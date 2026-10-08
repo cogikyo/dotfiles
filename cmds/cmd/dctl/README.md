@@ -1,67 +1,103 @@
 # dctl
 
-`dctl` builds the offline UEFI ISO, installs Arch, applies setup stages, and runs updates for a single-user Framework Desktop with AMD Strix Halo and Ethernet.
-This page is the command reference; follow [Installation](../../../README.md#installation) for the installation and first-login sequence.
+`dctl` installs and maintains this single-user Arch Linux system.
+It builds the offline ISO, applies configuration, and runs attended updates.
+
+- Built for the Framework Desktop with AMD Strix Halo and Ethernet only.
+- Installs the `cullyn` account and `costello` hostname.
+
+> _See [Installation](../../../README.md#installation) for the overview._
 
 ## Usage
+
+Run user commands from your own session; they elevate only where needed.
 
 ```sh
 dctl [--json] [--plain] [--yes] <command> [args]
 dctl <command> --help
 ```
 
-- `--json` emits structured results where supported.
+- `--json` emits structured results where supported; child output uses stderr.
 - `--plain` disables colors and animation.
-- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but never confirms erasing a disk or setup's lock phase.
-
-Bare `dctl` prints help.
-Streamed child output goes to stderr so JSON results can use stdout.
+- `--yes` (`-y`) accepts yes/no prompts, including release publication.
+  - It never grants disk-erase consent or setup's lock confirmation.
 
 ## Install
 
+Installation uses the ISO's package payload without a network.
+The live ISO starts the installer on tty1.
+
 > [!CAUTION]
 >
-> `dctl install` permanently erases the selected whole disk and all its data.
-> Back up the disk and follow [Installation](../../../README.md#installation) before running it.
+> `dctl install` erases the whole **target drive**.
+> Back up its data before confirming the erase.
 
-The command requires root, UEFI, and the dctl live ISO with its payload; it refuses an ordinary installed system or stock Arch ISO.
-The account is fixed to `cullyn` and the hostname to `costello`.
+```text
+prepare ──▶ disk consent ──▶ install steps ──▶ unmount ──▶ summary
+```
 
-The target must be an unmounted, writable, non-removable, non-USB disk of at least 32 GiB, with a serial or WWN and 512- or 4096-byte logical sectors; the boot disk is refused.
-The installer picks the only such disk, or the only NVMe disk among several, and aborts when no single disk qualifies.
-It shows the path, model, size, and identity, asks a default-no yes/no question that `--yes` cannot answer, and rechecks the target before writing.
+- Requires root, UEFI, and the dctl live ISO; stock Arch media are refused.
+- Prompts for the login password, timezone, and LUKS passphrase.
+- After success, remove the USB, reboot, and unlock with the disk passphrase.
+- Failed install steps can leave a partly modified disk; there is no rollback.
+  - Unmount and LUKS-close cleanup is attempted after success or failure.
 
-Installation uses bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs.
-The subvolumes are `@` for `/`, `@home` for `/home`, `@log` for `/var/log`, `@pkg` for `/var/cache/pacman/pkg`, and `@snapshots` for `/.snapshots`.
-It configures Snapper and Limine and installs prebuilt commands in `~/.local/bin/`.
-In the chroot, it runs `dctl setup --batch=force system packages` as root and `dctl setup --batch=force home` as `cullyn`.
-Output sections run through prepare → disk (erase consent) → install steps → unmount → summary.
-The summary tells you to reboot, log in, and run `dctl setup`.
+### Disk selection and consent
 
-The ISO bundle contains only the `master` tip, and the installed `~/dotfiles` is shallow.
-Restore history once online with `git -C ~/dotfiles fetch --unshallow`, as shown in [Installation](../../../README.md#installation).
+The installer chooses the only eligible disk, or the only eligible NVMe disk.
+An ambiguous selection stops before writing.
 
-The installer never enrolls Secure Boot keys and does not require Setup Mode.
-Prepare Setup Mode before installation to avoid another firmware step during [setup](#secure-boot).
+- Eligible disks must be unmounted, writable, non-removable, and not USB-connected.
+- Minimum size: 32 GiB; identity: serial or WWN; sector size: 512 or 4096 bytes.
+- The boot medium must be identified and excluded.
+- Occupied `/mnt` or open `/dev/mapper/root` stops installation.
+- Consent shows disk identity and asks **Erase `<disk>` and install?**, default **No**.
+  - `--yes` is refused; identity and eligibility are rechecked after consent.
 
-A failure during the write/install phase reports that the disk has been modified and installation is incomplete; there is no automatic rollback.
+### Installed files and layout
+
+The encrypted btrfs root is separate from the EFI system partition (ESP).
+Root snapshots cannot restore the boot images or the other subvolumes.
+
+| Storage      | Mount                   |
+| ------------ | ----------------------- |
+| 4 GiB FAT32  | `/boot`                 |
+| `@`          | `/`                     |
+| `@home`      | `/home`                 |
+| `@log`       | `/var/log`              |
+| `@pkg`       | `/var/cache/pacman/pkg` |
+| `@snapshots` | `/.snapshots`           |
+
+- Creates a shallow `~/dotfiles` checkout from the bundled `master` tip.
+- Installs prebuilt commands in `~/.local/bin/` and disables root password login.
+- Applies `system`, `packages`, and `home`; rebuilds and checks Limine boot images.
+- Snapper retains five hourly and seven daily root snapshots.
+- Secure Boot keys are enrolled later; installation does not require Setup Mode.
+
+> _See [Repos](#repos) for automatic history fetching after installation._
 
 ### Snapshot recovery
 
-**`snapper rollback` does not switch this installation's boot root.**
-Both fstab and the kernel command line pin `subvol=/@`, so changing btrfs's default subvolume does not select a restored root.
-The ESP at `/boot`, including the UKI, is outside the btrfs snapshots; `/home`, logs, and the package cache also have separate subvolumes.
+Changing btrfs's default subvolume does not select a restored boot root.
+This installation pins `@`, so a plain Snapper rollback is insufficient.
 
-Manual rollback requires the USB and a working LUKS passphrase or recovery key:
+1. Boot the USB and unlock LUKS with the passphrase or recovery key.
+2. Mount the btrfs top level with `subvolid=5`.
+3. Move `@` aside and create a writable snapshot as `@`.
+   - Source: `@snapshots/N/snapshot`; choose the intended snapshot number `N`.
+4. Mount restored `@`, the other subvolumes, and the ESP at their fstab paths.
+5. Chroot into the restored system and rebuild its boot files:
 
-1. Boot the USB, unlock the installed LUKS volume, and mount the btrfs top level with `subvolid=5`.
-2. Move `@` aside and create a writable snapshot of `@snapshots/N/snapshot` as `@`, choosing the intended snapshot number `N`.
-3. Mount the restored `@` as the chroot root, then mount its other subvolumes and the ESP at their fstab paths.
-4. Chroot into the restored system and run `limine-update` to rebuild its boot files before rebooting.
+   ```sh
+   limine-update
+   ```
 
-Keep the old `@` until the restored system boots successfully.
+6. Reboot and keep the old `@` until the restored system boots successfully.
 
 ## Setup
+
+Setup checks configuration, applies pending work, then offers security enrollment.
+Run as the normal user for dependency planning and the separate lock gate.
 
 ```sh
 dctl setup
@@ -70,29 +106,65 @@ dctl setup --from firefox
 dctl --json setup --status
 ```
 
-Run as your normal user.
-Consecutive root stages share one sudo child; user stages run in your session.
-User stages refuse root execution.
+```text
+system ─▶ network ─▶ packages ─▶ home ─▶ extra (background)
+  ┌──────────────────────────────────────────┘
+  ▼
+secrets ─▶ ssh ─▶ repos ─▶ firefox ─▶ certs
+  ┌─────────────────────────────────────┘
+  ▼
+All required phase-1 stages OK
+  │
+  ▼
+Separate lock confirmation
+  │
+  ▼
+luks ──▶ secureboot ──▶ reboot ──▶ totp ──▶ reboot and compare
+```
 
-- No names: show the full plan and ask once to run pending phase-1 work.
-- Named stages: show a plan and ask to redo those stages and pull in unfinished needs, marked `needed by X`.
-- `--from <name>`: redo that stage and everything after it, with optional stages included only when named.
-- `--yes`: accept the plan confirmation, but leave lock work for a run without `--yes`.
-- `--status`: report without changes; pending or failed items and recorded dependency blocks return nonzero.
+### Stage selection
 
-There is no setup `--all` flag.
-Applied items are checked again, and the summary gives the next action.
-Manual (`FIX`), deferred (`LATER`), or unknown items alone do not fail a status check, so inspect the rows even when it exits 0.
-Cancellation exits 130.
-JSON results contain `stage`, `state`, optional `wait`, and `items`; each item has `item`, `state`, and optional `detail`.
+Stages run in catalog order, regardless of the order you name them.
+Applied items are checked again and the summary gives the next action.
 
-Setup has two phases: **make it work**, then **lock it down**.
-Pending lock stages show `WAIT` until every non-optional phase-1 stage is OK; running them needs a separate confirmation: **Everything works. Lock it down now? YubiKeys, then Secure Boot**.
-Naming a lock stage, such as `dctl setup luks`, pulls in unfinished phase-1 work and still needs this separate confirmation.
-Lock work runs luks → secureboot → reboot → totp → reboot and compare the code.
+- Omit stage names to show the full plan and apply pending work.
+- Name stages to redo them and pull in unfinished dependencies.
+- Use `--from <name>` to redo that stage and later ones; optional stages need names.
+- Use `--yes` to accept the plan; rerun without it for lock work.
+- Use `--status` for a read-only check; pending, failed, or blocked work fails.
+  - Manual or deferred work can exit 0; inspect the rows, not only the exit code.
 
-**`sudo dctl setup <root stages>` runs the named root stages directly, with no plan, dependency pull-in, or lock confirmation.**
-This includes `luks`, `secureboot`, and `totp`; root execution still checks each stage's own conditions.
+### Stages and prerequisites
+
+Required phase-1 stages run in the table's order, from system through certs.
+The optional stages do not gate security enrollment.
+
+| Stage      | Needs                       | Work                      |
+| ---------- | --------------------------- | ------------------------- |
+| system     | —                           | Overlay and services      |
+| network    | —                           | Ethernet and DNS          |
+| packages   | system, network             | Base, AUR, local packages |
+| home       | packages                    | Links and fonts           |
+| extra      | home, network               | Background apps           |
+| secrets    | system                      | Restore private files     |
+| ssh        | secrets, network            | GitHub access             |
+| repos      | ssh                         | Clone and fetch history   |
+| firefox    | packages                    | Profile and config        |
+| certs      | firefox                     | Local CA and certificates |
+| tailscale  | network                     | Optional login and SSH    |
+| vpn        | secrets                     | Optional work VPN         |
+| luks       | All required phase-1 stages | Two YubiKeys and recovery |
+| secureboot | luks                        | Keys and boot signatures  |
+| totp       | secureboot                  | Seal the boot TOTP        |
+
+- Consecutive root stages share one sudo child; user stages stay in your session.
+- Root runs `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
+- `certs` uses sudo from the user session; user stages refuse root execution.
+
+### Status and output
+
+Status rows distinguish work dctl can apply from work that needs your attention.
+The summary and shell hint are the next-action reference.
 
 | Pill  | Meaning                 |
 | ----- | ----------------------- |
@@ -104,99 +176,162 @@ This includes `luks`, `secureboot`, and `totp`; root execution still checks each
 | WAIT  | Needs earlier work      |
 | ERR   | Failed or unknown       |
 
-`ASK` marks a prompt answer, and `RUN` marks a command.
-Captured commands show `OUTPUT` / `END OF OUTPUT` blocks only when they print something; interactive commands open a block before handing over the terminal.
+- `ASK` marks a prompt answer; `RUN` marks a command.
+- Cancellation exits 130.
+- A full run records its next action under `$XDG_STATE_HOME/dctl/next`.
+  - Default: `~/.local/state/dctl/next`; zsh prints it as `dctl · …`.
 
-A full `dctl setup` run saves its next-action hint in `${XDG_STATE_HOME:-~/.local/state}/dctl/next` and removes it when everything is done.
-The installer seeds `run dctl setup` at the default path, `~/.local/state/dctl/next`.
-Zsh prints it as `dctl · …` at shell start.
+### First-login details
 
-### Stages and prerequisites
+Network and authentication failures can leave dependent stages waiting.
+Independent stages can still run.
 
-Catalog order is execution order, regardless of the order of names on the command line.
+- Failed network checks offer **Retry** or **Skip online steps**.
+- Home linking backs up conflicting files but refuses to replace real directories.
+- Secrets ask for the YubiKey's PIV PIN or the age recovery phrase.
+- Enter the SSH key's passphrase when prompted.
+  - Register rejected keys with GitHub; review changed host-key fingerprints manually.
+- Quit Firefox if profile creation asks, then retry:
 
-| Stage      | Needs                       | Work                        |
-| ---------- | --------------------------- | --------------------------- |
-| system     | —                           | Overlay and services        |
-| network    | —                           | Ethernet and DNS            |
-| packages   | system, network             | Base, AUR, local packages   |
-| home       | packages                    | Links and fonts             |
-| extra      | home, network               | Apps in the background      |
-| secrets    | system                      | PIV PIN or recovery phrase  |
-| ssh        | secrets, network            | SSH access to GitHub        |
-| repos      | ssh                         | Clone repositories          |
-| firefox    | packages                    | Profile and config          |
-| certs      | firefox                     | Local CA and certificates   |
-| tailscale  | network                     | Optional login and SSH      |
-| vpn        | secrets                     | Optional work VPN import    |
-| luks       | All required phase-1 stages | Both YubiKeys and recovery  |
-| secureboot | luks                        | Keys and signed boot images |
-| totp       | secureboot                  | Seal the boot TOTP          |
+  ```sh
+  dctl setup firefox certs
+  ```
 
-Phase 1 ends at `certs`; `tailscale` and `vpn` are optional, and the last three stages are phase 2.
-Root stages are `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`; `certs` needs sudo from your user session.
-The `network` stage checks carrier and DNS for `archlinux.org`, `aur.archlinux.org`, and `github.com` and offers **Retry** or **Skip online steps** on failure.
-Stages that need failed work wait; independent stages such as `secrets` can still run.
+- Firefox CSS needs the Vagari checkout from `repos`; restart after customization.
 
-`dctl setup tailscale` uses `tailscale up --ssh --qr` for login; scan with a phone logged in to Tailscale, without opening a browser on this machine.
-`dctl setup vpn` decrypts and imports profiles, then removes newly staged plaintext even after failure.
-The `firefox` stage creates a missing Developer Edition profile; quit Firefox if asked, then rerun it.
-Firefox CSS still needs the repository from `repos`; restart Firefox after customization.
+> _See [Secrets](#secrets) and [Repos](#repos) for their inputs and recovery._
 
-`setup packages` installs missing official packages with `pacman -Syu --noconfirm --needed`, so installation includes a full upgrade rather than a partial upgrade.
-It has no package checklist and does no upgrade when no official packages are missing.
-Install missing AUR names with `yay -S` and local recipes with `makepkg -si` in `packages/<name>`.
-There is no offline flag; package selection belongs to [Update package reconciliation](#package-reconciliation).
+### Packages and background work
 
-When extra packages are missing, `extra` runs a full `pacman -Syu` before installing them through yay.
-It validates sudo before starting, keeps the credential active, and uses non-interactive sudo (`-n`) in the background.
-Output goes to `~/.local/state/dctl/extra.log`; failures show the last 20 log lines.
-Setup waits for `extra` before later root work, before `certs`, and at the end.
-The first Ctrl+C stops scheduling and waits for `extra` to finish; a second press sends SIGINT.
-Setup never sends SIGTERM or SIGKILL to pacman.
+Setup installs missing official packages and starts extra applications in the background.
+Missing AUR and local base packages need manual installation.
 
-The `home-fonts` item checks that `fc-list` finds Vagari and Symbols Nerd Font Mono and runs `fc-cache` if either is missing.
+- `packages` reads the base, AUR, and local inputs under `packages/`.
+  - Missing official packages trigger `pacman -Syu --noconfirm --needed`.
+  - No official packages missing means no upgrade from this stage.
+- Install missing AUR packages:
 
-The mkinitcpio `HOOKS` live in the system overlay at `system/etc/mkinitcpio.conf.d/dotfiles.conf`, not in installer-generated files.
-After changing the HOOKS file or the `sd-totp` hook, run `sudo limine-update`; kernel updates and `dctl setup secureboot` also rebuild the images.
+  ```sh
+  yay -S <name>
+  ```
+
+- Build missing local recipes from their `packages/<name>` directory:
+
+  ```sh
+  makepkg -si
+  ```
+
+- `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
+  - Output: `~/.local/state/dctl/extra.log`; failures show recent log lines.
+  - Setup waits before later root work, before `certs`, and at the end.
+- First Ctrl+C stops new stages and waits for `extra`; a second sends SIGINT.
+  - Setup never sends SIGTERM or SIGKILL to pacman.
+
+> _See [Package reconciliation](#package-reconciliation) for interactive selection._
+
+### Optional networking
+
+Tailscale and work VPN setup run only when named.
+
+```sh
+dctl setup tailscale
+dctl setup vpn
+```
+
+- Tailscale login shows a QR code; scan with a phone logged in to Tailscale.
+  - No browser opens; an existing connection only needs SSH enabled.
+- VPN profiles come from `cmds/config/hyprd.yaml` and staged secrets.
+  - Imports use hyprd; newly staged plaintext is removed even after failure.
+
+### Lock confirmation and root execution
+
+Lock work waits for every required phase-1 stage to be OK and asks separately.
+Naming a lock stage still pulls in unfinished phase-1 work and requires consent.
+
+> [!CAUTION]
+>
+> Direct root setup bypasses the plan, dependency pull-in, and lock confirmation.
+> Run first setup as the normal user.
+
+- `--yes` never accepts the lock confirmation.
+- Named root stages under sudo run directly; each checks its own conditions.
+
+> _See [Secure Boot](#secure-boot) for the enrollment procedure._
 
 ### Secure Boot
 
-Before installation, use F2 → **Erase all Secure Boot Settings** → F10 to enter Setup Mode and leave the TPM enabled.
-If enrollment checks pass but Secure Boot is off with keys dctl did not create, `secureboot` shows `LATER` with these steps.
-Run `dctl setup` as your user to retain the phase-1 gate and lock confirmation; `sudo dctl setup secureboot` bypasses both.
+Enrollment trusts only the owner's keys.
+It refuses automatic option-ROM trust and does not add Microsoft keys.
 
-The stage checks UEFI and Setup Mode before enrolling only your own keys with `sbctl enroll-keys`; it never adds Microsoft keys.
-It rejects nonempty `db_additions` in `/etc/sbctl/sbctl.conf` before enrollment and Microsoft certificates in KEK/db once your platform key is enrolled.
-A missing or unreadable TPM event log stops enrollment, as do measured option ROMs.
-Trusting option ROMs with `sbctl enroll-keys --tpm-eventlog` adds their hashes to db; that decision is yours, and dctl never runs it.
-In Setup Mode, dctl creates sbctl keys if needed, configures Limine, rebuilds the boot images, and verifies them before enrollment.
+1. Press F2 and choose **Erase all Secure Boot Settings** to enter Setup Mode.
+   Leave the TPM enabled.
+2. Save with F10; prepare both YubiKeys' PINs and age identities before locking down.
+3. Run setup as the user and accept the lock confirmation once phase 1 is OK:
 
-The signed check verifies Limine and UKI signatures, rejects an embedded UKI command line, and requires a Limine entry for each UKI.
-It checks the LUKS mapping named by `rd.luks.name` and `root`, requires config enrollment, and rejects fallback `BOOTX64.EFI`.
-Keys and signatures can be done while enforcement still needs a reboot or BIOS change; use the [manual hardware checklist](#manual-hardware-acceptance) to verify completion.
+   ```sh
+   dctl setup
+   ```
 
-After key enrollment, reboot; if Secure Boot is still off, enable it with F2 and save with F10.
-Run `dctl setup` again to run the separate `totp` stage once Secure Boot is enforced.
-It seals a secret to SHA256 PCRs 0 and 7 (firmware and Secure Boot state), shows a QR code once, and asks for your authenticator code.
-Scan the QR code or enter the `otpauth://` URL's `secret=` value; the entry uses the hostname as its label.
-Only after the code matches does dctl write `/etc/dctl/boot-totp`, rebuild and verify the boot images, and record the rebuild in `/etc/dctl/boot-totp.built`.
-Use a plain TTY or clear terminal scrollback afterward.
-Reboot again and compare the boot code before unlocking.
+4. Complete the `luks` prompts for both keys and confirm the paper recovery copy.
+5. Let `secureboot` enroll keys and sign images, then reboot with a YubiKey inserted.
+   - If Secure Boot is still off, enable it with F2 and save with F10.
+6. Run setup again to seal `totp` once Secure Boot is enforced.
+7. Reboot and compare the boot code with the authenticator before unlocking.
 
-At each boot, `sd-totp` prints `Boot TOTP <code> (Ns left)` on the console every 30 seconds until LUKS is unlocked.
-Without a marker, it prints **Boot TOTP not set up yet**, unless tpm2-totp reports a changed system state.
-With a marker and an unsealing failure, or with changed system state, it prints `!!! NO BOOT TOTP: do not unlock; investigate the TPM and boot state before resealing !!!`.
-Boot continues, and the hook never delays unlock.
-Inspect `tpm2-totp` errors with `journalctl -b -u boot-totp`.
-If image creation cannot find `tpm2-totp` or its device library, it warns and omits the hook, so no boot code or warning appears.
-The code is advisory: compare it with the authenticator before entering the PIN or passphrase.
+> _See [Keys](#keys) for YubiKey preparation and paper recovery._
 
-After enrollment, a missing or wrong code means **do not unlock**; stop and investigate.
+#### Enrollment checks
+
+Keys and signatures can be ready while enforcement still needs a reboot.
+Do not force enrollment past a failed check.
+
+- Stops on an unreadable TPM event log, measured option ROMs, or `db_additions`.
+- Rejects Microsoft KEK/db certificates after the owner's platform key is enrolled.
+- Verifies Limine and UKI signatures, boot entries, and the root LUKS mapping.
+  - Embedded UKI command lines are refused so snapshot entries can select a root.
+- Updates `/etc/default/limine` and removes `/boot/EFI/BOOT/BOOTX64.EFI`.
+- Keeps signing keys under `/var/lib/sbctl/` and enrolls firmware variables.
+
+#### TOTP enrollment and recovery
+
+The secret is sealed to SHA256 PCRs 0 and 7: firmware and Secure Boot state.
+The boot code is advisory tamper evidence; the hook does not block disk unlock.
+
+1. Enroll from a plain TTY, or clear terminal scrollback afterward.
+2. Scan the QR code shown once and enter its authenticator code.
+3. Wait for the verified image rebuild before rebooting.
+   - If image checks fail, do not reboot until setup's Secure Boot checks pass.
+
+> [!CAUTION]
+>
+> A missing or wrong boot TOTP after enrollment means **do not unlock**.
+> Investigate the TPM and boot state before resealing.
+
+- Before enrollment, the screen reports **Boot TOTP not set up yet**.
+- After enrollment, unsealing failure reports **NO BOOT TOTP**.
+- Missing hook dependencies at image build time leave that image without a boot code.
+- Inspect boot-hook errors:
+
+  ```sh
+  journalctl -b -u boot-totp
+  ```
+
 Changed PCR state is never resealed automatically.
-After you establish a known firmware or Secure Boot change as the cause, restore enforcement, run `sudo dctl keys totp`, and replace the authenticator entry.
+Only replace the secret after establishing a known firmware or Secure Boot change.
 
-Setup keeps these state files under `/etc/dctl/`:
+1. Restore Secure Boot enforcement.
+2. Replace the secret and verify the new authenticator entry:
+
+   ```sh
+   sudo dctl keys totp
+   ```
+
+3. Reboot and compare the new code before unlocking.
+
+#### Lock state
+
+Setup records enrollment and image-build state separately.
+These files are under `/etc/dctl/`.
 
 | File                        | Records                            |
 | --------------------------- | ---------------------------------- |
@@ -205,19 +340,19 @@ Setup keeps these state files under `/etc/dctl/`:
 | `luks-yubikeys`             | Serials enrolled for this disk     |
 | `luks-recovery.unconfirmed` | Paper copy not yet confirmed       |
 
-If a listed YubiKey no longer has a disk token, delete its line from `luks-yubikeys` before enrolling it again.
+- A recorded key with no disk token needs its `luks-yubikeys` line removed to reenroll.
+- After changing mkinitcpio `HOOKS` or `sd-totp`, rebuild images:
 
-The cause of `Early TPM SRK Setup failed` is not known.
-Dctl uses no systemd TPM feature, and `tpm2-totp` creates its own primary, so this unit failure does not block LUKS unlock.
-Do not clear the TPM or mask the unit to hide the error; inspect it with:
+  ```sh
+  sudo limine-update
+  ```
 
-```sh
-journalctl -b -o cat -u systemd-tpm2-setup-early
-systemd-analyze has-tpm2
-tpm2_getcap properties-variable # check inLockout and lockoutCounter
-```
+> _See [hardware acceptance](#manual-hardware-acceptance) for real-machine checks._
 
 ## Update
+
+Update runs attended upgrades and rebuilds from the current checkout.
+Failed steps are reported; later steps continue and the summary gives a retry command.
 
 ```sh
 dctl update
@@ -225,178 +360,181 @@ dctl update repos cmd
 dctl update --only dctl,hyprd
 ```
 
-Run as your normal user; each step has its own section and, with no step names, asks **Run <step>?**.
-Enter accepts the selected answer (Yes by default); `n` skips the step.
-Named steps omit the per-step prompt and retain the order below.
-**Update never pulls `~/dotfiles` or the `DOTFILES` checkout**; manage that checkout yourself before rebuilding commands.
+- Run as the normal user; root execution is refused.
+- Update never pulls `~/dotfiles` or the `DOTFILES` checkout; manage it separately.
+- Any failed step makes the final result nonzero.
+- Ctrl+C can interrupt pacman; update has no setup-style protected wait.
 
-`--all` or global `--yes` omits step and recipe prompts and passes `--noconfirm` to pacman, yay, and makepkg.
-It never installs or removes package-list drift.
-`--only NAME,...` limits `cmd` to named dotfiles commands or local recipes and selects only `cmd` when no steps are named; explicit step names must include `cmd`.
+### Selection and step order
 
-Steps run in this order:
+With no names, each step asks for consent, default **Yes**.
+Named steps omit that prompt and retain this order.
 
-1. `pacman`: run `sudo pacman -Syu` for official repositories.
-2. `aur`: run `yay -Sua --ignore <local recipe names>` for installed AUR packages, leaving local recipes to `cmd`.
-3. `packages`: reconcile installed packages with the lists and local recipes.
+1. `pacman`: upgrade official packages.
+2. `aur`: upgrade AUR packages, excluding local recipes.
+3. `packages`: reconcile installed packages with the lists.
 4. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
-5. `cmd`: build dotfiles commands and rebuild installed local recipes with different PKGBUILD versions.
-6. `go`: update module-proxy-installed Go tools with `go install <package>@latest`.
+5. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
+6. `go`: update eligible module-release tools.
 7. `rust`: run `rustup update`, or skip if rustup is absent.
 
-Failures are reported and later steps continue, but the final result is nonzero if any step failed.
-The summary lists finished and skipped steps and gives a retry command for failed steps.
-Ctrl+C stops the run and can still interrupt pacman; update does not have setup's protected background wait.
+- `--all` or global `--yes` skips step/recipe prompts and passes `--noconfirm`.
+  - It never installs or removes package-list drift.
+- `--only NAME,...` limits `cmd` to named commands or local recipes.
+  - With no step names it selects `cmd`; explicit step names must include `cmd`.
 
 ### Command and tool rebuilds
 
-The `cmd` step uses shared `internal/gobuild` settings and replaces binaries in `~/.local/bin/` only when their bytes differ.
-Hyprd owns its replacement through `hyprd rebuild`; a full lock, active OpenCode refresh job, or stopped daemon is a reported skip.
+Dotfiles binaries are replaced only when their bytes differ.
 Ewwd, newtab, and keys restart only when replaced.
 
-Uncommitted changes under `cmds/` require an extra default-no confirmation; `--all` skips that dotfiles build.
-Installed local recipes with different versions each require a separate default-yes rebuild prompt, even when `cmd` was named explicitly.
-They use `makepkg -sfiC`, which cleans `src/` first; `--all` rebuilds without asking, and uninstalled recipes are skipped.
-
-The `go` step scans `GOBIN`, or the first GOPATH's `bin` directory when GOBIN is unset, and updates only tools whose build metadata has a module-proxy checksum.
-Locally built tools are skipped, and individual recipe or Go-tool failures do not stop later work.
+- **hyprd** replaces itself via `hyprd rebuild`.
+  - Skips during full lock, an OpenCode refresh job, or when the daemon is stopped.
+- **Uncommitted `cmds/`** requires extra consent, default **No**; `--all` skips the build.
+- **Local recipes** with different installed versions ask separately, default **Yes**.
+  - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
+- **Go tools** need module-proxy checksum metadata; locally built tools are skipped.
+  - Scans `GOBIN`, or the first GOPATH's `bin`; installs eligible tools at `@latest`.
 
 ### Package reconciliation
 
-The `packages` step uses `packages/*.lst` and local recipe names as the desired package set.
-It first marks listed packages explicit and demotes unlisted packages required by others to dependencies, without asking.
-This marking precedes removal to protect listed packages from `pacman -Rns`.
+Reconciliation treats the package lists and local recipes as the desired set.
+It changes package reasons before prompting, so cancelling is not a complete undo.
 
-Missing listed packages appear in an **all-checked install checklist**.
-Selected official and AUR packages go through yay; selected local recipes produce a `makepkg -si` instruction.
-Then an all-checked removal checklist offers unlisted explicit packages and unlisted orphans.
-Selected removals go to `sudo pacman -Rns`, which asks again before removing them.
+1. Mark listed packages explicit and unlisted packages needed by others as dependencies.
+2. Offer missing packages in an all-checked install checklist.
+3. Install selected official/AUR packages via yay; give build instructions for locals.
+4. Offer unlisted explicit packages and orphans in an all-checked removal checklist.
+5. Save unchecked entries to `packages/extra.lst` and mark them explicit.
+6. Send selected removals to pacman, which asks again.
 
-Unchecked removal entries are saved in sorted order under `# official` or `# aur` in `extra.lst` and marked explicit.
-Esc skips the current checklist; earlier package-reason changes remain, and skipping installation does not skip the later removal checklist.
-`--all`, global `--yes`, or no terminal only performs marking and reports remaining drift; `--json` emits drift without changing anything.
+- Esc skips the current checklist; earlier reason changes remain.
+- `--all`, global `--yes`, or no terminal: change reasons and report drift only.
+- `--json`: this step reports drift without changes; other steps can still mutate.
 
 ## Firmware
 
-Firmware flashing is a manual operation outside dctl; update the BIOS only when needed.
-Reports of Framework Desktop BIOS 3.06 bricking machines are a reason to hold off.
-`fwupd` is not in the base package list.
-Read the [boot-TOTP warning](#secure-boot) before changing firmware; investigate a missing code before resealing.
+Firmware flashing is outside dctl.
+Follow Framework's instructions for the chosen release and updater.
 
-1. Install the tool with `sudo pacman -S fwupd`.
-2. Press F2 on reboot, turn Secure Boot off, and save with F10.
-3. Boot and run `fwupdmgr refresh` then `fwupdmgr update`, or use Framework's EFI USB updater.
-4. After the update, press F2, turn Secure Boot on, save with F10, and boot.
-5. After confirming the planned firmware change caused the PCR change, run `sudo dctl keys totp`, verify the new authenticator code, and replace the old entry.
+- There is no firmware command; `fwupd` is absent from the base list.
+- Firmware and Secure Boot changes can invalidate the sealed boot TOTP.
+
+> _See [Secure Boot](#secure-boot) before replacing a secret after changed boot state._
 
 ## ISO
 
-Build writes `iso/out/dotfiles-<rev12>.iso`, where `rev12` is the first 12 characters of the built revision.
-Test, release, and USB default to the newest of those images and print the one they chose.
-Test and release accept a positional image path; USB uses `--iso <path>`.
+The ISO commands build, VM-test, sign, and write offline installation media.
+Test, release, and USB choose the newest built image unless given a path.
+
+- Build writes `iso/out/dotfiles-<rev12>.iso`, using the revision's first 12 characters.
+- Test/release accept a positional image path; USB uses `--iso <path>`.
 
 ### Build
 
-Use an Arch host with network access, Go, Git, `archiso`, `devtools`, and pacman tooling, with a clean committed checkout on `master`.
-Run as your normal user; dctl re-runs itself through sudo for privileged work.
+Build bundles the committed master tip and an offline package payload.
+Extra applications remain an online setup step.
+
+- Requires an Arch host, network, Go, Git, `archiso`, `devtools`, and pacman tooling.
+- Requires a clean, committed checkout on `master`.
+- Run as the user; dctl elevates privileged work through sudo.
 
 ```sh
 dctl iso build
+dctl iso build --fresh
 ```
 
-The build uses a depth-1 clone of `master` and bundles only that tip, not the working tree or full history.
-It builds the Go commands and resolves base, AUR, and local recipes into the offline package payload, failing on missing packages.
-`extra.lst` must exist but is excluded from the payload; install its entries online with `dctl setup extra`.
-AUR/local builds use a per-build PGP keyring populated from recipe `keys/pgp/*.asc`; any declared `.SRCINFO` `validpgpkeys` fingerprint absent from that keyring stops the build before compilation.
-
-Builds reuse `/var/cache/dctl-iso/` for the build chroot, downloaded recipe sources, built recipe packages, and official package downloads.
-The cached chroot is refreshed on each build.
-Recipe package keys use the AUR repo commit or local recipe tree, plus the direct runtime dependency versions in the refreshed chroot's package databases.
-A recipe whose runtime dependencies name another recipe stops the build.
-
-Use `dctl iso build --fresh` to get new upstream code for `-git` AUR recipes such as `mpvpaper-git`, or to replace a broken cache.
-Valid cache entries are reused until the AUR repo or runtime dependency inputs change; upstream commits alone do not trigger a rebuild.
-`--fresh` wipes the cache, so the first build after a wipe is a full build.
-
-Concurrent builds are refused.
-The final timing summary shows stage and recipe times, including recipe cache hits and misses.
-
-The ISO includes `/opt/dctl/payload`, `/opt/dctl/targets`, `/opt/dctl/dotfiles.bundle`, and prebuilt commands in `/usr/local/bin`; installation verifies the payload checksums.
-A payload or image above 2 GiB fails the release-size check; an oversized completed image is retained for local use but the command returns an error.
+- Bundles a depth-1 clone; working-tree changes and full history are excluded.
+- Resolves base, AUR, and local recipes; missing packages stop the build.
+- `extra.lst` must exist but is not bundled; use `dctl setup extra` after installation.
+- Declared recipe PGP keys must be provided under recipe `keys/pgp/*.asc`.
+- Uses `/var/cache/dctl-iso/` for caching; concurrent builds are refused.
+  - Recipe keys include recipe revisions and direct runtime dependency versions.
+  - Upstream VCS commits and build-dependency versions are not separate inputs.
+  - Use `--fresh` for updated `-git` sources or a broken cache; it wipes all cache state.
+- Payload or ISO above 2 GiB fails the release-size check.
+  - An oversized completed ISO is retained for local use, but build returns an error.
 
 ### Test
 
-Use a normal account with KVM access, QEMU, dosfstools, mtools, and both `/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd` and `/usr/share/edk2/x64/OVMF_VARS.4m.fd`.
+The offline VM harness installs, unlocks LUKS with a passphrase, and boots twice.
+It checks basic setup and an active display manager, not Secure Boot enforcement.
+
+- Requires a user account with KVM access, QEMU, dosfstools, and mtools.
+- Requires `/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd` and `OVMF_VARS.4m.fd`.
 
 ```sh
 dctl iso test [path/to/image.iso] [--keep]
+dctl iso test --head
+dctl iso test --dctl /path/to/dctl --bundle /path/to/dotfiles.bundle
 ```
 
-Use `dctl iso test --head` for the fast installer/setup loop; it requires Go and Git.
-`--head` builds dctl from the checkout, including uncommitted code changes, and bundles the committed HEAD as `master`.
-Uncommitted changes do not enter the bundle.
-`--head` cannot be combined with `--dctl` or `--bundle`.
+- `--head` builds current dctl code, including uncommitted edits, and needs Go/Git.
+  - The bundle contains committed HEAD only, presented as `master`.
+  - Cannot combine with `--dctl` or `--bundle`.
+- Overrides replace the binary/bundle only; package/profile changes need a new ISO.
+- The VM has no network, a 32 GiB disk, and Setup Mode firmware variables.
+- Results stay in the printed `/var/tmp/dctl-iso-test-*` directory.
+  - Logs: `serial.log`, `timings.json`, `setup.json`; screenshot: `greeter.png`.
+  - Inspect the screenshot yourself; appearance and sign-in are not verified.
+- `--keep` retains VM disks and firmware variables; otherwise those are removed.
 
-Package-list or ISO-profile changes still require `dctl iso build`; the package payload and live environment come from the ISO.
-
-The VM has no network interface and uses a 32 GiB disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
-The harness installs, unlocks LUKS with a passphrase, boots twice, and requires `system`, `packages`, and `home` to be done, plus an active display manager.
-It does not check Secure Boot.
-
-Results live in the printed `/var/tmp/dctl-iso-test-*` directory: `serial.log`, `timings.json`, `setup.json`, and, after a 20-second wait, `greeter.png`.
-Inspect the screenshot yourself; the test does not verify appearance or sign-in behavior.
-VM disks and firmware variables are removed by default; `--keep` retains them.
-Use `--dctl /path/to/dctl` and `--bundle /path/to/dotfiles.bundle` to test replacements without rebuilding the ISO.
-Run [manual hardware acceptance](#manual-hardware-acceptance) separately.
+> _See [hardware acceptance](#manual-hardware-acceptance) for checks beyond the VM._
 
 ### Release
 
-> [!WARNING]
->
-> `dctl iso release` signs the checksum and publishes a public GitHub release.
+Release signs checksums before offering to publish.
+Declining publication leaves those signed files available for USB writing.
 
-Run as your normal user with authenticated `gh` and an enrolled hardware SSH signing key.
-The ISO filename revision must be contained in `origin/master`, and the image must be at most 2 GiB.
-The revision may be older than HEAD, so later commits do not require a rebuild.
-Release checks the local `origin/master` ref and does not fetch or push it.
+> [!CAUTION]
+>
+> `dctl iso release` publishes a **public GitHub release** after confirmation.
+> Global `--yes` accepts that confirmation.
 
 ```sh
 dctl iso release [path/to/dotfiles-REV.iso] [--key /path/to/key]
 ```
 
-The default key is `~/.ssh/id_ed25519_sk_<serial>` for the one inserted YubiKey; `--key` selects another key whose public key is trusted in `share/allowed_signers`.
-Signing bypasses the SSH agent and asks for the FIDO2 PIN, then touch.
-
-The command writes `<iso>.sha256` and `<iso>.sha256.sig`, verifies the signature, and asks before publishing.
-The release tag is `iso-YYYY.MM.DD-<rev12>`, with the ISO and both checksum files as assets.
+- Requires the user session, authenticated `gh`, and a hardware SSH signing key.
+- Image limit: 2 GiB; filename revision must be contained in local `origin/master`.
+  - The revision can be older than HEAD; release does not fetch or push.
+- Default key: `~/.ssh/id_ed25519_sk_<serial>` for the one inserted YubiKey.
+  - `--key` selects another hardware key trusted by `share/allowed_signers`.
+- Signing asks for the FIDO2 PIN and touch; signature verification precedes publishing.
+- Assets: ISO, `<iso>.sha256`, `<iso>.sha256.sig`.
+  - Tag: `iso-YYYY.MM.DD-<rev12>`.
 
 ### USB
 
+Writing requires the ISO and both signed checksum files together.
+Unsigned builds are refused.
+
 > [!CAUTION]
 >
-> `dctl iso usb` erases the selected whole disk.
+> `dctl iso usb` erases the whole **USB drive**.
 > Choose an unmounted removable or USB disk, not a partition.
-
-Keep the ISO, `<iso>.sha256`, and `<iso>.sha256.sig` together; unsigned builds are refused.
-The signing command is [Release](#release), which also publishes the ISO.
 
 ```sh
 dctl iso usb /dev/sdX
 dctl iso usb --iso ~/Downloads/dotfiles-REV.iso /dev/sdX
 ```
 
-Run as your normal user; dctl re-runs itself through sudo.
-It verifies the checksum signature against `share/allowed_signers`, requires the exact device path, and checks the ISO hash before writing.
-It refuses partitions, read-only or mounted disks, internal non-removable disks, undersized disks, and targets without a serial or WWN.
+1. Run as the user; dctl elevates through sudo.
+   - Direct root execution requires `--iso`.
+2. Review the target and type its exact device path; `--yes` cannot skip this.
+3. Wait for writing and sync to finish before using the USB.
 
-The device identity is rechecked after confirmation, and writing hashes the ISO bytes sent to the disk and syncs writes.
-It does **not read the disk back**.
-`--yes` does not skip typed confirmation, and a write failure means the disk must not be booted.
+- Refuses read-only, mounted, internal non-removable, or undersized disks.
+- Requires serial/WWN identity and rechecks it after consent.
+- Verifies the signature and ISO hash, hashes bytes written, and syncs writes.
+  - It does not read the disk back; do not boot it after a write failure.
+
+> _See [Release](#release) for signing without publication._
 
 ## Secrets
 
-Run as your normal user; `secrets/` holds ciphertext, `recipients` for age recipients, `identities` for plugin stubs, and `identity.age` for the phrase-wrapped X25519 recovery identity.
-Manifest entries use `name:~/target/path:0600[:staged]`.
+Secrets commands manage age ciphertext and private files in the user's home.
+Run them as the normal user.
 
 ```sh
 dctl secrets list
@@ -406,160 +544,260 @@ dctl secrets rekey
 dctl secrets verify-phrase
 ```
 
-- `list` reports manifest entries, ciphertext presence, and target status.
-- `decrypt` writes non-staged entries by default; named entries can include staged secrets.
-- `sync` encrypts changed plaintext targets across the manifest; unchanged ciphertext keeps its previous recipients.
-- `rekey` re-encrypts every manifest secret, including staged entries, for the current recipient list.
-- `verify-phrase` checks the recovery identity and its listed recipient in memory and writes nothing.
+| Command       | Work                              |
+| ------------- | --------------------------------- |
+| list          | Manifest and target status        |
+| decrypt       | Write selected plaintext targets  |
+| sync          | Encrypt changed plaintext targets |
+| rekey         | Re-encrypt all manifest secrets   |
+| verify-phrase | Check recovery identity in memory |
 
-Decryption asks before overwriting differing content and keeps no plaintext backup.
-Targets use atomic replacement with the exact manifest mode and must stay inside `$HOME`, outside the checkout, without symlinks or mount-point crossings.
-Age tries plugin identities first and offers the recovery phrase if they fail; cancelling a plugin prompt stops without offering the phrase.
+- Default decrypt excludes staged entries; naming one includes it.
+- Unchanged ciphertext keeps its recipients during sync; rekey changes all entries.
 
-`sync`, `rekey`, `keys enroll`, and `keys remove` hold an exclusive checkout lock and refuse concurrent locked operations.
-`decrypt`, `sync`, `rekey`, and `verify-phrase` refuse `AGEDEBUG` because it can expose PINs and file keys; `list` does not.
+### Files and target rules
+
+The manifest connects ciphertext to a target and its exact permissions.
+Decryption replaces files atomically and keeps no plaintext backup.
+
+```text
+name:~/target/path:0600[:staged]
+```
+
+- Inputs under `secrets/`: `manifest`, `<name>.age`, `recipients`, `identities`.
+- `identity.age` holds the phrase-wrapped recovery identity.
+- Targets must stay inside `$HOME`, outside the checkout, without symlink/mount crossings.
+- Decrypt asks before overwriting different content and applies the manifest mode.
+
+### Unlocking and failures
+
+Age tries plugin identities first, then offers the recovery phrase on failure.
+Cancelling a plugin prompt stops without offering the phrase.
+
+- Mutations through sync, rekey, key enrollment/removal take an exclusive checkout lock.
+- Decrypt/sync/rekey/verify-phrase refuse `AGEDEBUG`, which can expose PINs and keys.
+- Rekey stages all ciphertext first; decryption failure leaves `secrets/` unchanged.
 
 ### Secret recovery
 
-Keep the **age phrase** and **LUKS recovery key** available independently of the encrypted disk.
-The phrase unlocks `identity.age`, not LUKS; use `verify-phrase` and rehearse decryption without a YubiKey.
-Secret recovery does not restore user data, so maintain a separate off-site backup.
+The age phrase unlocks the recovery identity, not the disk.
+Secret recovery does not restore user data; keep a separate off-site backup.
 
-To store account recovery codes or a recovery kit, add `recovery:~/.local/share/dotfiles/recovery.txt:0600` to the manifest and provision that private plaintext outside the checkout.
-Run `dctl secrets sync` to create its ciphertext, then retrieve it with `dctl secrets decrypt recovery` using a working YubiKey or the phrase.
+1. Keep the age phrase and LUKS recovery key available outside the encrypted disk.
+2. Verify the phrase and rehearse decryption with both YubiKeys removed:
+
+   ```sh
+   dctl secrets verify-phrase
+   dctl secrets decrypt <name>
+   ```
 
 ## Keys
 
-Use `enroll` for each YubiKey's identities, with only the intended key inserted.
-The `luks` setup stage needs two PIN-required, no-touch disk tokens.
+Keys commands prepare YubiKeys, manage enrollment, and replace the boot TOTP.
+Key preparation and disk enrollment are separate operations.
 
 ```sh
 dctl keys enroll
-sudo dctl keys luks
-sudo dctl keys totp
 dctl keys status
 sudo dctl keys status
 dctl keys remove <serial>
 ```
 
-`enroll` runs as your user and configures FIDO2 PIN/always-UV and PIV PIN/PUK, adds an age identity, rekeys secrets, and provisions `~/.ssh/id_ed25519_sk_<serial>` for release signing.
-A forced FIDO2 PIN change is completed before always-UV is enabled; age uses the PIV PIN without touch.
-Enrollment updates age metadata and `share/allowed_signers` in the checkout.
+### Enroll identities
 
-Use `dctl setup luks` as your user for the phase-1 gate and lock confirmation.
-`sudo dctl keys luks` runs the same stage directly: it enrolls missing tokens for both YubiKeys with a FIDO2 PIN and no touch, adds a recovery key if absent, and keeps the passphrase slot.
-Write the recovery key on paper and keep it away from the machine; if you defer confirmation, the stage asks again on the next run.
-Enrollment refuses a key with three or fewer FIDO2 PIN tries left because enrollment can spend three.
-Verify one correct PIN with `ykman --device <serial> fido access verify-pin` to restore the tries, then rerun enrollment.
-Unprivileged `status` reports enrollment, while LUKS header inspection needs sudo.
+Enrollment prepares PINs, age access, and a release-signing identity.
+Later failures do not undo earlier changes to the key or checkout.
 
-`keys totp` explicitly replaces the [boot TOTP secret](#secure-boot), verifies the authenticator code, and rebuilds the boot images; it requires root and enforced Secure Boot.
+1. Insert only the intended YubiKey and run `dctl keys enroll` as the user.
+2. Follow PIN, age identity/rekey, and signing-key prompts.
+3. Inspect status before retrying a failure; repeat with the other key.
 
-`remove` refuses root, removes the age recipient and release signer, and rekeys secrets, but leaves LUKS tokens intact.
-The LUKS header does not identify which YubiKey created a token.
-Inspect it with `sudo dctl keys status` and identify the slot manually before revoking it with `systemd-cryptenroll --wipe-slot`; retain a tested passphrase or recovery key.
+- Age uses the PIV PIN without touch; release signing uses the FIDO2 PIN and touch.
+- Changes `secrets/`, `share/allowed_signers`, and local SSH signing-key files.
+
+### Enroll disk tokens and recovery
+
+Disk enrollment keeps the passphrase and adds two PIN-required, no-touch tokens.
+The recovery key is an independent disk-unlock method.
+
+1. Use the user setup flow for its phase-1 gate and lock confirmation:
+
+   ```sh
+   dctl setup luks
+   ```
+
+2. Insert one key at a time; enter the disk passphrase and FIDO2 PIN as prompted.
+3. Copy the recovery key onto paper, store it away from the machine, and confirm.
+   - Deferring paper confirmation leaves work for the next run.
+
+- Direct `sudo dctl keys luks` runs without the setup gate.
+- Three or fewer FIDO2 PIN tries blocks enrollment, which can spend three tries.
+  - Restore tries with one correct PIN, then retry:
+
+    ```sh
+    ykman --device <serial> fido access verify-pin
+    ```
+
+- Resetting FIDO2 erases its credentials, including signing and disk credentials.
+
+> _See [Lock state](#lock-state) for enrollment records._
+
+### Inspect, replace, and remove
+
+Removing an enrolled identity does not revoke its disk access.
+Retain a tested passphrase or recovery key before deleting disk slots.
+
+- User status reports identities; LUKS-header inspection needs sudo.
+- `keys remove` removes the age recipient and signer, then rekeys secrets.
+  - LUKS tokens and credentials on the YubiKey remain.
+  - Partial failures report which changes need a retry.
+- The header does not identify the key that created a token; identify its slot manually:
+
+  ```sh
+  sudo dctl keys status
+  sudo systemd-cryptenroll --wipe-slot=<slot> <device>
+  ```
+
+> _See [Secure Boot](#secure-boot) before using `sudo dctl keys totp` to reseal._
 
 ### LUKS unlock
 
-Insert the YubiKey before boot; unlock does not wait for a key inserted later.
-Systemd-cryptsetup uses the LUKS2 token plugin and asks once for `LUKS2 token PIN`, with no touch for tokens enrolled by dctl.
-Any token error falls back to the passphrase or recovery-key prompt.
-The `luks` stage removes legacy `rd.luks.options=<uuid>=fido2-device=auto` from `/etc/default/limine` and runs `limine-update` to restore this fallback.
+Insert the YubiKey before boot; unlock does not wait for a late insertion.
+Token errors fall back to the passphrase or recovery-key prompt.
+
+- Dctl-enrolled tokens ask once for **LUKS2 token PIN**, without touch.
+- The `luks` stage removes legacy `fido2-device=auto` boot options to restore fallback.
 
 ## Porkbun DNS
 
-`dctl porkbun` is Linux-only and manages one explicit domain at a time through the [Porkbun v3 API](https://porkbun.com/llms/dns).
-It is separate from the machine resolver configured by `setup system`.
-
-### Credentials
-
-Provision `~/.local/share/dotfiles/porkbun.env` as a regular, non-symlink file owned by your user with mode `0600`.
-It must contain exactly two unquoted assignments: `PORKBUN_API_KEY=value` and `PORKBUN_API_SECRET_KEY=value`, using Porkbun-issued values.
-No spaces, comments, blank lines, `export`, or shell expressions are accepted; one ending newline is allowed.
-
-Create credentials in the [account dashboard](https://porkbun.com/account/api) and enable API access for the domain; keep key values out of shell history and command arguments.
-Set restrictive permissions before editing and avoid plaintext editor backups.
-The command reads the file without evaluating shell code, decrypting, or using a credential fallback, and refuses root/sudo execution.
-
-If the `porkbun.env` manifest entry has ciphertext, provision it with `dctl secrets decrypt porkbun.env`.
-Use `dctl secrets sync` for encrypted synchronization; sync covers the whole manifest, and adding an entry alone creates neither ciphertext nor an identity.
-
-### Commands and record fields
+Porkbun commands change remote DNS records, not the machine's resolver.
+They require an explicit domain and refuse root/sudo execution.
 
 ```sh
 dctl porkbun check <domain>
 dctl porkbun list <domain>
-dctl porkbun create <domain> <name> <type> <content> [--ttl N] [--prio N] [--dry-run]
-dctl porkbun edit <domain> <id> --content VALUE [--ttl N] [--prio N] [--dry-run]
-dctl porkbun delete <domain> <id> [--dry-run]
+dctl porkbun create <domain> <name> <type> <content>
+dctl porkbun edit <domain> <id> --content VALUE
+dctl porkbun delete <domain> <id>
 ```
 
-Domains are lowercase ASCII without a scheme, path, or trailing dot; use punycode for internationalized names.
-Create names are relative lowercase subdomains; `@` or an empty name means the root, and wildcard names such as `'*'` need shell quoting.
-List returns fully qualified names and record IDs; take edit/delete IDs from the list for that domain.
-IDs are positive decimal numbers without signs or leading zeros.
+### Credentials
 
-Writes support A, AAAA, CNAME, TXT, MX, and SRV only, with content in Porkbun's format.
-Omitted create TTL or `--ttl 0` uses the account minimum; `--prio` applies only to MX/SRV, ranges from 0 to 65535, and defaults to zero on create.
+Credentials are read as data, never evaluated as shell code.
+Keep values out of shell history and editor backups.
+
+1. Create credentials in the [Porkbun dashboard](https://porkbun.com/account/api).
+2. Enable API access for the domain.
+3. Provision `~/.local/share/dotfiles/porkbun.env` as a user-owned regular file.
+   - Mode must be `0600`; symlinks are refused.
+   - Use exactly two unquoted assignments; no comments, blanks, or shell expressions:
+
+     ```text
+     PORKBUN_API_KEY=value
+     PORKBUN_API_SECRET_KEY=value
+     ```
+
+- Dctl does not decrypt credentials automatically.
+- Restore ciphertext-backed credentials with `dctl secrets decrypt porkbun.env`.
+
+### Record fields
+
+Use the domain's listed record IDs for edits and deletion.
 Edit preserves name, type, notes, and omitted TTL/priority fields.
 
-Duplicate name/type/content/priority is refused even when TTL differs; distinct values can coexist, and an already-matching edit reports unchanged.
+- Use lowercase ASCII/punycode domains, without scheme, path, or trailing dot.
+- Create relative lowercase subdomains; `@` or empty means the root.
+  - Quote wildcard names such as `'*'`.
+- Use positive decimal IDs, without signs or leading zeros.
+- Supported types are A, AAAA, CNAME, TXT, MX, SRV; content uses Porkbun's format.
+- Set `--ttl N` in seconds; omitted create TTL or zero uses the account minimum.
+- Set `--prio N` for MX/SRV only, 0–65535; create defaults to zero.
+- Duplicate name/type/content/priority is refused even if TTL differs.
 
 ### Consent and uncertain outcomes
 
-Writes show current and proposed state and require a default-no TTY confirmation unless global `--yes` is supplied.
-JSON or non-TTY writes require `--yes`; `--plain` still permits TTY confirmation.
+Writes preview the change, recheck state after consent, and verify API readback.
+These checks do not prove public DNS propagation or prevent all concurrent changes.
 
-Dry runs need no consent: create sends `dryRun=true` and requires `wouldSucceed=true` without a record ID, while edit/delete only preview locally without proving mutation permission.
-`check` tests authentication, DNS readability, authority evidence, and a create dry-run for `_dctl-check`, not live writes.
-
-Preflight requires matching domain metadata with `notLocal=0` and warning-free API responses; missing evidence or provider warnings block writes.
-This is API authority evidence, not independent DNS resolution.
-After consent, it refreshes authority and records and refuses a changed target or new duplicate before sending one mutation.
-
-Readback verifies the intended state or absence by ID, including preserved edit fields, but does not prove public DNS propagation.
-Concurrent changes remain possible between requests, and exact content comparison can make provider-normalized results uncertain.
-A failed mutation response or failed/mismatched readback returns nonzero; inspect `list` before retrying because there is no automatic mutation retry or rollback.
+- TTY writes ask default **No**; global `--yes` grants consent.
+  - JSON/non-TTY writes require `--yes`; `--plain` still permits TTY consent.
+- `--dry-run` needs no consent.
+  - Create asks the provider to validate; edit/delete preview locally only.
+- `check` tests authentication, authority evidence, and a create dry-run.
+  - It does not prove live-write permission.
+- Provider warnings, missing authority evidence, or changed targets block writes.
+- Failed mutation/readback can mean the change succeeded despite a nonzero exit.
+  - Inspect `list` before retrying; there is no automatic retry or rollback.
 
 ## Repos
+
+Repository management runs through setup and update, with no standalone repos command.
+Setup clones missing repositories; update only fast-forwards eligible checkouts.
 
 ```sh
 dctl setup repos
 dctl update repos
 ```
 
-Run as your normal user; `setup repos` reads `packages/repos.lst` in clone order, with one `owner/name path` pair per line, and clones missing directories over GitHub SSH.
-The repository must be a GitHub `owner/name`, and the path must start with `~/` or `/`.
-Existing directories are not replaced, and setup checks their origin URLs.
-Clones use a hidden sibling directory and move into place only after success; failed clones leave no checkout or temporary clone.
-A broken checkout is manual work: move it aside, then rerun `dctl setup repos`.
+- Catalog: `packages/repos.lst`, in clone order, with one entry per line:
 
-`update repos` fast-forwards branches with configured upstreams and no tracked changes; untracked files are not included in the dirty check.
-It skips both `~/dotfiles` and the `DOTFILES` checkout and reports dirty, detached, ahead, diverged, or upstream-less repositories without merging them.
-Absent repositories produce one summary line directing you to `dctl setup repos`; broken checkouts are failures.
+  ```text
+  owner/name ~/destination
+  ```
+
+- Destinations start with `~/` or `/`; existing directories are never replaced.
+- Setup checks checkout roots/origins and fetches full history for shallow dotfiles.
+  - No manual unshallow step is needed after installation.
+- Update skips both `~/dotfiles` and the `DOTFILES` checkout.
+- Tracked changes, detached HEAD, no upstream, ahead/diverged branches prevent merging.
+  - Untracked files are excluded from the dirty check.
+- Missing repositories need setup; broken checkouts need manual repair.
+  - Move a broken checkout aside, then rerun `dctl setup repos`.
 
 ## Environment
 
-`DOTFILES` overrides the checkout root, which must contain `AGENTS.md`.
-Without it, root discovery uses `~SUDO_USER/dotfiles` under sudo and `$HOME/dotfiles` otherwise.
-The override does not change the home directory used for user targets; run user commands as the owning user.
+Root discovery locates the checkout without changing user-target ownership.
+Run user commands as the owning user.
+
+- `DOTFILES` overrides the checkout root, which must contain `AGENTS.md`.
+- Default under sudo: `~SUDO_USER/dotfiles`; otherwise: `$HOME/dotfiles`.
 
 ## Manual hardware acceptance
 
-These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
+These checks require the Framework Desktop and real YubiKeys.
+The VM cannot prove hardware enrollment, boot-code stability, or recovery access.
 
-- [ ] Before installation, confirm the firmware is in Setup Mode after erasing Secure Boot settings and the TPM is enabled.
-- [ ] Before TOTP enrollment, confirm the boot screen says **Boot TOTP not set up yet**.
-- [ ] After enrollment and TOTP sealing, confirm Secure Boot is enforced with only your own keys and `dctl setup --status luks secureboot totp` shows OK.
-- [ ] Confirm Boot TOTP matches the authenticator across two reboots to check PCR 0 stability.
-- [ ] Confirm `NO BOOT TOTP` appears with Secure Boot off, then re-enable it and investigate any remaining mismatch before [resealing](#secure-boot).
-- [ ] Confirm the TOTP hook never delays LUKS unlock.
-- [ ] Insert each YubiKey separately before boot and unlock LUKS with one `LUKS2 token PIN` prompt and no touch.
-- [ ] Confirm a token error falls back to the passphrase or recovery-key prompt without a locked emergency shell.
-- [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
-- [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
-- [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.
-- [ ] Pass `dctl secrets verify-phrase` and rehearse secret recovery without a YubiKey.
-- [ ] Confirm `nmcli device status` shows no Wi-Fi interface.
-- [ ] Confirm `bluetoothctl list` shows a Bluetooth controller, then pair and use a device.
-- [ ] Confirm `journalctl -k -b` has no firmware load errors with `linux-firmware-{amd,amdgpu,mediatek,realtek}` installed.
+1. Confirm Setup Mode and TPM enablement before enrollment.
+2. Before TOTP sealing, confirm the boot screen reports **Boot TOTP not set up yet**.
+3. After enrollment, confirm own-key enforcement and setup status:
+
+   ```sh
+   dctl setup --status luks secureboot totp
+   ```
+
+4. Compare boot TOTP with the authenticator across two reboots.
+5. Check each YubiKey separately before boot: one PIN prompt, no touch.
+6. With both keys removed, unlock using the paper recovery key.
+7. Decrypt secrets with each key separately, then rehearse phrase recovery.
+8. Check network and Bluetooth devices:
+
+   ```sh
+   nmcli device status
+   bluetoothctl list
+   ```
+
+   - Expect no Wi-Fi interface; pair and use a Bluetooth device.
+
+9. Inspect kernel logs for firmware-load errors:
+
+   ```sh
+   journalctl -k -b
+   ```
+
+- Confirm token errors fall back to passphrase/recovery without an emergency shell.
+- Confirm the TOTP hook does not delay LUKS unlock.
+- With Secure Boot off, expect **NO BOOT TOTP**; restore enforcement before proceeding.
+  - Investigate any remaining mismatch before resealing.
+- Avoid repeated wrong PINs that can block a key; cancel age-phrase fallback in key tests.
+
+> _See [Secure Boot](#secure-boot) for investigation and explicit resealing._

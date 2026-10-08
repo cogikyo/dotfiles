@@ -107,94 +107,122 @@
 
 </details>
 
+<a id="installation"></a>
+
 ## 🛠️ Installation
 
-The dctl ISO installs Arch and these dotfiles offline onto the Framework Desktop, with LUKS2, btrfs, Snapper, and Limine.
-After the first login, setup makes the system work, then asks separately before it locks it down.
-The [dctl guide](cmds/cmd/dctl/README.md) explains each command in detail.
+This system is built specifically for the Framework Desktop (AMD Strix Halo, Ethernet only).
+
+- Offline Arch ISO: installs the base system and dotfiles without a network.
+- LUKS2 and YubiKey unlock: encrypts the disk; keeps passphrase and paper recovery options.
+- btrfs with Snapper: keeps root snapshots for recovery and manual rollback.
+- Limine and unified kernel images (UKIs): supports signed boot images and snapshot boot.
+- Own-key Secure Boot and TPM-sealed TOTP: adds signatures and boot-state evidence.
+- Two-phase setup: makes the desktop work before asking separately to lock it down.
+
+> _See the [dctl guide](cmds/cmd/dctl/README.md) for commands and recovery._
+
+There is no model check, but this system is only tested on that machine.
+AMD packages, no Wi-Fi packages, NVMe selection, and firmware menus limit portability.
 
 > [!CAUTION]
-> `dctl iso usb` erases the whole USB disk, and `dctl install` erases the whole target disk.
+>
+> `dctl iso usb` erases the whole **USB**.
+> `dctl install` erases the whole **target drive**.
+
+```text
+ISO ─▶ USB ─▶ firmware prep ─▶ install ─▶ reboot
+  ┌─────────────────────────────────────────┘
+  ▼
+phase 1 ─▶ lock confirmation ─▶ luks ─▶ secureboot ─▶ reboot
+  ┌─────────────────────────────────────────────────────┘
+  ▼
+totp ─▶ reboot and compare
+```
 
 ### 1. Get the ISO
 
-Download the ISO with its `.sha256` and `.sha256.sig` files from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build and publish one from an existing Arch machine:
+Download the ISO with its `.sha256` and `.sha256.sig` files from [Releases](https://github.com/cogikyo/dotfiles/releases/latest).
+
+Or build a new one on an existing Arch machine:
 
 ```sh
 dctl iso build
 dctl iso test
-git push
-dctl iso release
+dctl iso release # optional
 ```
 
-The build needs a clean, committed `master`, and the release signs the checksum with a YubiKey.
-See [ISO](cmds/cmd/dctl/README.md#iso) for requirements and test overrides.
+- Build from a clean, committed `master`.
+- USB writing needs signed checksums; release signs them before offering to publish.
+
+> _See [ISO](cmds/cmd/dctl/README.md#iso) for requirements and test overrides._
 
 ### 2. Write the USB
+
+Writing verifies the signed checksum and requires typed device-path consent.
+Add `--iso /path/to/dotfiles-REV.iso` for a downloaded ISO.
 
 ```sh
 dctl iso usb /dev/sdX
 ```
 
-Add `--iso /path/to/dotfiles-REV.iso` for a downloaded ISO.
-The command checks the signed checksum against `share/allowed_signers`, then asks you to type the device path.
-
 ### 3. Prepare the Framework
 
-Back up the internal disk if it has data.
-Put the firmware in Setup Mode before installing: F2 → **Erase all Secure Boot Settings** → F10 to save.
-Leave the TPM enabled.
+Prepare the firmware now to avoid another visit during security enrollment.
+
+1. Back up any data on the internal disk.
+2. Press F2 and choose **Erase all Secure Boot Settings** to enter Setup Mode.
+3. Leave the TPM enabled and press F10 to save.
 
 ### 4. Install
 
-Press F12 and choose the USB in UEFI mode; `dctl install` starts on tty1.
-Enter the login password for `cullyn`, the timezone, and the LUKS passphrase, then confirm `Erase <disk> and install?`.
-Output runs through prepare, disk consent, install steps, unmount, and summary.
-At the summary, remove the USB and reboot.
+The installer creates the encrypted system and desktop from bundled packages.
+
+1. Press F12 and choose the USB in UEFI mode; the ISO starts the installer on tty1.
+2. Enter the login password for `cullyn`, the timezone, and the disk passphrase.
+3. Check the selected disk before confirming **Erase `<disk>` and install?**.
+4. At the completed summary, remove the USB and reboot.
 
 ### 5. First login
 
-Unlock LUKS with the passphrase, log in through SDDM, and connect Ethernet.
-Insert a YubiKey, then run:
+Unlock with the passphrase, log in, connect Ethernet, and insert a YubiKey.
 
 ```sh
 dctl setup
-git -C ~/dotfiles fetch --unshallow
 ```
 
-Phase 1, **make it work**, runs system → network → packages → home → extra → secrets → ssh → repos → firefox → certs.
-Setup shows a plan, asks once to run pending work, and uses sudo for root stages.
-Extra packages run in the background with output in `~/.local/state/dctl/extra.log`; secrets use the PIV PIN or recovery phrase.
-The first Ctrl+C stops new stages and waits for the background package work to finish; a second press sends SIGINT.
-Tailscale and VPN are optional and run only when named: `dctl setup tailscale` or `dctl setup vpn`.
-Tailscale login shows a QR code; it does not open a browser.
-When an SSH key is first used, the keyring asks for its passphrase; choose the option to unlock it automatically at login.
-Setup creates the Firefox Developer Edition profile if needed; quit Firefox if it asks, then rerun `dctl setup firefox certs`.
-Restart Firefox after customization.
+Phase 1, **make it work**, then runs:
 
-Zsh prints the next setup action as `dctl · …` at shell start.
-Follow that hint until setup is complete.
+1. Check system services and Ethernet/DNS (`system`, `network`).
+2. Apply packages and home settings (`packages`, `home`).
+3. Install extra applications in the background (`extra`).
+4. Restore secrets, SSH access, and repositories (`secrets`, `ssh`, `repos`).
+5. Set up Firefox and local certificates (`firefox`, `certs`).
+
+Setup asks you to accept the plan; zsh prints the next action as `dctl · …`.
+
+> _See [Setup](cmds/cmd/dctl/README.md#setup) for stages and first-login details._
 
 ### 6. YubiKeys, Secure Boot, and boot TOTP
 
-If a YubiKey still needs its PINs and age identity, run `dctl keys enroll` with only that key inserted.
-Repeat for the other key, then continue with `dctl setup` as your normal user.
+Phase 2, **lock it down**, secures the system after a separate confirmation.
+Run setup as the normal user; `--yes` never accepts the lock confirmation.
 
-Phase 2, **lock it down**, waits until every required phase-1 stage is OK and asks **Everything works. Lock it down now? YubiKeys, then Secure Boot**.
-`--yes` never gives this confirmation.
-Direct `sudo dctl setup` runs of `luks`, `secureboot`, or `totp` bypass the plan and lock confirmation; use the user flow for first setup.
+1. Enroll both YubiKeys for disk unlock and save the recovery key onto paper.
+2. Enroll the Secure Boot keys, then reboot with a YubiKey inserted.
+3. Once Secure Boot is enforced, run setup again to seal and verify the boot TOTP.
+4. Reboot and compare the boot code with the authenticator before unlocking.
 
-1. The `luks` stage enrolls both YubiKeys, one at a time, with a FIDO2 PIN and no touch; it keeps the disk passphrase.
-2. Write the recovery key on paper, keep it away from the machine, and confirm the copy when asked.
-3. The `secureboot` stage enrolls only your own keys and signs the boot images; stop if it reports option ROMs or a missing TPM event log.
-4. Reboot with a YubiKey inserted; if Secure Boot is still off, enable it with F2 and save with F10.
-5. Run `dctl setup` again for `totp`, scan the QR code into your authenticator, and enter its code to verify it before the boot images are rebuilt.
-6. Reboot and compare the boot TOTP with the authenticator before entering the LUKS PIN or passphrase.
+After enrollment, a missing or wrong boot code means **do not unlock**.
+Investigate before resealing.
 
-If Setup Mode was not prepared before installation, follow the `secureboot` firmware action and rerun `dctl setup`.
-Use a plain TTY for TOTP enrollment, or clear terminal scrollback afterward.
-Before enrollment, the boot screen says **Boot TOTP not set up yet**.
-After enrollment, a missing or wrong code means **do not unlock**; investigate before [resealing](cmds/cmd/dctl/README.md#secure-boot).
-Then work through the [hardware checklist](cmds/cmd/dctl/README.md#manual-hardware-acceptance).
+> _See [Secure Boot](cmds/cmd/dctl/README.md#secure-boot) for the lock procedure._
+> _See [hardware acceptance](cmds/cmd/dctl/README.md#manual-hardware-acceptance) for real-machine checks._
 
-For daily upgrades, run `update`; see [Update](cmds/cmd/dctl/README.md#update).
+### Day-to-day use
+
+```sh
+dctl update --only {scope}
+```
+
+> _See [Update](cmds/cmd/dctl/README.md#update) for upgrades and package reconciliation._
