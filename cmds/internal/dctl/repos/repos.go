@@ -3,6 +3,10 @@ package repos
 import (
 	"bufio"
 	"context"
+	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/ui"
 	"errors"
 	"fmt"
 	"io"
@@ -14,11 +18,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/setup"
-	"dotfiles/cmds/internal/ui"
 
 	"golang.org/x/sys/unix"
 )
@@ -404,6 +403,22 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 				return setup.Manual("%s", strings.Join(moves, "\n"))
 			}
 			return nil
+		},
+	}, {
+		Name: "repos-history",
+		Check: func(ctx context.Context) error {
+			shallow, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "--is-shallow-repository")
+			switch {
+			case err != nil:
+				return err
+			case shallow == "true":
+				return errors.New("dotfiles has only the commit the ISO installed")
+			}
+			return nil
+		},
+		Fix: func(ctx context.Context) error {
+			fetch := execx.Reason(run, "fetch the history the ISO left out")
+			return fetch.Run(ctx, root.Dotfiles, "git", "fetch", "--unshallow", "--progress")
 		},
 	}}}
 }
