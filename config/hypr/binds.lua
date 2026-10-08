@@ -1,10 +1,12 @@
 -- stylua: ignore start
+local device
+
 local function bind(keys, description, action)
 	if type(action) == "string" then
 		action = hl.dsp.exec_cmd(action)
 	end
 
-	hl.bind(keys, action, { description = description })
+	hl.bind(keys, action, { description = description, device = device })
 end
 
 local function super(keys, description, action)
@@ -15,39 +17,32 @@ local function alt(keys, description, action)
 	bind("ALT + " .. keys, description, action)
 end
 
+local function keyboard(scope, binds)
+	device = scope
+	binds()
+	device = nil
+end
+
+local svalboard = {
+	list = {
+		"svalboard-lightly",
+		"svalboard-lightly-keyboard",
+		"svalboard-lightly-system-control",
+		"svalboard-lightly-consumer-control",
+	},
+}
+local corne = { inclusive = false, list = svalboard.list }
+
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ hyprd focus control                                                           │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
--- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
-super("B", "Workspace 1 (misc)",     "hyprd ws 1")
-super("C", "Workspace 2 (chat)",     "hyprd ws 2")
-super("D", "Workspace 3 (work)",     "hyprd ws 3")
-super("H", "Workspace 4 (personal)", "hyprd ws 4")
-super("M", "Workspace 5 (dotfiles)", "hyprd ws 5")
-super("K", "Workspace 6 (music)",    "hyprd ws 6")
-
-super("equal",     "Focus right", hl.dsp.focus({ direction = "right" }))
-super("backslash", "Focus left",  hl.dsp.focus({ direction = "left" }))
-
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
 alt("A", "Editor",  "hyprd three-body editor")
-super("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
-super("Backspace",     "Toggle shadow",  "hyprd three-body shadow")
-super("Period",        "Swap master",    "hyprd swap")
-super("Return",        "Toggle monocle", "hyprd monocle")
-super("Comma",         "Split narrow",   "hyprd split narrow")
-super("SHIFT + Comma", "Split wide",     "hyprd split wide")
-
--- ├┤ left window tabs ├───────────────────────────────────────────────────────────┤
-super("A", "Left tab 1", "hyprd tab left:1")
-super("S", "Left tab 2", "hyprd tab left:2")
-super("E", "Left tab 3", "hyprd tab left:3")
-super("T", "Left tab 4", "hyprd tab left:4")
-super("G", "Left tab 5", "hyprd tab left:5")
+super("Comma", "Split narrow", "hyprd split narrow")
 
 -- ├┤ right window tabs ├──────────────────────────────────────────────────────────┤
 super("Y", "Right tab 1", "hyprd tab right:1")
@@ -66,17 +61,12 @@ super("SHIFT + O", "Toggle right group 3", "hyprd tab right:3 group")
 
 -- ├┤ core conrols ├───────────────────────────────────────────────────────────────┤
 super("X", "Close active window", hl.dsp.window.close())
-super("SHIFT + X", "Force kill window", "hyprctl kill")
 super("F", "Toggle floating",    "hyprd float")
 super("V", "Screen share mode",   "hyprd share")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 
 hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
 hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
-
--- ├┤ move window focus ├──────────────────────────────────────────────────────────┤
-super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
-super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
 
 -- ├┤ move windows ├───────────────────────────────────────────────────────────────┤
 super("Left",  "Move window left",    hl.dsp.window.move({ direction = "left" }))
@@ -90,17 +80,7 @@ super("End",   "Move workspace up",   "hyprd ws up")
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("P", "App Launcher",    "hyprlauncher")
-super("J", "Layout Launcher", "hyprd picker open")
-super("U", "Keymap viewer", function()
-	for _, window in ipairs(hl.get_windows()) do
-		if window.class == "chrome-127.0.0.1__-Default" then
-			hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
-			return
-		end
-	end
-	hl.dispatch(hl.dsp.exec_cmd("chromium --app=http://127.0.0.1:42070/"))
-end)
+super("P", "App Launcher", "hyprlauncher")
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")
@@ -126,7 +106,7 @@ local display = "ddcutil --bus 8 --noverify"
 local terminal = "kitty --title terminalfloat -e"
 
 local function locked(keys, command)
-	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true })
+	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true, device = device })
 end
 
 locked("XF86AudioPlay",                  player .. " play-pause")
@@ -169,5 +149,80 @@ end)
 
 hl.define_submap("lockbarrier", function()
 	hl.bind("catchall", hl.dsp.no_op())
+end)
+
+-- ╭───────────────────────────────────────────────────────────────────────────────╮
+-- │ svalboard                                                                     │
+-- ╰───────────────────────────────────────────────────────────────────────────────╯
+
+keyboard(svalboard, function()
+	super("B", "Workspace 1 (misc)",     "hyprd ws 1")
+	super("C", "Workspace 2 (chat)",     "hyprd ws 2")
+	super("D", "Workspace 3 (work)",     "hyprd ws 3")
+	super("H", "Workspace 4 (personal)", "hyprd ws 4")
+	super("M", "Workspace 5 (dotfiles)", "hyprd ws 5")
+	super("K", "Workspace 6 (music)",    "hyprd ws 6")
+
+	super("equal",     "Focus right", hl.dsp.focus({ direction = "right" }))
+	super("backslash", "Focus left",  hl.dsp.focus({ direction = "left" }))
+	super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
+	super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
+
+	super("R",             "Browser",        "hyprd three-body browser")
+	super("Backspace",     "Toggle shadow",  "hyprd three-body shadow")
+	super("Period",        "Swap master",    "hyprd swap")
+	super("Return",        "Toggle monocle", "hyprd monocle")
+	super("SHIFT + Comma", "Split wide",     "hyprd split wide")
+
+	super("A", "Left tab 1", "hyprd tab left:1")
+	super("S", "Left tab 2", "hyprd tab left:2")
+	super("E", "Left tab 3", "hyprd tab left:3")
+	super("T", "Left tab 4", "hyprd tab left:4")
+	super("G", "Left tab 5", "hyprd tab left:5")
+
+	super("SHIFT + X", "Force kill window", "hyprctl kill")
+	super("J",         "Layout Launcher",   "hyprd picker open")
+	super("U",         "Keymap viewer", function()
+		for _, window in ipairs(hl.get_windows()) do
+			if window.class == "chrome-127.0.0.1__-Default" then
+				hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
+				return
+			end
+		end
+		hl.dispatch(hl.dsp.exec_cmd("chromium --app=http://127.0.0.1:42070/"))
+	end)
+end)
+
+-- ╭───────────────────────────────────────────────────────────────────────────────╮
+-- │ corne                                                                         │
+-- ╰───────────────────────────────────────────────────────────────────────────────╯
+
+keyboard(corne, function()
+	super("A", "Workspace 1 (misc)",     "hyprd ws 1")
+	super("S", "Workspace 2 (chat)",     "hyprd ws 2")
+	super("E", "Workspace 3 (work)",     "hyprd ws 3")
+	super("T", "Workspace 4 (personal)", "hyprd ws 4")
+	super("D", "Workspace 5 (dotfiles)", "hyprd ws 5")
+	super("G", "Workspace 6 (music)",    "hyprd ws 6")
+
+	alt("S", "Focus left",  hl.dsp.focus({ direction = "left" }))
+	alt("T", "Focus right", hl.dsp.focus({ direction = "right" }))
+
+	alt("R",                      "Browser",        "hyprd three-body browser")
+	alt("Backspace",              "Toggle shadow",  "hyprd three-body shadow")
+	alt("Z",                      "Swap master",    "hyprd swap")
+	alt("SHIFT + Z",              "Split wide",     "hyprd split wide")
+	bind("CTRL + SHIFT + Escape", "Toggle monocle", "hyprd monocle")
+
+	super("K", "Force kill window", "hyprctl kill")
+	super("H", "Layout Launcher",   "hyprd picker open")
+
+	super("SHIFT + S", "Screenshot to clipboard", "hyprd screenshot")
+	super("SHIFT + B", "Screenshot + annotate",   "hyprd screenshot annotate")
+	super("SHIFT + P", "Screen share mode",       "hyprd share")
+
+	locked("SUPER + SHIFT + H",      player .. " play-pause")
+	locked("SUPER + SHIFT + Period", player .. " previous")
+	locked("SUPER + SHIFT + Comma",  player .. " next")
 end)
 -- stylua: ignore end
