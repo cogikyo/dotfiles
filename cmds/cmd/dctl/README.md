@@ -12,7 +12,7 @@ dctl <command> --help
 
 - `--json` emits structured results where supported.
 - `--plain` disables colors and animation.
-- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but never confirms erasing a disk.
+- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but never confirms erasing a disk or setup's lock phase.
 
 Bare `dctl` prints help.
 Streamed child output goes to stderr so JSON results can use stdout.
@@ -33,13 +33,16 @@ It shows the path, model, size, and identity, asks a default-no yes/no question 
 
 Installation uses bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs.
 The subvolumes are `@` for `/`, `@home` for `/home`, `@log` for `/var/log`, `@pkg` for `/var/cache/pacman/pkg`, and `@snapshots` for `/.snapshots`.
-It configures Snapper and Limine, installs prebuilt commands in `~/.local/bin/`, and applies `setup system packages` as root and `setup home` as `cullyn` in the chroot.
+It configures Snapper and Limine and installs prebuilt commands in `~/.local/bin/`.
+In the chroot, it runs `dctl setup --batch=force system packages` as root and `dctl setup --batch=force home` as `cullyn`.
+Output sections run through prepare → disk (erase consent) → install steps → unmount → summary.
+The summary tells you to reboot, log in, and run `dctl setup`.
 
 The ISO bundle contains only the `master` tip, and the installed `~/dotfiles` is shallow.
 Restore history once online with `git -C ~/dotfiles fetch --unshallow`, as shown in [Installation](../../../README.md#installation).
 
-The installer always installs without Secure Boot, never enrolls keys, and does not need Setup Mode.
-Set up [Secure Boot](#secure-boot) after the first boot.
+The installer never enrolls Secure Boot keys and does not require Setup Mode.
+Prepare Setup Mode before installation to avoid another firmware step during [setup](#secure-boot).
 
 A failure during the write/install phase reports that the disk has been modified and installation is incomplete; there is no automatic rollback.
 
@@ -63,48 +66,82 @@ Keep the old `@` until the restored system boots successfully.
 ```sh
 dctl setup
 dctl setup home firefox
-dctl setup --all
+dctl setup --from firefox
 dctl --json setup --status
 ```
 
-Run as your normal user; stages run in catalog order, regardless of the order of names on the command line.
+Run as your normal user.
 Consecutive root stages share one sudo child; user stages run in your session.
 User stages refuse root execution.
 
-- No names: show one plan and ask once before applying pending stages.
-- Named stages: reapply their items without a setup confirmation, including items that already look done.
-- `--all` or global `--yes`: show the plan and apply pending stages without asking.
-- `--status`: check without changing anything and return nonzero for pending or failed items.
+- No names: show the full plan and ask once to run pending phase-1 work.
+- Named stages: show a plan and ask to redo those stages and pull in unfinished needs, marked `needed by X`.
+- `--from <name>`: redo that stage and everything after it, with optional stages included only when named.
+- `--yes`: accept the plan confirmation, but leave lock work for a run without `--yes`.
+- `--status`: report without changes; pending or failed items and recorded dependency blocks return nonzero.
 
-Applied items are checked again.
-A successful apply run reports `setup complete`, or `setup complete with deferred` when only manual work remains.
-Failures report `setup failed`; unresolved pending or unknown items also fail an apply run.
-Sudo refusal marks root stages failed with `sudo refused; nothing applied as root`; a status-only run leaves them `unknown`.
-Manual and unknown items alone do not fail the status check, so inspect their details.
+There is no setup `--all` flag.
+Applied items are checked again, and the summary gives the next action.
+Manual (`FIX`), deferred (`LATER`), or unknown items alone do not fail a status check, so inspect the rows even when it exits 0.
 Cancellation exits 130.
-JSON results are an array of stages with `stage`, `state`, and `items`; each item has `item`, `state`, and optional `detail`.
+JSON results contain `stage`, `state`, optional `wait`, and `items`; each item has `item`, `state`, and optional `detail`.
+
+Setup has two phases: **make it work**, then **lock it down**.
+Pending lock stages show `WAIT` until every non-optional phase-1 stage is OK; running them needs a separate confirmation: **Everything works. Lock it down now? YubiKeys, then Secure Boot**.
+Naming a lock stage, such as `dctl setup luks`, pulls in unfinished phase-1 work and still needs this separate confirmation.
+Lock work runs luks → secureboot → reboot → totp → reboot and compare the code.
+
+**`sudo dctl setup <root stages>` runs the named root stages directly, with no plan, dependency pull-in, or lock confirmation.**
+This includes `luks`, `secureboot`, and `totp`; root execution still checks each stage's own conditions.
+
+| Pill  | Meaning                 |
+| ----- | ----------------------- |
+| OK    | Done                    |
+| TODO  | Work to run             |
+| FIX   | Manual action           |
+| LATER | Reboot or firmware step |
+| OPT   | Runs only when named    |
+| WAIT  | Needs earlier work      |
+| ERR   | Failed or unknown       |
+
+`ASK` marks a prompt answer, and `RUN` marks a command.
+Captured commands show `OUTPUT` / `END OF OUTPUT` blocks only when they print something; interactive commands open a block before handing over the terminal.
+
+A full `dctl setup` run saves its next-action hint in `${XDG_STATE_HOME:-~/.local/state}/dctl/next` and removes it when everything is done.
+The installer seeds `run dctl setup` at the default path, `~/.local/state/dctl/next`.
+Zsh prints it as `dctl · …` at shell start.
 
 ### Stages and prerequisites
 
-Catalog order is execution order:
+Catalog order is execution order, regardless of the order of names on the command line.
 
-- `system` copies `system/`, enables preset-listed system units without starting them, and links the systemd-resolved stub (root).
-- `tailscale` enables Tailscale SSH and logs in if needed (root, online).
-- `packages` checks base, AUR, and local payload names and installs missing official packages (root, online).
-- `home` links config, fonts, public SSH keys, desktop entries, and user units, creates directories, and seeds app settings.
-- `extra` installs missing `packages/extra.lst` entries online in the background and enables Docker's socket without starting it.
-- `secrets` restores missing non-staged targets and corrects their modes.
-- `repos` clones missing catalog repositories over GitHub SSH (online).
-- `firefox` links customization into the Developer Edition profile and needs the CSS repository from `repos`.
-- `certs` provisions mkcert's CA and leaf certificate and checks system and Firefox trust.
-- `vpn` defers missing connections unless named with `dctl setup vpn`, which decrypts and imports profiles and removes newly staged plaintext even after failure.
-- `keys` adds a LUKS FIDO2 token and recovery key if missing, but does not provision YubiKey identities (root).
-- `secureboot` enrolls keys in Setup Mode or repairs signatures using enrolled keys (root).
+| Stage      | Needs                       | Work                        |
+| ---------- | --------------------------- | --------------------------- |
+| system     | —                           | Overlay and services        |
+| network    | —                           | Ethernet and DNS            |
+| packages   | system, network             | Base, AUR, local packages   |
+| home       | packages                    | Links and fonts             |
+| extra      | home, network               | Apps in the background      |
+| secrets    | system                      | PIV PIN or recovery phrase  |
+| ssh        | secrets, network            | SSH access to GitHub        |
+| repos      | ssh                         | Clone repositories          |
+| firefox    | packages                    | Profile and config          |
+| certs      | firefox                     | Local CA and certificates   |
+| tailscale  | network                     | Optional login and SSH      |
+| vpn        | secrets                     | Optional work VPN import    |
+| luks       | All required phase-1 stages | Both YubiKeys and recovery  |
+| secureboot | luks                        | Keys and signed boot images |
+| totp       | secureboot                  | Seal the boot TOTP          |
 
-Setup checks Ethernet carrier and DNS for `archlinux.org`, `aur.archlinux.org`, and `github.com` once, just before the first pending online stage.
-If the check fails, it prints one action line, marks remaining pending online stages `failed` with `needs network`, and exits 1 after running offline stages such as `secrets`.
-Launch Firefox Developer Edition once if `firefox` or `certs` reports a missing profile or NSS database.
-After applying Firefox customization, restart Firefox.
+Phase 1 ends at `certs`; `tailscale` and `vpn` are optional, and the last three stages are phase 2.
+Root stages are `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`; `certs` needs sudo from your user session.
+The `network` stage checks carrier and DNS for `archlinux.org`, `aur.archlinux.org`, and `github.com` and offers **Retry** or **Skip online steps** on failure.
+Stages that need failed work wait; independent stages such as `secrets` can still run.
+
+`dctl setup tailscale` uses `tailscale up --ssh --qr` for login; scan with a phone logged in to Tailscale, without opening a browser on this machine.
+`dctl setup vpn` decrypts and imports profiles, then removes newly staged plaintext even after failure.
+The `firefox` stage creates a missing Developer Edition profile; quit Firefox if asked, then rerun it.
+Firefox CSS still needs the repository from `repos`; restart Firefox after customization.
 
 `setup packages` installs missing official packages with `pacman -Syu --noconfirm --needed`, so installation includes a full upgrade rather than a partial upgrade.
 It has no package checklist and does no upgrade when no official packages are missing.
@@ -115,7 +152,7 @@ When extra packages are missing, `extra` runs a full `pacman -Syu` before instal
 It validates sudo before starting, keeps the credential active, and uses non-interactive sudo (`-n`) in the background.
 Output goes to `~/.local/state/dctl/extra.log`; failures show the last 20 log lines.
 Setup waits for `extra` before later root work, before `certs`, and at the end.
-The first Ctrl+C stops scheduling and waits for `extra` to finish safely; a second press sends SIGINT.
+The first Ctrl+C stops scheduling and waits for `extra` to finish; a second press sends SIGINT.
 Setup never sends SIGTERM or SIGKILL to pacman.
 
 The `home-fonts` item checks that `fc-list` finds Vagari and Symbols Nerd Font Mono and runs `fc-cache` if either is missing.
@@ -125,31 +162,50 @@ After changing the HOOKS file or the `sd-totp` hook, run `sudo limine-update`; k
 
 ### Secure Boot
 
-The item IDs are `secureboot-keys`, `secureboot-signed`, `secureboot-enforced`, and `secureboot-totp`.
-In Setup Mode, setup creates sbctl keys if needed, configures Limine, rebuilds and verifies boot files, and runs `sbctl enroll-keys` to enroll only your own keys, without Microsoft keys.
-Leave the TPM enabled: sbctl refuses enrollment if its eventlog shows option ROMs or is missing.
-Dctl reports that refusal and never forces enrollment; stop rather than bypassing the check.
-If enrollment needs Setup Mode, follow the [installation steps](../../../README.md#6-yubikeys-secure-boot-and-boot-totp) and rerun `sudo dctl setup secureboot`.
+Before installation, use F2 → **Erase all Secure Boot Settings** → F10 to enter Setup Mode and leave the TPM enabled.
+If enrollment checks pass but Secure Boot is off with keys dctl did not create, `secureboot` shows `LATER` with these steps.
+Run `dctl setup` as your user to retain the phase-1 gate and lock confirmation; `sudo dctl setup secureboot` bypasses both.
+
+The stage checks UEFI and Setup Mode before enrolling only your own keys with `sbctl enroll-keys`; it never adds Microsoft keys.
+It rejects nonempty `db_additions` in `/etc/sbctl/sbctl.conf` before enrollment and Microsoft certificates in KEK/db once your platform key is enrolled.
+A missing or unreadable TPM event log stops enrollment, as do measured option ROMs.
+Trusting option ROMs with `sbctl enroll-keys --tpm-eventlog` adds their hashes to db; that decision is yours, and dctl never runs it.
+In Setup Mode, dctl creates sbctl keys if needed, configures Limine, rebuilds the boot images, and verifies them before enrollment.
 
 The signed check verifies Limine and UKI signatures, rejects an embedded UKI command line, and requires a Limine entry for each UKI.
 It checks the LUKS mapping named by `rd.luks.name` and `root`, requires config enrollment, and rejects fallback `BOOTX64.EFI`.
 Keys and signatures can be done while enforcement still needs a reboot or BIOS change; use the [manual hardware checklist](#manual-hardware-acceptance) to verify completion.
 
-`secureboot-totp` is status-only and reports `manual` until a secret unseals in the current boot state; run `sudo dctl keys totp` once Secure Boot is enforced.
-The command replaces any previous secret and seals a new one to the TPM's SHA256 PCRs 0 and 7: PCR 0 measures firmware, and PCR 7 measures Secure Boot state and keys.
-It prints a QR code and an `otpauth://` URL once; scan it or enter the URL's `secret=` value into the authenticator.
-The authenticator entry is labelled with the machine's hostname.
-The authenticator can be the VivoKey Apex Flex implant read by phone NFC, a YubiKey OATH slot, or a phone TOTP app.
+After key enrollment, reboot; if Secure Boot is still off, enable it with F2 and save with F10.
+Run `dctl setup` again to run the separate `totp` stage once Secure Boot is enforced.
+It seals a secret to SHA256 PCRs 0 and 7 (firmware and Secure Boot state), shows a QR code once, and asks for your authenticator code.
+Scan the QR code or enter the `otpauth://` URL's `secret=` value; the entry uses the hostname as its label.
+Only after the code matches does dctl write `/etc/dctl/boot-totp`, rebuild and verify the boot images, and record the rebuild in `/etc/dctl/boot-totp.built`.
+Use a plain TTY or clear terminal scrollback afterward.
+Reboot again and compare the boot code before unlocking.
 
 At each boot, `sd-totp` prints `Boot TOTP <code> (Ns left)` on the console every 30 seconds until LUKS is unlocked.
-No TPM, no sealed secret, or changed PCRs produce `!!! NO BOOT TOTP: … !!!`; boot continues and the hook never delays unlock.
+Without a marker, it prints **Boot TOTP not set up yet**, unless tpm2-totp reports a changed system state.
+With a marker and an unsealing failure, or with changed system state, it prints `!!! NO BOOT TOTP: do not unlock; investigate the TPM and boot state before resealing !!!`.
+Boot continues, and the hook never delays unlock.
 Inspect `tpm2-totp` errors with `journalctl -b -u boot-totp`.
 If image creation cannot find `tpm2-totp` or its device library, it warns and omits the hook, so no boot code or warning appears.
 The code is advisory: compare it with the authenticator before entering the PIN or passphrase.
 
-`NO BOOT TOTP` is expected only before the first `dctl keys totp` or immediately after a change you made yourself: a BIOS/firmware update, turning Secure Boot off or on, or re-enrolling keys.
-In those cases, unlock, restore Secure Boot enforcement if needed, run `sudo dctl keys totp`, and replace the authenticator entry.
-At any other time, a missing or wrong code means **do not unlock**; stop and investigate.
+After enrollment, a missing or wrong code means **do not unlock**; stop and investigate.
+Changed PCR state is never resealed automatically.
+After you establish a known firmware or Secure Boot change as the cause, restore enforcement, run `sudo dctl keys totp`, and replace the authenticator entry.
+
+Setup keeps these state files under `/etc/dctl/`:
+
+| File                        | Records                            |
+| --------------------------- | ---------------------------------- |
+| `boot-totp`                 | Verified authenticator enrollment  |
+| `boot-totp.built`           | Marker used for a verified rebuild |
+| `luks-yubikeys`             | Serials enrolled for this disk     |
+| `luks-recovery.unconfirmed` | Paper copy not yet confirmed       |
+
+If a listed YubiKey no longer has a disk token, delete its line from `luks-yubikeys` before enrolling it again.
 
 The cause of `Early TPM SRK Setup failed` is not known.
 Dctl uses no systemd TPM feature, and `tpm2-totp` creates its own primary, so this unit failure does not block LUKS unlock.
@@ -169,8 +225,8 @@ dctl update repos cmd
 dctl update --only dctl,hyprd
 ```
 
-Run as your normal user; with no step names, each step shows its plan and asks `[Y/n]`.
-Enter runs it and `n` skips it.
+Run as your normal user; each step has its own section and, with no step names, asks **Run <step>?**.
+Enter accepts the selected answer (Yes by default); `n` skips the step.
 Named steps omit the per-step prompt and retain the order below.
 **Update never pulls `~/dotfiles` or the `DOTFILES` checkout**; manage that checkout yourself before rebuilding commands.
 
@@ -189,7 +245,8 @@ Steps run in this order:
 7. `rust`: run `rustup update`, or skip if rustup is absent.
 
 Failures are reported and later steps continue, but the final result is nonzero if any step failed.
-Cancellation stops the run.
+The summary lists finished and skipped steps and gives a retry command for failed steps.
+Ctrl+C stops the run and can still interrupt pacman; update does not have setup's protected background wait.
 
 ### Command and tool rebuilds
 
@@ -224,13 +281,13 @@ Esc skips the current checklist; earlier package-reason changes remain, and skip
 Firmware flashing is a manual operation outside dctl; update the BIOS only when needed.
 Reports of Framework Desktop BIOS 3.06 bricking machines are a reason to hold off.
 `fwupd` is not in the base package list.
-Follow the [expected missing-code rule](#secure-boot) when unlocking during this procedure.
+Read the [boot-TOTP warning](#secure-boot) before changing firmware; investigate a missing code before resealing.
 
 1. Install the tool with `sudo pacman -S fwupd`.
 2. Press F2 on reboot, turn Secure Boot off, and save with F10.
 3. Boot and run `fwupdmgr refresh` then `fwupdmgr update`, or use Framework's EFI USB updater.
 4. After the update, press F2, turn Secure Boot on, save with F10, and boot.
-5. Run `sudo dctl keys totp` to re-seal for the changed PCRs 0 and 7, and replace the old authenticator entry with the new secret.
+5. After confirming the planned firmware change caused the PCR change, run `sudo dctl keys totp`, verify the new authenticator code, and replace the old entry.
 
 ## ISO
 
@@ -373,7 +430,8 @@ Run `dctl secrets sync` to create its ciphertext, then retrieve it with `dctl se
 
 ## Keys
 
-Follow [Installation](../../../README.md#installation) for first enrollment with only the intended YubiKey inserted; there is no fixed key count.
+Use `enroll` for each YubiKey's identities, with only the intended key inserted.
+The `luks` setup stage needs two PIN-required, no-touch disk tokens.
 
 ```sh
 dctl keys enroll
@@ -388,12 +446,14 @@ dctl keys remove <serial>
 A forced FIDO2 PIN change is completed before always-UV is enabled; age uses the PIV PIN without touch.
 Enrollment updates age metadata and `share/allowed_signers` in the checkout.
 
-`keys luks` requires root and adds a FIDO2 token with PIN but no touch, adds a recovery key if absent, and leaves the passphrase slot unchanged.
-It asks before adding another token when one already exists; record the recovery key when it prints.
+Use `dctl setup luks` as your user for the phase-1 gate and lock confirmation.
+`sudo dctl keys luks` runs the same stage directly: it enrolls missing tokens for both YubiKeys with a FIDO2 PIN and no touch, adds a recovery key if absent, and keeps the passphrase slot.
+Write the recovery key on paper and keep it away from the machine; if you defer confirmation, the stage asks again on the next run.
+Enrollment refuses a key with three or fewer FIDO2 PIN tries left because enrollment can spend three.
+Verify one correct PIN with `ykman --device <serial> fido access verify-pin` to restore the tries, then rerun enrollment.
 Unprivileged `status` reports enrollment, while LUKS header inspection needs sudo.
 
-`totp` seals the [boot TOTP secret](#secure-boot); it requires root and enforced Secure Boot.
-Use a plain TTY or clear terminal scrollback afterward so the enrollment secret does not remain visible.
+`keys totp` explicitly replaces the [boot TOTP secret](#secure-boot), verifies the authenticator code, and rebuilds the boot images; it requires root and enforced Secure Boot.
 
 `remove` refuses root, removes the age recipient and release signer, and rekeys secrets, but leaves LUKS tokens intact.
 The LUKS header does not identify which YubiKey created a token.
@@ -402,9 +462,9 @@ Inspect it with `sudo dctl keys status` and identify the slot manually before re
 ### LUKS unlock
 
 Insert the YubiKey before boot; unlock does not wait for a key inserted later.
-Systemd-cryptsetup uses the LUKS2 token plugin and asks once for `LUKS2 token PIN`, with no touch for tokens enrolled by `dctl keys luks`.
+Systemd-cryptsetup uses the LUKS2 token plugin and asks once for `LUKS2 token PIN`, with no touch for tokens enrolled by dctl.
 Any token error falls back to the passphrase or recovery-key prompt.
-New installs omit `rd.luks.options=<uuid>=fido2-device=auto`; on an existing install, remove that option from `/etc/default/limine` and run `sudo limine-update` to enable this fallback.
+The `luks` stage removes legacy `rd.luks.options=<uuid>=fido2-device=auto` from `/etc/default/limine` and runs `limine-update` to restore this fallback.
 
 ## Porkbun DNS
 
@@ -488,10 +548,11 @@ The override does not change the home directory used for user targets; run user 
 
 These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
 
-- [ ] Before installation, confirm Secure Boot is off, its keys have not been erased, and the TPM is enabled.
-- [ ] After enrollment and TOTP sealing, confirm Secure Boot is enforced with only your own keys and all items are done in `dctl setup --status secureboot`.
+- [ ] Before installation, confirm the firmware is in Setup Mode after erasing Secure Boot settings and the TPM is enabled.
+- [ ] Before TOTP enrollment, confirm the boot screen says **Boot TOTP not set up yet**.
+- [ ] After enrollment and TOTP sealing, confirm Secure Boot is enforced with only your own keys and `dctl setup --status luks secureboot totp` shows OK.
 - [ ] Confirm Boot TOTP matches the authenticator across two reboots to check PCR 0 stability.
-- [ ] Confirm `NO BOOT TOTP` appears with Secure Boot off, then re-enable Secure Boot and follow the [re-sealing procedure](#secure-boot).
+- [ ] Confirm `NO BOOT TOTP` appears with Secure Boot off, then re-enable it and investigate any remaining mismatch before [resealing](#secure-boot).
 - [ ] Confirm the TOTP hook never delays LUKS unlock.
 - [ ] Insert each YubiKey separately before boot and unlock LUKS with one `LUKS2 token PIN` prompt and no touch.
 - [ ] Confirm a token error falls back to the passphrase or recovery-key prompt without a locked emergency shell.

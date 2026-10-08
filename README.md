@@ -110,7 +110,7 @@
 ## 🛠️ Installation
 
 The dctl ISO installs Arch and these dotfiles offline onto the Framework Desktop, with LUKS2, btrfs, Snapper, and Limine.
-Set up Secure Boot after the first login.
+After the first login, setup makes the system work, then asks separately before it locks it down.
 The [dctl guide](cmds/cmd/dctl/README.md) explains each command in detail.
 
 > [!CAUTION]
@@ -142,14 +142,15 @@ The command checks the signed checksum against `share/allowed_signers`, then ask
 ### 3. Prepare the Framework
 
 Back up the internal disk if it has data.
-Press F2 to enter the BIOS, turn Secure Boot off without erasing its keys yet, and leave the TPM enabled.
-Save with F10.
+Put the firmware in Setup Mode before installing: F2 → **Erase all Secure Boot Settings** → F10 to save.
+Leave the TPM enabled.
 
 ### 4. Install
 
 Press F12 and choose the USB in UEFI mode; `dctl install` starts on tty1.
-Enter the login password for `cullyn`, the timezone, and the LUKS passphrase, then type the disk path to confirm.
-Remove the USB when it asks to reboot.
+Enter the login password for `cullyn`, the timezone, and the LUKS passphrase, then confirm `Erase <disk> and install?`.
+Output runs through prepare, disk consent, install steps, unmount, and summary.
+At the summary, remove the USB and reboot.
 
 ### 5. First login
 
@@ -161,42 +162,39 @@ dctl setup
 git -C ~/dotfiles fetch --unshallow
 ```
 
-Setup shows one plan, asks once to apply pending stages, and uses sudo for root work.
-It installs missing `packages/extra.lst` entries in the background and asks for the YubiKey PIN to decrypt the SSH keys.
+Phase 1, **make it work**, runs system → network → packages → home → extra → secrets → ssh → repos → firefox → certs.
+Setup shows a plan, asks once to run pending work, and uses sudo for root stages.
+Extra packages run in the background with output in `~/.local/state/dctl/extra.log`; secrets use the PIV PIN or recovery phrase.
 The first Ctrl+C stops new stages and waits for the background package work to finish; a second press sends SIGINT.
-Missing work VPN connections are deferred; import them later with `dctl setup vpn`.
+Tailscale and VPN are optional and run only when named: `dctl setup tailscale` or `dctl setup vpn`.
+Tailscale login shows a QR code; it does not open a browser.
 When an SSH key is first used, the keyring asks for its passphrase; choose the option to unlock it automatically at login.
-If setup reports a missing Firefox profile, start Firefox once and run `dctl setup firefox certs`.
+Setup creates the Firefox Developer Edition profile if needed; quit Firefox if it asks, then rerun `dctl setup firefox certs`.
+Restart Firefox after customization.
+
+Zsh prints the next setup action as `dctl · …` at shell start.
+Follow that hint until setup is complete.
 
 ### 6. YubiKeys, Secure Boot, and boot TOTP
 
-Run both commands for each YubiKey, with only that key inserted:
+If a YubiKey still needs its PINs and age identity, run `dctl keys enroll` with only that key inserted.
+Repeat for the other key, then continue with `dctl setup` as your normal user.
 
-```sh
-dctl keys enroll
-sudo dctl keys luks
-```
+Phase 2, **lock it down**, waits until every required phase-1 stage is OK and asks **Everything works. Lock it down now? YubiKeys, then Secure Boot**.
+`--yes` never gives this confirmation.
+Direct `sudo dctl setup` runs of `luks`, `secureboot`, or `totp` bypass the plan and lock confirmation; use the user flow for first setup.
 
-Write the LUKS recovery key on paper when it is shown, and keep it away from the machine.
-Insert the YubiKey before boot; unlock asks for `LUKS2 token PIN` without touch and falls back to the passphrase or recovery key on token errors.
-For an older install, enable this fallback with the [LUKS unlock instructions](cmds/cmd/dctl/README.md#luks-unlock).
+1. The `luks` stage enrolls both YubiKeys, one at a time, with a FIDO2 PIN and no touch; it keeps the disk passphrase.
+2. Write the recovery key on paper, keep it away from the machine, and confirm the copy when asked.
+3. The `secureboot` stage enrolls only your own keys and signs the boot images; stop if it reports option ROMs or a missing TPM event log.
+4. Reboot with a YubiKey inserted; if Secure Boot is still off, enable it with F2 and save with F10.
+5. Run `dctl setup` again for `totp`, scan the QR code into your authenticator, and enter its code to verify it before the boot images are rebuilt.
+6. Reboot and compare the boot TOTP with the authenticator before entering the LUKS PIN or passphrase.
 
-1. Reboot, press F2, choose **Erase all Secure Boot Settings** to enter Setup Mode, and save with F10.
-2. Boot the installed system and run `sudo dctl setup secureboot`.
-3. If sbctl refuses over option ROMs or a missing TPM eventlog, stop; do not force enrollment.
-4. Press F2 on reboot, turn Secure Boot on, and save with F10.
-5. Boot and check `dctl setup --status secureboot`; `secureboot-totp` remains manual until the next step.
-
-From a plain TTY, seal the boot TOTP secret:
-
-```sh
-sudo dctl keys totp
-```
-
-Scan the QR code or type the `secret=` value from the `otpauth://` URL into your authenticator; the secret is shown only once.
-If you used a terminal emulator, clear its scrollback afterward.
-From then on, compare the boot code with the authenticator before entering the LUKS PIN or passphrase.
-An unexpected missing code or a wrong code means **do not unlock**; see the [expected missing-code cases](cmds/cmd/dctl/README.md#secure-boot).
+If Setup Mode was not prepared before installation, follow the `secureboot` firmware action and rerun `dctl setup`.
+Use a plain TTY for TOTP enrollment, or clear terminal scrollback afterward.
+Before enrollment, the boot screen says **Boot TOTP not set up yet**.
+After enrollment, a missing or wrong code means **do not unlock**; investigate before [resealing](cmds/cmd/dctl/README.md#secure-boot).
 Then work through the [hardware checklist](cmds/cmd/dctl/README.md#manual-hardware-acceptance).
 
 For daily upgrades, run `update`; see [Update](cmds/cmd/dctl/README.md#update).
