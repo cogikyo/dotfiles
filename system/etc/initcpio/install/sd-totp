@@ -4,12 +4,15 @@ build() {
     local tcti=/usr/lib/libtss2-tcti-device.so.0
 
     if ! type -P tpm2-totp >/dev/null || [[ ! -e $tcti ]]; then
-        warning 'sd-totp: tpm2-totp is not installed; this image shows NO boot TOTP'
+        warning 'sd-totp: tpm2-totp or its TCTI library is missing; this image will show no boot TOTP'
         return 0
     fi
 
     add_checked_modules '/drivers/char/tpm/'
     map add_binary tpm2-totp "$tcti" bash sleep
+    if [[ -e /etc/dctl/boot-totp ]]; then
+        add_file /etc/dctl/boot-totp
+    fi
 
     printf '%s\n' \
         '#!/usr/bin/bash' \
@@ -18,8 +21,14 @@ build() {
         'until systemctl --quiet is-active cryptsetup.target; do' \
         '    step=$((EPOCHSECONDS / 30))' \
         '    if [[ $step != "$shown" ]]; then' \
-        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show); then' \
-        '            printf "\n!!! NO BOOT TOTP: no TPM, no sealed secret, or the firmware or Secure Boot state changed !!!\n\n"' \
+        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show 2>/run/boot-totp.err) || [[ ! -e /etc/dctl/boot-totp ]]; then' \
+        '            err=$(</run/boot-totp.err)' \
+        '            [[ -n $err ]] && printf "%s\n" "$err" >&2' \
+        '            if [[ ! -e /etc/dctl/boot-totp && $err != *"The system state has changed"* ]]; then' \
+        '                printf "\nBoot TOTP not set up yet · run dctl setup after login\n\n"' \
+        '            else' \
+        '                printf "\n!!! NO BOOT TOTP: do not unlock; investigate the TPM and boot state before resealing !!!\n\n"' \
+        '            fi' \
         '            exit 0' \
         '        fi' \
         '        printf "\nBoot TOTP %s (%ss left)\n" "$code" "$((30 - EPOCHSECONDS % 30))"' \
@@ -49,9 +58,11 @@ build() {
 
 help() {
     cat <<HELPEOF
-This hook shows the TOTP that tpm2-totp unseals from the TPM on the console
-while the initramfs waits to unlock the root volume, refreshed every 30 seconds.
-It prints one warning line instead when the TPM is absent or refuses to unseal.
-It never blocks boot. Seal a secret with: sudo dctl keys totp
+Shows the TPM-sealed boot TOTP while the initramfs waits for root unlock.
+Refreshes every 30 seconds.
+Shows "not set up yet" when dctl has not sealed a secret (no /etc/dctl/boot-totp); otherwise, an unsealing failure shows NO BOOT TOTP.
+Never blocks boot.
+After enabling Secure Boot and rebooting, run dctl setup to seal the secret.
+Compare the boot TOTP with your authenticator before unlocking.
 HELPEOF
 }

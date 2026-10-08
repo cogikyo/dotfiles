@@ -11,15 +11,16 @@ import (
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/secureboot"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 )
 
 type KeysCmd struct {
 	Enroll keysEnroll `cmd:"" help:"Enroll the inserted YubiKey: PINs, age identity, rekey, release-signing key."`
-	Luks   keysLuks   `cmd:"" help:"Add the inserted YubiKey and a recovery key to the root LUKS2 header (root)."`
+	Luks   keysLuks   `cmd:"" help:"Enroll two YubiKeys (PIN, no touch) and a recovery key in the root LUKS2 header (root)."`
 	Remove keysRemove `cmd:"" help:"Remove the age recipient and release signer, then rekey; LUKS tokens remain."`
 	Status keysStatus `cmd:"" help:"Show enrolled and inserted YubiKeys and LUKS tokens."`
-	Totp   keysTotp   `cmd:"" name:"totp" help:"Seal a new boot TOTP secret to the TPM and show it once (root, Secure Boot enforced)."`
+	Totp   keysTotp   `cmd:"" name:"totp" help:"Seal a new boot TOTP secret, show it once, and check the authenticator code (root, Secure Boot enforced)."`
 }
 
 var errUser = errors.New("run as your user, not root")
@@ -31,7 +32,7 @@ func (keysEnroll) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return errUser
 	}
 	return secrets.Locked(root, func() error {
-		return keys.Enroll(ctx, u, root, execx.OSRunner{Frame: u.Frame}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+		return keys.Enroll(ctx, u, root, execx.OSRunner{UI: u}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
 	})
 }
 
@@ -41,7 +42,11 @@ func (keysLuks) Run(ctx context.Context, u *ui.UI) error {
 	if os.Geteuid() != 0 {
 		return errors.New("needs root: sudo dctl keys luks")
 	}
-	return keys.Luks(ctx, u, execx.OSRunner{Frame: u.Frame}, "/sys", u.Confirm)
+	reports, err := setup.Run(ctx, u, []setup.Stage{keys.Stage(u, execx.OSRunner{UI: u}, "/")}, setup.All)
+	if err != nil {
+		return err
+	}
+	return finish(u, reports, setup.All)
 }
 
 type keysTotp struct{}
@@ -50,7 +55,7 @@ func (keysTotp) Run(ctx context.Context, u *ui.UI) error {
 	if os.Geteuid() != 0 {
 		return errors.New("needs root: sudo dctl keys totp")
 	}
-	return secureboot.Seal(ctx, u, execx.OSRunner{Frame: u.Frame}, "/sys/firmware/efi")
+	return secureboot.Seal(ctx, u, execx.OSRunner{UI: u}, "/")
 }
 
 type keysRemove struct {
@@ -81,10 +86,10 @@ func (keysStatus) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		if e.Recipient == "" || !e.Signer {
 			level = ui.Warn
 		}
-		u.Node(level, "yubikey "+e.Serial, fmt.Sprintf("age recipient %s, release signer %s", yes(e.Recipient != ""), yes(e.Signer)))
+		u.Node(level, "YubiKey "+e.Serial, fmt.Sprintf("age recipient %s, release signer %s", yes(e.Recipient != ""), yes(e.Signer)))
 	}
 	if r.Inserted != "" {
-		u.Node(ui.Info, "inserted", "yubikey "+r.Inserted)
+		u.Node(ui.Info, "inserted", "YubiKey "+r.Inserted)
 	} else {
 		u.Node(ui.Info, "inserted", r.Absent)
 	}
@@ -93,10 +98,10 @@ func (keysStatus) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		u.Node(ui.Warn, "luks", r.Unread)
 	case r.Luks != nil:
 		level := ui.OK
-		if len(r.Luks.Fido2) == 0 || !r.Luks.Recovery {
+		if r.Luks.Unattended() < keys.YubiKeys || !r.Luks.Recovery {
 			level = ui.Warn
 		}
-		u.Node(level, r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, recovery key %s", len(r.Luks.Fido2), yes(r.Luks.Recovery)))
+		u.Node(level, r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, %d with PIN and no touch, recovery key %s", len(r.Luks.Fido2), r.Luks.Unattended(), yes(r.Luks.Recovery)))
 	}
 	if len(r.Enrolled) == 0 {
 		u.Close(ui.Warn, "no YubiKey enrolled")

@@ -31,13 +31,13 @@ const (
 func (s *session) form(context.Context) (iso.Answers, error) {
 	var a iso.Answers
 	var err error
-	if a.Password, err = s.secret("Password"); err != nil {
+	if a.Password, err = s.secret("Login password", login+", also for sudo"); err != nil {
 		return a, err
 	}
 	if a.Zone, err = s.text("Timezone", defaultZone, s.zone); err != nil {
 		return a, err
 	}
-	a.LUKS, err = s.secret("Disk passphrase")
+	a.LUKS, err = s.secret("Disk passphrase", "first boot and recovery unlock")
 	return a, err
 }
 
@@ -51,7 +51,7 @@ func (s *session) valid(a iso.Answers) error {
 
 func (s *session) zone(v string) error {
 	if !filepath.IsLocal(v) {
-		return fmt.Errorf("%q is not a zone name", v)
+		return fmt.Errorf("invalid timezone name %q", v)
 	}
 	if st, err := os.Stat(s.path("/usr/share/zoneinfo", v)); err != nil || !st.Mode().IsRegular() {
 		return fmt.Errorf("%q is not in /usr/share/zoneinfo", v)
@@ -77,14 +77,14 @@ func (s *session) text(label, initial string, valid func(string) error) (string,
 	}
 }
 
-func (s *session) secret(label string) (string, error) {
+func (s *session) secret(label, hint string) (string, error) {
 	for {
-		v, err := s.u.Secret(label)
+		v, err := s.u.Secret(label + " (" + hint + ")")
 		if err != nil {
 			return "", err
 		}
 		if v == "" {
-			s.u.Warn("%s: empty", label)
+			s.u.Warn("%s is required", label)
 			continue
 		}
 		again, err := s.u.Secret(label + " again")
@@ -104,7 +104,7 @@ func (s *session) dctltest(ctx context.Context) (*iso.Answers, error) {
 		return nil, nil
 	}
 	if _, err := s.sh.output(ctx, "systemd-detect-virt", "--vm"); err != nil {
-		return nil, fmt.Errorf("refusing unattended install: a DCTLTEST drive is attached but this is not a VM (%v)", err)
+		return nil, fmt.Errorf("refusing unattended install: a DCTLTEST drive is attached and no VM was detected (%v)", err)
 	}
 	if os.Getenv(testEnv) != "" {
 		s.testMounted = true
@@ -112,7 +112,7 @@ func (s *session) dctltest(ctx context.Context) (*iso.Answers, error) {
 		if err := os.MkdirAll(s.path(testMount), 0o755); err != nil {
 			return nil, err
 		}
-		if err := s.sh.run(ctx, nil, "mount", "-o", "ro", testLabel, testMount); err != nil {
+		if err := s.sh.run(ctx, nil, run("mount", "-o", "ro", testLabel, testMount)); err != nil {
 			return nil, err
 		}
 		s.testMounted = true
@@ -144,7 +144,7 @@ func (s *session) unmountTest(ctx context.Context) error {
 	if !s.testMounted {
 		return nil
 	}
-	if err := s.sh.run(ctx, nil, "umount", testMount); err != nil {
+	if err := s.sh.run(ctx, nil, run("umount", testMount)); err != nil {
 		return err
 	}
 	s.testMounted = false
@@ -171,7 +171,7 @@ func (s *session) reexec(override string) error {
 	if err := os.Rename(tmp.Name(), dst); err != nil {
 		return err
 	}
-	// Closing clears the tree marker, so the replacement opens and owns its own tree.
+	// Closing leaves the transcript marker closed, so the replacement starts separate sections.
 	s.u.Close(ui.Info, "re-executing the DCTLTEST dctl")
 	return fmt.Errorf("exec %s: %w", dst, execve(dst, os.Args, append(os.Environ(), testEnv+"=1")))
 }

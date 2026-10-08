@@ -31,7 +31,7 @@ func obs(r paths.Root) []setup.Item {
 			Name: "home-obs-dir",
 			Check: func(context.Context) error {
 				if legacy(dir, r.Config("obs-studio")) {
-					return fmt.Errorf("%s links into the checkout; fix makes it a local directory", dir)
+					return fmt.Errorf("%s links into the checkout; setup replaces the link with a directory", dir)
 				}
 				return localDir(dir)
 			},
@@ -89,7 +89,7 @@ func localDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("%s must be a local directory, not a symlink or file", dir)
+	return fmt.Errorf("%s must be a directory, not a symlink or file", dir)
 }
 
 func basics(lines []string) [][2]int {

@@ -28,17 +28,21 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 		}
 		return args
 	}
+	prompting := run
+	if !all {
+		prompting = execx.Interactive(run)
+	}
 	return []Step{
 		{
 			Name: "pacman",
-			Plan: "official repos via sudo pacman -Syu",
+			Plan: "official packages",
 			Run: func(ctx context.Context) error {
-				return run.Run(ctx, "", "sudo", slices.Concat([]string{"pacman"}, packages.Upgrade(all))...)
+				return drawn(prompting.Run(ctx, "", "sudo", slices.Concat([]string{"pacman"}, packages.Upgrade(all))...))
 			},
 		},
 		{
 			Name: "aur",
-			Plan: "AUR packages via yay -Sua, except packages/ recipes",
+			Plan: "AUR packages, excluding local PKGBUILDs",
 			Run: func(ctx context.Context) error {
 				l, err := packages.Load(root.Packages())
 				if err != nil {
@@ -48,12 +52,12 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 				if len(l.Local) > 0 {
 					args = append(args, "--ignore", strings.Join(l.Local, ","))
 				}
-				return run.Run(ctx, "", "yay", noconfirm(args...)...)
+				return drawn(prompting.Run(ctx, "", "yay", noconfirm(args...)...))
 			},
 		},
 		{
 			Name: "packages",
-			Plan: "make installed packages match packages/*.lst",
+			Plan: "reconcile package lists and installed packages",
 			Run: func(ctx context.Context) error {
 				return packages.Reconcile(ctx, u, root.Packages(), run, all)
 			},
@@ -67,27 +71,26 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 		},
 		{
 			Name: "cmd",
-			Plan: "dotfiles commands and packages/ PKGBUILDs, rebuilt when changed",
+			Plan: "build dotfiles commands; rebuild local packages when versions differ",
 			Run: func(ctx context.Context) error {
 				return cmd(ctx, u, root, run, all, only)
 			},
 		},
 		{
 			Name: "go",
-			Plan: "go install @latest for module-proxy tools in GOBIN",
+			Plan: "Go tools installed from module releases",
 			Run: func(ctx context.Context) error {
 				return tools(ctx, u, run)
 			},
 		},
 		{
 			Name: "rust",
-			Plan: "rustup update",
 			Run: func(ctx context.Context) error {
 				if _, err := exec.LookPath("rustup"); err != nil {
 					u.Info("skipped: rustup is not installed")
 					return nil
 				}
-				return run.Run(ctx, "", "rustup", "update")
+				return drawn(run.Run(ctx, "", "rustup", "update"))
 			},
 		},
 	}
@@ -110,18 +113,20 @@ func Select(all []Step, names []string) ([]Step, error) {
 }
 
 func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
-	var failed []string
+	var done, skipped, failed []string
 	for _, s := range steps {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		u.Section(s.Name, s.Plan)
+		u.Begin(s.Name, s.Plan)
 		if ask {
 			ok, err := u.Proceed(fmt.Sprintf("Run %s?", s.Name))
 			if err != nil {
 				return err
 			}
 			if !ok {
+				skipped = append(skipped, s.Name)
+				u.End(ui.Info, "skipped")
 				continue
 			}
 		}
@@ -132,15 +137,39 @@ func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
 			if errors.Is(err, ui.ErrCanceled) {
 				return err
 			}
-			u.Row(ui.Err, err.Error())
 			failed = append(failed, s.Name)
+			if _, ok := errors.AsType[shown](err); ok {
+				u.End(ui.Err, "")
+				continue
+			}
+			u.End(ui.Err, "%s", err)
 			continue
 		}
-		u.OK("%s done", s.Name)
+		done = append(done, s.Name)
+		u.End(ui.OK, "")
+	}
+	u.Begin("summary", "")
+	if len(done) > 0 {
+		u.OK("finished: %s", strings.Join(done, ", "))
+	}
+	if len(skipped) > 0 {
+		u.Info("skipped: %s", strings.Join(skipped, ", "))
 	}
 	if len(failed) > 0 {
+		u.Info("retry: `dctl update %s`", strings.Join(failed, " "))
 		return errors.New("update failed: " + strings.Join(failed, ", "))
 	}
-	u.Close(ui.OK, "update done")
+	u.End(ui.OK, "")
 	return nil
+}
+
+type shown struct{ error }
+
+func (s shown) Unwrap() error { return s.error }
+
+func drawn(err error) error {
+	if err == nil {
+		return nil
+	}
+	return shown{err}
 }

@@ -4,6 +4,7 @@ package execx
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
+
+	"dotfiles/cmds/internal/ui"
 )
 
 type Runner interface {
@@ -19,11 +23,28 @@ type Runner interface {
 }
 
 type OSRunner struct {
-	Group     bool
-	Interrupt bool
-	Stdin     []byte
-	// Frame, when set, draws rules around streamed child output; it returns the closing call.
-	Frame func() func()
+	Group       bool
+	Interrupt   bool
+	Stdin       []byte
+	UI          *ui.UI
+	Reason      string
+	Interactive bool
+}
+
+func Reason(run Runner, reason string) Runner {
+	if r, ok := run.(OSRunner); ok {
+		r.Reason = reason
+		return r
+	}
+	return run
+}
+
+func Interactive(run Runner) Runner {
+	if r, ok := run.(OSRunner); ok {
+		r.Interactive = true
+		return r
+	}
+	return run
 }
 
 func Grouped(ctx context.Context, args []string) *exec.Cmd {
@@ -48,22 +69,53 @@ func Logged(ctx context.Context, w io.Writer) context.Context {
 	return context.WithValue(ctx, logKey{}, w)
 }
 
-// Run streams both child output streams to stderr so JSON results can use stdout, or to the writer set by Logged.
+// Run renders command and result rows through UI, capturing output unless Interactive attaches the terminal.
+// Without UI it streams both child output streams to stderr so JSON results can use stdout.
+// Under Logged it writes both streams to the log writer and renders nothing.
+// An Interactive child inherits the terminal, so it stays in the foreground process group even with Group set.
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) error {
 	cmd := r.command(ctx, dir, name, args)
 	if w, ok := ctx.Value(logKey{}).(io.Writer); ok {
 		cmd.Stdout, cmd.Stderr = w, w
 		return failed(cmd.Run(), name, args, "")
 	}
-	if cmd.Stdin == nil && !r.Group {
+	if cmd.Stdin == nil && (!r.Group || r.Interactive) {
 		cmd.Stdin = os.Stdin
 	}
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-	if r.Frame != nil {
-		defer r.Frame()()
+	if r.UI == nil {
+		cmd.Stdout = os.Stderr
+		cmd.Stderr = os.Stderr
+		return failed(r.wait(ctx, cmd), name, args, "")
 	}
-	return failed(r.wait(ctx, cmd), name, args, "")
+	b := r.UI.Command(shell(name, args), r.Reason)
+	if r.Interactive {
+		cmd.Stdout, cmd.Stderr = b.Attach()
+	} else {
+		cmd.Stdout, cmd.Stderr = b, b
+	}
+	err := r.wait(ctx, cmd)
+	shown := err
+	if err != nil && ctx.Err() != nil {
+		shown = ctx.Err()
+	}
+	b.End(shown)
+	if r.UI.JSON() {
+		return failed(err, name, args, "")
+	}
+	if err != nil {
+		return rendered{err}
+	}
+	return nil
+}
+
+type rendered struct{ error }
+
+func (r rendered) Unwrap() error { return r.error }
+
+// Shown identifies a rendered command failure without added wrapper text, so callers can omit a duplicate row.
+func Shown(err error) bool {
+	r, ok := errors.AsType[rendered](err)
+	return ok && r.Error() == err.Error()
 }
 
 // Output returns trimmed stdout even on failure; errors wrap the cause and include up to 20 trailing stderr lines.
@@ -84,7 +136,7 @@ func (r OSRunner) command(ctx context.Context, dir string, name string, args []s
 		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT) }
 	case r.Interrupt:
 		cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGINT) }
-	case r.Group:
+	case r.Group && !r.Interactive:
 		cmd = Grouped(ctx, append([]string{name}, args...))
 	}
 	cmd.Dir = dir
@@ -99,6 +151,19 @@ func (r OSRunner) wait(ctx context.Context, cmd *exec.Cmd) error {
 		return cmd.Run()
 	}
 	return Reap(ctx, cmd)
+}
+
+func shell(name string, args []string) string {
+	words := make([]string, 0, 1+len(args))
+	for _, w := range append([]string{name}, args...) {
+		if w == "" || strings.ContainsFunc(w, func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !strings.ContainsRune("@%+=:,./_-", r)
+		}) {
+			w = "'" + strings.ReplaceAll(w, "'", `'\''`) + "'"
+		}
+		words = append(words, w)
+	}
+	return strings.Join(words, " ")
 }
 
 func failed(err error, name string, args []string, stderr string) error {

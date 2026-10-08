@@ -76,7 +76,7 @@ func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []st
 		}
 	}
 	if names := slices.DeleteFunc(picked, func(name string) bool { return !local[name] }); len(names) > 0 {
-		u.Warn("build local recipes with `makepkg -si` in packages/<name>: %s", strings.Join(names, " "))
+		u.Warn("build local packages with `makepkg -si` in packages/<name>: %s", strings.Join(names, " "))
 	}
 	return nil
 }
@@ -85,7 +85,7 @@ func prune(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names []
 	if len(names) == 0 {
 		return nil
 	}
-	checked, err := u.Checklist(fmt.Sprintf("Remove %d unlisted packages?", len(names)), names)
+	checked, err := u.Checklist(fmt.Sprintf("Select packages to remove (%d unlisted); unselected packages are added to extra.lst", len(names)), names)
 	if errors.Is(err, ui.ErrCanceled) {
 		return nil
 	}
@@ -106,7 +106,7 @@ func prune(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names []
 	if len(drop) == 0 {
 		return nil
 	}
-	return run.Run(ctx, "", "sudo", slices.Concat([]string{"pacman", "-Rns"}, drop)...)
+	return execx.Interactive(run).Run(ctx, "", "sudo", slices.Concat([]string{"pacman", "-Rns"}, drop)...)
 }
 
 func keep(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names []string) error {
@@ -135,7 +135,7 @@ func keep(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names []s
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
 		return err
 	}
-	u.OK("kept in extra.lst: %s", strings.Join(names, " "))
+	u.OK("added to extra.lst: %s", strings.Join(names, " "))
 	return run.Run(ctx, "", "sudo", slices.Concat([]string{"pacman", "-D", "--asexplicit"}, names)...)
 }
 

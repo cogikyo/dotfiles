@@ -34,14 +34,14 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err != nil {
 		return err
 	}
-	u.Section("yubikey "+serial, "wait for each prompt before typing; keys typed early are dropped")
+	u.Section("YubiKey "+serial, "wait for each prompt before typing; early input is discarded")
 	pins, err := pinSteps(ctx, run, serial)
 	if err != nil {
 		return err
 	}
 	for _, s := range pins {
 		u.Section(s.label, s.hint)
-		if err := run.Run(ctx, "", "ykman", s.args...); err != nil {
+		if err := execx.Interactive(run).Run(ctx, "", "ykman", s.args...); err != nil {
 			return err
 		}
 	}
@@ -56,7 +56,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	u.KV("PIV PIN", "age secrets")
 	u.KV("PUK", "unblocks a locked PIV PIN")
 	u.Detail("for disk unlock, run `sudo dctl keys luks`")
-	u.Close(ui.OK, "yubikey %s enrolled", serial)
+	u.Close(ui.OK, "YubiKey %s enrolled", serial)
 	return nil
 }
 
@@ -70,7 +70,7 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 	var steps []step
 	switch {
 	case fido["PIN"] == "Blocked":
-		return nil, fmt.Errorf("yubikey %s: the FIDO2 PIN is blocked", serial)
+		return nil, fmt.Errorf("YubiKey %s: FIDO2 PIN blocked", serial)
 	case fido["PIN"] == "Not set":
 		steps = append(steps, step{"Set FIDO2 PIN", fidoUse, ykman(serial, "fido", "access", "change-pin")})
 	case fido["NOTE"] == forced:
@@ -87,7 +87,7 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 		steps = append(steps, step{"Set PIV PIN", "new PIV PIN for age secrets; 6–8 characters, can match FIDO2", ykman(serial, "piv", "access", "change-pin", "--pin", "123456")})
 	}
 	if strings.Contains(piv, "WARNING: Using default PUK!") {
-		steps = append(steps, step{"Set PIV PUK", "new PUK: unblocks the PIV PIN after 3 wrong tries; 6–8 characters", ykman(serial, "piv", "access", "change-puk", "--puk", "12345678")})
+		steps = append(steps, step{"Set PIV PUK", "new PUK: unblocks the PIV PIN; 6–8 characters", ykman(serial, "piv", "access", "change-puk", "--puk", "12345678")})
 	}
 	if strings.Contains(piv, "WARNING: Using default Management key!") {
 		steps = append(steps, step{"Protect the PIV management key", "enter the PIV PIN", ykman(serial, "piv", "access", "change-management-key", "--management-key", defaultKey, "--algorithm", "TDES", "--protect")})
@@ -102,14 +102,14 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 	}
 	if len(keys) == 0 {
 		u.Section("Create age identity", `enter the PIV PIN (ignore "default is 123456"); no touch needed`)
-		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "never"); err != nil {
+		if err := execx.Interactive(run).Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "never"); err != nil {
 			return err
 		}
 		if keys, err = onKey(ctx, run, serial); err != nil {
 			return err
 		}
 	}
-	u.Section("Re-encrypt secrets", "PIV PIN of an enrolled YubiKey, or the recovery phrase")
+	u.Section("Re-encrypt secrets", "enrolled YubiKey's PIV PIN or recovery phrase")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
@@ -117,7 +117,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 			i = slices.IndexFunc(keys, func(k Key) bool { return k.Recipient != "" })
 		}
 		if i < 0 {
-			return fmt.Errorf("yubikey %s holds no age identity with a recipient", serial)
+			return fmt.Errorf("YubiKey %s has no age identity with a recipient", serial)
 		}
 		l.Recipients = appended(l.Recipients, keys[i].Recipient)
 		l.Identities = appended(l.Identities, keys[i].Stub)
@@ -151,8 +151,8 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	u.Section("Configure release-signing key", `"PIN for authenticator" is the FIDO2 PIN; touch the key when it blinks`)
-	if err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
+	u.Section("Set up release-signing key", `"PIN for authenticator" is the FIDO2 PIN; touch the key when it blinks`)
+	if err := execx.Interactive(run).Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}
 	if err := run.Run(ctx, tmp, "ssh-keygen", "-p", "-O", "verify-required", "-P", "", "-N", "", "-f", name); err != nil {
@@ -164,7 +164,7 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	key := skKey(string(pub))
 	if key == "" || i >= 0 && key != skKey(signed[i]) {
-		return fmt.Errorf("the %s key from ssh-keygen does not match allowed_signers", application)
+		return fmt.Errorf("%s key from ssh-keygen is invalid or does not match allowed_signers", application)
 	}
 	priv, err := os.ReadFile(filepath.Join(tmp, name))
 	if err != nil {
@@ -202,15 +202,15 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 	stubbed := slices.ContainsFunc(pair(secrets.Lines(ledger.Identities), nil), func(k Key) bool { return k.Serial == serial })
 	signed := slices.Contains(have, principal(serial))
 	if !stubbed && !signed {
-		return fmt.Errorf("yubikey %s is not enrolled", serial)
+		return fmt.Errorf("YubiKey %s is not enrolled", serial)
 	}
-	u.Section("yubikey "+serial, "remove")
+	u.Section("YubiKey "+serial, "remove")
 	var errs []error
 	if signed {
 		if err := rewrite(root, func(data []byte) []byte {
 			return dropped(data, func(line string) bool { return signs(line, principal(serial)) })
 		}); err != nil {
-			errs = append(errs, fmt.Errorf("allowed_signers still lists yubikey %s: %w", serial, err))
+			errs = append(errs, fmt.Errorf("allowed_signers still lists YubiKey %s: %w", serial, err))
 		}
 	}
 	if stubbed {
@@ -227,15 +227,15 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 		})
 		switch {
 		case errors.Is(err, secrets.ErrCommitted):
-			errs = append(errs, fmt.Errorf("yubikey %s removed from secrets: %w", serial, err))
+			errs = append(errs, fmt.Errorf("YubiKey %s removed from secrets: %w", serial, err))
 		case err != nil:
-			errs = append(errs, fmt.Errorf("yubikey %s still opens every secret; rerun `dctl keys remove %s`: %w", serial, serial, err))
+			errs = append(errs, fmt.Errorf("YubiKey %s still opens every secret; rerun `dctl keys remove %s`: %w", serial, serial, err))
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
-	u.Close(ui.OK, "yubikey %s removed; any LUKS FIDO2 token it made stays in the header", serial)
+	u.Close(ui.OK, "YubiKey %s removed; any LUKS FIDO2 token it made stays in the header", serial)
 	return nil
 }
 

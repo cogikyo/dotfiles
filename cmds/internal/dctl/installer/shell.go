@@ -2,22 +2,24 @@ package installer
 
 import (
 	"context"
-	"strings"
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/ui"
 )
 
 type shell interface {
-	run(ctx context.Context, stdin []byte, args ...string) error
+	run(ctx context.Context, stdin []byte, c cmd) error
 	output(ctx context.Context, args ...string) ([]byte, error)
 }
 
 type host struct{ u *ui.UI }
 
-func (h host) run(ctx context.Context, stdin []byte, args ...string) error {
-	h.u.Detail("$ %s", strings.Join(args, " "))
-	return execx.OSRunner{Group: true, Stdin: stdin}.Run(ctx, "", args[0], args[1:]...)
+func (h host) run(ctx context.Context, stdin []byte, c cmd) error {
+	r := execx.OSRunner{Group: true, Stdin: stdin, Reason: c.Why}
+	if !c.Quiet {
+		r.UI = h.u
+	}
+	return r.Run(ctx, "", c.Args[0], c.Args[1:]...)
 }
 
 func (host) output(ctx context.Context, args ...string) ([]byte, error) {

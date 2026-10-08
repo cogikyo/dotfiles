@@ -133,7 +133,7 @@ func inspect(ctx context.Context, run execx.Runner, dir, url string) (checkout, 
 	if top, err := git("rev-parse", "--show-toplevel"); err != nil {
 		return rejected(err)
 	} else if top != real {
-		return bad("not a git repository; git resolved %s", top)
+		return bad("not the checkout root; Git resolved %s", top)
 	}
 	origin, err := git("remote", "get-url", "origin")
 	switch {
@@ -165,7 +165,7 @@ func exit(err error) int {
 }
 
 func action(r Repo, reason string) string {
-	return fmt.Sprintf("%s (%s); move %s aside, then rerun `dctl setup repos`", Broken, reason, r.Path)
+	return fmt.Sprintf("%s (%s); move %s aside, then run `dctl setup repos`", Broken, reason, r.Path)
 }
 
 func clone(ctx context.Context, run execx.Runner, r Repo, dir string) (err error) {
@@ -276,7 +276,7 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 		u.Row(res.level(), res.repo+": "+res.summary())
 	}
 	if len(missing) > 0 {
-		u.Warn("%d %s → `dctl setup repos`", len(missing), Absent)
+		u.Warn("%d repos %s; run `dctl setup repos`", len(missing), Absent)
 	}
 	if len(failed) > 0 {
 		return fmt.Errorf("%d of %d repos failed: %s", len(failed), len(repos), strings.Join(failed, ", "))
@@ -360,7 +360,7 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 				}
 			}
 			if len(missing) > 0 {
-				problems = slices.Insert(problems, 0, fmt.Sprintf("%d %s: %s", len(missing), Absent, strings.Join(missing, ", ")))
+				problems = slices.Insert(problems, 0, fmt.Sprintf("%d repos %s: %s", len(missing), Absent, strings.Join(missing, ", ")))
 			}
 			switch {
 			case len(problems) > 0:

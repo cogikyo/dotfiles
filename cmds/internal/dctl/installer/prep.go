@@ -34,7 +34,7 @@ func (s *session) prepare(ctx context.Context) *prep {
 		var fw secureboot.Firmware
 		fw, p.errs[2] = secureboot.Read(s.path("/sys/firmware/efi"))
 		if p.errs[2] == nil && !fw.UEFI {
-			p.errs[2] = errors.New("not booted with UEFI; Limine is installed for UEFI only")
+			p.errs[2] = errors.New("not booted with UEFI; reboot the dctl ISO in UEFI mode")
 		}
 	})
 	p.wg.Go(func() {

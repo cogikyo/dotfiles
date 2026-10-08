@@ -12,41 +12,24 @@ import (
 )
 
 func TestCatalog(t *testing.T) {
+	stages := catalog(nil, paths.Root{})
 	var names, root []string
-	for _, s := range catalog(nil, paths.Root{}) {
+	for i, s := range stages {
 		names = append(names, s.Name)
 		if s.Root {
 			root = append(root, s.Name)
 		}
-	}
-	if want := []string{"system", "tailscale", "packages", "home", "extra", "secrets", "repos", "firefox", "certs", "vpn", "keys", "secureboot"}; !slices.Equal(names, want) {
-		t.Errorf("stages %v, want %v", names, want)
-	}
-	if want := []string{"system", "tailscale", "packages", "keys", "secureboot"}; !slices.Equal(root, want) {
-		t.Errorf("root stages %v, want %v", root, want)
-	}
-}
-
-func TestMode(t *testing.T) {
-	for _, tc := range []struct {
-		cmd  SetupCmd
-		yes  bool
-		want setup.Mode
-	}{
-		{SetupCmd{}, false, setup.Ask},
-		{SetupCmd{All: true}, false, setup.All},
-		{SetupCmd{}, true, setup.All},
-		{SetupCmd{Stages: []string{"home"}}, true, setup.Force},
-		{SetupCmd{Status: true, Stages: []string{"home"}}, false, setup.Status},
-		{SetupCmd{Batch: setup.Force}, false, setup.Force},
-	} {
-		got, err := tc.cmd.mode(ui.New(ui.Options{Yes: tc.yes}))
-		if err != nil || got != tc.want {
-			t.Errorf("%+v yes=%v: %s %v, want %s", tc.cmd, tc.yes, got, err, tc.want)
+		for _, need := range s.Needs {
+			if j := slices.IndexFunc(stages, func(t setup.Stage) bool { return t.Name == need }); j < 0 || j >= i {
+				t.Errorf("%s needs %s, which is not an earlier stage", s.Name, need)
+			}
 		}
 	}
-	if _, err := (&SetupCmd{Batch: "fix"}).mode(ui.New(ui.Options{})); err == nil {
-		t.Error("unknown batch mode accepted")
+	if want := []string{"system", "network", "packages", "home", "extra", "secrets", "ssh", "repos", "firefox", "certs", "tailscale", "vpn", "luks", "secureboot", "totp"}; !slices.Equal(names, want) {
+		t.Errorf("stages %v, want %v", names, want)
+	}
+	if want := []string{"system", "packages", "tailscale", "luks", "secureboot", "totp"}; !slices.Equal(root, want) {
+		t.Errorf("root stages %v, want %v", root, want)
 	}
 }
 
@@ -66,8 +49,7 @@ func TestBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mode, err := c.Setup.mode(ui.New(ui.Options{}))
-	if ctx.Command() != "setup <stages>" || !c.JSON || !c.Yes || mode != setup.All || c.Setup.Report != "/tmp/dctl-setup-1.json" || !slices.Equal(c.Setup.Stages, []string{"system", "keys"}) {
-		t.Fatalf("child parsed %q: %+v, mode %s %v", ctx.Command(), c, mode, err)
+	if ctx.Command() != "setup <stages>" || !c.JSON || !c.Yes || c.Setup.Batch != setup.All || c.Setup.Report != "/tmp/dctl-setup-1.json" || !slices.Equal(c.Setup.Stages, []string{"system", "keys"}) {
+		t.Fatalf("child parsed %q: %+v", ctx.Command(), c)
 	}
 }

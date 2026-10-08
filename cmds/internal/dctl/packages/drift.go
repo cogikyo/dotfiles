@@ -35,8 +35,8 @@ func report(u *ui.UI, d Drift) {
 		what  string
 		names []string
 	}{
-		{"explicit repo packages in no list (base.lst, extra.lst)", d.Repo},
-		{"explicit foreign packages in no list (aur.lst, packages/*/PKGBUILD)", d.AUR},
+		{"unlisted explicit official packages", d.Repo},
+		{"unlisted explicit foreign packages", d.AUR},
 		{"listed packages not installed", d.Missing},
 		{"unlisted orphans", d.Orphans},
 	} {
@@ -45,7 +45,7 @@ func report(u *ui.UI, d Drift) {
 			u.Detail("%s", strings.Join(row.names, " "))
 		}
 	}
-	u.Info("run `dctl update packages` interactively to install or remove them")
+	u.Info("run `dctl update packages` interactively to resolve the differences")
 }
 
 func drift(ctx context.Context, run execx.Runner, l Lists) (Drift, error) {

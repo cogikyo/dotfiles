@@ -66,7 +66,7 @@ func librepods(r paths.Root) setup.Item {
 			}
 			for _, dir := range dirs {
 				if st, err := os.Lstat(dir); err == nil && !st.IsDir() {
-					return fmt.Errorf("%s must be a local directory", dir)
+					return fmt.Errorf("%s must be a directory, not a symlink or file", dir)
 				}
 				if err := os.MkdirAll(dir, 0o700); err != nil {
 					return err
@@ -151,7 +151,7 @@ func localFile(path string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() {
-		return fmt.Errorf("%s must be a local file, not %v", path, st.Mode().Type())
+		return fmt.Errorf("%s must be a regular file, not %v", path, st.Mode().Type())
 	}
 	return nil
 }
@@ -159,7 +159,7 @@ func localFile(path string) error {
 func readLocal(path string) ([]byte, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if errors.Is(err, syscall.ELOOP) {
-		return nil, fmt.Errorf("%s must be a local file, not a symlink", path)
+		return nil, fmt.Errorf("%s must be a regular file, not a symlink", path)
 	}
 	if err != nil {
 		return nil, err
@@ -170,7 +170,7 @@ func readLocal(path string) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() {
-		return nil, fmt.Errorf("%s must be a local file, not %v", path, st.Mode().Type())
+		return nil, fmt.Errorf("%s must be a regular file, not %v", path, st.Mode().Type())
 	}
 	return io.ReadAll(f)
 }

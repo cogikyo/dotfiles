@@ -131,7 +131,7 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 		}
 	}
 	if len(changed) > 0 {
-		u.Warn("%d targets differ from the repo; no plaintext backup is kept", len(changed))
+		u.Warn("%d secret files differ from the repo; overwriting keeps no plaintext backup", len(changed))
 		for _, p := range changed {
 			u.Detail("%s", p.e.Path())
 		}
@@ -142,7 +142,7 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 		if ok {
 			writes = append(writes, changed...)
 		} else {
-			u.Warn("kept %d changed targets", len(changed))
+			u.Warn("kept %d changed files", len(changed))
 		}
 	}
 	for _, p := range writes {
@@ -155,7 +155,7 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
-	u.OK("decrypted %d, unchanged %d", len(writes), unchanged)
+	u.OK("wrote %d secret files; %d unchanged", len(writes), unchanged)
 	return nil
 }
 
@@ -386,7 +386,12 @@ func Stage(u *ui.UI, root paths.Root) setup.Stage {
 		{
 			Name:  "secrets-targets",
 			Check: func(context.Context) error { return checkTargets(root) },
-			Fix:   func(context.Context) error { return restore(u, root) },
+			Fix: func(context.Context) error {
+				if err := restore(u, root); !errors.Is(err, errSkipped) {
+					return err
+				}
+				return setup.Manual("secrets unlock skipped; run dctl setup secrets")
+			},
 		},
 	}}
 }
@@ -430,7 +435,7 @@ func checkTargets(root paths.Root) error {
 		}
 	}
 	if len(bad) > 0 {
-		return fmt.Errorf("%d targets: %s", len(bad), strings.Join(bad, ", "))
+		return fmt.Errorf("%d secret files need attention: %s", len(bad), strings.Join(bad, ", "))
 	}
 	return nil
 }
@@ -462,7 +467,7 @@ func restore(u *ui.UI, root paths.Root) error {
 		case WrongMode:
 			errs = append(errs, home.chmod(s.Target, s.Mode))
 		case Irregular:
-			errs = append(errs, fmt.Errorf("%s: %w; move it aside by hand", s.Path(), errIrregular))
+			errs = append(errs, fmt.Errorf("%s: %w; move it aside, then run dctl setup secrets", s.Path(), errIrregular))
 		case Missing:
 			data, err := reveal(keys, root, s.Entry)
 			if aborted(err) {
@@ -508,5 +513,6 @@ func reveal(keys *Keys, root paths.Root, e Entry) ([]byte, error) {
 }
 
 func aborted(err error) bool {
-	return errors.Is(err, ui.ErrCanceled) || errors.Is(err, ui.ErrNoTTY)
+	_, halted := errors.AsType[halt](err)
+	return halted || errors.Is(err, ui.ErrCanceled) || errors.Is(err, ui.ErrNoTTY)
 }

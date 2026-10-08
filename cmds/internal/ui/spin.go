@@ -11,15 +11,29 @@ import (
 )
 
 func (u *UI) Spin(ctx context.Context, label string, work func(context.Context) error) error {
-	if !u.Can() || u.opts.Plain {
-		u.Info("%s", label)
+	if u.opts.JSON {
 		return work(ctx)
 	}
-	if err := spin(ctx, u.stdout, u.lead(), label, work); err != nil {
-		return err
+	u.mu.Lock()
+	u.ensure()
+	u.flush(true)
+	live := u.Can() && !u.opts.Plain
+	u.mu.Unlock()
+	var err error
+	if live {
+		err = spin(ctx, u.stdout, u.lead(), label, work)
+	} else {
+		err = work(ctx)
 	}
-	u.OK("%s", label)
-	return nil
+	switch {
+	case err == nil:
+		u.Row(OK, label)
+	case errors.Is(err, ErrCanceled) || errors.Is(err, context.Canceled):
+		u.Row(Warn, label)
+	default:
+		u.Row(Err, label)
+	}
+	return err
 }
 
 func spin(parent context.Context, out io.Writer, lead, label string, work func(context.Context) error) error {

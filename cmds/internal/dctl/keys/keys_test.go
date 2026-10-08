@@ -15,6 +15,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 
 	"filippo.io/age/plugin"
@@ -256,79 +257,101 @@ func TestRemoveRetry(t *testing.T) {
 	}
 }
 
-func TestLuksNeverWipes(t *testing.T) {
-	sys := t.TempDir()
-	dm := filepath.Join(sys, "block", "dm-0")
-	if err := os.MkdirAll(filepath.Join(dm, "dm"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(dm, "slaves", "nvme0n1p2"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	write(t, filepath.Join(dm, "dm", "name"), "root\n")
-	write(t, filepath.Join(dm, "dm", "uuid"), "CRYPT-LUKS2-0123-root\n")
-	for name, tc := range map[string]struct {
-		tokens string
-		want   []string
-	}{
-		"fresh": {`{}`, []string{
-			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/nvme0n1p2",
-			"systemd-cryptenroll --recovery-key /dev/nvme0n1p2",
-		}},
-		"second key": {`{"0":{"type":"systemd-fido2","keyslots":["1"]},"1":{"type":"systemd-recovery","keyslots":["2"]}}`, []string{
-			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/nvme0n1p2",
-		}},
-	} {
-		f := &fake{t: t, out: map[string][]string{
-			"findmnt -nvo SOURCE /":                                   {"/dev/mapper/root"},
-			"cryptsetup luksDump --dump-json-metadata /dev/nvme0n1p2": {`{"keyslots":{"0":{"type":"luks2"}},"tokens":` + tc.tokens + `}`},
-		}}
-		if err := Luks(t.Context(), quiet(), f, sys, func(string) (bool, error) { return true, nil }); err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-		if !slices.Equal(f.log, tc.want) {
-			t.Errorf("%s: ran %v", name, f.log)
-		}
-		for _, line := range f.log {
-			if strings.Contains(line, "wipe") {
-				t.Errorf("%s: %s", name, line)
-			}
-		}
-	}
-}
-
-func TestLuksRetryRecovery(t *testing.T) {
-	sys := t.TempDir()
-	dm := filepath.Join(sys, "block", "dm-0")
-	for _, d := range []string{filepath.Join(dm, "dm"), filepath.Join(dm, "slaves", "vda2")} {
+func luksRoot(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	dm := filepath.Join(root, "sys", "block", "dm-0")
+	for _, d := range []string{filepath.Join(dm, "dm"), filepath.Join(dm, "slaves", "nvme0n1p2"), filepath.Join(root, "etc", "default"), filepath.Join(root, "boot")} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
 	write(t, filepath.Join(dm, "dm", "name"), "root\n")
 	write(t, filepath.Join(dm, "dm", "uuid"), "CRYPT-LUKS2-0123-root\n")
-	fido := "systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/vda2"
-	recovery := "systemd-cryptenroll --recovery-key /dev/vda2"
-	dump := "cryptsetup luksDump --dump-json-metadata /dev/vda2"
-	f := &fake{t: t, fail: map[string]error{recovery: errors.New("recovery failed")}, out: map[string][]string{
-		"findmnt -nvo SOURCE /": {"/dev/mapper/root"},
-		dump:                    {`{"tokens":{}}`, `{"tokens":{"0":{"type":"systemd-fido2","keyslots":["1"]}}}`},
-	}}
-	yes := func(string) (bool, error) { return true, nil }
-	if err := Luks(t.Context(), quiet(), f, sys, yes); err == nil {
-		t.Fatal("recovery failure ignored")
-	}
-	if !slices.Equal(f.log, []string{fido, recovery}) {
-		t.Fatalf("first run ran %v", f.log)
-	}
-	f.log, f.fail = nil, nil
-	asked := false
-	no := func(string) (bool, error) { asked = true; return false, nil }
-	if err := Luks(t.Context(), quiet(), f, sys, no); err != nil {
+	return root
+}
+
+func luksStage(t *testing.T, root string, f *fake, mode setup.Mode) map[string]setup.Result {
+	t.Helper()
+	reports, err := setup.Run(t.Context(), quiet(), []setup.Stage{Stage(quiet(), f, root)}, mode)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !asked || !slices.Equal(f.log, []string{recovery}) {
-		t.Fatalf("retry ran %v (asked %v)", f.log, asked)
+	out := map[string]setup.Result{}
+	for _, r := range reports[0].Items {
+		out[r.Item] = r
+	}
+	return out
+}
+
+func TestLuksTokens(t *testing.T) {
+	const (
+		good  = `{"type":"systemd-fido2","keyslots":["%d"],"fido2-clientPin-required":true,"fido2-up-required":false}`
+		touch = `{"type":"systemd-fido2","keyslots":["3"],"fido2-clientPin-required":true,"fido2-up-required":true}`
+		old   = `{"type":"systemd-fido2","keyslots":["3"]}`
+		paper = `{"type":"systemd-recovery","keyslots":["4"]}`
+	)
+	for name, tc := range map[string]struct {
+		tokens string
+		state  setup.State
+		detail string
+	}{
+		"fresh":     {`{"9":` + paper + `}`, setup.Pending, "0 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
+		"one":       {`{"0":` + fmt.Sprintf(good, 1) + `,"9":` + paper + `}`, setup.Pending, "1 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
+		"touch":     {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + touch + `}`, setup.Pending, "1 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
+		"two":       {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `}`, setup.Done, ""},
+		"two+touch": {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + touch + `}`, setup.ManualState, "--wipe-slot=3 /dev/nvme0n1p2"},
+		"two+old":   {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + old + `}`, setup.ManualState, "--wipe-slot=3"},
+	} {
+		dump := `{"keyslots":{},"tokens":` + tc.tokens + `}`
+		out := func() map[string][]string {
+			return map[string][]string{
+				"findmnt -nvo SOURCE /":                                   {"/dev/mapper/root"},
+				"cryptsetup luksDump --dump-json-metadata /dev/nvme0n1p2": {dump},
+			}
+		}
+		root := luksRoot(t)
+		r := luksStage(t, root, &fake{t: t, out: out()}, setup.Status)["luks-yubikeys"]
+		if r.State != tc.state || !strings.Contains(r.Detail, tc.detail) {
+			t.Errorf("%s: %+v, want %s %q", name, r, tc.state, tc.detail)
+		}
+		f := &fake{t: t, out: out()}
+		luksStage(t, root, f, setup.Force)
+		for _, line := range f.log {
+			if strings.Contains(line, "wipe") {
+				t.Errorf("%s: ran %s", name, line)
+			}
+		}
+	}
+}
+
+func TestLuksCmdline(t *testing.T) {
+	const uuid = "0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a"
+	for name, line := range map[string]string{
+		"bare":   "KERNEL_CMDLINE[default]=rd.luks.name=" + uuid + "=root rd.luks.options=" + uuid + "=fido2-device=auto root=/dev/mapper/root rw\n",
+		"quoted": `KERNEL_CMDLINE[default]="rd.luks.name=` + uuid + `=root root=/dev/mapper/root rd.luks.options=` + uuid + `=fido2-device=auto"` + "\n",
+	} {
+		root := luksRoot(t)
+		defaults := filepath.Join(root, "etc", "default", "limine")
+		write(t, defaults, "ESP_PATH=/boot\n"+line+"ENABLE_UKI=yes\n")
+		f := &fake{t: t, out: map[string][]string{
+			"findmnt -nvo SOURCE /":                                   {"/dev/mapper/root"},
+			"cryptsetup luksDump --dump-json-metadata /dev/nvme0n1p2": {`{"tokens":{}}`},
+		}}
+		if r := luksStage(t, root, f, setup.Status)["luks-cmdline"]; r.State != setup.Pending {
+			t.Fatalf("%s: %+v, want pending", name, r)
+		}
+		f.log = nil
+		if r := luksStage(t, root, f, setup.Force)["luks-cmdline"]; r.State != setup.Done || !slices.Contains(f.log, "limine-update") {
+			t.Errorf("%s: %+v after %v", name, r, f.log)
+		}
+		data, _ := os.ReadFile(defaults)
+		if strings.Contains(string(data), "rd.luks.options") || !strings.Contains(string(data), "rd.luks.name="+uuid+"=root") {
+			t.Errorf("%s: rewrote to %q", name, data)
+		}
+		if name == "quoted" && !strings.Contains(string(data), `root=/dev/mapper/root"`+"\n") {
+			t.Errorf("%s: lost the closing quote: %q", name, data)
+		}
 	}
 }
 

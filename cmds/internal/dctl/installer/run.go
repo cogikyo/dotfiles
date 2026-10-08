@@ -49,6 +49,7 @@ type session struct {
 
 type step struct {
 	name string
+	note string
 	do   func(context.Context) error
 }
 
@@ -77,6 +78,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	}
 	s.bundle = iso.Bundle
 	defer func() { err = errors.Join(err, s.unmountTest(context.WithoutCancel(ctx))) }()
+	s.u.Begin("prepare", "")
 	test, err := s.dctltest(ctx)
 	if err != nil {
 		return err
@@ -105,20 +107,24 @@ func (s *session) main(ctx context.Context) (err error) {
 	} else if a, err = s.ask(ctx); err != nil {
 		return err
 	}
-	if err := s.u.Spin(ctx, "preparing", func(context.Context) error { return prep.wait() }); err != nil {
+	if err := s.u.Spin(ctx, "payload verification and disk survey", func(context.Context) error { return prep.wait() }); err != nil {
 		return err
 	}
-	s.u.OK("payload verified; %d packages to install", len(prep.targets))
-
+	s.u.OK("payload: %d packages", len(prep.targets))
 	d, err := choose(s.u, prep.disks, test)
 	if err != nil {
 		return err
 	}
+	s.u.End(ui.OK, "")
+
 	p := newPlan(d, a.Zone)
+	s.u.Begin("disk", p.Disk.Path)
 	if test == nil {
 		if err := s.confirm(p.Disk); err != nil {
 			return err
 		}
+	} else {
+		s.u.Info("DCTLTEST: unattended install on serial %s", p.Disk.Serial)
 	}
 	boot, out, err := s.lsblk(ctx)
 	if err != nil {
@@ -130,6 +136,8 @@ func (s *session) main(ctx context.Context) (err error) {
 	if err := s.vacant(); err != nil {
 		return err
 	}
+	s.u.OK("disk unchanged since the survey; nothing mounted at %s, /dev/mapper/%s not open", target, mapper)
+	s.u.End(ui.OK, "")
 
 	start := time.Now()
 	if err := s.install(ctx, p, a, prep.targets); err != nil {
@@ -138,18 +146,27 @@ func (s *session) main(ctx context.Context) (err error) {
 	if test != nil {
 		s.report(nil)
 	}
+	s.u.Begin("summary", "")
 	s.u.OK("installed %s on %s in %s", machine, p.Disk.Path, time.Since(start).Round(time.Second))
-	s.u.Detail("after first login, run `dctl setup`; Secure Boot keys enroll later with `sudo dctl setup secureboot`")
+	s.u.Info("remove the USB stick")
+	s.u.Info("reboot")
+	s.u.Info("unlock with the disk passphrase; the boot TOTP shows `not set up yet` until dctl setup seals it")
+	s.u.Info("log in as %s and run `dctl setup`", login)
 	if test == nil {
 		ok, err := s.u.Confirm("Reboot now?")
-		if err != nil || !ok {
+		if err != nil {
 			return err
+		}
+		if !ok {
+			s.u.End(ui.OK, "")
+			return nil
 		}
 	}
 	if err := s.unmountTest(context.WithoutCancel(ctx)); err != nil {
 		return err
 	}
-	return s.sh.run(context.WithoutCancel(ctx), nil, "systemctl", "reboot")
+	s.u.End(ui.OK, "")
+	return s.sh.run(context.WithoutCancel(ctx), nil, cmd{Args: []string{"systemctl", "reboot"}, Quiet: true})
 }
 
 func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
@@ -166,22 +183,25 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 	for _, c := range found.Candidates {
 		u.Info("installable %s: %s, %.0f GB, %s", c.Path, c.Model, float64(c.Size)/1e9, c.Tran)
 	}
-	return found.pick("")
+	d, err := found.pick("")
+	if err == nil {
+		u.OK("selected %s", d.Path)
+	}
+	return d, err
 }
 
 func (s *session) consent(d disk) error {
 	if s.u.Yes() {
 		return errors.New("--yes cannot consent to erasing a disk; run dctl install without it")
 	}
-	s.u.Section("erase", d.Path)
+	s.u.Warn("will erase all partitions and data on %s", d.Path)
 	s.u.KV("model", d.Model)
 	s.u.KV("size", fmt.Sprintf("%.0f GB", float64(d.Size)/1e9))
 	s.u.KV("serial", d.Serial)
 	if d.WWN != "" {
-		s.u.KV("wwn", d.WWN)
+		s.u.KV("WWN", d.WWN)
 	}
-	s.u.Warn("installing permanently erases %s and all its partitions and data", d.Path)
-	ok, err := s.u.Confirm(fmt.Sprintf("Erase %s (%s, %.0f GB) and install?", d.Path, d.Model, float64(d.Size)/1e9))
+	ok, err := s.u.Confirm(fmt.Sprintf("Erase %s and install?", d.Path))
 	if err != nil {
 		return err
 	}
@@ -213,7 +233,7 @@ func (s *session) vacant() error {
 		return err
 	}
 	if busy {
-		return fmt.Errorf("refusing to install: something is mounted under %s", target)
+		return fmt.Errorf("refusing to install: something is mounted at or under %s", target)
 	}
 	return nil
 }
@@ -237,21 +257,26 @@ func (s *session) release(ctx context.Context) error {
 		busy, err := s.busy()
 		errs = append(errs, err)
 		if busy {
-			errs = append(errs, s.sh.run(ctx, nil, "umount", "-R", target))
+			errs = append(errs, s.sh.run(ctx, nil, run("umount", "-R", target)))
 		}
 	}
 	if s.opened {
-		errs = append(errs, s.sh.run(ctx, nil, "cryptsetup", "close", mapper))
+		errs = append(errs, s.sh.run(ctx, nil, run("cryptsetup", "close", mapper)))
 	}
-	errs = append(errs, s.sh.run(ctx, nil, "sync"))
+	errs = append(errs, s.sh.run(ctx, nil, run("sync")))
 	return errors.Join(errs...)
 }
 
 func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []string) (err error) {
 	defer func() {
-		if rerr := s.release(context.WithoutCancel(ctx)); rerr != nil {
-			err = errors.Join(err, fmt.Errorf("release target: %w", rerr))
+		s.u.Begin("unmount", target)
+		rerr := s.release(context.WithoutCancel(ctx))
+		if rerr != nil {
+			s.u.End(ui.Err, "")
+			err = errors.Join(err, fmt.Errorf("unmount %s: %w", target, rerr))
+			return
 		}
+		s.u.End(ui.OK, "")
 	}()
 	cmds := func(list []cmd) func(context.Context) error {
 		return func(ctx context.Context) error {
@@ -260,7 +285,7 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 				if c.Key {
 					stdin = []byte(a.LUKS)
 				}
-				if err := s.sh.run(ctx, stdin, c.Args...); err != nil {
+				if err := s.sh.run(ctx, stdin, c); err != nil {
 					return err
 				}
 				switch a := c.Args; {
@@ -274,33 +299,38 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		}
 	}
 	steps := []step{
-		{"partition", cmds(p.partition())},
-		{"format", cmds(p.format())},
-		{"subvolumes", cmds(p.subvolumes())},
-		{"mount", cmds(p.mount())},
-		{"pacstrap", func(ctx context.Context) error { return s.pacstrap(ctx, pkgs) }},
-		{"files", func(context.Context) error { return s.write(p) }},
-		{"firstboot", cmds(p.firstboot())},
-		{"accounts", func(ctx context.Context) error { return s.accounts(ctx, a) }},
-		{"keyring", cmds([]cmd{{Args: chroot("pacman-key", "--init")}, {Args: chroot("pacman-key", "--populate", "archlinux")}})},
-		{"dotfiles", func(ctx context.Context) error { return s.dotfiles(ctx) }},
-		{"setup", func(ctx context.Context) error { return s.setup(ctx) }},
-		{"snapshots", cmds(p.snapshots())},
-		{"boot", cmds([]cmd{{Args: chroot("limine-install")}})},
-		{"kernel", cmds([]cmd{{Args: chroot("limine-update")}})},
-		{"validate", func(ctx context.Context) error { return s.validate(ctx, p) }},
+		{"partition", p.Disk.Path, cmds(p.partition())},
+		{"format", "LUKS2 + btrfs root; FAT32 EFI", cmds(p.format())},
+		{"subvolumes", "", cmds(p.subvolumes())},
+		{"mount", target, cmds(p.mount())},
+		{"packages", fmt.Sprintf("%d from the ISO payload", len(pkgs)), func(ctx context.Context) error { return s.pacstrap(ctx, pkgs) }},
+		{"files", "", func(context.Context) error { return s.write(p) }},
+		{"identity", machine + ", " + p.Zone, cmds(p.firstboot())},
+		{"accounts", login, func(ctx context.Context) error { return s.accounts(ctx, a) }},
+		{"keyring", "", cmds([]cmd{
+			run(chroot("pacman-key", "--init")...),
+			run(chroot("pacman-key", "--populate", "archlinux")...),
+		})},
+		{"dotfiles", "", func(ctx context.Context) error { return s.dotfiles(ctx) }},
+		{"setup", "", func(ctx context.Context) error { return s.setup(ctx) }},
+		{"snapshots", "", cmds(p.snapshots())},
+		{"bootloader", "", cmds([]cmd{run(chroot("limine-install")...).because("install Limine to the EFI partition")})},
+		{"kernel", "", cmds([]cmd{run(chroot("limine-update")...).because("build the unified kernel image and boot entries")})},
+		{"verify", "", func(ctx context.Context) error { return s.validate(ctx, p) }},
 	}
 	if s.testMounted {
-		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testSetup(ctx) }})
+		steps = append(steps, step{"dctltest", "", func(ctx context.Context) error { return s.testSetup(ctx) }})
 	}
 	for _, st := range steps {
-		s.u.Section(st.name, "")
+		s.u.Begin(st.name, st.note)
 		start := time.Now()
 		err := st.do(ctx)
 		s.times = append(s.times, iso.Phase{Name: st.name, Seconds: time.Since(start).Seconds()})
 		if err != nil {
+			s.u.End(ui.Err, "")
 			return fmt.Errorf("%s: %w", st.name, err)
 		}
+		s.u.End(ui.OK, "")
 	}
 	return nil
 }
@@ -329,7 +359,7 @@ WantedBy=graphical.target
 	if err := os.WriteFile(s.path(target, "/etc/systemd/system", testUnit), []byte(unit), 0o644); err != nil {
 		return err
 	}
-	return s.sh.run(ctx, nil, chroot("systemctl", "enable", testUnit)...)
+	return s.sh.run(ctx, nil, run(chroot("systemctl", "enable", testUnit)...))
 }
 
 func chroot(args ...string) []string {
@@ -371,11 +401,11 @@ func (s *session) pacstrap(ctx context.Context, pkgs []string) (err error) {
 	}
 	defer func() { err = errors.Join(err, restore()) }()
 	cache := filepath.Join(target, "var", "cache", "pacman", "pkg")
-	if err := s.sh.run(ctx, nil, "mount", "--bind", iso.Payload, cache); err != nil {
+	if err := s.sh.run(ctx, nil, run("mount", "--bind", iso.Payload, cache).because("use ISO packages as the pacman cache")); err != nil {
 		return err
 	}
-	err = s.sh.run(ctx, nil, append([]string{"pacstrap", "-G", "-M", target}, pkgs...)...)
-	return errors.Join(err, s.sh.run(context.WithoutCancel(ctx), nil, "umount", cache))
+	err = s.sh.run(ctx, nil, run(append([]string{"pacstrap", "-G", "-M", target}, pkgs...)...))
+	return errors.Join(err, s.sh.run(context.WithoutCancel(ctx), nil, run("umount", cache)))
 }
 
 func (s *session) write(p plan) error {
@@ -384,7 +414,9 @@ func (s *session) write(p plan) error {
 		return err
 	}
 	defer root.Close()
-	for _, f := range append(p.files(), file{"etc/pacman.d/mirrorlist", 0o644, mirror}) {
+	files := append(p.files(), file{"etc/pacman.d/mirrorlist", 0o644, mirror})
+	var names []string
+	for _, f := range files {
 		if err := root.MkdirAll(filepath.Dir(f.Path), 0o755); err != nil {
 			return err
 		}
@@ -394,25 +426,27 @@ func (s *session) write(p plan) error {
 		if err := root.Chmod(f.Path, f.Mode); err != nil {
 			return err
 		}
+		names = append(names, "/"+f.Path)
 	}
+	s.u.OK("wrote %s", strings.Join(names, ", "))
 	return nil
 }
 
 func (s *session) accounts(ctx context.Context, a iso.Answers) error {
 	for _, c := range []struct {
-		args  []string
+		cmd   cmd
 		stdin string
 	}{
-		{args: chroot("locale-gen")},
-		{args: chroot("useradd", "-m", "-G", "wheel", "-s", "/usr/bin/zsh", login)},
-		{args: chroot("chpasswd"), stdin: login + ":" + a.Password + "\n"},
-		{args: chroot("passwd", "-l", "root")},
+		{cmd: run(chroot("locale-gen")...)},
+		{cmd: run(chroot("useradd", "-m", "-G", "wheel", "-s", "/usr/bin/zsh", login)...)},
+		{cmd: run(chroot("chpasswd")...).because("set the login password"), stdin: login + ":" + a.Password + "\n"},
+		{cmd: run(chroot("passwd", "-l", "root")...).because("disable root password login; use sudo")},
 	} {
 		var stdin []byte
 		if c.stdin != "" {
 			stdin = []byte(c.stdin)
 		}
-		if err := s.sh.run(ctx, stdin, c.args...); err != nil {
+		if err := s.sh.run(ctx, stdin, c.cmd); err != nil {
 			return err
 		}
 	}
@@ -427,6 +461,13 @@ func (s *session) dotfiles(ctx context.Context) error {
 	home := filepath.Join("/home", login)
 	bin := s.path(target, home, ".local", "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
+		return err
+	}
+	state := s.path(target, home, ".local", "state", "dctl")
+	if err := os.MkdirAll(state, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(state, "next"), []byte("run dctl setup\n"), 0o644); err != nil {
 		return err
 	}
 	for _, name := range binaries.Names {
@@ -444,7 +485,7 @@ func (s *session) dotfiles(ctx context.Context) error {
 		chroot("chown", "-R", login+":", filepath.Join(home, ".local")),
 		as("git", "init", "--quiet", "--initial-branch=master", repo),
 	} {
-		if err := s.sh.run(ctx, nil, args...); err != nil {
+		if err := s.sh.run(ctx, nil, run(args...)); err != nil {
 			return err
 		}
 	}
@@ -454,7 +495,7 @@ func (s *session) dotfiles(ctx context.Context) error {
 	}
 	tip, _, ok := strings.Cut(string(heads), " ")
 	if !ok {
-		return fmt.Errorf("%s has no master: %q", s.bundle, heads)
+		return fmt.Errorf("%s has no master branch: %q", s.bundle, heads)
 	}
 	shallow := filepath.Join(repo, ".git", "shallow")
 	if err := os.WriteFile(s.path(target, shallow), []byte(tip+"\n"), 0o644); err != nil {
@@ -466,7 +507,7 @@ func (s *session) dotfiles(ctx context.Context) error {
 		git("fetch", "--quiet", staged, "master:refs/remotes/origin/master"),
 		git("switch", "--quiet", "--force-create", "master", "--track", "origin/master"),
 	} {
-		if err := s.sh.run(ctx, nil, args...); err != nil {
+		if err := s.sh.run(ctx, nil, run(args...)); err != nil {
 			return err
 		}
 	}
@@ -493,14 +534,13 @@ func dctl(args ...string) []string {
 }
 
 func (s *session) setup(ctx context.Context) error {
-	s.u.Info("setup stages: root %s; %s %s", strings.Join(rootStages, ", "), login, strings.Join(userStages, ", "))
-	if err := s.sh.run(ctx, nil, chroot(dctl(slices.Concat([]string{"setup"}, rootStages)...)...)...); err != nil {
+	if err := s.sh.run(ctx, nil, run(chroot(dctl(slices.Concat([]string{"setup", "--batch=force"}, rootStages)...)...)...)); err != nil {
 		return err
 	}
-	return s.sh.run(ctx, nil, as(dctl(slices.Concat([]string{"setup"}, userStages)...)...)...)
+	return s.sh.run(ctx, nil, run(as(dctl(slices.Concat([]string{"setup", "--batch=force"}, userStages)...)...)...))
 }
 
-var errModified = errors.New("The target disk has already been modified; installation is incomplete.")
+var errModified = errors.New("installation incomplete; the target disk may be partly written")
 
 func (s *session) report(err error) {
 	line := iso.Report{Event: "install", OK: err == nil, Phases: s.times}
@@ -514,7 +554,7 @@ func (s *session) report(err error) {
 	fmt.Fprintf(os.Stdout, "%s\n", data)
 	f, ferr := os.OpenFile(s.path(console), os.O_WRONLY|os.O_APPEND, 0)
 	if ferr != nil {
-		s.u.Warn("serial console: %v", ferr)
+		s.u.Warn("could not write test report to serial console: %v", ferr)
 		return
 	}
 	fmt.Fprintf(f, "%s\n", data)

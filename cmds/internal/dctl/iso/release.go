@@ -36,7 +36,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if len(short) != 12 || strings.Trim(short, "0123456789abcdef") != "" {
 		return fmt.Errorf("%s is not named dotfiles-<rev12>.iso by dctl iso build", iso)
 	}
-	run := execx.OSRunner{Frame: u.Frame}
+	run := execx.OSRunner{UI: u}
 	rev, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "--verify", "--quiet", short+"^{commit}")
 	if err != nil {
 		return fmt.Errorf("resolve the ISO revision %s: %w", short, err)
@@ -76,7 +76,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 		return err
 	}
 	u.Section("sign", filepath.Base(sums)+" with "+filepath.Base(key)+"; enter the FIDO2 PIN, then touch the key")
-	if err := run.Run(ctx, "", "env", "-u", "SSH_AUTH_SOCK", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
+	if err := execx.Interactive(run).Run(ctx, "", "env", "-u", "SSH_AUTH_SOCK", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
 	signed, err := signedSum(ctx, root.Share("allowed_signers"), iso)

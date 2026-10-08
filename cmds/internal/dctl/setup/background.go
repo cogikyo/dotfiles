@@ -2,12 +2,13 @@ package setup
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
@@ -44,10 +45,28 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 		defer close(done)
 		r, applyErr = s.Apply(execx.Logged(run, log), force)
 	}()
+	var draining atomic.Bool
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	go func() {
+		defer signal.Stop(sig)
+		for {
+			select {
+			case <-done:
+				return
+			case <-sig:
+				if !draining.CompareAndSwap(false, true) {
+					stop()
+					return
+				}
+			}
+		}
+	}()
 	shown := "~/" + rel
-	u.Node(ui.Info, fmt.Sprintf("%-10s", s.Name), "started in background · log "+shown)
+	u.Line(ui.Info, s.Name, s.About+" · log "+shown)
 	return func(ctx context.Context) (Report, error) {
 		defer stop()
+		u.Begin(s.Name, s.About)
 		spin := func(ctx context.Context) error {
 			select {
 			case <-done:
@@ -57,28 +76,29 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 		}
 		err := ctx.Err()
 		if err == nil {
-			err = u.Spin(ctx, s.Name+": waiting for the background run", spin)
+			err = u.Spin(ctx, "background install", spin)
 		}
 		if err != nil || ctx.Err() != nil {
-			u.Warn("waiting for %s to finish safely · Ctrl+C again to interrupt", s.Name)
-			sig := make(chan os.Signal, 1)
-			signal.Notify(sig, os.Interrupt)
-			select {
-			case <-sig:
-				stop()
-			case <-done:
+			if errors.Is(context.Cause(ctx), ui.ErrCanceled) {
+				draining.Store(true)
 			}
-			<-done
-			signal.Stop(sig)
+			u.Warn("waiting for %s to finish · Ctrl+C again interrupts it", s.Name)
+			_ = u.Spin(context.WithoutCancel(ctx), "background install", spin)
 		}
 		<-done
 		keep()
 		log.Close()
-		Show(u, r)
+		for _, it := range r.Items {
+			if it.State != Done {
+				head, _, _ := strings.Cut(it.Detail, "\n")
+				u.Row(level(it.State), short(r, it.Item)+": "+head)
+			}
+		}
 		if r.State == Failed {
-			u.Detail("last lines of %s:", shown)
+			u.Row(ui.Info, "last lines of "+shown)
 			u.Detail("%s", tail(path, 20))
 		}
+		u.End(level(r.State), "")
 		return r, applyErr
 	}, nil
 }

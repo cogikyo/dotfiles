@@ -48,5 +48,9 @@ func (s *session) validate(ctx context.Context, p plan) error {
 	case got != p.LUKSID:
 		errs = append(errs, fmt.Errorf("LUKS UUID on %s is %s, cmdline names %s", p.Disk.part(2), got, p.LUKSID))
 	}
-	return errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return err
+	}
+	s.u.OK("boot entries match %s, LUKS UUID %s", p.Disk.part(2), p.LUKSID)
+	return nil
 }

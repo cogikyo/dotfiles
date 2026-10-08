@@ -193,16 +193,16 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 			current = append(current, name)
 			continue
 		}
-		u.Info("makepkg %s %s → %s", name, have, want)
-		args := []string{"-sfiC"}
+		u.Info("%s: %s → %s", name, have, want)
+		args, build := []string{"-sfiC"}, execx.Interactive(run)
 		if all {
-			args = append(args, "--noconfirm")
-		} else if ok, err := u.Proceed(fmt.Sprintf("Rebuild %s now?", name)); err != nil {
+			args, build = append(args, "--noconfirm"), run
+		} else if ok, err := u.Proceed(fmt.Sprintf("Rebuild %s?", name)); err != nil {
 			return err
 		} else if !ok {
 			continue
 		}
-		if err := run.Run(ctx, dir, "makepkg", args...); err != nil {
+		if err := build.Run(ctx, dir, "makepkg", args...); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
 		}
 	}
@@ -210,7 +210,7 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 		u.OK("local packages current: %s", strings.Join(current, ", "))
 	}
 	if len(absent) > 0 {
-		u.Info("skipped, not installed: %s", strings.Join(absent, ", "))
+		u.Info("not installed: %s", strings.Join(absent, ", "))
 	}
 	return errors.Join(errs...)
 }
@@ -273,7 +273,7 @@ func tools(ctx context.Context, u *ui.UI, run execx.Runner) error {
 		}
 	}
 	if len(local) > 0 {
-		u.Info("skipped, not from a module proxy: %s", strings.Join(local, ", "))
+		u.Info("skipped, no module checksum: %s", strings.Join(local, ", "))
 	}
 	return errors.Join(errs...)
 }

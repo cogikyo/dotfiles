@@ -84,7 +84,7 @@ func Upgrade(noconfirm bool, names ...string) []string {
 }
 
 func Stage(dir string, run execx.Runner) setup.Stage {
-	return setup.Stage{Name: "packages", Root: true, Online: true, Items: []setup.Item{{
+	return setup.Stage{Name: "packages", Root: true, Items: []setup.Item{{
 		Name: "packages-installed",
 		Check: func(ctx context.Context) error {
 			official, other, err := missing(ctx, dir, run)
@@ -94,7 +94,7 @@ func Stage(dir string, run execx.Runner) setup.Stage {
 			if len(official)+len(other) == 0 {
 				return nil
 			}
-			return fmt.Errorf("missing %d official: %s; missing %d AUR or local: %s",
+			return fmt.Errorf("missing packages — official (%d): %s; AUR or local (%d): %s",
 				len(official), strings.Join(official, " "), len(other), strings.Join(other, " "))
 		},
 		Fix: func(ctx context.Context) error {
@@ -108,7 +108,7 @@ func Stage(dir string, run execx.Runner) setup.Stage {
 				}
 			}
 			if len(other) > 0 {
-				return setup.Manual("pacman cannot install AUR or local packages: %s; build them with yay -S or makepkg -si in packages/<name>", strings.Join(other, " "))
+				return setup.Manual("missing AUR or local packages: %s; install AUR packages with yay -S <name>; build local packages with makepkg -si in packages/<name>", strings.Join(other, " "))
 			}
 			return nil
 		},
@@ -132,7 +132,7 @@ var coreDB = "/var/lib/pacman/sync/core.db"
 func synced() error {
 	_, err := os.Stat(coreDB)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("no official sync databases (%s missing); run `dctl update pacman`", coreDB)
+		return fmt.Errorf("pacman sync database missing: %s; run `dctl update pacman`", coreDB)
 	}
 	return err
 }

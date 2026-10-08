@@ -176,7 +176,7 @@ func (s survey) pick(path string) (disk, error) {
 		if i := slices.IndexFunc(s.Refused, func(r refusal) bool { return r.Disk.Path == path }); i >= 0 {
 			return disk{}, fmt.Errorf("refusing %s: %s", path, s.Refused[i].Reason)
 		}
-		return disk{}, fmt.Errorf("no disk %s", path)
+		return disk{}, fmt.Errorf("disk not found: %s", path)
 	}
 	if len(s.Candidates) == 0 {
 		return disk{}, errors.New("no installable disk")

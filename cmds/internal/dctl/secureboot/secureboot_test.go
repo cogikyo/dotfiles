@@ -6,6 +6,7 @@ import (
 	"debug/pe"
 	"encoding/binary"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -24,6 +25,7 @@ type fake struct {
 	keys     bool
 	unsigned bool
 	conf     string
+	totp     error
 	calls    []string
 }
 
@@ -35,6 +37,7 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 	switch line {
 	case "sbctl create-keys":
 		f.keys = true
+		put(f.t, filepath.Join(f.root, sbctlPK), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("own PK")}))
 	case "limine-update":
 		writeUKI(f.t, filepath.Join(f.root, "boot", "EFI", "Linux", "linux.efi"))
 		put(f.t, filepath.Join(f.root, "boot", "EFI", "limine", "limine_x64.efi"), []byte("limine"))
@@ -43,6 +46,7 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 		}
 	case "sbctl enroll-keys":
 		efivar(f.t, f.root, "SetupMode", 0)
+		put(f.t, filepath.Join(f.root, "sys", "firmware", "efi", "efivars", "PK-"+global), []byte("\x27\x00\x00\x00list own PK"))
 	}
 	return nil
 }
@@ -51,7 +55,7 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 	f.calls = append(f.calls, strings.Join(append([]string{name}, args...), " "))
 	switch {
 	case name == "tpm2-totp" && args[len(args)-1] == "show":
-		return "123456", nil
+		return "123456", f.totp
 	case name == "sbctl" && args[0] == "status":
 		return fmt.Sprintf(`{"installed": %t}`, f.keys), nil
 	case name == "sbctl" && args[0] == "verify":
@@ -107,6 +111,8 @@ func machine(t *testing.T) *fake {
 	put(t, filepath.Join(f.root, "etc", "default", "limine"), []byte("ESP_PATH=/boot\nENABLE_LIMINE_FALLBACK=yes\n"))
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
 	put(t, filepath.Join(f.root, "dev", "nvme0n1p2"), nil)
+	put(t, filepath.Join(f.root, "dev", "tpmrm0"), nil)
+	put(t, filepath.Join(f.root, measured), synthetic(0, false))
 	put(t, filepath.Join(f.root, "sys", "class", "block", "nvme0n1p2", "holders", "dm-0", "dm", "name"), []byte("root\n"))
 	if err := os.MkdirAll(filepath.Join(f.root, "dev", "disk", "by-uuid"), 0o755); err != nil {
 		t.Fatal(err)
@@ -123,13 +129,16 @@ func run(t *testing.T, f *fake, fix bool) map[string]setup.Result {
 	if fix {
 		mode = setup.Force
 	}
-	reports, err := setup.Run(t.Context(), ui.New(ui.Options{JSON: true}), []setup.Stage{Stage(f, f.root)}, mode)
+	u := ui.New(ui.Options{JSON: true})
+	reports, err := setup.Run(t.Context(), u, []setup.Stage{Stage(f, f.root), TOTP(u, f, f.root)}, mode)
 	if err != nil {
 		t.Fatal(err)
 	}
 	byName := map[string]setup.Result{}
-	for _, r := range reports[0].Items {
-		byName[r.Item] = r
+	for _, report := range reports {
+		for _, r := range report.Items {
+			byName[r.Item] = r
+		}
 	}
 	return byName
 }
@@ -140,8 +149,11 @@ func TestFixEnrolls(t *testing.T) {
 	if rs[Keys].State != setup.Done || rs[Signed].State != setup.Done {
 		t.Fatalf("after enrollment: %+v", rs)
 	}
-	if r := rs[Enforced]; r.State != setup.ManualState || !strings.Contains(r.Detail, "reboot") {
-		t.Errorf("before reboot %s = %+v, want manual on a reboot", Enforced, r)
+	if r := rs[Enforced]; r.State == setup.Done || !strings.HasPrefix(r.Detail, "reboot") {
+		t.Errorf("before reboot %s = %+v, want a wait for the reboot", Enforced, r)
+	}
+	if r := rs["totp-sealed"]; r.State == setup.Done || !strings.Contains(r.Detail, "after reboot") {
+		t.Errorf("before reboot totp-sealed = %+v, want a wait for the reboot", r)
 	}
 	order := []string{"sbctl create-keys", "limine-update", "sbctl verify", "sbctl enroll-keys"}
 	at := -1
@@ -161,6 +173,8 @@ func TestFixEnrolls(t *testing.T) {
 	}
 
 	efivar(t, f.root, "SecureBoot", 1)
+	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
+	put(t, filepath.Join(f.root, built), []byte("label=test\n"))
 	for name, r := range run(t, f, false) {
 		if r.State != setup.Done {
 			t.Errorf("after reboot %s = %+v", name, r)
@@ -225,6 +239,8 @@ func TestSignedRepairs(t *testing.T) {
 	run(t, f, true)
 	efivar(t, f.root, "SecureBoot", 1)
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
+	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
+	put(t, filepath.Join(f.root, built), []byte("label=test\n"))
 	if r := run(t, f, false)[Signed]; r.State != setup.Pending || !strings.Contains(r.Detail, "fallback") {
 		t.Fatalf("drifted %s = %+v, want pending", Signed, r)
 	}
@@ -236,5 +252,130 @@ func TestSignedRepairs(t *testing.T) {
 	}
 	if !slices.Contains(f.calls, "limine-update") || slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, "sbctl enroll-keys") }) {
 		t.Errorf("repair calls %q, want limine-update without enrollment", f.calls)
+	}
+}
+
+func TestPreflight(t *testing.T) {
+	for name, tc := range map[string]struct {
+		setup bool
+		log   []byte
+		want  string
+		on    bool
+	}{
+		"option ROMs":         {true, synthetic(2, false), "2 option ROMs measured, so sbctl refuses to enroll", false},
+		"option ROMs in BIOS": {false, synthetic(2, true), "2 option ROMs", false},
+		"no event log":        {true, nil, "TPM event log missing", false},
+		"factory keys":        {false, synthetic(0, true), "Erase all Secure Boot Settings", false},
+		"factory keys on":     {false, synthetic(0, true), "keys dctl did not create", true},
+		"ready":               {true, synthetic(0, false), "keys not enrolled", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := machine(t)
+			efivar(t, f.root, "SetupMode", map[bool]byte{true: 1}[tc.setup])
+			efivar(t, f.root, "SecureBoot", map[bool]byte{true: 1}[tc.on])
+			if tc.log == nil {
+				os.Remove(filepath.Join(f.root, measured))
+			} else {
+				put(t, filepath.Join(f.root, measured), tc.log)
+			}
+			if r := run(t, f, false)[Keys]; !strings.Contains(r.Detail, tc.want) {
+				t.Errorf("%s = %+v, want %q", Keys, r, tc.want)
+			}
+			if name == "ready" {
+				return
+			}
+			run(t, f, true)
+			if slices.ContainsFunc(f.calls, func(c string) bool {
+				return strings.HasPrefix(c, "sbctl create-keys") || strings.HasPrefix(c, "sbctl enroll-keys")
+			}) {
+				t.Errorf("forced apply ran %q", f.calls)
+			}
+		})
+	}
+}
+
+func TestVendorKeys(t *testing.T) {
+	f := machine(t)
+	put(t, filepath.Join(f.root, sbctlConf), []byte("db_additions:\n- microsoft\n"))
+	if r := run(t, f, true)[Keys]; r.State != setup.ManualState || !strings.Contains(r.Detail, "adds microsoft to db") || slices.Contains(f.calls, "sbctl enroll-keys") {
+		t.Fatalf("%s = %+v with db_additions, calls %q", Keys, r, f.calls)
+	}
+	os.Remove(filepath.Join(f.root, sbctlConf))
+	run(t, f, true)
+	db := append([]byte{7, 0, 0, 0}, microsoft...)
+	put(t, filepath.Join(f.root, "sys", "firmware", "efi", "efivars", "db-"+security), db)
+	if r := run(t, f, false)[Keys]; r.State != setup.ManualState || !strings.Contains(r.Detail, "Microsoft certificates remain in db") {
+		t.Errorf("%s = %+v, want Microsoft certificates flagged", Keys, r)
+	}
+}
+
+func TestStillOffAfterReboot(t *testing.T) {
+	f := machine(t)
+	run(t, f, true)
+	put(t, filepath.Join(f.root, measured), synthetic(0, true))
+	if r := run(t, f, false)[Enforced]; r.State != setup.ManualState || !strings.Contains(r.Detail, "Secure Boot still off") {
+		t.Errorf("%s = %+v, want manual", Enforced, r)
+	}
+}
+
+func TestSealed(t *testing.T) {
+	none := errors.New("tpm2-totp: exit status 1: No TOTP secret is currently stored, use 'init' to generate and store one.")
+	for name, tc := range map[string]struct {
+		err    error
+		tpm    bool
+		marked bool
+		want   error
+		text   string
+	}{
+		"sealed":          {nil, true, true, nil, ""},
+		"sealed unmarked": {nil, true, false, errUnmarked, ""},
+		"unsealed":        {none, true, false, errUnsealed, ""},
+		"gone":            {none, true, true, nil, "NO BOOT TOTP: sealed secret missing"},
+		"changed":         {errors.New("tpm2-totp: exit status 1: The system state has changed, no TOTP could be calculated."), true, false, nil, "NO BOOT TOTP: PCR 0 or 7 changed"},
+		"lockout":         {errors.New("tpm2-totp: exit status 1: The password has been entered wrongly too many times and the TPM is in lockout mode."), true, true, nil, "lockout"},
+		"no TPM":          {nil, false, true, nil, "no TPM at"},
+		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR in main: 0xa000a - tcti:IO failure"), true, true, nil, "IO failure"},
+	} {
+		f := machine(t)
+		efivar(t, f.root, "SetupMode", 0)
+		efivar(t, f.root, "SecureBoot", 1)
+		if !tc.tpm {
+			os.Remove(filepath.Join(f.root, "dev", "tpmrm0"))
+		}
+		if tc.marked {
+			put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
+			put(t, filepath.Join(f.root, built), []byte("label=test\n"))
+		}
+		f.totp = tc.err
+		err := sealed(t.Context(), f, f.root)
+		switch {
+		case tc.text != "":
+			if r := run(t, f, false)["totp-sealed"]; r.State != setup.ManualState || !strings.Contains(r.Detail, tc.text) {
+				t.Errorf("%s: %+v, want manual naming %q", name, r, tc.text)
+			}
+		case !errors.Is(err, tc.want) || (tc.want == nil) != (err == nil):
+			t.Errorf("%s: %v, want %v", name, err, tc.want)
+		}
+	}
+}
+
+func TestMarkerRepair(t *testing.T) {
+	f := machine(t)
+	run(t, f, true)
+	efivar(t, f.root, "SecureBoot", 1)
+	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
+	put(t, filepath.Join(f.root, built), []byte("label=old\n"))
+	if r := run(t, f, false)["totp-sealed"]; r.State != setup.Pending {
+		t.Fatalf("totp-sealed with stale images = %+v, want pending", r)
+	}
+	f.calls = nil
+	if r := run(t, f, true)["totp-sealed"]; r.State != setup.Done {
+		t.Fatalf("totp-sealed = %+v, want the images rebuilt", r)
+	}
+	if stamp, err := os.ReadFile(filepath.Join(f.root, built)); err != nil || string(stamp) != "label=test\n" || !slices.Contains(f.calls, "limine-update") {
+		t.Errorf("stamp %q %v, calls %q", stamp, err, f.calls)
+	}
+	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, " init") || strings.Contains(c, " clean") }) {
+		t.Errorf("rebuilding the images resealed: %q", f.calls)
 	}
 }

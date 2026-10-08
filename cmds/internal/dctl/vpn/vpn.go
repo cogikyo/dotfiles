@@ -30,7 +30,7 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 			if err != nil || len(missing) == 0 {
 				return err
 			}
-			return setup.Manual("skipped: %s not in NetworkManager; run `dctl setup vpn` to import it with its password and PSK", strings.Join(missing, ", "))
+			return fmt.Errorf("VPN profiles missing from NetworkManager: %s; run dctl setup vpn; password and PSK required", strings.Join(missing, ", "))
 		},
 		Fix: func(ctx context.Context) (err error) {
 			conns, missing, err := absent(ctx, r, run)
@@ -46,7 +46,7 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 				profile := conns[name].Path(name)
 				i := slices.IndexFunc(entries, func(e secrets.Entry) bool { return paths.ExpandHome(r.Home, e.Path()) == profile })
 				if i < 0 {
-					return fmt.Errorf("vpn %s: no secret in secrets/manifest targets %s", name, profile)
+					return fmt.Errorf("VPN %s: secrets/manifest has no entry for %s", name, profile)
 				}
 				names = append(names, entries[i].Name)
 				if _, err := os.Lstat(profile); errors.Is(err, fs.ErrNotExist) {
@@ -65,7 +65,7 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 				return err
 			}
 			for _, name := range missing {
-				err := run.Run(ctx, "", "hyprd", "vpn", "install", name)
+				err := execx.Interactive(run).Run(ctx, "", "hyprd", "vpn", "install", name)
 				if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 130 {
 					return ui.ErrCanceled
 				}
@@ -94,7 +94,7 @@ func absent(ctx context.Context, r paths.Root, run execx.Runner) (map[string]con
 		return conns, nil, nil
 	}
 	if _, err := exec.LookPath("nmcli"); err != nil {
-		return nil, nil, setup.Manual("nmcli not found; install networkmanager from base.lst")
+		return nil, nil, setup.Manual("nmcli not found; run dctl setup packages to install NetworkManager")
 	}
 	out, err := run.Output(ctx, "", "nmcli", "-t", "-f", "NAME", "connection", "show")
 	if err != nil {

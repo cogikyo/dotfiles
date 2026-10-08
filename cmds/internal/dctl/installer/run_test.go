@@ -68,7 +68,8 @@ func (f *fake) mount(add string, drop func(string) bool) {
 	put(f.t, filepath.Join(f.root, "proc", "self", "mountinfo"), []byte(b.String()), 0o644)
 }
 
-func (f *fake) run(_ context.Context, _ []byte, args ...string) error {
+func (f *fake) run(_ context.Context, _ []byte, c cmd) error {
+	args := c.Args
 	f.record(args)
 	line := strings.Join(args, " ")
 	if f.fail != "" && strings.HasPrefix(line, f.fail) {
@@ -302,7 +303,7 @@ func TestPreexistingTargetRefused(t *testing.T) {
 	t.Run("mount", func(t *testing.T) {
 		s, f := rig(t)
 		f.mount("/mnt/boot", func(string) bool { return false })
-		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "mounted under") {
+		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "mounted at or under") {
 			t.Fatalf("main: %v, want a mount refusal", err)
 		}
 		f.mutated(t)
@@ -333,7 +334,7 @@ func TestCancelSignalsProcessGroup(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() {
-		done <- host{ui.New(ui.Options{JSON: true})}.run(ctx, nil, "sh", "-c", script, "sh", ready, trapped, child)
+		done <- host{ui.New(ui.Options{JSON: true})}.run(ctx, nil, run("sh", "-c", script, "sh", ready, trapped, child))
 	}()
 	for !exists(ready) {
 		time.Sleep(10 * time.Millisecond)
@@ -368,7 +369,7 @@ func TestDCTLTEST(t *testing.T) {
 	t.Run("outside a VM", func(t *testing.T) {
 		s, f := rig(t)
 		answer(t, s, valid("24123A800123"))
-		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "not a VM") {
+		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "no VM was detected") {
 			t.Fatalf("main: %v, want a VM refusal", err)
 		}
 		if f.index("mount") >= 0 {

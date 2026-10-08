@@ -56,16 +56,23 @@ func fatID() string {
 }
 
 type cmd struct {
-	Args []string
-	Key  bool
+	Args  []string
+	Key   bool
+	Why   string
+	Quiet bool
 }
 
 func run(args ...string) cmd { return cmd{Args: args} }
 
+func (c cmd) because(why string) cmd {
+	c.Why = why
+	return c
+}
+
 func (p plan) partition() []cmd {
 	return []cmd{
 		run("wipefs", "--all", "--force", p.Disk.Path),
-		run("sgdisk", "--new=1:0:"+espSize, "--typecode=1:ef00", "--new=2:0:0", "--typecode=2:8309", p.Disk.Path),
+		run("sgdisk", "--new=1:0:"+espSize, "--typecode=1:ef00", "--new=2:0:0", "--typecode=2:8309", p.Disk.Path).because("create EFI and root partitions"),
 		run("udevadm", "settle"),
 	}
 }
@@ -73,7 +80,7 @@ func (p plan) partition() []cmd {
 func (p plan) format() []cmd {
 	luks := p.Disk.part(2)
 	return []cmd{
-		{Args: []string{"cryptsetup", "luksFormat", "--type=luks2", "--batch-mode", "--uuid=" + p.LUKSID, "--key-file=-", luks}, Key: true},
+		{Args: []string{"cryptsetup", "luksFormat", "--type=luks2", "--batch-mode", "--uuid=" + p.LUKSID, "--key-file=-", luks}, Key: true, Why: "encrypt the root partition with the disk passphrase"},
 		{Args: []string{"cryptsetup", "open", "--allow-discards", "--persistent", "--key-file=-", luks, mapper}, Key: true},
 		run("mkfs.fat", "-F", "32", "-i", strings.ReplaceAll(p.ESPID, "-", ""), p.Disk.part(1)),
 		run("mkfs.btrfs", "--uuid="+p.RootID, "/dev/mapper/"+mapper),
@@ -110,8 +117,8 @@ func (p plan) snapshots() []cmd {
 		run(chroot("snapper", "--no-dbus", "-c", "root", "create-config", "/")...),
 		run(chroot("snapper", "--no-dbus", "-c", "root", "set-config",
 			"TIMELINE_LIMIT_HOURLY=5", "TIMELINE_LIMIT_DAILY=7", "TIMELINE_LIMIT_WEEKLY=0",
-			"TIMELINE_LIMIT_MONTHLY=0", "TIMELINE_LIMIT_YEARLY=0")...),
-		run("btrfs", "subvolume", "delete", dir),
+			"TIMELINE_LIMIT_MONTHLY=0", "TIMELINE_LIMIT_YEARLY=0")...).because("keep 5 hourly and 7 daily snapshots"),
+		run("btrfs", "subvolume", "delete", dir).because("replace snapper's nested subvolume with the top-level @snapshots"),
 		run("mount", "--mkdir", "-o", snapshots.options(), "/dev/mapper/"+mapper, dir),
 		run("chmod", "750", dir),
 	}

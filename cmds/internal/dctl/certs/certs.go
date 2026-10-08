@@ -55,7 +55,7 @@ func Stage(r paths.Root, run execx.Runner) setup.Stage {
 				if err != nil {
 					return err
 				}
-				if err := run.Run(ctx, "", "mkcert", "-install"); err != nil {
+				if err := execx.Interactive(run).Run(ctx, "", "mkcert", "-install"); err != nil {
 					return fmt.Errorf("mkcert -install: %w", err)
 				}
 				root, path, err := ca(ctx, run)
@@ -91,7 +91,7 @@ func Stage(r paths.Root, run execx.Runner) setup.Stage {
 func prerequisites(homeDir string) (string, error) {
 	for _, tool := range []string{"mkcert", "certutil"} {
 		if _, err := exec.LookPath(tool); err != nil {
-			return "", setup.Manual("%s not found; install it from base.lst", tool)
+			return "", setup.Manual("%s not found; run dctl setup packages", tool)
 		}
 	}
 	return home.FirefoxProfile(homeDir)
@@ -139,7 +139,7 @@ func systemTrusts(root *x509.Certificate) error {
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(data)
 	if _, err := root.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}); err != nil {
-		return fmt.Errorf("mkcert CA is absent from %s: %w", bundle, err)
+		return fmt.Errorf("mkcert CA verification against %s failed: %w", bundle, err)
 	}
 	return nil
 }
@@ -150,19 +150,19 @@ func nickname(root *x509.Certificate) string {
 
 func firefoxTrusts(ctx context.Context, run execx.Runner, root *x509.Certificate, profile string) error {
 	if _, err := os.Stat(filepath.Join(profile, "cert9.db")); err != nil {
-		return setup.Manual("Firefox NSS database missing; start Firefox once")
+		return setup.Manual("Firefox NSS database unavailable; run dctl setup firefox")
 	}
 	db, name := "sql:"+profile, nickname(root)
 	installed, err := run.Output(ctx, "", "certutil", "-L", "-d", db, "-n", name, "-a")
 	if err != nil {
-		return fmt.Errorf("Firefox lacks CA %q", name)
+		return fmt.Errorf("could not read Firefox CA %q", name)
 	}
 	cert, err := parsePEM([]byte(installed))
 	if err != nil || !bytes.Equal(cert.Raw, root.Raw) {
-		return fmt.Errorf("Firefox CA %q differs from the current mkcert CA", name)
+		return fmt.Errorf("Firefox CA %q is invalid or differs from the current mkcert CA", name)
 	}
 	if _, err := run.Output(ctx, "", "certutil", "-V", "-d", db, "-n", name, "-u", "L"); err != nil {
-		return fmt.Errorf("Firefox does not trust CA %q: %w", name, err)
+		return fmt.Errorf("Firefox CA %q validation failed: %w", name, err)
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func trustInFirefox(ctx context.Context, run execx.Runner, root *x509.Certificat
 		return nil
 	}
 	if _, err := os.Stat(filepath.Join(profile, "cert9.db")); err != nil {
-		return setup.Manual("Firefox NSS database missing; start Firefox once")
+		return setup.Manual("Firefox NSS database unavailable; run dctl setup firefox")
 	}
 	db, name := "sql:"+profile, nickname(root)
 	_, _ = run.Output(ctx, "", "certutil", "-D", "-d", db, "-n", name)
@@ -216,7 +216,7 @@ func verify(certPath, keyPath string, root *x509.Certificate, now time.Time) err
 
 func (l leaf) generate(ctx context.Context, run execx.Runner, root *x509.Certificate) error {
 	if st, err := os.Lstat(l.dir); err == nil && !st.IsDir() {
-		return fmt.Errorf("%s must be a local directory", l.dir)
+		return fmt.Errorf("%s must be a directory, not a symlink or file", l.dir)
 	}
 	if err := os.MkdirAll(l.dir, 0o700); err != nil {
 		return err
@@ -226,7 +226,7 @@ func (l leaf) generate(ctx context.Context, run execx.Runner, root *x509.Certifi
 	}
 	for _, path := range []string{l.cert, l.key} {
 		if st, err := os.Lstat(path); err == nil && !st.Mode().IsRegular() {
-			return fmt.Errorf("refusing %s: not a regular file", path)
+			return fmt.Errorf("refusing to replace %s: not a regular file", path)
 		}
 	}
 	if verify(l.cert, l.key, root, time.Now()) == nil {

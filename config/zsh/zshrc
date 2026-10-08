@@ -9,6 +9,10 @@ function command_not_found_handler {
     return 127
 }
 
+dctl_next=${XDG_STATE_HOME:-$HOME/.local/state}/dctl/next
+[[ -r $dctl_next ]] && print -r -- $'\e[2m'"dctl · $(<$dctl_next)"$'\e[0m'
+unset dctl_next
+
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │ History                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯

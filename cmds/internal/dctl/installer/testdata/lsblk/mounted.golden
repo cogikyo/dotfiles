@@ -5,4 +5,4 @@ refused /dev/nvme0n1 "WD_BLACK SN850X 2000GB" serial=24123A800123 wwn=eui.e8238f
 pick "": error: no installable disk
 pick "/dev/nvme0n1": error: refusing /dev/nvme0n1: mounted at /mnt/var/log, /mnt/home, /mnt
 pick "/dev/sdb": error: refusing /dev/sdb: removable or USB
-pick "/dev/sdz": error: no disk /dev/sdz
+pick "/dev/sdz": error: disk not found: /dev/sdz

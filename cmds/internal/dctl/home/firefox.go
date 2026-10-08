@@ -1,15 +1,18 @@
 package home
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func Firefox(r paths.Root) setup.Stage {
+func Firefox(r paths.Root, run execx.Runner) setup.Stage {
 	userJS := func() ([]link, error) {
 		profile, err := FirefoxProfile(r.Home)
 		if err != nil {
@@ -32,9 +35,33 @@ func Firefox(r paths.Root) setup.Stage {
 		}
 		return out, nil
 	}
+	profile := setup.Item{
+		Name: "firefox-profile",
+		Check: func(context.Context) error {
+			if _, err := FirefoxProfile(r.Home); err != nil {
+				return errors.New("Firefox Developer Edition profile missing")
+			}
+			return nil
+		},
+		Fix: func(ctx context.Context) error {
+			if _, err := FirefoxProfile(r.Home); err == nil {
+				return nil
+			}
+			if running() {
+				return setup.Manual("quit Firefox, then run dctl setup firefox")
+			}
+			dir, err := os.MkdirTemp("", "dctl-firefox-")
+			if err != nil {
+				return err
+			}
+			defer os.RemoveAll(dir)
+			return execx.Reason(run, "create the Developer Edition profile").Run(ctx, "", "firefox-developer-edition", "--headless", "--screenshot", filepath.Join(dir, "first-run.png"), "about:blank")
+		},
+	}
 	return setup.Stage{Name: "firefox", Items: []setup.Item{
-		linkCheck("firefox-user-js", r.Dotfiles, "restart Firefox after fixing", userJS),
-		linkCheck("firefox-chrome", r.Dotfiles, "restart Firefox after fixing", chrome),
+		profile,
+		linkCheck("firefox-user-js", r.Dotfiles, "restart Firefox after setup", userJS),
+		linkCheck("firefox-chrome", r.Dotfiles, "restart Firefox after setup", chrome),
 	}}
 }
 
@@ -53,7 +80,17 @@ func FirefoxProfile(home string) (string, error) {
 			}
 		}
 	}
-	return "", setup.Manual("Firefox Developer Edition profile not found; launch it once first")
+	return "", setup.Manual("Firefox Developer Edition profile not found; run dctl setup firefox")
+}
+
+func running() bool {
+	comms, _ := filepath.Glob("/proc/[0-9]*/comm")
+	for _, comm := range comms {
+		if data, err := os.ReadFile(comm); err == nil && strings.TrimSpace(string(data)) == "firefox" {
+			return true
+		}
+	}
+	return false
 }
 
 func devProfile(ini string) string {

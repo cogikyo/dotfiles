@@ -291,6 +291,12 @@ func TestCheckPhrase(t *testing.T) {
 	}
 }
 
+type inserted []string
+
+func (s inserted) Serials() ([]string, error) { return s, nil }
+
+func (inserted) Tries(string) (int, error) { return 3, nil }
+
 type prompting struct{ ui *plugin.ClientUI }
 
 func (p prompting) Unwrap([]*age.Stanza) ([]byte, error) {
@@ -304,8 +310,8 @@ func TestPluginPromptAbortSkipsPhrase(t *testing.T) {
 	f := newFixture(t, "key:~/key:600\n")
 	sealed, err := Seal([]byte("key"), f.recipients(t))
 	must(t, err)
-	k := &Keys{u: f.u, wrapped: f.root.Secrets("missing.age")}
-	k.plugins = []age.Identity{prompting{clientUI(f.u, &k.stop)}}
+	k := &Keys{u: f.u, wrapped: f.root.Secrets("missing.age"), piv: inserted{"1"}}
+	k.plugins = []yubikey{{prompting{clientUI(f.u, &k.stop, &k.gone)}, "1"}}
 	if _, err := k.Open(sealed); !aborted(err) {
 		t.Fatalf("got %v, want an aborted prompt", err)
 	}

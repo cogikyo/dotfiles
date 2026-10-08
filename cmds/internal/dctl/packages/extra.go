@@ -22,7 +22,7 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 		}
 		return absent(l.Extra, have), nil
 	}
-	return setup.Stage{Name: "extra", Online: true, Background: true, Items: []setup.Item{
+	return setup.Stage{Name: "extra", Background: true, Items: []setup.Item{
 		{
 			Name: "extra-installed",
 			Check: func(ctx context.Context) error {
@@ -30,7 +30,7 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 				if err != nil || len(names) == 0 {
 					return err
 				}
-				return fmt.Errorf("missing %d: %s", len(names), strings.Join(names, " "))
+				return fmt.Errorf("%d packages missing: %s", len(names), strings.Join(names, " "))
 			},
 			Fix: func(ctx context.Context) error {
 				names, err := pending(ctx)
@@ -51,7 +51,7 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 				case "enabled":
 					return nil
 				case "not-found":
-					return setup.Manual("docker.socket not found; install extra.lst first")
+					return setup.Manual("docker.socket not found; run dctl setup extra")
 				case "":
 					return fmt.Errorf("systemctl is-enabled docker.socket: %w", err)
 				}

@@ -86,11 +86,11 @@ func Inserted(ctx context.Context, run execx.Runner) (string, error) {
 	serials := strings.Fields(out)
 	switch len(serials) {
 	case 0:
-		return "", errors.New("no YubiKey with a readable serial is inserted")
+		return "", errors.New("no readable YubiKey serial; insert one YubiKey")
 	case 1:
 		return serials[0], nil
 	}
-	return "", fmt.Errorf("%d YubiKeys inserted (%s); leave only one in", len(serials), strings.Join(serials, ", "))
+	return "", fmt.Errorf("%d YubiKeys inserted (%s); leave one inserted", len(serials), strings.Join(serials, ", "))
 }
 
 func ykman(serial string, args ...string) []string {

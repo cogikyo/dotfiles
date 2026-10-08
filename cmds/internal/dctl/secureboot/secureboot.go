@@ -1,9 +1,11 @@
 package secureboot
 
 import (
+	"bytes"
 	"context"
 	"debug/pe"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,20 +16,27 @@ import (
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	global   = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
-	fallback = "EFI/BOOT/BOOTX64.EFI"
-	bios     = "Secure Boot is off and the firmware is not in Setup Mode: in the BIOS, erase the Secure Boot keys (Setup Mode), boot, then run dctl setup secureboot"
+	global    = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+	security  = "d719b2cb-3d3a-4596-a3bc-dad00e67656f"
+	fallback  = "EFI/BOOT/BOOTX64.EFI"
+	bios      = "reboot; F2 → Erase all Secure Boot Settings → F10 to save; then run dctl setup"
+	sbctlPK   = "var/lib/sbctl/keys/PK/PK.pem"
+	sbctlConf = "etc/sbctl/sbctl.conf"
+	measured  = "sys/kernel/security/tpm0/binary_bios_measurements"
 
 	Keys     = "secureboot-keys"
 	Signed   = "secureboot-signed"
 	Enforced = "secureboot-enforced"
-	TOTP     = "secureboot-totp"
 )
 
 var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}
+
+var microsoft = []byte{0xbd, 0x9a, 0xfa, 0x77, 0x59, 0x03, 0x32, 0x4d, 0xbd, 0x60, 0x28, 0xf4, 0xe7, 0x8f, 0x78, 0x4b}
 
 type Firmware struct {
 	UEFI    bool
@@ -70,26 +79,32 @@ func Stage(run execx.Runner, root string) setup.Stage {
 	efi := filepath.Join(root, "sys", "firmware", "efi")
 	esp := filepath.Join(root, "boot")
 	limine := filepath.Join(root, "etc", "default", "limine")
-	enrolled := func(ctx context.Context) error {
+	errReady := errors.New("firmware in Setup Mode; keys not enrolled")
+	keys := func(context.Context) error {
 		fw, err := Read(efi)
 		switch {
 		case err != nil:
 			return err
 		case !fw.UEFI:
-			return setup.Manual("not booted with UEFI")
-		case fw.Setup:
-			return errors.New("firmware is in Setup Mode: no Secure Boot keys enrolled")
-		case fw.Enabled:
-			return nil
+			return setup.Manual("booted without UEFI; reboot in UEFI mode")
 		}
-		keys, err := installed(ctx, run)
+		ours, err := own(root)
 		switch {
 		case err != nil:
 			return err
-		case !keys:
-			return setup.Manual("%s", bios)
+		case ours:
+			return vendors(efi)
 		}
-		return nil
+		if err := preflight(root); err != nil {
+			return err
+		}
+		switch {
+		case fw.Setup:
+			return errReady
+		case fw.Enabled:
+			return setup.Manual("Secure Boot is on with keys dctl did not create; %s", bios)
+		}
+		return setup.Later("%s", bios)
 	}
 	sign := func(ctx context.Context) error {
 		if err := configure(limine); err != nil {
@@ -101,35 +116,31 @@ func Stage(run execx.Runner, root string) setup.Stage {
 		return run.Run(ctx, "", "limine-update")
 	}
 	signed := func(ctx context.Context) error {
-		keys, err := installed(ctx, run)
+		ours, err := own(root)
 		switch {
 		case err != nil:
 			return err
-		case !keys:
-			return setup.Manual("no sbctl keys yet; see secureboot-keys")
+		case !ours:
+			return setup.Later("after key enrollment")
 		}
 		return verify(ctx, run, root)
 	}
 	return setup.Stage{Name: "secureboot", Root: true, Items: []setup.Item{
 		{
 			Name:  Keys,
-			Check: enrolled,
+			Check: keys,
 			Fix: func(ctx context.Context) error {
-				if enrolled(ctx) == nil {
+				if !errors.Is(keys(ctx), errReady) {
 					return nil
 				}
-				fw, err := Read(efi)
+				if err := additions(root); err != nil {
+					return err
+				}
+				created, err := installed(ctx, run)
 				if err != nil {
 					return err
 				}
-				if !fw.Setup {
-					return setup.Manual("%s", bios)
-				}
-				keys, err := installed(ctx, run)
-				if err != nil {
-					return err
-				}
-				if !keys {
+				if !created {
 					if err := run.Run(ctx, "", "sbctl", "create-keys"); err != nil {
 						return err
 					}
@@ -141,7 +152,7 @@ func Stage(run execx.Runner, root string) setup.Stage {
 					return fmt.Errorf("%w; keys not enrolled", err)
 				}
 				if err := run.Run(ctx, "", "sbctl", "enroll-keys"); err != nil {
-					return fmt.Errorf("%w; keys not enrolled: if sbctl refused over option ROMs or a missing TPM eventlog, do not add Microsoft keys (-m) or force it", err)
+					return fmt.Errorf("%w; keys not enrolled; do not add Microsoft keys or force sbctl", err)
 				}
 				return nil
 			},
@@ -150,40 +161,120 @@ func Stage(run execx.Runner, root string) setup.Stage {
 			Name:  Signed,
 			Check: signed,
 			Fix: func(ctx context.Context) error {
-				err := signed(ctx)
-				if err == nil {
+				if ours, err := own(root); err != nil || !ours || signed(ctx) == nil {
 					return nil
-				}
-				if keys, ierr := installed(ctx, run); ierr != nil || !keys {
-					return err
-				}
-				if enrolled(ctx) != nil {
-					return setup.Manual("Secure Boot keys are not enrolled; see secureboot-keys before re-signing")
 				}
 				return sign(ctx)
 			},
 		},
 		{
 			Name: Enforced,
-			Check: func(ctx context.Context) error {
+			Check: func(context.Context) error {
 				fw, err := Read(efi)
-				if err != nil {
+				switch {
+				case err != nil:
 					return err
-				}
-				if fw.Enabled {
+				case fw.Enabled && !fw.Setup:
 					return nil
 				}
-				if enrolled(ctx) != nil {
-					return setup.Manual("no Secure Boot keys enrolled; see secureboot-keys")
+				ours, err := own(root)
+				switch {
+				case err != nil:
+					return err
+				case !ours:
+					return setup.Later("after key enrollment")
 				}
-				return setup.Manual("keys are enrolled but Secure Boot is not enforced yet: reboot; if Secure Boot is still off, enable it in the BIOS")
+				if log, err := readLog(root); err == nil && log.pk {
+					return setup.Manual("Secure Boot still off; reboot, press F2, enable Secure Boot, save with F10, then run dctl setup")
+				}
+				return setup.Later("reboot; if Secure Boot is still off, enable it in the BIOS with F2 and save with F10; then run dctl setup")
 			},
 		},
-		{
-			Name:  TOTP,
-			Check: func(ctx context.Context) error { return sealed(ctx, run, efi) },
-		},
 	}}
+}
+
+func readLog(root string) (eventlog, error) {
+	data, err := os.ReadFile(filepath.Join(root, measured))
+	if err != nil {
+		return eventlog{}, err
+	}
+	return parseLog(data)
+}
+
+func preflight(root string) error {
+	log, err := readLog(root)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return setup.Manual("TPM event log missing, so sbctl refuses to enroll; check that the TPM is enabled in the BIOS")
+	case err != nil:
+		return setup.Manual("cannot read the TPM event log: %v", err)
+	case log.oproms > 0:
+		return setup.Manual("%d option ROMs measured, so sbctl refuses to enroll; trusting them needs sbctl enroll-keys --tpm-eventlog, which adds their hashes to db; dctl does not run it, so that decision is yours", log.oproms)
+	}
+	return nil
+}
+
+func vendors(efi string) error {
+	var found []string
+	for name, guid := range map[string]string{"KEK": global, "db": security} {
+		data, err := os.ReadFile(filepath.Join(efi, "efivars", name+"-"+guid))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if bytes.Contains(data, microsoft) {
+			found = append(found, name)
+		}
+	}
+	if len(found) > 0 {
+		slices.Sort(found)
+		return setup.Manual("Microsoft certificates remain in %s; %s", strings.Join(found, " and "), bios)
+	}
+	return nil
+}
+
+func additions(root string) error {
+	data, err := os.ReadFile(filepath.Join(root, sbctlConf))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var conf struct {
+		Additions []string `yaml:"db_additions"`
+	}
+	if err := yaml.Unmarshal(data, &conf); err != nil {
+		return fmt.Errorf("/%s: %w", sbctlConf, err)
+	}
+	if len(conf.Additions) > 0 {
+		return setup.Manual("refusing to enroll: /%s adds %s to db; remove db_additions, then run dctl setup", sbctlConf, strings.Join(conf.Additions, ", "))
+	}
+	return nil
+}
+
+func own(root string) (bool, error) {
+	data, err := os.ReadFile(filepath.Join(root, sbctlPK))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return false, fmt.Errorf("%s contains no PEM certificate", sbctlPK)
+	}
+	pk, err := os.ReadFile(filepath.Join(root, "sys", "firmware", "efi", "efivars", "PK-"+global))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return bytes.Contains(pk, block.Bytes), nil
 }
 
 func verify(ctx context.Context, run execx.Runner, root string) error {
@@ -215,7 +306,7 @@ func verify(ctx context.Context, run execx.Runner, root string) error {
 		case err != nil:
 			errs = append(errs, err)
 		case embedded:
-			errs = append(errs, fmt.Errorf("%s embeds a cmdline; snapshot entries could not boot under Secure Boot", filepath.Base(uki)))
+			errs = append(errs, fmt.Errorf("%s embeds a cmdline; snapshot entries cannot boot under Secure Boot", filepath.Base(uki)))
 		}
 	}
 	files := append([]string{filepath.Join(esp, "EFI", "limine", "limine_x64.efi")}, ukis...)

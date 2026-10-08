@@ -56,7 +56,7 @@ func (u *UI) Checklist(title string, options []string) ([]bool, error) {
 }
 
 func (u *UI) Text(label, initial string) (string, error) {
-	m := newInput(u.lead()+styleStep.Render(label), false, !u.opts.Plain)
+	m := newInput(u.lead(), styleStep.Render(label), false, !u.opts.Plain)
 	m.field.SetValue(initial)
 	if err := u.run(m, &m.canceled); err != nil {
 		return "", err
@@ -65,22 +65,37 @@ func (u *UI) Text(label, initial string) (string, error) {
 }
 
 func (u *UI) Secret(label string) (string, error) {
-	m := newInput(u.lead()+styleStep.Render(label), true, !u.opts.Plain)
+	m := newInput(u.lead(), styleStep.Render(label), true, !u.opts.Plain)
 	if err := u.run(m, &m.canceled); err != nil {
 		return "", err
 	}
 	return m.field.Value(), nil
 }
 
-func (u *UI) run(m tea.Model, canceled *bool) error {
+type prompt interface {
+	tea.Model
+	answer() string
+}
+
+func (u *UI) run(m prompt, canceled *bool) error {
 	if !u.Can() {
 		return ErrNoTTY
 	}
+	u.mu.Lock()
+	u.ensure()
+	u.flush(true)
+	u.mu.Unlock()
 	opts := []tea.ProgramOption{tea.WithContext(u.opts.Context), tea.WithInput(u.in), tea.WithOutput(u.stdout)}
 	if u.opts.Plain {
 		opts = append(opts, tea.WithColorProfile(colorprofile.NoTTY))
 	}
-	if _, err := tea.NewProgram(m, opts...).Run(); err != nil {
+	_, err := tea.NewProgram(m, opts...).Run()
+	if a := m.answer(); a != "" {
+		u.mu.Lock()
+		u.pending = &child{level: ask, pill: true, msg: a}
+		u.mu.Unlock()
+	}
+	if err != nil {
 		return err
 	}
 	if *canceled {
@@ -127,19 +142,26 @@ func (m *confirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *confirm) View() tea.View {
-	question := m.lead + styleStep.Render(m.question)
+func (m *confirm) answer() string {
+	question := styleStep.Render(m.question)
 	switch {
 	case m.canceled:
-		return tea.NewView(question + " " + styleDim.Render("canceled") + "\n")
+		return question + " " + styleDim.Render("canceled")
 	case m.done && m.yes:
-		return tea.NewView(question + " " + connector(OK).Render("yes") + "\n")
+		return question + " " + connector(OK).Render("yes")
 	case m.done:
-		return tea.NewView(question + " " + styleDim.Render("no") + "\n")
+		return question + " " + styleDim.Render("no")
+	}
+	return ""
+}
+
+func (m *confirm) View() tea.View {
+	if m.done || m.canceled {
+		return tea.NewView("")
 	}
 	yes := toggle("Yes", m.yes, OK, m.plain)
 	no := toggle("No", !m.yes, Err, m.plain)
-	return tea.NewView(fmt.Sprintf("%s  %s %s ", question, yes, no))
+	return tea.NewView(fmt.Sprintf("%s%s  %s %s ", m.lead, styleStep.Render(m.question), yes, no))
 }
 
 // toggle marks the selection with brackets too, because plain output drops the pill colors.
@@ -185,14 +207,21 @@ func (m *choose) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *choose) answer() string {
+	switch {
+	case m.done:
+		return styleStep.Render(m.title) + ": " + m.options[m.cursor]
+	case m.canceled:
+		return styleStep.Render(m.title) + " " + styleDim.Render("canceled")
+	}
+	return ""
+}
+
 func (m *choose) View() tea.View {
+	if m.done || m.canceled {
+		return tea.NewView("")
+	}
 	title := m.lead + styleStep.Render(m.title)
-	if m.done {
-		return tea.NewView(fmt.Sprintf("%s %s\n", title, m.options[m.cursor]))
-	}
-	if m.canceled {
-		return tea.NewView(title + "\n")
-	}
 	var b strings.Builder
 	b.WriteString(title + "\n")
 	for i, option := range m.options {
@@ -239,20 +268,28 @@ func (m *checklist) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *checklist) View() tea.View {
-	title := m.lead + styleStep.Render(m.title)
-	if m.canceled {
-		return tea.NewView(title + " " + styleDim.Render("canceled") + "\n")
-	}
-	if m.done {
+func (m *checklist) answer() string {
+	title := styleStep.Render(m.title)
+	switch {
+	case m.canceled:
+		return title + " " + styleDim.Render("canceled")
+	case m.done:
 		n := 0
 		for _, on := range m.checked {
 			if on {
 				n++
 			}
 		}
-		return tea.NewView(fmt.Sprintf("%s %d of %d checked\n", title, n, len(m.options)))
+		return fmt.Sprintf("%s %d of %d checked", title, n, len(m.options))
 	}
+	return ""
+}
+
+func (m *checklist) View() tea.View {
+	if m.done || m.canceled {
+		return tea.NewView("")
+	}
+	title := m.lead + styleStep.Render(m.title)
 	var b strings.Builder
 	b.WriteString(title + "  " + styleDim.Render("space toggles, enter confirms") + "\n")
 	for i, option := range m.options {
@@ -273,13 +310,13 @@ func (m *checklist) View() tea.View {
 }
 
 type input struct {
-	label          string
+	lead, label    string
 	secret, blink  bool
 	field          textinput.Model
 	done, canceled bool
 }
 
-func newInput(label string, secret, blink bool) *input {
+func newInput(lead, label string, secret, blink bool) *input {
 	field := textinput.New()
 	field.Prompt = ""
 	styles := textinput.DefaultStyles(true)
@@ -289,7 +326,7 @@ func newInput(label string, secret, blink bool) *input {
 		field.EchoMode = textinput.EchoNone
 	}
 	field.Focus()
-	return &input{label: label, secret: secret, blink: blink, field: field}
+	return &input{lead: lead, label: label, secret: secret, blink: blink, field: field}
 }
 
 func (m *input) Init() tea.Cmd {
@@ -313,13 +350,21 @@ func (m *input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *input) View() tea.View {
-	label := m.label + " "
+func (m *input) answer() string {
 	switch {
+	case m.canceled:
+		return m.label + " " + styleDim.Render("canceled")
 	case m.done && !m.secret:
-		return tea.NewView(label + m.field.Value() + "\n")
-	case m.done || m.canceled:
-		return tea.NewView(label + "\n")
+		return m.label + " " + m.field.Value()
+	case m.done:
+		return m.label
 	}
-	return tea.NewView(label + m.field.View())
+	return ""
+}
+
+func (m *input) View() tea.View {
+	if m.done || m.canceled {
+		return tea.NewView("")
+	}
+	return tea.NewView(m.lead + m.label + " " + m.field.View())
 }
