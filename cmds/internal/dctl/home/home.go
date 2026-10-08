@@ -133,6 +133,7 @@ func links(r paths.Root) ([]link, error) {
 		link{r.Config("zsh", "zshrc"), filepath.Join(r.Home, ".zshrc")},
 		link{r.Config("zsh", "zshenv"), filepath.Join(r.Home, ".zshenv")},
 		link{r.Share("fonts"), filepath.Join(r.Home, ".local", "share", "fonts")},
+		link{r.Share("themes"), filepath.Join(r.Home, ".local", "share", "themes")},
 	)
 	apps, err := filepath.Glob(r.Share("applications", "*.desktop"))
 	if err != nil {

@@ -1,0 +1,135 @@
+/* vagari for libadwaita and adw-gtk3-dark GTK4; palette: vagari colors.toml */
+/* libadwaita normally ignores gtk-theme, so these colors need USER priority.
+   This file affects every GTK4 app. */
+/* Keep shared palette roles in sync with share/themes/vagari/gtk-3.0/gtk.css.
+   GTK resolves relative @imports from the loaded path without resolving symlinks. */
+@define-color window_bg_color #222536; /* bg */
+@define-color window_fg_color #aeb9f8; /* fg */
+@define-color view_bg_color #1e2133; /* drk_0 */
+@define-color view_fg_color #aeb9f8; /* fg */
+@define-color headerbar_bg_color #181b2c; /* drk_1 */
+@define-color headerbar_fg_color #aeb9f8; /* fg */
+@define-color headerbar_border_color #aeb9f8; /* fg */
+@define-color headerbar_backdrop_color #1e2133; /* drk_0 */
+@define-color headerbar_shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color headerbar_darker_shade_color rgba(13, 15, 27, 0.9); /* drk_3 */
+@define-color sidebar_bg_color #181b2c; /* drk_1 */
+@define-color sidebar_fg_color #aeb9f8; /* fg */
+@define-color sidebar_backdrop_color #1e2133; /* drk_0 */
+@define-color sidebar_border_color #131626; /* drk_2 */
+@define-color sidebar_shade_color rgba(13, 15, 27, 0.25); /* drk_3 */
+@define-color secondary_sidebar_bg_color #1e2133; /* drk_0 */
+@define-color secondary_sidebar_fg_color #aeb9f8; /* fg */
+@define-color secondary_sidebar_backdrop_color #222536; /* bg */
+@define-color secondary_sidebar_border_color #131626; /* drk_2 */
+@define-color secondary_sidebar_shade_color rgba(13, 15, 27, 0.25); /* drk_3 */
+@define-color card_bg_color #252841; /* glc_0 */
+@define-color card_fg_color #aeb9f8; /* fg */
+@define-color card_shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color dialog_bg_color #222536; /* bg */
+@define-color dialog_fg_color #aeb9f8; /* fg */
+@define-color popover_bg_color #252841; /* glc_0 */
+@define-color popover_fg_color #aeb9f8; /* fg */
+@define-color popover_shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color thumbnail_bg_color #282b48; /* glc_1 */
+@define-color thumbnail_fg_color #aeb9f8; /* fg */
+@define-color shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color scrollbar_outline_color rgba(13, 15, 27, 0.95); /* drk_3 */
+
+@define-color accent_bg_color #7492ef; /* blu_2 */
+@define-color accent_fg_color #0d0f1b; /* drk_3 */
+@define-color accent_color #8aa4f3; /* blu_3 */
+@define-color destructive_bg_color #f36978; /* rby_1 */
+@define-color destructive_fg_color #0d0f1b; /* drk_3 */
+@define-color destructive_color #f08898; /* rby_3 */
+@define-color success_bg_color #5aba6d; /* emr_2 */
+@define-color success_fg_color #0d0f1b; /* drk_3 */
+@define-color success_color #5fc976; /* emr_3 */
+@define-color warning_bg_color #f5b855; /* sun_1 */
+@define-color warning_fg_color #0d0f1b; /* drk_3 */
+@define-color warning_color #f4ce88; /* sun_3 */
+@define-color error_bg_color #f36978; /* rby_1 */
+@define-color error_fg_color #0d0f1b; /* drk_3 */
+@define-color error_color #f08898; /* rby_3 */
+
+@define-color border_color #30345a; /* glc_2 */
+@define-color focus_color rgba(242, 161, 112, 0.7); /* orn_3 */
+@define-color link_color #9db2f4; /* blu_4 */
+@define-color visited_color #b29ae8; /* prp_3 */
+@define-color selected_bg_color #30345a; /* glc_2 */
+@define-color selected_fg_color #f8b486; /* orn_4 */
+@define-color selection_bg_color #3f4578; /* glc_3 */
+@define-color selection_fg_color #bec6f8; /* brt_1 */
+@define-color control_border_color #7b7fb0; /* slt_5 */
+@define-color knob_color #e9e9fb; /* wht_3 */
+
+:root {
+  /* Keep this override: adw-gtk3's GTK4 tweaks set their own blue after libadwaita. */
+  --accent-bg-color: @accent_bg_color;
+  /* Set standalone colors explicitly instead of using libadwaita's Oklab-derived colors. */
+  --accent-color: @accent_color;
+  --destructive-color: @destructive_color;
+  --success-color: @success_color;
+  --warning-color: @warning_color;
+  --error-color: @error_color;
+  --active-toggle-bg-color: #30345a; /* glc_2 */
+  --active-toggle-fg-color: #bec6f8; /* brt_1 */
+  --overview-bg-color: #181b2c; /* drk_1 */
+  --overview-fg-color: #aeb9f8; /* fg */
+  --dim-opacity: 72%;
+}
+
+:focus-visible,
+entry:focus-within,
+spinbutton:focus-within,
+row.entry.focused,
+row.spin.focused,
+calendar > grid > label:focus,
+expander-widget:focus-visible > box > title,
+notebook:focus-visible > header > tabs > tab:checked,
+scale:focus-visible > trough > slider,
+tabgrid > tabgridchild:focus-visible .card {
+  outline-color: @focus_color;
+}
+
+link:not(:disabled),
+:link:not(:disabled) {
+  color: @link_color;
+}
+
+:visited:not(:disabled) {
+  color: @visited_color;
+}
+
+row:selected,
+gridview > child:selected {
+  background-color: @selected_bg_color;
+  color: @selected_fg_color;
+}
+
+check:not(:checked):not(:indeterminate):not(:disabled),
+radio:not(:checked):not(:indeterminate):not(:disabled) {
+  box-shadow: inset 0 0 0 2px @control_border_color;
+}
+
+switch > slider:not(:disabled),
+scale > trough > slider:not(:disabled) {
+  background-color: @knob_color;
+}
+
+columnview > header > button > box,
+treeview.view > header > button > box {
+  color: @view_fg_color;
+}
+
+selection:focus-within {
+  background-color: @selection_bg_color;
+  color: @selection_fg_color;
+}
+
+tooltip.background,
+toast {
+  background-color: @popover_bg_color;
+  border-color: @border_color;
+  color: @popover_fg_color;
+}

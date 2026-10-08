@@ -23,6 +23,7 @@ func sandbox(t *testing.T) paths.Root {
 		"config/zsh/zshrc",
 		"config/zsh/zshenv",
 		"share/fonts/Vagari-Regular.ttf",
+		"share/themes/vagari/index.theme",
 	} {
 		write(t, filepath.Join(r.Dotfiles, rel), rel)
 	}
@@ -71,7 +72,7 @@ func TestLinks(t *testing.T) {
 	if _, err := os.Lstat(filepath.Join(r.Home, ".config", "firefox")); err == nil {
 		t.Error("firefox linked wholesale")
 	}
-	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv"} {
+	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv", ".local/share/themes"} {
 		if st, err := os.Lstat(filepath.Join(r.Home, dst)); err != nil || st.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("%s not a symlink: %v", dst, err)
 		}

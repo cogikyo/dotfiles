@@ -1,0 +1,154 @@
+/* vagari over adw-gtk3-dark 6.5 (github.com/lassekongo83/adw-gtk3); palette: vagari colors.toml */
+/* Keep this at THEME priority so eww's APPLICATION-priority all: unset wins.
+   USER-priority ~/.config/gtk-3.0/gtk.css would override eww's reset. */
+/* adw-gtk-theme in packages/base.lst supplies the imported theme. */
+@import url("/usr/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css");
+
+@define-color window_bg_color #222536; /* bg */
+@define-color window_fg_color #aeb9f8; /* fg */
+@define-color view_bg_color #1e2133; /* drk_0 */
+@define-color view_fg_color #aeb9f8; /* fg */
+@define-color headerbar_bg_color #181b2c; /* drk_1 */
+@define-color headerbar_fg_color #aeb9f8; /* fg */
+@define-color headerbar_backdrop_color #1e2133; /* drk_0 */
+@define-color headerbar_shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color sidebar_bg_color #181b2c; /* drk_1 */
+@define-color sidebar_fg_color #aeb9f8; /* fg */
+@define-color sidebar_backdrop_color #1e2133; /* drk_0 */
+@define-color sidebar_border_color #131626; /* drk_2 */
+@define-color card_bg_color #252841; /* glc_0 */
+@define-color card_fg_color #aeb9f8; /* fg */
+@define-color card_shade_color rgba(13, 15, 27, 0.36); /* drk_3 */
+@define-color dialog_bg_color #222536; /* bg */
+@define-color dialog_fg_color #aeb9f8; /* fg */
+@define-color popover_bg_color #252841; /* glc_0 */
+@define-color popover_fg_color #aeb9f8; /* fg */
+@define-color panel_bg_color #181b2c; /* drk_1 */
+@define-color panel_fg_color #aeb9f8; /* fg */
+
+@define-color accent_bg_color #7492ef; /* blu_2 */
+@define-color accent_fg_color #0d0f1b; /* drk_3 */
+/* Orange marks focus, rubberband selection, and attention; resting fills stay blue. */
+@define-color accent_color #f8b486; /* orn_4 */
+@define-color destructive_bg_color #f36978; /* rby_1 */
+@define-color destructive_fg_color #0d0f1b; /* drk_3 */
+@define-color destructive_color #f08898; /* rby_3 */
+@define-color success_bg_color #5aba6d; /* emr_2 */
+@define-color success_color #5fc976; /* emr_3 */
+@define-color warning_bg_color #f5b855; /* sun_1 */
+@define-color warning_color #f4ce88; /* sun_3 */
+@define-color error_bg_color #f36978; /* rby_1 */
+@define-color error_color #f08898; /* rby_3 */
+
+@define-color border_color #30345a; /* glc_2 */
+@define-color link_color #9db2f4; /* blu_4 */
+@define-color visited_color #b29ae8; /* prp_3 */
+@define-color selected_bg_color #30345a; /* glc_2 */
+@define-color selected_fg_color #f8b486; /* orn_4 */
+@define-color selection_bg_color #3f4578; /* glc_3 */
+@define-color selection_fg_color #bec6f8; /* brt_1 */
+/* App/Qt palette consumers need text-selection colors here, rather than selected-row colors. */
+@define-color theme_selected_bg_color @selection_bg_color;
+@define-color theme_selected_fg_color @selection_fg_color;
+@define-color theme_unfocused_selected_bg_color @selection_bg_color;
+@define-color theme_unfocused_selected_fg_color @selection_fg_color;
+/* GtkEntry reads this named color directly (GTK 3.24.52 gtkentry.c), even without a CSS reference. */
+@define-color placeholder_text_color mix(@view_fg_color, @view_bg_color, 0.28);
+@define-color control_border_color #7b7fb0; /* slt_5 */
+@define-color knob_color #e9e9fb; /* wht_3 */
+
+/* Override adw-gtk3's accent-colored resting links with blue and visited links with purple. */
+*:link,
+*:link:backdrop,
+*:link:selected,
+*:selected *:link,
+infobar *:link,
+button:link,
+button:link > label,
+button:link > label:backdrop,
+*:selected button:link > label {
+  color: @link_color;
+}
+
+*:visited,
+button:visited,
+button:backdrop:visited,
+button:visited > label,
+button:visited > label:backdrop,
+*:selected button:visited > label {
+  color: @visited_color;
+}
+
+check:not(:checked):not(:indeterminate):not(:disabled),
+radio:not(:checked):not(:indeterminate):not(:disabled) {
+  border-color: @control_border_color;
+}
+
+/* GTK3 has no CSS filter; mix the fill and border to approximate libadwaita's disabled opacity. */
+check:checked:disabled,
+radio:checked:disabled,
+check:indeterminate:disabled,
+radio:indeterminate:disabled {
+  background-image: image(mix(@accent_bg_color, @window_bg_color, 0.5));
+  border-color: mix(@accent_bg_color, @window_bg_color, 0.5);
+}
+
+switch slider:not(:disabled),
+scale slider:not(:disabled) {
+  background-color: @knob_color;
+}
+
+treeview.view header button {
+  color: @view_fg_color;
+}
+
+treeview.view:selected:focus,
+treeview.view:selected,
+.view:selected:focus,
+.view:selected,
+iconview:selected:focus,
+iconview:selected,
+flowbox flowboxchild:selected,
+row:selected,
+row.activatable:selected,
+row.activatable:selected:hover,
+row.activatable:selected:backdrop,
+placessidebar row:selected,
+placessidebar row:backdrop:selected {
+  background-color: @selected_bg_color;
+  color: @selected_fg_color;
+}
+
+entry selection,
+spinbutton:not(.vertical) selection,
+headerbar entry selection,
+.view text selection:focus,
+.view text selection,
+iconview text selection:focus,
+iconview text selection,
+textview text selection:focus,
+textview text selection,
+label selection {
+  background-color: @selection_bg_color;
+  color: @selection_fg_color;
+}
+
+.dim-label,
+headerbar .subtitle,
+row label.subtitle {
+  opacity: 0.72;
+}
+
+tooltip.background {
+  background-color: @popover_bg_color;
+  border-color: @border_color;
+  color: @popover_fg_color;
+}
+
+tooltip {
+  text-shadow: none;
+}
+
+tooltip * {
+  color: @popover_fg_color;
+}

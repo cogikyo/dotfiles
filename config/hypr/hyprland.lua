@@ -44,7 +44,7 @@ hl.on("hyprland.start", function()
 
 	-- GTK theming via gsettings — Wayland reads dconf, not settings.ini.
 	local gnome = "org.gnome.desktop.interface"
-	hl.exec_cmd("gsettings set " .. gnome .. " gtk-theme 'catppuccin-macchiato-peach-standard+default'")
+	hl.exec_cmd("gsettings set " .. gnome .. " gtk-theme 'vagari'")
 	hl.exec_cmd("gsettings set " .. gnome .. " color-scheme 'prefer-dark'")
 	hl.exec_cmd("gsettings set " .. gnome .. " icon-theme 'Papirus-Dark'")
 	hl.exec_cmd("gsettings set " .. gnome .. " font-name 'sans-serif 12'")

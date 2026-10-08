@@ -1,0 +1,6 @@
+[X-GNOME-Metatheme]
+Name=vagari
+Type=X-GNOME-Metatheme
+Comment=vagari palette over adw-gtk3-dark
+Encoding=UTF-8
+GtkTheme=vagari
