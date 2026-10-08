@@ -16,10 +16,9 @@ hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
-hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
+hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
 hl.env("QT_SCALE_FACTOR", "1.25")
-hl.env("QT_STYLE_OVERRIDE", "kvantum")
 
 hl.env("GDK_BACKEND", "wayland,x11")
 hl.env("GDK_DPI_SCALE", "1.25")
