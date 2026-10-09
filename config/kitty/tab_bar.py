@@ -18,7 +18,7 @@ from pathlib import Path
 from unicodedata import east_asian_width
 
 from kitty.boss import get_boss
-from kitty.fast_data_types import Screen, get_options
+from kitty.fast_data_types import Screen, current_focused_os_window_id, get_options
 from kitty.tab_bar import (
     DrawData,
     ExtraData,
@@ -73,6 +73,7 @@ OPENCODE_ACCENT_HEX = "f2a170"
 SSH_ACCENT_HEX = "e887c3"
 APP_FG_HEX = "9db2f4"
 APP_BG_HEX = "222536"
+UNFOCUSED_HEX = "4a6be3"
 
 
 class Colors:
@@ -88,6 +89,7 @@ class Colors:
         self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
         self.app_fg = int(APP_FG_HEX, 16)
         self.app_bg = int(APP_BG_HEX, 16)
+        self.unfocused = int(UNFOCUSED_HEX, 16)
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
         # Tab bar background (with fallback)
@@ -318,7 +320,11 @@ def _busy(tab_id: int) -> bool:
 
 
 def _styled(tab: TabBarData) -> TabBarData:
-    if tab.is_active or not _busy(tab.tab_id):
+    if tab.is_active:
+        if current_focused_os_window_id() == tab.os_window_id:
+            return tab
+        return tab._replace(active_fg=colors.unfocused)
+    if not _busy(tab.tab_id):
         return tab
     return tab._replace(inactive_fg=colors.app_fg, inactive_bg=colors.app_bg)
 
@@ -625,17 +631,16 @@ def draw_tab(
     _right_status_length = sum(_display_width(cell[2]) for cell in cells)
 
     styled = _styled(tab)
-    busy = styled is not tab
+    restyled = styled is not tab
     tab = styled
-    if busy:
-        screen.cursor.fg = as_rgb(colors.app_fg)
-        screen.cursor.bg = as_rgb(colors.app_bg)
+    screen.cursor.fg = as_rgb(draw_data.tab_fg(tab))
+    screen.cursor.bg = as_rgb(draw_data.tab_bg(tab))
     if extra_data.next_tab:
         extra_data.next_tab = _styled(extra_data.next_tab)
 
     # Draw components: Icon → Tabs → Right status
     draw_icon(screen, index)
-    if busy:
+    if restyled:
         screen.cursor.bold = True
     draw_tab_title(draw_data, screen, tab, index, extra_data, max_title_length)
 
