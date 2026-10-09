@@ -81,6 +81,7 @@ super("End",   "Move workspace up",   "hyprd ws up")
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 super("P",     "App Launcher",       "pkill -x rofi || rofi -show drun")
+super("Space", "Drop-down terminal", hl.dsp.workspace.toggle_special("dropdown"))
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")

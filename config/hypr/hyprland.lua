@@ -194,6 +194,29 @@ hl.window_rule({
 	float = true,
 	center = true,
 })
+local dropdown = { x = 960, y = -20, w = 1920, h = 1100 }
+
+hl.window_rule({
+	name = "drop-down-terminal",
+	match = { class = [[^(dropdown)$]] },
+	workspace = "special:dropdown",
+	float = true,
+	size = dropdown.w .. " " .. dropdown.h,
+	move = dropdown.x .. " " .. dropdown.y,
+	rounding = 20,
+	animation = "slide top",
+})
+
+hl.on("workspace.special_active", function(ws)
+	if not ws or ws.name ~= "special:dropdown" then
+		return
+	end
+	for _, window in ipairs(hl.get_workspace_windows("special:dropdown")) do
+		local target = "address:" .. window.address
+		hl.dispatch(hl.dsp.window.resize({ x = dropdown.w, y = dropdown.h, window = target }))
+		hl.dispatch(hl.dsp.window.move({ x = dropdown.x, y = dropdown.y, window = target }))
+	end
+end)
 hl.window_rule({
 	name = "terminal-float",
 	match = { title = [[^(terminalfloat)]] },
@@ -240,6 +263,7 @@ hl.layer_rule({
 })
 
 hl.workspace_rule({ workspace = "special:stash", gaps_out = 120 })
+hl.workspace_rule({ workspace = "special:dropdown", on_created_empty = "kitty --class dropdown -o tab_bar_min_tabs=2 -o background_opacity=0.92 -o 'window_padding_width=24 9 9 9'" })
 
 require("binds")
 
@@ -264,6 +288,7 @@ hl.config({
 		active_opacity = 1,
 		inactive_opacity = 0.98,
 		fullscreen_opacity = 1,
+		dim_special = 0.4,
 		shadow = {
 			enabled = true,
 			range = 24,
@@ -327,3 +352,5 @@ hl.curve("easeInCubic", { type = "bezier", points = { { 0.32, 0 }, { 0.67, 0 } }
 hl.animation({ leaf = "layersIn", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
 hl.animation({ leaf = "layersOut", enabled = true, speed = 2.2, bezier = "easeInCubic" })
 hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 2.6, bezier = "easeInCubic" })
+hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slide top" })
+hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 2.2, bezier = "easeInCubic", style = "slide bottom" })

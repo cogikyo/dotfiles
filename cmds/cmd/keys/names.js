@@ -8,6 +8,7 @@ export const names = {
     "App Launcher": { name: "Apps" },
     "Close active window": { name: "Close" },
     "Dismiss": { name: "Dismiss", about: "Closes the top notification." },
+    "Drop-down terminal": { name: "Terminal", about: "Slides a kitty window down from the top on its own special workspace; press again to hide it." },
     "Editor tab 0": { name: "[0] Editor" },
     "Editor tab 1": { name: "[1] Editor" },
     "Editor tab 2": { name: "[2] Editor" },
