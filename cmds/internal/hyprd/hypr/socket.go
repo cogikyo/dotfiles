@@ -159,19 +159,16 @@ func (c *Client) ActiveWindow() (*Window, error) {
 }
 
 // Monitor mirrors the JSON from `hyprctl -j monitors`.
-//
-// TODO: reserved tags are wrong; Hyprland returns `reserved` as a [L,T,R,B] array.
 type Monitor struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	Width         int    `json:"width"`
-	Height        int    `json:"height"`
-	X             int    `json:"x"`
-	Y             int    `json:"y"`
-	Focused       bool   `json:"focused"`
-	ActiveWS      WsRef  `json:"activeWorkspace"`
-	ReservedTop   int    `json:"reserved"`
-	ReservedRight int    `json:"reservedB"`
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Width    int    `json:"width"`
+	Height   int    `json:"height"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	Focused  bool   `json:"focused"`
+	ActiveWS WsRef  `json:"activeWorkspace"`
+	Reserved [4]int `json:"reserved"`
 }
 
 // Monitors returns all monitors from `hyprctl -j monitors`.
