@@ -1,6 +1,7 @@
 package session
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	sessionWindowTimeout       = 5 * time.Second
+	sessionWindowTimeout       = 15 * time.Second
 	sessionBrowserClaimTimeout = 5 * time.Second
 )
 
@@ -185,6 +186,9 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 			}
 			roles = append(roles, "browser")
 		}
+		if s.Layout.Slave != "" {
+			roles = append(roles, s.Layout.Slave)
+		}
 
 		windowsByRole := l.waitForSessionRoles(s, roles, sessionWindowTimeout)
 		if err := l.arrangeCommand(s, windowsByRole); err != nil {
@@ -224,7 +228,8 @@ func (l *Layout) arrangeCommand(s config.Session, windowsByRole map[string]*hypr
 	l.state.LockLayout()
 	defer l.state.UnlockLayout()
 	if commandWindow := windowsByRole[s.Name]; commandWindow != nil {
-		if err := l.arrangePair(s, commandWindow, windowsByRole["browser"]); err != nil {
+		slave := cmp.Or(windowsByRole[s.Layout.Slave], windowsByRole["browser"])
+		if err := l.arrangePair(s, commandWindow, slave); err != nil {
 			return err
 		}
 	}
@@ -481,16 +486,16 @@ func missingRoles(roles []string, found map[string]*hypr.Window) []string {
 	return missing
 }
 
-func (l *Layout) arrangePair(s config.Session, master, browserWindow *hypr.Window) error {
-	if master == nil || browserWindow == nil {
+func (l *Layout) arrangePair(s config.Session, master, slave *hypr.Window) error {
+	if master == nil || slave == nil {
 		return nil
 	}
 	workspace := strconv.Itoa(s.Workspace)
 	if err := l.hypr.MoveWindowToWorkspace(master.Address, workspace, false); err != nil {
 		return fmt.Errorf("move master to workspace %d: %w", s.Workspace, err)
 	}
-	if err := l.hypr.MoveWindowToWorkspace(browserWindow.Address, workspace, false); err != nil {
-		return fmt.Errorf("move browser to workspace %d: %w", s.Workspace, err)
+	if err := l.hypr.MoveWindowToWorkspace(slave.Address, workspace, false); err != nil {
+		return fmt.Errorf("move slave to workspace %d: %w", s.Workspace, err)
 	}
 	return l.ensureMaster(s.Workspace, master.Address)
 }

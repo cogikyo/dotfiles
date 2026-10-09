@@ -22,6 +22,8 @@ sessions:
   1: # communication-focused sessions.
     slack:
       command: sh -c 'slack & exec gtk-launch grok-bot'
+      layout:
+        slave: grok-bot
       init: true
 
     discord:
