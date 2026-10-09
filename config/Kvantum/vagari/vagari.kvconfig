@@ -41,10 +41,10 @@ transient_groove=true
 
 [GeneralColors]
 window.color=#222536
-base.color=#1e2133
-alt.base.color=#222536
-button.color=#30345a
-light.color=#3f4578
+base.color=#222536
+alt.base.color=#252841
+button.color=#252841
+light.color=#282b48
 mid.light.color=#30345a
 dark.color=#181b2c
 mid.color=#282b48
@@ -86,7 +86,7 @@ interior=true
 interior.element=button
 indicator.size=8
 text.normal.color=#aeb9f8
-text.focus.color=#bec6f8
+text.focus.color=#aeb9f8
 text.press.color=#d1d8ff
 text.toggle.color=#d1d8ff
 text.margin=4
@@ -102,7 +102,7 @@ frame.element=tbutton
 interior.element=tbutton
 indicator.element=tarrow
 text.normal.color=#aeb9f8
-text.focus.color=#bec6f8
+text.focus.color=#aeb9f8
 text.press.color=#d1d8ff
 text.toggle.color=#d1d8ff
 
@@ -159,7 +159,6 @@ frame.top=2
 frame.bottom=2
 frame.left=2
 frame.right=2
-frame.patternsize=14
 
 [GenericFrame]
 inherits=PanelButtonCommand
@@ -206,9 +205,9 @@ frame.top=8
 frame.bottom=8
 frame.left=8
 frame.right=8
-text.focus.color=#aeb9f8
-text.press.color=#bec6f8
-text.toggle.color=#bec6f8
+text.focus.color=#f8b486
+text.press.color=#7492ef
+text.toggle.color=#7492ef
 
 [TabFrame]
 inherits=PanelButtonCommand
@@ -288,9 +287,9 @@ frame.top=4
 frame.bottom=4
 frame.left=4
 frame.right=4
-text.focus.color=#aeb9f8
-text.press.color=#f8b486
-text.toggle.color=#f8b486
+text.focus.color=#f8b486
+text.press.color=#7492ef
+text.toggle.color=#7492ef
 min_width=+0.3font
 min_height=+0.3font
 
@@ -340,6 +339,7 @@ frame.top=4
 frame.bottom=4
 frame.left=12
 frame.right=12
+text.focus.color=#f8b486
 
 [MenuBar]
 inherits=PanelButtonCommand
@@ -359,6 +359,7 @@ frame.left=2
 frame.right=2
 text.margin.top=0
 text.margin.bottom=0
+text.focus.color=#f8b486
 text.press.color=#bec6f8
 text.toggle.color=#bec6f8
 min_width=+0.3font
