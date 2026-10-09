@@ -99,7 +99,7 @@ func (c *Client) MoveWindowToWorkspace(address string, workspace string, follow 
 // SetWindowFloating makes the addressed window floating without toggling its current state.
 func (c *Client) SetWindowFloating(address string) error {
 	return c.eval("SetWindowFloating", fmt.Sprintf(
-		`hl.dispatch(hl.dsp.window.float({ action = "set", window = %s }))`,
+		`hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s }))`,
 		luaQuote(windowAddress(address)),
 	))
 }
