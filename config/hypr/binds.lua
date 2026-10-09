@@ -180,6 +180,16 @@ keyboard(svalboard, function()
 	super("T", "Left tab 4", "hyprd tab left:4")
 	super("G", "Left tab 5", "hyprd tab left:5")
 
+	for _, key in ipairs({ "A", "S", "E", "T", "G" }) do
+		bind("CTRL + SHIFT + " .. key, nil, function()
+			local window = hl.get_active_window()
+			if window and window.class:find("^kitty") then
+				return
+			end
+			hl.dispatch(hl.dsp.send_shortcut({ mods = "CTRL SHIFT", key = key:lower() }))
+		end)
+	end
+
 	super("SHIFT + X", "Force kill window", "hyprctl kill")
 	super("J",         "Layout Launcher",   "hyprd picker open")
 	super("U",         "Keymap viewer", function()
