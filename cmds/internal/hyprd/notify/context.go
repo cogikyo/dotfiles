@@ -205,10 +205,7 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 		if clients, err := n.hypr.Clients(); err == nil {
 			for _, c := range clients {
 				if c.Pid == ctx.PID {
-					revealed, err := wm.NewThreeBody(n.hypr, n.state).RevealShadow(c.Address)
-					if err == nil && !revealed {
-						_ = n.hypr.FocusWindow(c.Address)
-					}
+					_ = wm.NewThreeBody(n.hypr, n.state).Show(c.Address, 0)
 					break
 				}
 			}

@@ -408,7 +408,9 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 
 		action := strings.TrimSpace(string(out))
 		if action == "focus" {
+			n.state.LockLayout()
 			n.focusContext(ctx)
+			n.state.UnlockLayout()
 			return nil
 		}
 		if !persistent || i >= maxPersistentRetries {

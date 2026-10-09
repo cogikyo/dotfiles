@@ -43,7 +43,11 @@ func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	return Tiled(clients, wsID), nil
+}
 
+// Tiled returns the non-floating clients on wsID sorted by X position.
+func Tiled(clients []hypr.Window, wsID int) []hypr.Window {
 	var tiled []hypr.Window
 	for _, c := range clients {
 		if c.Workspace.ID == wsID && !c.Floating && !IsIgnored(c.Class) {
@@ -54,8 +58,7 @@ func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
 	sort.Slice(tiled, func(i, j int) bool {
 		return tiled[i].At[0] < tiled[j].At[0]
 	})
-
-	return tiled, nil
+	return tiled
 }
 
 // GetMaster returns the leftmost tiled window on wsID, or nil if none.

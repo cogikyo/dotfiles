@@ -65,9 +65,21 @@ func (m *Monocle) activate() (string, error) {
 	cfg := m.state.GetConfig()
 	var savedTB *state.ThreeBodyState
 	if tb := m.state.GetThreeBody(wsID); tb != nil {
-		_ = m.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(wsID), false)
+		clients, err := m.hypr.Clients()
+		if err != nil {
+			return "", err
+		}
+		tiled := windows.Tiled(clients, wsID)
+		slaves := windows.GetSlaves(tiled)
+		if shadow := windows.Parked(tb, clients); shadow != nil {
+			if err := windows.Unpark(m.hypr, shadow.Address, wsID); err != nil {
+				return "", fmt.Errorf("monocle unpark %s: %w", shadow.Address, err)
+			}
+			if len(slaves) > 0 {
+				savedTB = &state.ThreeBodyState{Master: tiled[0].Address, Active: slaves[0].Address, Shadow: shadow.Address}
+			}
+		}
 		m.state.ClearThreeBody(wsID)
-		savedTB = tb
 	}
 
 	tiled, err := windows.GetTiledWindows(m.hypr, wsID)
@@ -244,7 +256,11 @@ func (m *Monocle) ensureMaster(wsID int, masterAddr string) {
 }
 
 func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState) {
-	_ = m.hypr.MoveWindowToWorkspace(saved.Shadow, windows.ShadowWorkspace, false)
+	if clients, err := m.hypr.Clients(); err == nil {
+		if w := windows.Find(clients, saved.Shadow); w != nil {
+			_ = windows.Park(m.hypr, *w, wsID)
+		}
+	}
 	_ = m.hypr.FocusWindow(saved.Active)
 	m.state.SetThreeBody(wsID, saved)
 }

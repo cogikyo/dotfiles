@@ -14,7 +14,8 @@ import (
 //
 // Exported fields are JSON-serialized for subscriber event streams; always use accessor methods.
 type State struct {
-	mu sync.RWMutex
+	mu     sync.RWMutex
+	layout sync.Mutex
 
 	Workspace          int                     `json:"workspace"`
 	OccupiedWorkspaces []int                   `json:"occupied_workspaces"`
@@ -28,6 +29,7 @@ type State struct {
 	ScreenShare        bool                    `json:"screen_share"`
 	BrowserQA          []BrowserQAWindow       `json:"browser_qa"`
 	pendingLaunches    map[string]time.Time    `json:"-"`
+	arranging          map[int]bool            `json:"-"`
 	config             *config.HyprConfig
 }
 
@@ -44,6 +46,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		ActiveSessions:     make(map[int]string),
 		BrowserQA:          []BrowserQAWindow{},
 		pendingLaunches:    make(map[string]time.Time),
+		arranging:          make(map[int]bool),
 		config:             cfg,
 	}
 }
@@ -190,3 +193,9 @@ func (s *State) ReloadConfig(cfg *config.HyprConfig) {
 	defer s.mu.Unlock()
 	s.config = cfg
 }
+
+// LockLayout serializes whole layout read-modify-write transitions; it is not reentrant.
+func (s *State) LockLayout() { s.layout.Lock() }
+
+// UnlockLayout releases the layout lock taken by LockLayout.
+func (s *State) UnlockLayout() { s.layout.Unlock() }

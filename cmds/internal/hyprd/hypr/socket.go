@@ -160,15 +160,16 @@ func (c *Client) ActiveWindow() (*Window, error) {
 
 // Monitor mirrors the JSON from `hyprctl -j monitors`.
 type Monitor struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Width    int    `json:"width"`
-	Height   int    `json:"height"`
-	X        int    `json:"x"`
-	Y        int    `json:"y"`
-	Focused  bool   `json:"focused"`
-	ActiveWS WsRef  `json:"activeWorkspace"`
-	Reserved [4]int `json:"reserved"`
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Focused   bool   `json:"focused"`
+	ActiveWS  WsRef  `json:"activeWorkspace"`
+	SpecialWS WsRef  `json:"specialWorkspace"`
+	Reserved  [4]int `json:"reserved"`
 }
 
 // Monitors returns all monitors from `hyprctl -j monitors`.

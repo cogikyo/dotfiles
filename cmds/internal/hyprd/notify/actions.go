@@ -12,8 +12,11 @@ package notify
 // Pending routes live in memory and reset with hyprd.
 
 import (
+	"cmp"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
+	"dotfiles/cmds/internal/hyprd/wm"
 	"fmt"
 	"os"
 	"os/exec"
@@ -62,6 +65,7 @@ type appRouter struct {
 	once   sync.Once
 	mu     sync.Mutex
 	hypr   *hypr.Client
+	state  *state.State
 	routes map[string]appRoute  // target key -> pending route
 	live   map[uint32]string    // notification id -> target key, while dunst may still show it
 	acted  map[uint32]time.Time // ActionInvoked acknowledgements, scoped per notification id
@@ -102,7 +106,7 @@ func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 		return
 	}
 
-	globalAppRouter.Start(n.hypr)
+	globalAppRouter.Start(n.hypr, n.state)
 	globalAppRouter.Remember(uint32(max(req.NotificationID, 0)), target)
 }
 
@@ -113,7 +117,7 @@ func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 // When a visible notification has no provider action, the newest app route is consumed and focused.
 // Reporting false leaves the keybind free to fall through to its normal behavior.
 func (n *Notifier) ActivateDisplayed() (string, bool, error) {
-	globalAppRouter.Start(n.hypr)
+	globalAppRouter.Start(n.hypr, n.state)
 
 	displayed := dunstDisplayedCount()
 	if displayed > 0 {
@@ -178,12 +182,13 @@ func dunstAction() error {
 	return exec.Command("dunstctl", "action").Run()
 }
 
-func (r *appRouter) Start(h *hypr.Client) {
+func (r *appRouter) Start(h *hypr.Client, s *state.State) {
 	if h == nil {
 		return
 	}
 	r.once.Do(func() {
 		r.hypr = h
+		r.state = s
 		go r.run()
 	})
 }
@@ -354,7 +359,9 @@ func (r *appRouter) handleAction(body []any) {
 	for _, staleID := range stale {
 		closeDunstNotification(int(staleID))
 	}
+	r.state.LockLayout()
 	focused, err := r.focus(route.Target)
+	r.state.UnlockLayout()
 	if err != nil {
 		logf("action focus %s (id=%d): %v", route.Target.Class, id, err)
 		return
@@ -404,24 +411,20 @@ func (r *appRouter) focus(target focusTarget) (string, error) {
 		return "", err
 	}
 
-	var fallback *hypr.Window
+	owner := r.state.GetThreeBody(target.Workspace)
+	var home, other *hypr.Window
 	for i := range clients {
 		client := &clients[i]
-		if !windows.MatchesTarget(client, target.Class, target.Title) {
-			continue
-		}
-		if target.Workspace > 0 && client.Workspace.ID == target.Workspace {
-			if err := r.hypr.FocusWindow(client.Address); err != nil {
-				return "", err
-			}
-			return target.Class, nil
-		}
-		if fallback == nil {
-			fallback = client
+		switch {
+		case !windows.MatchesTarget(client, target.Class, target.Title):
+		case target.Workspace > 0 && (client.Workspace.ID == target.Workspace || owner.Has(client.Address)):
+			home = client
+		case other == nil:
+			other = client
 		}
 	}
-	if fallback != nil {
-		if err := r.hypr.FocusWindow(fallback.Address); err != nil {
+	if match := cmp.Or(home, other); match != nil {
+		if err := wm.NewThreeBody(r.hypr, r.state).Show(match.Address, target.Workspace); err != nil {
 			return "", err
 		}
 		return target.Class, nil

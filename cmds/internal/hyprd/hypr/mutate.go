@@ -104,6 +104,42 @@ func (c *Client) SetWindowFloating(address string) error {
 	))
 }
 
+// Park floats the addressed window at its current global box at, size and silently moves it to workspace in one frame.
+func (c *Client) Park(address, workspace string, at, size [2]int) error {
+	w := luaQuote(windowAddress(address))
+	return c.eval("Park", fmt.Sprintf(
+		`hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s }))`,
+		w, size[0], size[1], w, at[0], at[1], w, luaQuote(workspace), w,
+	))
+}
+
+// Unpark silently moves the addressed window to workspace and tiles it in one frame.
+func (c *Client) Unpark(address, workspace string) error {
+	w := luaQuote(windowAddress(address))
+	return c.eval("Unpark", fmt.Sprintf(
+		`hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.float({ action = "disable", window = %s }))`,
+		luaQuote(workspace), w, w,
+	))
+}
+
+// Fit moves and resizes the addressed floating window to the global box at, size.
+func (c *Client) Fit(address string, at, size [2]int) error {
+	w := luaQuote(windowAddress(address))
+	return c.eval("Fit", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s }))",
+		size[0], size[1], w, at[0], at[1], w,
+	))
+}
+
+// SwapSlot exchanges two windows' layout slots and floating flags, then focuses incoming and recalculates its workspace in one frame.
+func (c *Client) SwapSlot(incoming, outgoing string) error {
+	w := luaQuote(windowAddress(incoming))
+	return c.eval("SwapSlot", fmt.Sprintf(
+		`hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })); hl.dispatch(hl.dsp.focus({ window = %s })); hl.dispatch(hl.dsp.layout("orientationleft"))`,
+		w, luaQuote(windowAddress(outgoing)), w,
+	))
+}
+
 // ResizeWindowExact resizes the addressed window to exact pixel size w×h.
 func (c *Client) ResizeWindowExact(address string, w, h int) error {
 	return c.eval("ResizeWindowExact", fmt.Sprintf(
@@ -239,17 +275,5 @@ func (c *Client) SetOuterGaps(top, right, bottom, left int) error {
 func (c *Client) SetMasterFactor(mfact float64) error {
 	return c.eval("SetMasterFactor", fmt.Sprintf(
 		"hl.config({ master = { mfact = %g } })", mfact,
-	))
-}
-
-// AddFadeRule adds a dynamic window rule with animation = "fade".
-// initialTitle may be empty (class-only match).
-func (c *Client) AddFadeRule(class, initialTitle string) error {
-	match := "class = " + luaQuote(class)
-	if initialTitle != "" {
-		match += ", initial_title = " + luaQuote(initialTitle)
-	}
-	return c.eval("AddFadeRule", fmt.Sprintf(
-		`hl.window_rule({ match = { %s }, animation = "fade" })`, match,
 	))
 }

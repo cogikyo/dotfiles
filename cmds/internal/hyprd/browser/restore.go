@@ -94,7 +94,10 @@ func (b *Browser) claimWindowToWorkspace(name string, workspace int) error {
 	deadline := time.Now().Add(firefoxWindowClaimTimeout)
 	var lastErr error
 	for time.Now().Before(deadline) {
-		if err := b.ClaimWindow(name, workspace); err == nil {
+		b.state.LockLayout()
+		err := b.ClaimWindow(name, workspace)
+		b.state.UnlockLayout()
+		if err == nil {
 			return nil
 		} else {
 			lastErr = err

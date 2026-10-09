@@ -148,6 +148,8 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", fmt.Errorf("focus workspace %d: %w", s.Workspace, err)
 	}
 	l.state.SetActiveSession(s.Workspace, s.Name)
+	l.state.SetArranging(s.Workspace, true)
+	defer l.state.SetArranging(s.Workspace, false)
 
 	clients, err := l.hypr.Clients()
 	if err != nil {
@@ -185,16 +187,8 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		}
 
 		windowsByRole := l.waitForSessionRoles(s, roles, sessionWindowTimeout)
-		if commandWindow := windowsByRole[s.Name]; commandWindow != nil {
-			if err := l.arrangePair(s, commandWindow, windowsByRole["browser"]); err != nil {
-				return "", err
-			}
-		}
-
-		if s.Monocle {
-			if err := l.applyMonocle(s.Workspace); err != nil {
-				return "", err
-			}
+		if err := l.arrangeCommand(s, windowsByRole); err != nil {
+			return "", err
 		}
 		return l.sessionResult(s, roles, windowsByRole), nil
 	}
@@ -220,21 +214,39 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		}
 	}
 	windowsByRole := l.waitForSessionRoles(s, s.Body, sessionWindowTimeout)
-
-	if _, err := wm.NewSplit(l.hypr, l.state).Apply("default"); err != nil {
-		return "", fmt.Errorf("set layout split: %w", err)
-	}
-	if err := l.arrangeThreeBody(s, windowsByRole); err != nil {
+	if err := l.arrangeBody(s, windowsByRole); err != nil {
 		return "", err
 	}
+	return l.sessionResult(s, s.Body, windowsByRole), nil
+}
 
-	if s.Monocle {
-		if err := l.applyMonocle(s.Workspace); err != nil {
-			return "", err
+func (l *Layout) arrangeCommand(s config.Session, windowsByRole map[string]*hypr.Window) error {
+	l.state.LockLayout()
+	defer l.state.UnlockLayout()
+	if commandWindow := windowsByRole[s.Name]; commandWindow != nil {
+		if err := l.arrangePair(s, commandWindow, windowsByRole["browser"]); err != nil {
+			return err
 		}
 	}
+	if s.Monocle {
+		return l.applyMonocle(s.Workspace)
+	}
+	return nil
+}
 
-	return l.sessionResult(s, s.Body, windowsByRole), nil
+func (l *Layout) arrangeBody(s config.Session, windowsByRole map[string]*hypr.Window) error {
+	l.state.LockLayout()
+	defer l.state.UnlockLayout()
+	if _, err := wm.NewSplit(l.hypr, l.state).Apply("default"); err != nil {
+		return fmt.Errorf("set layout split: %w", err)
+	}
+	if err := l.arrangeThreeBody(s, windowsByRole); err != nil {
+		return err
+	}
+	if s.Monocle {
+		return l.applyMonocle(s.Workspace)
+	}
+	return nil
 }
 
 func (l *Layout) applyMonocle(wsID int) error {
@@ -385,7 +397,10 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	deadline := time.Now().Add(sessionBrowserClaimTimeout)
 	var lastErr error
 	for time.Now().Before(deadline) {
-		if err := b.ClaimWindowForSnapshot(s.Browser.Snapshot, s.Workspace); err == nil {
+		l.state.LockLayout()
+		err := b.ClaimWindowForSnapshot(s.Browser.Snapshot, s.Workspace)
+		l.state.UnlockLayout()
+		if err == nil {
 			return nil
 		} else {
 			lastErr = err
@@ -496,14 +511,24 @@ func (l *Layout) arrangeThreeBody(s config.Session, windowsByRole map[string]*hy
 	if err := l.hypr.MoveWindowToWorkspace(slave.Address, workspace, false); err != nil {
 		return fmt.Errorf("move slave to workspace %d: %w", s.Workspace, err)
 	}
-
-	if shadow != nil {
-		if err := l.hypr.MoveWindowToWorkspace(shadow.Address, "special:shadow", false); err != nil {
-			return fmt.Errorf("move shadow window: %w", err)
+	for _, w := range []*hypr.Window{master, slave} {
+		if err := windows.Unpark(l.hypr, w.Address, s.Workspace); err != nil {
+			return fmt.Errorf("tile %s: %w", w.Address, err)
 		}
 	}
 	if err := l.ensureMaster(s.Workspace, master.Address); err != nil {
 		return err
+	}
+	if shadow != nil {
+		clients, err := l.hypr.Clients()
+		if err != nil {
+			return err
+		}
+		if w := windows.Find(clients, shadow.Address); w != nil {
+			if err := windows.Park(l.hypr, *w, s.Workspace); err != nil {
+				return fmt.Errorf("park shadow window: %w", err)
+			}
+		}
 	}
 	if err := l.hypr.FocusWindow(slave.Address); err != nil {
 		return fmt.Errorf("focus slave window: %w", err)

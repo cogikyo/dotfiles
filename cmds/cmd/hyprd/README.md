@@ -80,10 +80,15 @@ Run it again to restore the parked windows.
 hyprd three-body editor      # focus/launch editor window
 hyprd three-body agents      # focus/launch agents (checks notifications first)
 hyprd three-body browser     # focus/launch browser window
-hyprd three-body shadow      # toggle active/shadow slave
-hyprd shadow                 # toggle visibility of shadow workspace
+hyprd shadow                 # toggle active/shadow slave
 hyprd shadow list            # list windows parked on shadow workspace
 ```
+
+Each workspace has a master, one visible slave, and at most one shadow parked on `special:shadow`.
+The shadow floats at its workspace's slave size, so a toggle or `hyprd swap` trades slots without resizing the app.
+A third tiled window opening on workspaces 1–5 parks the previous slave as the shadow; further windows tile normally.
+`special:shadow` is never shown.
+Focusing a parked window swaps it into its own workspace's slave slot instead, and an unowned one tiles on the target or active workspace.
 
 ### Sessions & layouts
 

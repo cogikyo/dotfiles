@@ -14,6 +14,7 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 	"dotfiles/cmds/internal/hyprd/wm"
 )
 
@@ -95,7 +96,10 @@ func (e *EventLoop) syncState() error {
 	}
 	e.notifyWorkspace()
 	e.resetAccent()
+	e.state.LockLayout()
 	e.reseedSplit()
+	e.refit()
+	e.state.UnlockLayout()
 
 	return nil
 }
@@ -135,8 +139,13 @@ func (e *EventLoop) handleEvent(line string) {
 			e.state.SetWorkspace(ws)
 			e.notifyWorkspace()
 			e.resetAccent()
+			e.state.LockLayout()
 			e.reseedSplit()
 			e.refreshSplit()
+			if event == "workspacev2" {
+				e.refitWorkspace(ws)
+			}
+			e.state.UnlockLayout()
 		}
 
 	case "focusedmon":
@@ -145,21 +154,35 @@ func (e *EventLoop) handleEvent(line string) {
 				e.state.SetWorkspace(ws)
 				e.notifyWorkspace()
 				e.resetAccent()
+				e.state.LockLayout()
 				e.reseedSplit()
 				e.refreshSplit()
+				e.state.UnlockLayout()
 			}
 		}
 
 	case "activewindow", "activewindowv2":
 		e.applyAccent()
+		e.state.LockLayout()
 		e.refreshSplit()
+		e.state.UnlockLayout()
+
+	case "activespecial":
+		if name, _, _ := strings.Cut(data, ","); name == windows.ShadowWorkspace {
+			e.state.LockLayout()
+			e.closeShadow()
+			e.state.UnlockLayout()
+		}
 
 	case "configreloaded":
 		if e.accent != nil {
 			e.accent.Invalidate()
 		}
 		e.applyAccent()
+		e.state.LockLayout()
 		e.reseedSplit()
+		e.refit()
+		e.state.UnlockLayout()
 
 	case "createworkspace", "destroyworkspace":
 		e.refreshClients()
@@ -172,21 +195,32 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "openwindow":
+		e.state.LockLayout()
+		e.autoPark(data)
+		e.refit()
+		e.state.UnlockLayout()
 		e.refreshClients()
 		e.notifyWorkspace()
 
-	case "movewindow", "movewindowv2", "windowtitle", "windowtitlev2":
+	case "movewindowv2":
+		e.state.LockLayout()
+		e.refit()
+		e.state.UnlockLayout()
+		e.refreshClients()
+		e.notifyWorkspace()
+
+	case "movewindow", "windowtitle", "windowtitlev2":
 		e.refreshClients()
 		e.notifyWorkspace()
 
 	case "closewindow":
-		addr := data // closewindow emits bare hex (no 0x prefix)
-		if !strings.HasPrefix(addr, "0x") {
-			addr = "0x" + addr
-		}
+		addr := hexAddress(data)
+		e.state.LockLayout()
 		e.handleThreeBodyClose(addr) // must run before ClearWindowState wipes the entries
 		e.handleMonocleClose(addr)
 		e.state.ClearWindowState(addr)
+		e.refit()
+		e.state.UnlockLayout()
 		e.refreshClients()
 		e.notifyWorkspace()
 		e.applyAccent()
@@ -225,19 +259,108 @@ func (e *EventLoop) resetAccent() {
 	}
 }
 
+// closeShadow keeps the shadow workspace from ever being on screen.
+//
+// Focusing a parked window makes Hyprland open its special workspace over the current one, so the window that took focus is shown in its own workspace instead.
+func (e *EventLoop) closeShadow() {
+	active, err := e.hypr.ActiveWindow()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd shadow: %v\n", err)
+		return
+	}
+	monitors, err := e.hypr.Monitors()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd shadow: %v\n", err)
+		return
+	}
+	if slices.ContainsFunc(monitors, func(m hypr.Monitor) bool { return m.Focused && m.SpecialWS.Name == windows.ShadowWorkspace }) {
+		if err := e.hypr.ToggleSpecialWorkspace(strings.TrimPrefix(windows.ShadowWorkspace, "special:")); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd shadow: close: %v\n", err)
+		}
+	}
+	if active == nil || active.Workspace.Name != windows.ShadowWorkspace {
+		return
+	}
+	if err := wm.NewThreeBody(e.hypr, e.state).Show(active.Address, 0); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd shadow: show %s: %v\n", active.Address, err)
+	}
+}
+
 // handleThreeBodyClose dissolves a three-body triple when any member closes, pulling the shadow back if needed.
 func (e *EventLoop) handleThreeBodyClose(addr string) {
 	for ws, tb := range e.state.AllThreeBody() {
-		if tb.Shadow == addr {
-			e.state.ClearThreeBody(ws)
+		if !tb.Has(addr) {
+			continue
+		}
+		e.state.ClearThreeBody(ws)
+		clients, err := e.hypr.Clients()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd three-body close: %v\n", err)
 			return
 		}
-		if tb.Active == addr || tb.Master == addr {
-			e.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(ws), false)
-			e.state.ClearThreeBody(ws)
-			return
+		if shadow := windows.Parked(tb, clients); shadow != nil && shadow.Address != addr {
+			if err := windows.Unpark(e.hypr, shadow.Address, ws); err != nil {
+				fmt.Fprintf(os.Stderr, "hyprd three-body close: unpark %s: %v\n", shadow.Address, err)
+			}
 		}
+		return
 	}
+}
+
+func (e *EventLoop) autoPark(data string) {
+	addr, rest, _ := strings.Cut(data, ",")
+	name, _, _ := strings.Cut(rest, ",")
+	wsID, err := strconv.Atoi(name)
+	if err != nil || wsID < 1 || wsID > 5 || e.state.Arranging(wsID) || e.state.GetMonocle(wsID) != nil {
+		return
+	}
+	addr = hexAddress(addr)
+	clients, err := e.hypr.Clients()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd auto-park: %v\n", err)
+		return
+	}
+	i := slices.IndexFunc(clients, func(c hypr.Window) bool { return c.Address == addr })
+	if i < 0 || clients[i].Floating || clients[i].Workspace.ID != wsID || windows.IsIgnored(clients[i].Class) {
+		return
+	}
+	if windows.Parked(e.state.GetThreeBody(wsID), clients) != nil {
+		return
+	}
+	tiled := windows.Tiled(clients, wsID)
+	slaves := windows.GetSlaves(tiled)
+	j := windows.SlaveIndex(slaves, addr)
+	if len(tiled) != 3 || len(slaves) != 2 || j < 0 {
+		return
+	}
+	prev := slaves[1-j].Address
+	if err := windows.Park(e.hypr, slaves[1-j], wsID); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd auto-park: park %s: %v\n", prev, err)
+		return
+	}
+	if err := e.hypr.FocusWindow(addr); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd auto-park: focus %s: %v\n", addr, err)
+	}
+	e.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tiled[0].Address, Active: addr, Shadow: prev})
+}
+
+func (e *EventLoop) refit() {
+	if err := windows.RefitAll(e.hypr, e.state); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd refit: %v\n", err)
+	}
+}
+
+func (e *EventLoop) refitWorkspace(ws int) {
+	if err := windows.Refit(e.hypr, e.state, ws); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd refit: %v\n", err)
+	}
+}
+
+func hexAddress(addr string) string {
+	if strings.HasPrefix(addr, "0x") {
+		return addr
+	}
+	return "0x" + addr
 }
 
 // handleMonocleClose restores displaced windows when the focused monocle window closes.

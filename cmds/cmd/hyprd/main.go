@@ -226,7 +226,7 @@ func cmdTab() {
 	sendCommand("tab " + strings.Join(os.Args[2:], " "))
 }
 func cmdThreeBody() {
-	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
+	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser}"))
 }
 func cmdShadow() { sendCommand("shadow " + strings.Join(os.Args[2:], " ")) }
 func cmdBrowserQA() {
@@ -415,10 +415,9 @@ Three-body (2-visible, 1-shadow window management):
   hyprd three-body editor    Focus/launch editor window
   hyprd three-body agents    Focus/launch agents (checks notifications first)
   hyprd three-body browser   Focus/launch browser window
-  hyprd three-body shadow    Toggle active/shadow slave
 
 Shadow workspace (special:shadow):
-  hyprd shadow               Toggle visibility of shadow workspace
+  hyprd shadow               Toggle active/shadow slave
   hyprd shadow list          List windows parked on shadow workspace
 
 Browser QA workspaces (browser-qa-<slot>):

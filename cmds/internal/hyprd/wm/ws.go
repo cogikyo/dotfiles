@@ -7,6 +7,7 @@ import (
 
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 )
 
 const (
@@ -84,8 +85,14 @@ func (w *WS) moveActiveWindow(delta int) (string, error) {
 // normalizeWorkspaceState unwinds three-body and displaced-master state before a cross-workspace move.
 func (w *WS) normalizeWorkspaceState(wsID int) error {
 	if tb := w.state.GetThreeBody(wsID); tb != nil {
-		if err := w.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(wsID), false); err != nil {
-			return fmt.Errorf("restore three-body shadow on ws %d: %w", wsID, err)
+		clients, err := w.hypr.Clients()
+		if err != nil {
+			return err
+		}
+		if shadow := windows.Parked(tb, clients); shadow != nil {
+			if err := windows.Unpark(w.hypr, shadow.Address, wsID); err != nil {
+				return fmt.Errorf("restore three-body shadow on ws %d: %w", wsID, err)
+			}
 		}
 		w.state.ClearThreeBody(wsID)
 	}

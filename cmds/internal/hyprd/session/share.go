@@ -4,6 +4,7 @@ import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 	"dotfiles/cmds/internal/hyprd/wm"
 	"fmt"
 	"os/exec"
@@ -85,11 +86,16 @@ func (s *Share) exit() (string, error) {
 
 // retuneSplit applies the active workspace's split preset for the new share mode.
 func (s *Share) retuneSplit() error {
+	s.state.LockLayout()
+	defer s.state.UnlockLayout()
 	split := wm.NewSplit(s.hypr, s.state)
 	if err := split.Reseed(); err != nil {
 		return err
 	}
-	return split.Refresh()
+	if err := split.Refresh(); err != nil {
+		return err
+	}
+	return windows.RefitAll(s.hypr, s.state)
 }
 
 func withSplitErr(result string, err error) string {

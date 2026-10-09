@@ -157,6 +157,12 @@ func (d *Daemon) handleCommand(command string) string {
 	arg = strings.TrimSpace(arg)
 
 	switch cmd {
+	case "split", "hide", "float", "swap", "ws", "focus", "edit", "three-body", "shadow":
+		d.state.LockLayout()
+		defer d.state.UnlockLayout()
+	}
+
+	switch cmd {
 	case "status":
 		return "running"
 	case "ping":
@@ -268,8 +274,9 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "monocle":
-		monocle := wm.NewMonocle(d.hypr, d.state)
-		result, err := monocle.Execute()
+		d.state.LockLayout()
+		result, err := wm.NewMonocle(d.hypr, d.state).Execute()
+		d.state.UnlockLayout()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
@@ -336,14 +343,17 @@ func (d *Daemon) handleCommand(command string) string {
 
 func (d *Daemon) handleShadow(arg string) string {
 	shadowWS := windows.ShadowWorkspace
-	special := strings.TrimPrefix(shadowWS, "special:")
 
 	switch strings.TrimSpace(arg) {
-	case "", "toggle":
-		if err := d.hypr.ToggleSpecialWorkspace(special); err != nil {
+	case "":
+		if _, err := wm.NewMonocle(d.hypr, d.state).DeactivateIfActive(); err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
-		return "toggled " + shadowWS
+		result, err := wm.NewThreeBody(d.hypr, d.state).Toggle()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "list":
 		clients, err := d.hypr.Clients()
 		if err != nil {
@@ -368,7 +378,7 @@ func (d *Daemon) handleShadow(arg string) string {
 		}
 		return string(data)
 	default:
-		return "usage: shadow [toggle|list]"
+		return "usage: shadow [list]"
 	}
 }
 
@@ -388,7 +398,7 @@ func (d *Daemon) handleBrowserQA(arg string) string {
 func (d *Daemon) handleThreeBody(arg string) string {
 	name := strings.TrimSpace(arg)
 	if name == "" {
-		return "usage: three-body {editor|agents|browser|shadow}"
+		return "usage: three-body {editor|agents|browser}"
 	}
 	if name == "agents" {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())

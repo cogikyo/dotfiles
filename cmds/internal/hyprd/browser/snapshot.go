@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/windows"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -291,6 +292,26 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 	}
 	if window.Workspace.ID == workspace {
 		return nil
+	}
+	if b.state != nil {
+		for ws, tb := range b.state.AllThreeBody() {
+			if ws == workspace || !tb.Has(window.Address) {
+				continue
+			}
+			clients, err := b.hypr.Clients()
+			if err != nil {
+				return err
+			}
+			if parked := windows.Parked(tb, clients); parked != nil && parked.Address != window.Address {
+				if err := windows.Unpark(b.hypr, parked.Address, ws); err != nil {
+					return err
+				}
+			}
+			b.state.ClearThreeBody(ws)
+		}
+	}
+	if window.Workspace.Name == windows.ShadowWorkspace {
+		return windows.Unpark(b.hypr, window.Address, workspace)
 	}
 	return b.hypr.MoveWindowToWorkspace(window.Address, strconv.Itoa(workspace), false)
 }

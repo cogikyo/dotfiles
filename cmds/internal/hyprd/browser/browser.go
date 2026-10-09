@@ -83,33 +83,29 @@ func (b *Browser) executeOpen(args []string) (string, error) {
 	}
 	url := args[0]
 
-	if target, ok := b.focusedWorkspaceFirefoxOpenTarget(); ok {
-		if err := b.openURLInFirefoxTarget(target, url); err != nil {
-			return "", err
-		}
-		return "opened browser URL", nil
+	b.state.LockLayout()
+	target, ok := b.focusedWorkspaceFirefoxOpenTarget()
+	var err error
+	if ok {
+		err = b.focusFirefoxOpenTarget(target)
+	}
+	b.state.UnlockLayout()
+	if err != nil {
+		return "", err
 	}
 
-	cmd := append(b.browserCommandParts(), "--new-window", url)
+	cmd := b.browserCommandParts()
+	if ok {
+		time.Sleep(250 * time.Millisecond)
+		cmd = append(cmd, "--new-tab", url)
+	} else {
+		cmd = append(cmd, "--new-window", url)
+	}
 	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
 		return "", err
 	}
 
 	return "opened browser URL", nil
-}
-
-func (b *Browser) openURLInFirefoxTarget(target firefoxOpenTarget, url string) error {
-	if err := b.focusFirefoxOpenTarget(target); err != nil {
-		return err
-	}
-	time.Sleep(250 * time.Millisecond)
-
-	cmd := b.browserCommandParts()
-	cmd = append(cmd, "--new-tab", url)
-	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
-		return err
-	}
-	return nil
 }
 
 // ResolveLaunchConfig populates cfg from the named snapshot, falling back to inline URLs if the snapshot is missing.

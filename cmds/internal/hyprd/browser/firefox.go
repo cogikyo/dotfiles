@@ -268,11 +268,8 @@ func threeBodyFirefoxOpenTarget(clients []hypr.Window, workspaceID int, threeBod
 			}
 		}
 	}
-	for _, client := range clients {
-		if client.Address != threeBody.Shadow || client.Workspace.Name != windows.ShadowWorkspace || !IsFirefoxWindow(client) {
-			continue
-		}
-		return firefoxOpenTargetFromWindow(client, workspaceID, true)
+	if parked := windows.Parked(threeBody, clients); parked != nil && IsFirefoxWindow(*parked) {
+		return firefoxOpenTargetFromWindow(*parked, workspaceID, true)
 	}
 	return firefoxOpenTarget{}, false
 }
@@ -322,14 +319,8 @@ func (b *Browser) swapThreeBodyShadowIntoView(workspaceID int, shadowAddress str
 		return fmt.Errorf("no visible three-body slave on workspace %d", workspaceID)
 	}
 	activeAddress := slaves[0].Address
-	if err := b.hypr.MoveWindowToWorkspace(activeAddress, windows.ShadowWorkspace, false); err != nil {
-		return fmt.Errorf("move active window to shadow workspace: %w", err)
-	}
-	if err := b.hypr.MoveWindowToWorkspace(shadowAddress, strconv.Itoa(workspaceID), false); err != nil {
-		return fmt.Errorf("move shadow window to workspace %d: %w", workspaceID, err)
-	}
-	if err := b.hypr.FocusWindow(shadowAddress); err != nil {
-		return fmt.Errorf("focus shadow window: %w", err)
+	if err := windows.SwapSlot(b.hypr, shadowAddress, activeAddress, workspaceID); err != nil {
+		return fmt.Errorf("swap shadow window into workspace %d: %w", workspaceID, err)
 	}
 	if b.state != nil && len(tiled) > 0 {
 		b.state.SetThreeBody(workspaceID, &state.ThreeBodyState{Master: tiled[0].Address, Active: shadowAddress, Shadow: activeAddress})

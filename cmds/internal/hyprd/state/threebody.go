@@ -58,3 +58,24 @@ func (s *State) ClearThreeBodyLaunch(key string) {
 	defer s.mu.Unlock()
 	delete(s.pendingLaunches, key)
 }
+
+// SetArranging marks ws while a session layout places its windows, so new windows there are not auto-parked.
+func (s *State) SetArranging(ws int, on bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if on {
+		if s.arranging == nil {
+			s.arranging = make(map[int]bool)
+		}
+		s.arranging[ws] = true
+		return
+	}
+	delete(s.arranging, ws)
+}
+
+// Arranging reports whether a session layout is placing windows on ws.
+func (s *State) Arranging(ws int) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.arranging[ws]
+}

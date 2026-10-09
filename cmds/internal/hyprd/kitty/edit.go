@@ -99,30 +99,25 @@ func (t *Editor) findEditor(wsID int) (*hypr.Window, error) {
 		}
 	}
 
-	if shadow := shadowEditorForWorkspace(clients, t.state.GetThreeBody(wsID)); shadow != nil {
-		if err := t.hypr.MoveWindowToWorkspace(shadow.Address, strconv.Itoa(wsID), false); err != nil {
+	tb := t.state.GetThreeBody(wsID)
+	shadow := windows.Parked(tb, clients)
+	if shadow == nil || shadow.Class != "kitty" || shadow.InitialTitle != "editor" {
+		return nil, nil
+	}
+	tiled := windows.Tiled(clients, wsID)
+	slaves := windows.GetSlaves(tiled)
+	if len(slaves) == 0 {
+		if err := windows.Unpark(t.hypr, shadow.Address, wsID); err != nil {
 			return nil, fmt.Errorf("move editor to workspace %d: %w", wsID, err)
 		}
+		t.state.ClearThreeBody(wsID)
 		return shadow, nil
 	}
-
-	return nil, nil
-}
-
-func shadowEditorForWorkspace(clients []hypr.Window, tb *state.ThreeBodyState) *hypr.Window {
-	if tb == nil || tb.Shadow == "" {
-		return nil
+	if err := windows.SwapSlot(t.hypr, shadow.Address, slaves[0].Address, wsID); err != nil {
+		return nil, fmt.Errorf("swap editor into workspace %d: %w", wsID, err)
 	}
-
-	for i := range clients {
-		c := &clients[i]
-		if c.Address == tb.Shadow && strings.HasPrefix(c.Workspace.Name, windows.ShadowWorkspace) &&
-			c.Class == "kitty" && c.InitialTitle == "editor" {
-			return c
-		}
-	}
-
-	return nil
+	t.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tiled[0].Address, Active: shadow.Address, Shadow: slaves[0].Address})
+	return shadow, nil
 }
 
 func nvimInWindow(win *hypr.Window) (*Client, Pane, bool) {

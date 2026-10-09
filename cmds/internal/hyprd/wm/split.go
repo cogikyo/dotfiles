@@ -74,6 +74,9 @@ func (s *Split) Apply(preset string) (string, error) {
 	if err := s.seed(mfact); err != nil {
 		return "", err
 	}
+	if err := windows.Refit(s.hypr, s.state, ws); err != nil {
+		return "", fmt.Errorf("refit shadow: %w", err)
+	}
 	return fmt.Sprintf("split: %s (%s)", name, mfact), nil
 }
 

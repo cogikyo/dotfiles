@@ -14,6 +14,11 @@ type ThreeBodyState struct {
 	Shadow string `json:"shadow"`
 }
 
+// Has reports whether address is one of the three bodies; a nil state has none.
+func (t *ThreeBodyState) Has(address string) bool {
+	return t != nil && address != "" && (t.Master == address || t.Active == address || t.Shadow == address)
+}
+
 type MonocleWindow struct {
 	Address  string `json:"address"`
 	OriginWS int    `json:"origin_ws"`
