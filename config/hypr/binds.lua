@@ -40,6 +40,7 @@ local corne = { inclusive = false, list = svalboard.list }
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
 alt("A", "Editor",  "hyprd three-body editor")
 alt("C", "Agents",  "hyprd three-body agents")
+alt("R", "Browser", "hyprd three-body browser")
 alt("X", "Dismiss", "dunstctl close")
 
 super("Comma", "Split narrow", "hyprd split narrow")
@@ -169,7 +170,6 @@ keyboard(svalboard, function()
 	super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
 	super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
 
-	super("R",             "Browser",        "hyprd three-body browser")
 	super("Backspace",     "Toggle shadow",  "hyprd three-body shadow")
 	super("Period",        "Swap master",    "hyprd swap")
 	super("Return",        "Toggle monocle", "hyprd monocle")
@@ -219,7 +219,6 @@ keyboard(corne, function()
 	alt("S", "Focus left",  hl.dsp.focus({ direction = "left" }))
 	alt("T", "Focus right", hl.dsp.focus({ direction = "right" }))
 
-	alt("R",                      "Browser",        "hyprd three-body browser")
 	alt("Backspace",              "Toggle shadow",  "hyprd three-body shadow")
 	alt("Z",                      "Swap master",    "hyprd swap")
 	alt("SHIFT + Z",              "Split wide",     "hyprd split wide")
