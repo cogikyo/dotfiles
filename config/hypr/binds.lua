@@ -157,8 +157,8 @@ end)
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 keyboard(svalboard, function()
-	super("B", "Workspace 1 (misc)",     "hyprd ws 1")
-	super("C", "Workspace 2 (chat)",     "hyprd ws 2")
+	super("B", "Workspace 1 (chat)",     "hyprd ws 1")
+	super("C", "Workspace 2 (misc)",     "hyprd ws 2")
 	super("D", "Workspace 3 (work)",     "hyprd ws 3")
 	super("H", "Workspace 4 (personal)", "hyprd ws 4")
 	super("M", "Workspace 5 (dotfiles)", "hyprd ws 5")
@@ -209,8 +209,8 @@ end)
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 keyboard(corne, function()
-	super("A", "Workspace 1 (misc)",     "hyprd ws 1")
-	super("S", "Workspace 2 (chat)",     "hyprd ws 2")
+	super("A", "Workspace 1 (chat)",     "hyprd ws 1")
+	super("S", "Workspace 2 (misc)",     "hyprd ws 2")
 	super("E", "Workspace 3 (work)",     "hyprd ws 3")
 	super("T", "Workspace 4 (personal)", "hyprd ws 4")
 	super("D", "Workspace 5 (dotfiles)", "hyprd ws 5")

@@ -45,8 +45,8 @@
       :class "tr-a workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
-      (workspace :icon "learn"    :num "1" :hover ws-h1 :desc " misc")
-      (workspace :icon "network"  :num "2" :hover ws-h2 :desc "󰭹 chat")
+      (workspace :icon "network"  :num "1" :hover ws-h1 :desc "󰭹 chat")
+      (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " misc")
       (workspace :icon "leadpier" :num "3" :hover ws-h3 :desc "󰃖 work")
       (workspace :icon "dna"      :num "4" :hover ws-h4 :desc "󰀄 personal")
       (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " dotfiles")

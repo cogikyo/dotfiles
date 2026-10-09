@@ -19,7 +19,17 @@ windows:
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 sessions:
   # ├─ workspace 1 ──────────────────────────────────────────────────────────────┤
-  1: # alternate main workspace
+  1: # communication-focused sessions.
+    slack:
+      command: sh -c 'slack & exec gtk-launch grok-bot'
+      init: true
+
+    discord:
+      command: discord
+      monocle: true
+
+  # ├─ workspace 2 ──────────────────────────────────────────────────────────────┤
+  2: # alternate main workspace
     leadpier-alt:
       project: LeadPier
       body:
@@ -65,16 +75,6 @@ sessions:
       body:
         - editor
         - agents
-
-  # ├─ workspace 2 ──────────────────────────────────────────────────────────────┤
-  2: # communication-focused sessions.
-    slack:
-      command: sh -c 'slack & exec gtk-launch grok-bot'
-      init: true
-
-    discord:
-      command: discord
-      monocle: true
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
   3: # work
@@ -332,11 +332,11 @@ notify:
   # Routes last only while the latest notification for that target remains active.
   # Repeated notifications for one target coalesce into the newest route.
   action_focus_apps:
-    Slack: { workspace: 2, class: slack }
-    Grok Bot: { workspace: 2, class: grok-bot }
-    Firefox: { workspace: 2, class: firefox-developer-edition }
-    Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
-    firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
+    Slack: { workspace: 1, class: slack }
+    Grok Bot: { workspace: 1, class: grok-bot }
+    Firefox: { workspace: 1, class: firefox-developer-edition }
+    Firefox Developer Edition: { workspace: 1, class: firefox-developer-edition }
+    firefox-developer-edition: { workspace: 1, class: firefox-developer-edition }
 
   # ├─ silence filters ──────────────────────────────────────────────────────────┤
   silent_apps: # these suppress sounds without suppressing the notification itself.

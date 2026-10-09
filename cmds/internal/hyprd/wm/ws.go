@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	chatWorkspace  = 2
+	chatWorkspace  = 1
 	musicWorkspace = 6
 	lastWorkspace  = 6
 )
