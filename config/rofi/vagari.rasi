@@ -1,0 +1,98 @@
+* {
+	bg:    #222536;
+	fg:    #aeb9f8;
+	drk-1: #181b2c;
+	orn-3: #f2a170;
+	slt-3: #585f8d;
+	blu-1: #6380ec;
+	blu-2: #7492ef;
+
+	font:             "sans-serif 14";
+	background-color: transparent;
+	text-color:       @fg;
+}
+
+window {
+	location:         south;
+	anchor:           south;
+	width:            1680px;
+	padding:          36px 40px 40px;
+	border:           2px 2px 0 2px;
+	border-color:     @orn-3;
+	border-radius:    28px 28px 0 0;
+	background-color: #222536eb;
+}
+
+mainbox {
+	spacing:  28px;
+	children: [ inputbar, listview ];
+}
+
+inputbar {
+	padding:          14px 20px;
+	spacing:          16px;
+	border:           2px;
+	border-color:     @blu-1;
+	border-radius:    14px;
+	background-color: @drk-1;
+	children:         [ textbox-search, entry ];
+}
+
+textbox-search {
+	expand:         false;
+	str:            "󰍉";
+	font:           "Symbols Nerd Font Mono 18";
+	text-color:     @blu-2;
+	vertical-align: 0.5;
+}
+
+entry {
+	font:              "sans-serif 17";
+	placeholder:       "Search apps";
+	placeholder-color: @slt-3;
+	cursor-color:      @blu-2;
+	vertical-align:    0.5;
+}
+
+listview {
+	columns:       6;
+	lines:         3;
+	flow:          horizontal;
+	fixed-columns: true;
+	fixed-height:  true;
+	spacing:       16px;
+	scrollbar:     false;
+	cycle:         false;
+}
+
+element {
+	orientation:   vertical;
+	padding:       22px 12px 18px;
+	spacing:       14px;
+	border-radius: 18px;
+	cursor:        pointer;
+}
+
+element normal.normal, element alternate.normal, element normal.active, element alternate.active {
+	background-color: transparent;
+	text-color:       @fg;
+}
+
+element selected.normal, element selected.active {
+	background-image: linear-gradient(to bottom, #0d0f1b, #14172a, #181b2c, #181b2c, #181b2c, #181b2c, #181b2c, #181b2c);
+	text-color:       @blu-2;
+}
+
+element-icon {
+	size:             96px;
+	horizontal-align: 0.5;
+	cursor:           inherit;
+}
+
+element-text {
+	horizontal-align: 0.5;
+	vertical-align:   0.5;
+	highlight:        bold;
+	text-color:       inherit;
+	cursor:           inherit;
+}

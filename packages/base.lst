@@ -78,7 +78,6 @@ dunst
 grim
 hypridle
 hyprland
-hyprlauncher
 hyprlock
 hyprpaper
 hyprpicker
@@ -91,6 +90,7 @@ qt6-multimedia
 qt6-multimedia-ffmpeg
 qt6ct
 quickshell
+rofi
 sddm
 slurp
 thunar

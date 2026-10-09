@@ -80,7 +80,7 @@ super("End",   "Move workspace up",   "hyprd ws up")
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("P", "App Launcher", "hyprlauncher")
+super("P",     "App Launcher",       "pkill -x rofi || rofi -show drun")
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")

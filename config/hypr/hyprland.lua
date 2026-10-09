@@ -230,6 +230,14 @@ hl.window_rule({
 
 hl.layer_rule({ match = { namespace = [[^(hyprpaper)$]] }, order = 1 })
 hl.layer_rule({ match = { namespace = [[^(mpvpaper)$]] }, order = 0 })
+hl.layer_rule({
+	name = "launcher",
+	match = { namespace = [[^(rofi)$]] },
+	animation = "slide bottom",
+	blur = true,
+	ignore_alpha = 0.5,
+	dim_around = true,
+})
 
 hl.workspace_rule({ workspace = "special:stash", gaps_out = 120 })
 
@@ -313,3 +321,9 @@ hl.animation({ leaf = "windowsOut", enabled = true, speed = 2, bezier = "default
 hl.animation({ leaf = "windowsMove", enabled = true, speed = 1.5, bezier = "default", style = "slidefade" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = "slide" })
 hl.animation({ leaf = "fade", enabled = true, speed = 1.5, bezier = "default" })
+
+hl.curve("easeOutQuint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } })
+hl.curve("easeInCubic", { type = "bezier", points = { { 0.32, 0 }, { 0.67, 0 } } })
+hl.animation({ leaf = "layersIn", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
+hl.animation({ leaf = "layersOut", enabled = true, speed = 2.2, bezier = "easeInCubic" })
+hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 2.6, bezier = "easeInCubic" })

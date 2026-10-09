@@ -1,0 +1,23 @@
+configuration {
+	modi:                "drun";
+	show-icons:          true;
+	icon-theme:          "Papirus-Dark";
+	drun-display-format: "{name}";
+	terminal:            "kitty";
+	dpi:                 96;
+
+	matching:       "fuzzy";
+	sort:           true;
+	sorting-method: "fzf";
+
+	hover-select:    true;
+	me-select-entry: "";
+	me-accept-entry: "MousePrimary";
+
+	kb-move-char-back:    "Control+b";
+	kb-move-char-forward: "Control+f";
+	kb-row-left:          "Left";
+	kb-row-right:         "Right";
+}
+
+@theme "vagari"
