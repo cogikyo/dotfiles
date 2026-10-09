@@ -71,6 +71,8 @@ HYPRD_ACCENT_HEARTBEAT_SECONDS = 5.0
 NORMAL_ACCENT_HEX = "f2a170"
 OPENCODE_ACCENT_HEX = "f2a170"
 SSH_ACCENT_HEX = "e887c3"
+APP_FG_HEX = "9db2f4"
+APP_BG_HEX = "282b48"
 
 
 class Colors:
@@ -84,6 +86,8 @@ class Colors:
             color_as_int(opts.color3)
         )  # yellow/orange accent for opencode
         self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
+        self.app_fg = int(APP_FG_HEX, 16)
+        self.app_bg = int(APP_BG_HEX, 16)
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
         # Tab bar background (with fallback)
@@ -288,20 +292,42 @@ def _home_cwd_right(dir_parts: list[str], is_git: bool) -> str:
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
+def _foreground(window) -> tuple[int, list[str]]:
+    try:
+        pgrp = os.tcgetpgrp(window.child.child_fd)
+    except (AttributeError, TypeError, OSError):
+        return 0, []
+    try:
+        with open(f"/proc/{pgrp}/cmdline", "rb") as f:
+            raw = f.read()
+    except OSError:
+        return pgrp, []
+    return pgrp, [arg.decode(errors="replace") for arg in raw.split(b"\0") if arg]
+
+
+def _busy(tab_id: int) -> bool:
+    boss = get_boss()
+    tab = boss.tab_for_id(tab_id) if boss else None
+    window = tab.active_window if tab else None
+    if window is None:
+        return False
+    if not window.screen.is_main_linebuf():
+        return True
+    pgrp = _foreground(window)[0]
+    return pgrp not in (0, window.child.pid)
+
+
+def _styled(tab: TabBarData) -> TabBarData:
+    if tab.is_active or not _busy(tab.tab_id):
+        return tab
+    return tab._replace(inactive_fg=colors.app_fg, inactive_bg=colors.app_bg)
+
+
 def _agent_from_window(window) -> str:
     """Return agent name if a known AI CLI is the foreground process."""
-    try:
-        for proc in window.child.foreground_processes:
-            cmdline = proc.get("cmdline") or []
-            if not cmdline:
-                continue
-            name = cmdline[0].rsplit("/", 1)[-1].lower()
-            for agent in AGENT_NAMES:
-                if agent in name:
-                    return agent
-    except (AttributeError, TypeError):
-        pass
-    return ""
+    cmdline = _foreground(window)[1]
+    name = cmdline[0].rsplit("/", 1)[-1].lower() if cmdline else ""
+    return next((agent for agent in AGENT_NAMES if agent in name), "")
 
 
 def _agent_from_title(window) -> str:
@@ -383,37 +409,30 @@ def _ssh_from_window(window) -> tuple:
     if declared:
         host = observed or declared
         return ("", host) if host != LOCAL_HOST else ("", "")
-    try:
-        for proc in window.child.foreground_processes:
-            cmdline = proc.get("cmdline") or []
-            if not cmdline:
-                continue
-            name = cmdline[0].rsplit("/", 1)[-1].lower()
-            if name == "ssh":
-                start = 1
-            elif name == "kitten" and len(cmdline) > 1 and cmdline[1] == "ssh":
-                start = 2
-            elif name == "kitty" and "+kitten" in cmdline:
-                marker = cmdline.index("+kitten")
-                if marker + 1 >= len(cmdline) or cmdline[marker + 1] != "ssh":
-                    continue
-                start = marker + 2
-            else:
-                continue
-            dest = _parse_ssh_destination(cmdline, start)
-            if not dest:
-                continue
-            if "@" in dest:
-                user, host = dest.split("@", 1)
-            else:
-                user, host = "", dest
-            host = host.split(".")[0]
-            if host == LOCAL_HOST or host in ("localhost", "127.0.0.1", "::1"):
-                continue
-            return user, host
-    except (AttributeError, TypeError):
-        pass
-    return "", ""
+    cmdline = _foreground(window)[1]
+    name = cmdline[0].rsplit("/", 1)[-1].lower() if cmdline else ""
+    if name == "ssh":
+        start = 1
+    elif name == "kitten" and cmdline[1:2] == ["ssh"]:
+        start = 2
+    elif name == "kitty" and "+kitten" in cmdline:
+        marker = cmdline.index("+kitten")
+        if cmdline[marker + 1 : marker + 2] != ["ssh"]:
+            return "", ""
+        start = marker + 2
+    else:
+        return "", ""
+    dest = _parse_ssh_destination(cmdline, start)
+    if not dest:
+        return "", ""
+    if "@" in dest:
+        user, host = dest.split("@", 1)
+    else:
+        user, host = "", dest
+    host = host.split(".")[0]
+    if host == LOCAL_HOST or host in ("localhost", "127.0.0.1", "::1"):
+        return "", ""
+    return user, host
 
 
 def _detect_ssh_active(tab_manager) -> tuple:
@@ -527,7 +546,7 @@ def _draw_soft_separator(
     """Draw a soft separator between tabs with same background."""
     prev_fg = screen.cursor.fg
 
-    if tab_bg == tab_fg:
+    if tab_bg in (tab_fg, default_bg):
         screen.cursor.fg = default_bg
     elif tab_bg != default_bg:
         c1 = draw_data.inactive_bg.contrast(draw_data.default_bg)
@@ -605,8 +624,19 @@ def draw_tab(
     # Calculate right status width
     _right_status_length = sum(_display_width(cell[2]) for cell in cells)
 
+    styled = _styled(tab)
+    busy = styled is not tab
+    tab = styled
+    if busy:
+        screen.cursor.fg = as_rgb(colors.app_fg)
+        screen.cursor.bg = as_rgb(colors.app_bg)
+    if extra_data.next_tab:
+        extra_data.next_tab = _styled(extra_data.next_tab)
+
     # Draw components: Icon → Tabs → Right status
     draw_icon(screen, index)
+    if busy:
+        screen.cursor.bold = True
     draw_tab_title(draw_data, screen, tab, index, extra_data, max_title_length)
 
     if is_last:
