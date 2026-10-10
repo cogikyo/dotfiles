@@ -1,0 +1,12 @@
+[terminal]
+vt = 1
+
+[initial_session]
+# zsh --login restores the login environment, including ~/.local/bin from ~/.zshenv via config/shell/env.sh, which greetd's /bin/sh profile sourcing omits.
+# --locked-cmd locks before output on every start-hyprland restart, including safe mode where hyprd init does not run.
+command = "zsh --login -c 'exec start-hyprland -- --locked-cmd \"hyprd lock client\"'"
+user = "cullyn"
+
+[default_session]
+command = "agreety --cmd \"zsh --login -c 'exec start-hyprland'\""
+user = "greeter"

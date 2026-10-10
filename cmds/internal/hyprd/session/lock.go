@@ -67,7 +67,7 @@ type lockState struct {
 func NewLock(h *hypr.Client, s *state.State) *Lock {
 	return &Lock{
 		hypr: h, state: s,
-		launch: execLock, running: lockRunning, stopForeign: stopLocks, endSession: endSession,
+		launch: runLock, running: lockRunning, stopForeign: stopLocks, endSession: endSession,
 		intent: intentPath(),
 	}
 }
@@ -88,6 +88,13 @@ func (l *Lock) Locked() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.inFull
+}
+
+// Wait blocks until no full lock is active and session restoration has finished.
+func (l *Lock) Wait() {
+	for l.Locked() {
+		time.Sleep(lockPoll)
+	}
 }
 
 // Full starts lock supervision asynchronously; returning does not mean the compositor is locked.
@@ -427,7 +434,17 @@ func lockCommand(ctx context.Context, log *lockLog) *exec.Cmd {
 	return cmd
 }
 
-func execLock(ctx context.Context, out io.Writer) error {
+// ExecLock replaces the current process with qs -c lock using the same environment as [Lock.Full].
+// It needs no daemon socket and returns only if lookup or process replacement fails.
+func ExecLock() error {
+	cmd := lockCommand(context.Background(), nil)
+	if cmd.Err != nil {
+		return cmd.Err
+	}
+	return syscall.Exec(cmd.Path, cmd.Args, cmd.Env)
+}
+
+func runLock(ctx context.Context, out io.Writer) error {
 	log, ok := out.(*lockLog)
 	if !ok {
 		log = newLockLog(out)

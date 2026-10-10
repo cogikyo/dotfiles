@@ -7,6 +7,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/cli"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
 	opencodepkg "dotfiles/cmds/internal/hyprd/opencode"
+	"dotfiles/cmds/internal/hyprd/session"
 	"dotfiles/cmds/internal/ui"
 	"encoding/json"
 	"errors"
@@ -212,11 +213,17 @@ func cmdBrowser() {
 	sendCommand("browser " + strings.Join(os.Args[2:], " "))
 }
 func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
-func cmdLock()    { sendCommand("lock " + strings.Join(os.Args[2:], " ")) }
-func cmdShare()   { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
-func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
-func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {static|video}")) }
-func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
+func cmdLock() {
+	if len(os.Args) == 3 && os.Args[2] == "client" {
+		fmt.Fprintf(os.Stderr, "hyprd lock client: %v\n", session.ExecLock())
+		os.Exit(1)
+	}
+	sendCommand("lock " + strings.Join(os.Args[2:], " "))
+}
+func cmdShare() { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
+func cmdQuery() { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
+func cmdBG()    { sendCommand("bg " + requireArg("usage: hyprd bg {static|video}")) }
+func cmdWS()    { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
 func cmdEdit() {
 	_ = requireArg("usage: hyprd edit <file>")
 	sendCommand("edit " + strings.Join(os.Args[2:], " "))

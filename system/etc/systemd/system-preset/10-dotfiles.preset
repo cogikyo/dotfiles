@@ -2,9 +2,9 @@ enable NetworkManager.service
 enable bluetooth.service
 enable earlyoom.service
 enable fstrim.timer
+enable greetd.service
 enable nftables.service
 enable pcscd.socket
-enable sddm.service
 enable snapper-cleanup.timer
 enable snapper-timeline.timer
 enable systemd-resolved.service

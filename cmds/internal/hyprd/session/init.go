@@ -86,22 +86,24 @@ func connectBluetooth(device string) {
 // NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
 type NotifyFunc func(app, urgency, title, body string)
 
-// Init drives first-boot session setup: background, network wait, and per-workspace layouts.
+// Init manages session startup and delays widgets, browsers, and sessions until the full lock is released.
 type Init struct {
 	hypr   *hypr.Client
 	state  *state.State
+	lock   *Lock
 	notify NotifyFunc
 }
 
-func NewInit(h *hypr.Client, s *state.State) *Init {
-	return &Init{hypr: h, state: s}
+func NewInit(h *hypr.Client, s *state.State, lock *Lock) *Init {
+	return &Init{hypr: h, state: s, lock: lock}
 }
 
 func (i *Init) SetNotify(fn NotifyFunc) {
 	i.notify = fn
 }
 
-// Execute runs the full init sequence: background, network, workspace layouts, and startup execs.
+// Execute applies the background, optionally waits for the network, then waits for full lock release before restoring widgets, browsers, and sessions.
+// It then runs startup commands and selects the initial workspace.
 //
 // Inter-dispatch sleeps are tuned for Hyprland to settle; shortening them races layout application.
 func (i *Init) Execute() (string, error) {
@@ -117,6 +119,11 @@ func (i *Init) Execute() (string, error) {
 		if ok := i.waitNetwork(init.NetworkTimeout); ok {
 			fmt.Println("hyprd init: network ready")
 		}
+	}
+
+	if i.lock.Locked() {
+		fmt.Println("hyprd init: waiting for unlock")
+		i.lock.Wait()
 	}
 
 	restoreEwwWidgets(true)

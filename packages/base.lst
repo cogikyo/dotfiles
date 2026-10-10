@@ -75,6 +75,7 @@ wireplumber
 # desktop
 adw-gtk-theme
 dunst
+greetd
 grim
 hypridle
 hyprland
@@ -91,7 +92,6 @@ qt6-multimedia-ffmpeg
 qt6ct
 quickshell
 rofi
-sddm
 slurp
 thunar
 wev

@@ -574,7 +574,7 @@ func (d *Daemon) handleProject(arg string) string {
 }
 
 func (d *Daemon) newInit() *session.Init {
-	init := session.NewInit(d.hypr, d.state)
+	init := session.NewInit(d.hypr, d.state, d.lockCtl)
 	init.SetNotify(d.notify)
 	return init
 }

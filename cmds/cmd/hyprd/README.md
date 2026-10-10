@@ -34,9 +34,16 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 ## Startup flow
 
 `hyprd init` imports the Wayland environment into systemd and D-Bus, starts the session target and user services, waits for the daemon socket, and sends `init`.
-The daemon applies the saved wallpaper mode, optionally waits for the network, restores eww and the initial browser layouts, opens configured sessions, and selects the initial workspace.
+The daemon applies the saved wallpaper mode and optionally waits for the network.
+It waits for unlock before it restores eww widgets and the initial browser layouts, opens configured sessions, and selects the initial workspace.
 It also starts glava and Spotify and connects the configured Bluetooth device.
-SDDM handles login authentication; hyprd does not lock the session at startup.
+Boot apps open after the password unlocks the session.
+This prevents `misc:session_lock_xray` from showing new windows beneath a lock client that has not mapped yet.
+
+greetd logs in `cullyn` automatically once per boot and starts Hyprland with `--locked-cmd "hyprd lock client"`, which locks before any output appears.
+`start-hyprland` preserves the lock command on crash restarts, including safe mode without `hyprd init`.
+The first lock-screen unlock also unlocks the login keyring.
+After logout or a session ended by hyprd for repeated lock failures, greetd shows the `agreety` text password prompt, which starts Hyprland unlocked.
 
 ## Commands
 
@@ -124,7 +131,11 @@ Save work before running it.
 
 ```bash
 hyprd lock full        # supervise the Quickshell session lock
+hyprd lock client      # replace this process with the lock client (no daemon needed)
 ```
+
+`hyprd lock client` runs locally without a daemon socket and replaces the process with the same `qs -c lock` command and environment used by `hyprd lock full`.
+When the daemon starts, it adopts the client marked with `LOCK_MODE=lock` so unlock restores workspaces and widgets as usual.
 
 `hyprd lock full` starts supervision asynchronously for `qs -c lock` with `LOCK_MODE=lock`; returning does not confirm that the session is locked.
 The UI lives in `config/quickshell/lock/` at the repo root, and Quickshell's stdout and stderr are forwarded to hyprd's stderr.

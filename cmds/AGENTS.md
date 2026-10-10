@@ -22,6 +22,7 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 ## Couplings
 
 - Keep hyprd verbs aligned across `cmd/hyprd/{main,daemon}.go` and `../config/hypr/binds.lua`.
+- Keep `../system/etc/greetd/config.toml` → `--locked-cmd "hyprd lock client"` aligned with the local `hyprd lock client` verb in `cmd/hyprd/main.go`.
 - Names in `config/ewwd.yaml` → `windows` must match `defwindow` names under `../config/eww/yuck/`.
 - `internal/dctl/binaries/` → `Names` drives ISO builds, installer placement, and CLI updates.
 - Register setup stages in execution order in `internal/dctl/cli/setup.go`; consecutive root stages share one sudo child, and background work must finish before later root work or stages that need sudo.
