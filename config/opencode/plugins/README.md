@@ -27,6 +27,7 @@ Running sessions keep the loaded plugin set.
 | Drive mode             | `opencode/drive.ts`                | `opencode-drive`                | server  |
 | Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
 | Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
+| Session retitle        | `opencode/retitle.ts`              | `opencode-retitle`              | server  |
 | Code blocks            | `opencode/code-blocks.ts`          | `opencode-code-blocks`          | TUI     |
 | Kitty context          | `hyprd/kitty.ts`                   | `hyprd-kitty-context`           | TUI     |
 | Browser QA workspaces  | `hyprd/browser-qa.tsx`             | `hyprd-browser-qa`              | TUI     |
@@ -222,6 +223,7 @@ Normal flow:
 - The writer prunes stale entries and dead Kitty sockets.
 - The reader follows parent session IDs so subagent notifications target the pane that owns the parent session.
 - Idle reminders only fire when the context is fresh.
+- Sessions created with the `title` agent, such as image naming and retitle sessions, never notify.
 
 Event types sent: `start`, `complete`, `subagent`, `idle`, `permission`, `question`, `todo-complete`, `error`.
 
@@ -263,6 +265,8 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/drive.ts` reads the drive state that `opencode/statusline.tsx` toggles and appends a system line to each turn of an armed root session; the line tells the model to load the `drive` skill.
   In an armed tree, it approves each permission ask once, returns `question` calls to the agent, and prompts the armed session to continue after a compaction that did not continue by itself.
   It retries an approval after a network error, 5xx, or 429, and stops after any other 4xx; a non-404 stop shows an error toast because the ask then waits for the user.
+- `opencode/retitle.ts` renames an idle top-level session to 2-4 words after 2 new user messages, at most once per 5 minutes, with the `title` agent and `small_model` in a deleted temporary session.
+  A title with letters and no lowercase letters is pinned and never renamed; `agent.title.prompt` in `opencode.json` also keeps the built-in first title at 2-4 words.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 - `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`, and toggles reasoning between `medium` and `high` with `<leader>i`.
   The variant is stored at `join(api.state.path.state, "pin.json")`; new OpenCode windows read the pinned `model` from `opencode.json`.

@@ -1,6 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import type { Part as V1Part } from "@opencode-ai/sdk";
-import type { z } from "zod";
+import { z } from "zod";
 import {
   agentNotice,
   cleanSessionTitle,
@@ -41,17 +41,31 @@ import {
 
 const PERMISSION_DEBOUNCE_MS = 1500;
 
-type Context = { sessions: Sessions; roles: Map<string, Role> };
+const TITLE_AGENT = "title";
+
+type Context = { sessions: Sessions; roles: Map<string, Role>; hidden: Set<string> };
+
+const Owner = z.union([z.object({ sessionID: z.string() }), z.object({ info: z.object({ id: z.string() }) })]);
+const Titler = z.object({ info: z.object({ agent: z.literal(TITLE_AGENT) }) });
 
 const server: Plugin = async () => {
-  const ctx: Context = { sessions: new Map(), roles: new Map() };
+  const ctx: Context = { sessions: new Map(), roles: new Map(), hidden: new Set() };
 
   return {
     "chat.message": async (input, output) => {
+      if (input.agent === TITLE_AGENT || ctx.hidden.has(input.sessionID)) return;
       updateUserMessage(ctx.sessions, input.sessionID, output.parts.map(partText).join(" "));
     },
 
     event: async ({ event }) => {
+      const owner = Owner.safeParse(event.properties);
+      const id = !owner.success ? "" : "sessionID" in owner.data ? owner.data.sessionID : owner.data.info.id;
+      const titler = event.type === "session.created" || event.type === "session.updated";
+      if (id && titler && Titler.safeParse(event.properties).success) ctx.hidden.add(id);
+      if (ctx.hidden.has(id)) {
+        if (event.type === "session.deleted") ctx.hidden.delete(id);
+        return;
+      }
       await handlers.get(event.type)?.(ctx, event.properties);
     },
   };

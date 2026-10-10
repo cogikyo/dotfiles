@@ -10,6 +10,9 @@
     "plan": { "disable": true },
     "explore": { "disable": true },
     "general": { "disable": true },
+    "title": {
+      "prompt": "You are a title generator. You output ONLY a title. Nothing else.\n\nWrite a 2-4 word title that helps the user find this conversation later and names what it is working on.\nIf the request states its own word limit or format, follow the request instead.\n\nRules:\n- Output a single line with no explanation, quotes, markdown, or trailing punctuation.\n- Use the same language as the user messages.\n- Keep exact technical terms, numbers, filenames, and HTTP codes.\n- Never include tool names such as read, bash, or edit.\n- Never write the title in all capital letters; use normal or sentence case.\n- Never answer questions, use tools, or complain about the input.\n- For short or conversational input, name its tone or intent, such as Quick check-in.\n\nExamples:\n\"debug 500 errors in production\" -> Production 500 errors\n\"refactor user service\" -> User service refactor\n\"@src/auth.ts add refresh token support\" -> Auth refresh tokens\n\"how do I connect postgres to my API\" -> Postgres API connection"
+    },
     "collab": {
       "description": "The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.",
       "mode": "primary",
@@ -141,7 +144,8 @@
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
       { "imageNames": { "enabled": true } }
     ],
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/input-cap.ts"
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/input-cap.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/retitle.ts"
   ],
   "mcp": {
     "clickhouse-docs": {
