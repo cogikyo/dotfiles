@@ -12,6 +12,7 @@ Item {
     required property var player
     property var feed: null
     property real room: 0
+    property real floor: room
     property color text: "#aeb9f8"
     property color muted: "#7690b9"
     property color accent: "#7492ef"
@@ -307,11 +308,12 @@ Item {
         }
 
         Item {
-            anchors.fill: parent
+            x: parent.width - width
+            width: 1000 * music.s
+            height: music.floor
             layer.enabled: card.visible
             layer.effect: ShaderEffect {
-                property size area: Qt.size(width, height)
-                property vector4d edges: Qt.vector4d(110 * music.s, 0, 0, 90 * music.s)
+                property vector2d inner: Qt.vector2d(0.16, 0.78)
                 fragmentShader: "feather.frag.qsb"
             }
 

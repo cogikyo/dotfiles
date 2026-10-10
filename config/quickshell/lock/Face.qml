@@ -222,6 +222,7 @@ Rectangle {
 
     Helix {
         id: helix
+        z: 1
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.rightMargin: root.edge * 0.75
@@ -238,6 +239,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         room: helix.y - 36 * root.s
+        floor: root.height
         s: root.s
         player: root.player
         feed: root.feed
