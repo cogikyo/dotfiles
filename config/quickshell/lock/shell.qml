@@ -1,3 +1,4 @@
+//@ pragma Env QT_DISABLE_HW_TEXTURES_CONVERSION=1
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
