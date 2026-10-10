@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
 import QtMultimedia
+import Quickshell
 import Quickshell.Widgets
 
 Item {
@@ -29,6 +30,7 @@ Item {
     readonly property string art: player?.trackArtUrl ?? ""
     readonly property string key: [title, artist, art].join("\n")
     readonly property string canvas: feed?.canvas && feed.title === title ? "file://" + feed.canvas : ""
+    readonly property string swatch: feed?.art && feed.title === title ? `file://${feed.art}?${encodeURIComponent(key)}` : ""
     readonly property real big: 150 * s
     readonly property real small: 46 * s
     readonly property var fades: [0, 0.38, 0.6, 1, 0.9, 0.68, 0]
@@ -52,6 +54,26 @@ Item {
 
     function norm(text) {
         return (text ?? "").trim().toLowerCase()
+    }
+
+    function pick(colors) {
+        if (colors.length === 0)
+            return music.text
+        const weight = c => Math.min(1, c.hslLightness / 0.4) * Math.min(1, (1 - c.hslLightness) / 0.15)
+        const score = c => (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) * weight(c)
+        const best = colors.reduce((a, b) => score(b) > score(a) ? b : a)
+        if (score(best) < 0.06)
+            return Qt.hsla(Math.max(0, best.hslHue), Math.min(best.hslSaturation, 0.3), 0.88, 1)
+        return Qt.hsla(best.hslHue, Math.min(best.hslSaturation, 0.8), Math.max(best.hslLightness, 0.72), 1)
+    }
+
+    readonly property color tint: pick(quantizer.colors)
+
+    ColorQuantizer {
+        id: quantizer
+        source: music.swatch
+        depth: 3
+        rescaleSize: 64
     }
 
     function find(key) {
@@ -383,6 +405,7 @@ Item {
 
             Caption {
                 text: card.title
+                color: music.tint
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
                 font.weight: Font.DemiBold
@@ -391,6 +414,7 @@ Item {
 
             Caption {
                 text: card.artist
+                color: music.tint
                 font.weight: Font.Medium
                 font.pixelSize: 24 * music.s
             }
@@ -401,8 +425,9 @@ Item {
     component Caption: Text {
         width: parent.width
         elide: Text.ElideRight
+        horizontalAlignment: Text.AlignRight
         font.family: music.face
-        color: music.accent
+        Behavior on color { ColorAnimation { duration: 400 } }
         layer.enabled: visible
         layer.effect: MultiEffect {
             shadowEnabled: true

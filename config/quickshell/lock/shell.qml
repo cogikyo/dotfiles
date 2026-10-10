@@ -281,11 +281,12 @@ ShellRoot {
                     return
                 }
                 const canvas = data?.has_canvas ? (data.canvas_path ?? "") : ""
-                const key = JSON.stringify([data?.title, canvas, data?.queue, data?.history])
+                const art = data?.has_art ? (data.art_path ?? "") : ""
+                const key = JSON.stringify([data?.title, canvas, art, data?.queue, data?.history])
                 if (key === shell.feedKey)
                     return
                 shell.feedKey = key
-                shell.feed = { title: data?.title ?? "", canvas: canvas, queue: data?.queue ?? [], history: data?.history ?? [] }
+                shell.feed = { title: data?.title ?? "", canvas: canvas, art: art, queue: data?.queue ?? [], history: data?.history ?? [] }
             }
         }
     }
