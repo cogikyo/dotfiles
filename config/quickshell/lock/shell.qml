@@ -311,11 +311,7 @@ ShellRoot {
 
     function shows(screen) {
         const name = screen?.name ?? ""
-        if (name === "")
-            return false
-        if (!checked)
-            return Quickshell.screens.length === 1 || name === Hyprland.focusedMonitor?.name
-        return clearOutput === name
+        return name !== "" && clearOutput === name
     }
 
     function inspect() {
