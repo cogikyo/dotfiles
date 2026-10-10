@@ -245,7 +245,6 @@ Rectangle {
         feed: root.feed
         text: root.lavender
         muted: root.steel
-        accent: root.blue
         active: root.peach
         well: root.navy
         night: root.night

@@ -16,7 +16,6 @@ Item {
     property real floor: room
     property color text: "#aeb9f8"
     property color muted: "#7690b9"
-    property color accent: "#7492ef"
     property color active: "#f2a170"
     property color well: "#222536"
     property color night: "#0b0d1a"
@@ -534,7 +533,7 @@ Item {
                     readonly property real r: Math.max(0, tile.radius - o)
                     readonly property real span: 2 * (w + h) - 8 * r + 2 * Math.PI * r
                     property real shown: music.progress
-                    property color tone: toggle.containsMouse ? music.active : music.accent
+                    property color tone: toggle.containsMouse ? music.active : music.tint
 
                     anchors.fill: parent
                     z: 1
