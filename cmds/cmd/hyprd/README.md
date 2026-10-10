@@ -143,9 +143,16 @@ An adopted client is stopped if, after 5 seconds, the compositor confirms it is 
 Startup also relaunches a lock when the compositor is locked without a client, and refuses to start if there is neither a client nor recorded intent and the lock state cannot be read.
 `hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
 
-On the first launch, the desktop cover runs alongside supervision, with 2-second timeouts on cover helper commands.
-It saves the workspace, switches to the empty workspace 7, pauses the background, dunst, and Spotify, stops GLava, and closes eww widgets.
-Release restores the saved workspace, background, dunst, and widgets, restarts GLava and Spotify, and reconnects configured Bluetooth; playback resumes if music was playing before the lock.
+On the first launch, the desktop cover runs after hyprd enters `lockbarrier` and before the lock client starts, with 2-second timeouts on cover helper commands.
+It saves the workspace, switches to the empty workspace 7, pauses dunst, stops GLava, and closes eww widgets.
+Release restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, restarts GLava, and reconnects configured Bluetooth.
+Lock and release do not touch Spotify or other media players.
+
+Hyprland's `misc:session_lock_xray` keeps the wallpaper layers rendering under the transparent lock surface, so the lock shows the live wallpaper in either mode.
+hyprd passes the cover workspace to the lock client as `LOCK_COVER_WORKSPACE`.
+The lock UI shows the still image unless Hyprland reports that the focused workspace is the cover workspace, it has no windows, no window is pinned, no special workspace is open, and no layer-shell surface sits above the background layer.
+Until its first check returns, the lock surface on the focused monitor stays clear, and other monitors show the still; the still appears if the check fails or takes longer than 1 second.
+After the first check, each Hyprland window, workspace, monitor, and layer event shows the still and starts a new check, and a passing check hides the still again after 500 ms.
 
 ### Browser
 
@@ -239,7 +246,7 @@ eww integration:
 
 `cmds/config/hyprd.yaml` — overrides compiled defaults for:
 
-- `background` — mpvpaper wallpaper
+- `background` — mpvpaper display, video, and socket; `hyprd bg` owns the mode
 - `init` — network wait and initial workspace
 - `notify` — sounds, icons, per-style appearance
 - `windows` — ignored classes, hidden/shadow workspace names, split presets, monocle sizing

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import Quickshell.Services.Pam
 import Quickshell.Services.Mpris
@@ -194,6 +195,117 @@ ShellRoot {
         onTriggered: Qt.quit()
     }
 
+    readonly property int cover: Number(Quickshell.env("LOCK_COVER_WORKSPACE") ?? 0)
+    readonly property var exposures: [
+        "openwindow", "closewindow", "movewindow", "movewindowv2", "pin", "changefloatingmode",
+        "workspace", "workspacev2", "focusedmon", "focusedmonv2", "moveworkspace", "moveworkspacev2",
+        "activespecial", "activespecialv2", "openlayer", "closelayer",
+        "monitoradded", "monitoraddedv2", "monitorremoved", "monitorremovedv2", "configreloaded"
+    ]
+    property string clearOutput: ""
+    property string candidate: ""
+    property bool dirty: false
+    property bool checked: !locking || !(cover > 0)
+
+    function shows(screen) {
+        const name = screen?.name ?? ""
+        if (name === "")
+            return false
+        if (!checked)
+            return Quickshell.screens.length === 1 || name === Hyprland.focusedMonitor?.name
+        return clearOutput === name
+    }
+
+    function inspect() {
+        if (checked) {
+            clearOutput = ""
+            candidate = ""
+            settle.stop()
+        }
+        if (!locking)
+            return
+        if (scene.running) {
+            dirty = true
+            return
+        }
+        scene.running = true
+    }
+
+    function judge(text) {
+        if (!(cover > 0))
+            return ""
+        let monitors, clients, layers
+        try {
+            [monitors, clients, layers] = text.split("\n\n\n").map(part => JSON.parse(part))
+        } catch (e) {
+            console.warn("lock scene:", e)
+            return ""
+        }
+        if (!Array.isArray(monitors) || !Array.isArray(clients) || !layers)
+            return ""
+        const focused = monitors.filter(m => m.focused)
+        if (focused.length !== 1)
+            return ""
+        const monitor = focused[0]
+        if (monitor.activeWorkspace?.id !== cover || monitor.specialWorkspace?.id !== 0)
+            return ""
+        if (clients.some(c => c.pinned !== false || c.workspace?.id === cover))
+            return ""
+        const levels = layers[monitor.name]?.levels
+        if (!levels || ["1", "2", "3"].some(level => levels[level]?.length !== 0))
+            return ""
+        return monitor.name
+    }
+
+    Process {
+        id: scene
+        command: ["hyprctl", "--batch", "j/monitors; j/clients; j/layers"]
+        stdout: StdioCollector { id: sceneOut }
+        onExited: code => {
+            if (shell.dirty) {
+                shell.dirty = false
+                running = true
+                return
+            }
+            const name = code === 0 ? shell.judge(sceneOut.text) : ""
+            if (!shell.checked) {
+                shell.clearOutput = name
+                shell.checked = true
+                return
+            }
+            shell.candidate = name
+            if (name)
+                settle.restart()
+        }
+    }
+
+    Timer {
+        id: settle
+        interval: 500
+        onTriggered: shell.clearOutput = shell.candidate
+    }
+
+    Timer {
+        interval: 1000
+        running: !shell.checked
+        onTriggered: {
+            shell.clearOutput = ""
+            shell.checked = true
+        }
+    }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (shell.exposures.includes(event.name))
+                shell.inspect()
+        }
+        function onFocusedMonitorChanged() { shell.inspect() }
+        function onFocusedWorkspaceChanged() { shell.inspect() }
+    }
+
+    Component.onCompleted: inspect()
+
     component Screen: Face {
         id: face
         busy: shell.busy
@@ -228,9 +340,13 @@ ShellRoot {
         onSecureChanged: console.warn(secure ? "lock-secure: acquired" : "lock-secure: lost")
 
         WlSessionLockSurface {
-            color: "black"
+            id: surface
+            color: "transparent"
 
-            Screen { anchors.fill: parent }
+            Screen {
+                anchors.fill: parent
+                clear: shell.shows(surface.screen)
+            }
         }
     }
 }

@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 )
@@ -62,8 +61,7 @@ type Lock struct {
 }
 
 type lockState struct {
-	workspace    int
-	musicPlaying bool
+	workspace int
 }
 
 func NewLock(h *hypr.Client, s *state.State) *Lock {
@@ -221,15 +219,15 @@ func (l *Lock) hold(adopted bool) {
 		adopted = false
 		l.submap(barrierSubmap)
 		l.record(intentPending)
+		if launch == 0 {
+			l.cover()
+		}
 		started := time.Now()
 		deadline := time.After(lockWait)
 		ctx, stop := context.WithCancel(context.Background())
 		log := newLockLog(os.Stderr)
 		exited := make(chan error, 1)
 		go func() { exited <- l.launch(ctx, log) }()
-		if launch == 0 {
-			go l.cover()
-		}
 
 		acquired, err := l.awaitUnlock(exited, stop, deadline, log)
 		stop()
@@ -350,21 +348,18 @@ func (l *Lock) submap(name string) {
 }
 
 func (l *Lock) cover() {
-	playing := playerctlStatus() == "Playing"
 	l.mu.Lock()
 	if !l.inFull || l.saved != nil {
 		l.mu.Unlock()
 		return
 	}
 	l.saved = l.capture()
-	l.saved.musicPlaying = playing
 	l.mu.Unlock()
 
 	if err := l.hypr.FocusWorkspace(coverWorkspace); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: switch to workspace %d: %v\n", coverWorkspace, err)
 	}
-	cfg := l.state.GetConfig()
-	enterBlackout(&cfg.Background)
+	enterBlackout()
 }
 
 func intentPath() string {
@@ -425,7 +420,7 @@ func (l *Lock) release() {
 
 func lockCommand(ctx context.Context, log *lockLog) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "qs", "-c", "lock")
-	cmd.Env = append(os.Environ(), lockEnv, "QS_DISABLE_CRASH_HANDLER=1")
+	cmd.Env = append(os.Environ(), lockEnv, "LOCK_COVER_WORKSPACE="+strconv.Itoa(coverWorkspace), "QS_DISABLE_CRASH_HANDLER=1")
 	cmd.Stdout = log
 	cmd.Stderr = log
 	cmd.WaitDelay = time.Second
@@ -559,14 +554,10 @@ func (l *Lock) capture() *lockState {
 	return &lockState{workspace: ws}
 }
 
-func enterBlackout(bg *config.BackgroundConfig) {
+func enterBlackout() {
 	coverRun("killall", "glava")
 	coverRun("dunstctl", "close-all")
 	coverRun("dunstctl", "set-paused", "true")
-	coverRun("playerctl", "--player=spotify", "pause")
-	if err := NewBG(bg).SetPaused(true); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd lock: pause background: %v\n", err)
-	}
 	closeEwwWidgets()
 }
 
@@ -599,16 +590,13 @@ func (l *Lock) exitBlackout(saved *lockState) error {
 	if err := EnsureBG(&cfg.Background); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
 	}
-	if err := NewBG(&cfg.Background).SetPaused(false); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd lock: resume background: %v\n", err)
-	}
 
-	dispatchStartup(l.hypr, cfg.Bluetooth)
+	dispatchGLava(l.hypr)
+	if bt := cfg.Bluetooth; bt.Enabled && bt.Device != "" {
+		connectBluetooth(bt.Device)
+	}
 	restoreEwwWidgets(false)
 
-	if saved.musicPlaying {
-		exec.Command("playerctl", "play").Run()
-	}
 	exec.Command("dunstctl", "set-paused", "false").Run()
 	return nil
 }
@@ -659,14 +647,4 @@ func startDetached(name string, args ...string) {
 			fmt.Fprintf(os.Stderr, "hyprd lock: %s %s: %v\n", name, strings.Join(args, " "), err)
 		}
 	}()
-}
-
-func playerctlStatus() string {
-	ctx, cancel := context.WithTimeout(context.Background(), coverTimeout)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "playerctl", "status").Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
 }

@@ -1,11 +1,10 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
-import QtMultimedia
 
 Rectangle {
     id: root
-    color: "black"
+    color: root.clear ? "transparent" : "black"
 
     readonly property color navy: "#222536"
     readonly property color lavender: "#aeb9f8"
@@ -19,6 +18,7 @@ Rectangle {
     readonly property real s: height / 1080
     readonly property real edge: 96 * s
 
+    property bool clear: false
     property bool busy: false
     property var weather: null
     property int notices: 0
@@ -39,22 +39,9 @@ Rectangle {
 
     Image {
         anchors.fill: parent
+        visible: !root.clear
         source: "file:///usr/share/backgrounds/dotfiles/dna-still.png"
         fillMode: Image.PreserveAspectCrop
-    }
-
-    MediaPlayer {
-        source: "file:///usr/share/backgrounds/dotfiles/dna.webm"
-        loops: MediaPlayer.Infinite
-        videoOutput: video
-        onErrorOccurred: (error, text) => console.warn("lock video error:", error, text)
-        Component.onCompleted: play()
-    }
-
-    VideoOutput {
-        id: video
-        anchors.fill: parent
-        fillMode: VideoOutput.PreserveAspectCrop
     }
 
     MouseArea {

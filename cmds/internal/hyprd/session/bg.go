@@ -132,13 +132,6 @@ func (b *BG) isAlive() bool {
 	return b.request(`["get_property","path"]`) == nil
 }
 
-func (b *BG) SetPaused(paused bool) error {
-	if !b.cfg.Enabled {
-		return nil
-	}
-	return b.request(fmt.Sprintf(`["set_property","pause",%t]`, paused))
-}
-
 func (b *BG) request(command string) error {
 	conn, err := net.DialTimeout("unix", b.cfg.Socket, 200*time.Millisecond)
 	if err != nil {

@@ -213,7 +213,6 @@ tabs:
 # │ background                                                                    │
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 background:
-  enabled: true
   display: "auto"
   video: "/usr/share/backgrounds/dotfiles/dna.webm"
   socket: "/tmp/mpvpaper.sock"

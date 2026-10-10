@@ -338,6 +338,7 @@ hl.config({
 	},
 	misc = {
 		allow_session_lock_restore = true,
+		session_lock_xray = true,
 	},
 })
 
