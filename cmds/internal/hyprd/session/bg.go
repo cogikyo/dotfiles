@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -35,24 +37,79 @@ func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
 }
 
-// Execute runs "ensure" (spawn if dead) or "kill" (pkill all).
-func (b *BG) Execute(mode string) (string, error) {
-	switch mode {
-	case "ensure":
-		return b.ensure()
-	case "kill":
-		b.killAll()
-		return "bg: killed", nil
-	default:
-		return "", fmt.Errorf("unknown bg mode: %s (ensure|kill)", mode)
+type Mode string
+
+const (
+	ModeVideo  Mode = "video"
+	ModeStatic Mode = "static"
+)
+
+// Execute saves the mode and applies it.
+func (b *BG) Execute(arg string) (string, error) {
+	mode := Mode(arg)
+	if mode != ModeVideo && mode != ModeStatic {
+		return "", fmt.Errorf("unknown bg mode: %s (static|video)", arg)
 	}
+	if err := saveMode(mode); err != nil {
+		return "", err
+	}
+	return b.apply(mode)
+}
+
+func (b *BG) apply(mode Mode) (string, error) {
+	if mode == ModeStatic {
+		b.killAll()
+		return "bg: static", nil
+	}
+	return b.ensure()
+}
+
+func modePath() (string, error) {
+	dir := os.Getenv("XDG_STATE_HOME")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("bg mode path: %w", err)
+		}
+		dir = filepath.Join(home, ".local", "state")
+	}
+	return filepath.Join(dir, "hyprd", "bg"), nil
+}
+
+func loadMode() (Mode, error) {
+	path, err := modePath()
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return ModeVideo, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read bg mode: %w", err)
+	}
+	mode := Mode(strings.TrimSpace(string(data)))
+	if mode != ModeVideo && mode != ModeStatic {
+		return "", fmt.Errorf("bg mode %s: unknown mode %q (static|video)", path, mode)
+	}
+	return mode, nil
+}
+
+func saveMode(mode Mode) error {
+	path, err := modePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("save bg mode: %w", err)
+	}
+	if err := os.WriteFile(path, []byte(string(mode)+"\n"), 0o644); err != nil {
+		return fmt.Errorf("save bg mode: %w", err)
+	}
+	return nil
 }
 
 func (b *BG) ensure() (string, error) {
-	if !b.cfg.Enabled {
-		b.killAll()
-		return "bg: disabled", nil
-	}
 	if b.isAlive() {
 		return "bg: running", nil
 	}
@@ -198,9 +255,12 @@ func (b *BG) killAll() {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// EnsureBG spawns the wallpaper if not already running.
+// EnsureBG applies the saved mode: static stops mpvpaper, and video spawns it if it is not running.
 func EnsureBG(cfg *config.BackgroundConfig) error {
-	bg := NewBG(cfg)
-	_, err := bg.Execute("ensure")
+	mode, err := loadMode()
+	if err != nil {
+		return err
+	}
+	_, err = NewBG(cfg).apply(mode)
 	return err
 }

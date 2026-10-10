@@ -34,7 +34,7 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 ## Startup flow
 
 `hyprd init` imports the Wayland environment into systemd and D-Bus, starts the session target and user services, waits for the daemon socket, and sends `init`.
-The daemon ensures the wallpaper, optionally waits for the network, restores eww and the initial browser layouts, opens configured sessions, and selects the initial workspace.
+The daemon applies the saved wallpaper mode, optionally waits for the network, restores eww and the initial browser layouts, opens configured sessions, and selects the initial workspace.
 It also starts glava and Spotify and connects the configured Bluetooth device.
 SDDM handles login authentication; hyprd does not lock the session at startup.
 
@@ -68,8 +68,12 @@ hyprd swap                   # exchange master/slave positions
 hyprd ws <n>                 # switch workspace with its transition animation
 hyprd ws up|down             # move active window between workspaces 1..6, skipping music (6)
 hyprd focus <class> [title]  # focus window by class, unhide if needed
-hyprd bg ensure|kill         # ensure the wallpaper process or stop it
+hyprd bg static|video        # save and apply the wallpaper mode
 ```
+
+`static` stops mpvpaper so hyprpaper's still shows, and `video` starts mpvpaper if it is not running.
+hyprd saves the mode in `$XDG_STATE_HOME/hyprd/bg` (default `~/.local/state/hyprd/bg`); a missing file means video.
+Init and lock release apply the saved mode.
 
 Monocle keeps the focused window on its workspace and parks the other tiled windows on `special:mono<n>`.
 Run it again to restore the parked windows.

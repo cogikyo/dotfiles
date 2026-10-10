@@ -215,7 +215,7 @@ func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
 func cmdLock()    { sendCommand("lock " + strings.Join(os.Args[2:], " ")) }
 func cmdShare()   { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
-func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
+func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {static|video}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
 func cmdEdit() {
 	_ = requireArg("usage: hyprd edit <file>")
@@ -391,7 +391,7 @@ Usage:
   hyprd rebuild          Rebuild binary and hot-restart (preserves state)
 
 Window commands:
-  hyprd bg <mode>        Background: code, music, kill, lock, ensure
+  hyprd bg static|video  Save and apply the wallpaper mode (still or video)
   hyprd hide             Toggle hide/show slave (special workspace)
   hyprd monocle          Toggle monocle (isolate focused window)
   hyprd float            Toggle floating (centered at monocle size)
