@@ -16,7 +16,11 @@ ShellRoot {
     property string pending: ""
     property bool busy: false
     property var weather: null
-    property int notices: 0
+    property var tally: ({})
+    property var hides: []
+    readonly property var notices: Object.entries(tally)
+        .map(([app, count]) => ({ app: app, count: count }))
+        .sort((a, b) => b.count - a.count || a.app.localeCompare(b.app))
     readonly property var player: {
         const all = Mpris.players.values
         return all.find(p => p.isPlaying) ?? all.find(p => p.identity === "Spotify") ?? all[0] ?? null
@@ -93,28 +97,50 @@ ShellRoot {
         onTriggered: forecast.running = true
     }
 
+    function hidden(app, summary, body) {
+        return hides.some(rule => [["appname", app], ["summary", summary], ["body", body]]
+            .every(([key, value]) => rule[key] === undefined || new RegExp(rule[key]).test(value)))
+    }
+
     Process {
-        id: count
-        command: ["dunstctl", "count"]
+        command: ["dunstctl", "rules", "--json"]
+        running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                const field = name => Number(text.match(new RegExp(name + ":\\s*(\\d+)"))?.[1] ?? 0)
-                shell.notices = field("Waiting") + field("Currently displayed")
+                try {
+                    shell.hides = JSON.parse(text).data[0]
+                        .map(rule => Object.fromEntries(Object.entries(rule).map(([key, value]) => [key, value.data])))
+                        .filter(rule => rule.enabled && (rule.skip_display || rule.format === ""))
+                } catch (e) {
+                    console.warn("lock dunst rules:", e)
+                }
             }
         }
     }
 
-    Timer {
-        interval: 3000
+    Process {
+        command: ["busctl", "--user", "monitor", "--json=short", "--match", "type=method_call,interface=org.freedesktop.Notifications,member=Notify"]
         running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: count.running = true
+        stdout: SplitParser {
+            onRead: line => {
+                let app, replaces, summary, body
+                try {
+                    [app, replaces, , summary, body] = JSON.parse(line).payload.data
+                } catch (e) {
+                    console.warn("lock notices:", e)
+                    return
+                }
+                if (replaces !== 0 || shell.hidden(app, summary, body))
+                    return
+                shell.tally = Object.assign({}, shell.tally, { [app]: (shell.tally[app] ?? 0) + 1 })
+            }
+        }
+        onExited: code => console.warn("lock notices: busctl exited", code)
     }
 
     property var feed: null
     property string feedKey: ""
-    property int agents: 0
+    property var sessions: []
 
     function request(path, directory, done) {
         const xhr = new XMLHttpRequest()
@@ -137,27 +163,101 @@ ShellRoot {
         xhr.send()
     }
 
-    function countAgents() {
+    function scanAgents() {
+        if (Object.keys(tints).length === 0 && theme.loaded)
+            loadTints()
         request("/project", "", projects => {
-            if (!projects) {
-                shell.agents = 0
-                return
-            }
-            const dirs = [...new Set(projects.reduce((all, p) => all.concat(p.worktree, p.sandboxes ?? []), []).filter(d => d && d !== "/"))]
+            const dirs = [...new Set((projects ?? []).reduce((all, p) => all.concat(p.worktree, p.sandboxes ?? []), []).filter(d => d && d !== "/"))]
             if (dirs.length === 0) {
-                shell.agents = 0
+                shell.sessions = []
                 return
             }
             let pending = dirs.length
-            let busy = 0
+            const busy = []
             for (const dir of dirs) {
                 request("/session/status", dir, statuses => {
-                    busy += Object.values(statuses ?? {}).filter(s => s.type === "busy" || s.type === "retry").length
+                    for (const [id, status] of Object.entries(statuses ?? {}))
+                        if (status.type === "busy" || status.type === "retry")
+                            busy.push({ id: id, dir: dir })
                     if (--pending === 0)
-                        shell.agents = busy
+                        shell.group(busy)
                 })
             }
         })
+    }
+
+    function root(id, dir, done) {
+        request("/session/" + id, dir, info => {
+            if (info?.parentID)
+                shell.root(info.parentID, dir, done)
+            else
+                done(info)
+        })
+    }
+
+    function group(busy) {
+        if (busy.length === 0) {
+            sessions = []
+            return
+        }
+        const roots = {}
+        const entry = info => {
+            roots[info.id] = roots[info.id] ?? { id: info.id, title: info.title ?? "", agents: [] }
+            return roots[info.id]
+        }
+        let pending = busy.length
+        const finish = () => {
+            if (--pending > 0)
+                return
+            shell.sessions = Object.values(roots)
+                .sort((a, b) => b.id.localeCompare(a.id))
+                .map(r => ({ title: r.title, subs: r.agents.sort().map(name => shell.tints[name] ?? "") }))
+        }
+        for (const session of busy) {
+            request("/session/" + session.id, session.dir, info => {
+                if (!info?.parentID) {
+                    if (info)
+                        entry(info)
+                    finish()
+                    return
+                }
+                shell.root(info.parentID, session.dir, top => {
+                    if (top)
+                        entry(top).agents.push(info.agent ?? "")
+                    finish()
+                })
+            })
+        }
+    }
+
+    property var tints: ({})
+
+    function loadTints() {
+        let palette
+        try {
+            palette = JSON.parse(theme.text())
+        } catch (e) {
+            console.warn("lock theme:", e)
+            return
+        }
+        request("/agent", "", agents => {
+            const out = {}
+            for (const agent of agents ?? []) {
+                let value = palette.theme?.[agent.color] ?? agent.color
+                if (typeof value === "object")
+                    value = value?.dark
+                const hex = palette.defs?.[value] ?? value
+                if (typeof hex === "string" && hex.startsWith("#"))
+                    out[agent.name] = hex
+            }
+            shell.tints = out
+        })
+    }
+
+    FileView {
+        id: theme
+        path: Quickshell.env("HOME") + "/.config/opencode/themes/vagari.json"
+        onLoaded: shell.loadTints()
     }
 
     Timer {
@@ -165,7 +265,7 @@ ShellRoot {
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: shell.countAgents()
+        onTriggered: shell.scanAgents()
     }
 
     Process {
@@ -312,7 +412,7 @@ ShellRoot {
         busy: shell.busy
         weather: shell.weather
         notices: shell.notices
-        agents: shell.agents
+        sessions: shell.sessions
         feed: shell.feed
         player: shell.player
         onSubmitted: password => shell.check(password)

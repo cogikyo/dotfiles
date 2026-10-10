@@ -21,8 +21,9 @@ Rectangle {
     property bool clear: false
     property bool busy: false
     property var weather: null
-    property int notices: 0
-    property int agents: 0
+    property var notices: []
+    property var sessions: []
+    property real breath: 1
     property var player: null
     property var feed: null
     property string message: ""
@@ -68,36 +69,20 @@ Rectangle {
         color: root.lavender
     }
 
-    component Status: Row {
-        id: status
-        property int count: 0
-        property int glyph
-        property color tint
-        property bool breathing: false
+    SequentialAnimation on breath {
+        running: root.sessions.length > 0
+        loops: Animation.Infinite
+        NumberAnimation { to: 0.4; duration: 1100; easing.type: Easing.InOutSine }
+        NumberAnimation { to: 1; duration: 1100; easing.type: Easing.InOutSine }
+    }
 
-        spacing: 10 * root.s
-        visible: count > 0
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: String.fromCodePoint(status.glyph)
-            font.family: "Symbols Nerd Font"
-            font.pixelSize: 28 * root.s
-            color: status.tint
-
-            SequentialAnimation on opacity {
-                running: status.breathing && status.visible
-                loops: Animation.Infinite
-                NumberAnimation { to: 0.4; duration: 1100; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 1; duration: 1100; easing.type: Easing.InOutSine }
-            }
-        }
-
-        Label {
-            anchors.verticalCenter: parent.verticalCenter
-            text: status.count
-            font.pixelSize: 26 * root.s
-        }
+    component Glyph: Text {
+        property int code
+        width: 32 * root.s
+        horizontalAlignment: Text.AlignHCenter
+        text: String.fromCodePoint(code)
+        font.family: "Symbols Nerd Font"
+        font.pixelSize: 28 * root.s
     }
 
     Column {
@@ -146,25 +131,92 @@ Rectangle {
 
     }
 
-    Row {
-        anchors.horizontalCenter: parent.horizontalCenter
+    Column {
         anchors.top: parent.top
+        anchors.left: parent.horizontalCenter
         anchors.topMargin: 88 * root.s
-        spacing: 40 * root.s
+        anchors.leftMargin: -380 * root.s
+        spacing: 12 * root.s
         layer.enabled: true
         layer.effect: Shadowed {}
 
-        Status {
-            count: root.agents
-            glyph: 0xF0BC9
-            tint: root.lavender
-            breathing: true
+        Row {
+            visible: root.notices.length > 0
+            spacing: 14 * root.s
+
+            Glyph {
+                anchors.verticalCenter: parent.verticalCenter
+                code: 0xF009A
+                color: root.peach
+            }
+
+            Repeater {
+                model: root.notices
+
+                Row {
+                    id: group
+                    required property var modelData
+                    anchors.verticalCenter: parent.verticalCenter
+                    rightPadding: 12 * root.s
+                    spacing: 8 * root.s
+
+                    Label {
+                        text: group.modelData.count
+                        color: root.peach
+                        font.pixelSize: 26 * root.s
+                    }
+
+                    Label {
+                        text: group.modelData.app
+                        font.pixelSize: 26 * root.s
+                    }
+                }
+            }
         }
 
-        Status {
-            count: root.notices
-            glyph: 0xF009A
-            tint: root.peach
+        Repeater {
+            model: root.sessions
+
+            Row {
+                id: session
+                required property var modelData
+                spacing: 14 * root.s
+
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4 * root.s
+
+                    Glyph {
+                        anchors.verticalCenter: parent.verticalCenter
+                        code: 0xF0BC9
+                        color: root.blue
+                        opacity: root.breath
+                    }
+
+                    Repeater {
+                        model: session.modelData.subs
+
+                        Glyph {
+                            required property string modelData
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 20 * root.s
+                            code: 0xF0BC9
+                            color: modelData || root.steel
+                            opacity: root.breath
+                            font.pixelSize: 18 * root.s
+                        }
+                    }
+                }
+
+                Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, 720 * root.s)
+                    elide: Text.ElideRight
+                    text: session.modelData.title
+                    color: root.blue
+                    font.pixelSize: 26 * root.s
+                }
+            }
         }
     }
 
