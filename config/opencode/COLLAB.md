@@ -97,13 +97,15 @@ A **lane** is a named child that you resume across turns with deltas.
 - **Resume** a lane with the delta: what changed, the feedback, and the new ask.
   - Let it re-read files instead of pasting their contents.
 - Send **repairs** back to the lane that built the change.
-- Start a **fresh lane** when the scope changes or you need independence from earlier rounds.
+- Start a **fresh lane** when the new scope needs a different owner or you need independence from earlier rounds.
 - **Parallel lanes** can share one worktree when their writes are mostly disjoint.
   - A failed patch means re-read and adjust.
 - When a lane **rolls over** after a context limit, re-brief the fresh child with the objective, accepted work, and open deltas.
-- **Compact** an idle lane before resuming it when its old context is past the soft pressure tier or no longer serves the next ask.
+- **Compact** an idle lane before resuming it past **200K** or when its scope changes.
   - The lane stays trusted.
 - **Close** finished lanes with `task_close`, or run `clear-lanes` to sweep them.
+  - Scope briefs so most lanes finish under **200K**.
+  - A lane reaching the **300K hard stop** means the work needed a better split.
 
 ## Councils
 

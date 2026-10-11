@@ -3,7 +3,7 @@ import type { SessionPromptAsyncData, SessionSummarizeData } from "@opencode-ai/
 import { errorMessage } from "../shared/error.ts";
 import { type Client, create, session, type Status, statuses, unwrap } from "../shared/opencode.ts";
 import { COLLAB } from "../shared/root.ts";
-import { CONTEXT_PRESSURE } from "../shared/session.ts";
+import { CONTEXT_PRESSURE, STEP_BUDGET } from "../shared/session.ts";
 import {
   applyDisplayArgs,
   type PreparedTask,
@@ -24,6 +24,7 @@ import {
   isContentFilterBlock,
   lastTextPart,
   renderOutput,
+  stepLimitedResult,
   withNotes,
 } from "./result.ts";
 import { resolveRoute } from "./routing.ts";
@@ -311,6 +312,18 @@ async function completionResult(input: {
       sessionID,
       notes,
       limit: completion.limit,
+      messages: completion.messages,
+      permission: prepared.permission,
+    });
+  }
+  if (completion.steps) {
+    return stepLimitedResult({
+      args,
+      metadata,
+      sessionID,
+      notes,
+      steps: completion.steps,
+      budget: STEP_BUDGET.hard,
       messages: completion.messages,
       permission: prepared.permission,
     });

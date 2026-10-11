@@ -11,6 +11,7 @@ const CONTEXT_ADVICE =
   "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
 const CONTENT_FILTER_ADVICE =
   "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
+const STEP_ADVICE = "re-brief the remaining work narrower; the lane can resume, but its context size is unknown";
 const INTERRUPTED_ADVICE =
   "completion unknown; reconcile durable state before re-running because the child may have edited files";
 
@@ -60,6 +61,40 @@ export function contextLimitedResult(input: {
     output: renderOutput({
       sessionID: input.sessionID,
       state: "context_limited",
+      text: withNotes(lines.join("\n"), input.notes),
+    }),
+  };
+}
+
+/** Reports a child aborted at the step budget with its latest text. */
+export function stepLimitedResult(input: {
+  args: TaskArgs;
+  metadata: Record<string, unknown>;
+  sessionID: string;
+  notes: string[];
+  steps: number;
+  budget: number;
+  messages: Message[];
+  permission: Rule[];
+}) {
+  const latest = latestText(input.messages);
+  const lines = [
+    `step_limit: aborted after ${input.steps} assistant steps (budget ${input.budget}); the provider reports no token counts`,
+    `child_session_id: ${input.sessionID}`,
+    !hasWriteAccess(input.permission)
+      ? "durable_state: no writes expected from the child permission envelope"
+      : "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions",
+    `advice: ${STEP_ADVICE}`,
+    "",
+    "latest_text:",
+    latest || "(no assistant text)",
+  ];
+  return {
+    title: input.args.description,
+    metadata: input.metadata,
+    output: renderOutput({
+      sessionID: input.sessionID,
+      state: "error",
       text: withNotes(lines.join("\n"), input.notes),
     }),
   };
@@ -135,6 +170,15 @@ function recoverableText(messages: Message[]) {
     .flatMap((message) => message.parts)
     .flatMap((part) => (part.type === "text" && part.text.trim() ? [part.text.trim()] : []))
     .join("\n\n");
+}
+
+function latestText(messages: Message[]) {
+  for (const message of messages.toReversed()) {
+    if (message.info.role !== "assistant") continue;
+    const text = lastTextPart({ info: message.info, parts: message.parts }).trim();
+    if (text) return text;
+  }
+  return "";
 }
 
 function hasWriteAccess(rules: Rule[]) {

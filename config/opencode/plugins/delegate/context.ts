@@ -17,7 +17,7 @@ export type ContextLimit = {
   tokens?: number;
 };
 
-export type ContextWarning = "soft" | "medium" | "final";
+export type ContextWarning = "medium" | "final";
 
 /** Process-local child IDs that cannot resume, even if saving their context limit fails. */
 export const contextLimitedSessions = new Set<string>();
@@ -57,16 +57,14 @@ export function finalAssistant(reply: Reply | undefined) {
 
 // ├─ Warnings ────────────────────────────────────────────────────────────────────────────────────┤
 
-const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
 const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
 const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
 
-/** Picks the highest unspent warning reached by the observed token count. */
+/** Picks the highest unspent warning reached by the observed token count; the soft tier sends none. */
 export function pendingContextWarning(tokens: number | undefined, limits: ContextLimits, spent: Set<ContextWarning>) {
   if (tokens === undefined) return undefined;
   if (tokens >= limits.final && !spent.has("final")) return "final";
   if (tokens >= limits.medium && !spent.has("medium")) return "medium";
-  if (tokens >= limits.soft && !spent.has("soft")) return "soft";
   return undefined;
 }
 
@@ -77,17 +75,12 @@ export function observeContextWarnings(messages: Message[], spent: Set<ContextWa
     for (const part of message.parts) {
       if (part.type !== "text") continue;
       if (part.text.startsWith(FINAL_WARNING_MARKER)) {
-        spent.add("soft");
         spent.add("medium");
         spent.add("final");
         observed.add("final");
       } else if (part.text.startsWith(MEDIUM_WARNING_MARKER)) {
-        spent.add("soft");
         spent.add("medium");
         observed.add("medium");
-      } else if (part.text.startsWith(SOFT_WARNING_MARKER)) {
-        spent.add("soft");
-        observed.add("soft");
       }
     }
   }
@@ -100,25 +93,17 @@ export function contextWarningPrompt(level: ContextWarning, tokens: number | und
       FINAL_WARNING_MARKER,
       `Observed context: ${tokens ?? "unknown"} tokens; final threshold: ${limits.final}; hard stop: ${limits.hard}.`,
       `Remaining context budget before forced shutdown: ${tokens === undefined ? "unknown" : Math.max(0, limits.hard - tokens)} tokens at this observation.`,
-      "A forced context-limited stop is approaching. Finish immediately.",
-      "If you are patching, complete only the last edits already in progress. Otherwise, make only final evidence calls.",
-      "Return a concise final report now.",
-    ].join("\n");
-  }
-  if (level === "medium") {
-    return [
-      MEDIUM_WARNING_MARKER,
-      `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; final warning: ${limits.final}; hard stop: ${limits.hard}.`,
-      "Long-context performance may degrade. Be wary of missed constraints, stale assumptions, and repeated work.",
-      "Converge on the assigned boundary and finish soon; verify critical conclusions against source evidence.",
-      "Do not expand scope or begin another concern.",
+      `Finish now or report what remains; the hard stop is at ${limits.hard} tokens.`,
+      "If you are patching, complete only the edits already in progress. Otherwise, make only final evidence calls.",
+      "Return a concise final report now, including any unfinished work.",
     ].join("\n");
   }
   return [
-    SOFT_WARNING_MARKER,
-    `Observed context: ${tokens ?? "unknown"} tokens; soft threshold: ${limits.soft}; medium threshold: ${limits.medium}.`,
-    `Try to finish before ${limits.medium} tokens if you can, while preserving the assigned acceptance checks.`,
-    "Do not expand scope or begin another concern.",
+    MEDIUM_WARNING_MARKER,
+    `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; final warning: ${limits.final}; hard stop: ${limits.hard}.`,
+    `You are past the scope target; most lanes finish under ${limits.medium} tokens.`,
+    "Finish the current step. If more work remains after it, report the remaining work instead of starting it.",
+    "Long context can hide constraints and stale assumptions; verify critical conclusions against source evidence.",
   ].join("\n");
 }
 

@@ -66,6 +66,8 @@ Normal flow:
 - On Anthropic accounts, the limiting windows are hourly `H`, all-model weekly `W`, and the model's scoped weekly window; other models' scoped windows are ignored.
 - Children inherit external-directory rules; review leaves get their own read-only defaults.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
+- After a child goes idle, the delegate waits briefly for its final assistant message to carry `finish` or `error` before returning.
+  - A provider error on that message fails the task instead of returning an empty success.
 
 Model routing:
 
@@ -102,12 +104,14 @@ Context governor:
 - While a child is active, the delegate polls status and messages every 300 ms.
 - Token pressure comes from completed assistant-step telemetry and mirrors OpenCode's overflow count: `tokens.total`, or input + output + cache read + cache write when total is absent.
 - `shared/session.ts` owns the `CONTEXT_PRESSURE` tiers, with no separate limits in `delegate.json`.
-- At soft, the delegate appends one warning to try to finish before medium while preserving assigned acceptance checks.
-- At medium, it warns about possible degraded long-context performance and asks the child to finish soon and verify critical conclusions.
-- At final, it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
+- At soft (100K), the delegate sends no warning.
+- At medium (200K), it says the lane is past its scope target and asks the child to finish the current step, report any remaining work, and verify critical conclusions against source evidence.
+- At final (250K), it asks the child to finish or report what remains, allowing only last edits already in progress or final evidence calls.
 - Warnings do not abort, seal, change tools, or limit later resume; a normal child completion after any warning remains a trusted normal result.
-- At hard, the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
+- At hard (300K), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
 - Hard-stopped and automatically compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and trigger lane rollover.
+- When a provider reports no token counts, such as Cursor, the delegate warns at 100 assistant steps in the current call and aborts active work at 150 with `state="error"`.
+  - The lane stays resumable; re-brief the remaining work narrower because its context size is unknown.
 - The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
 - A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
 - The delegate never retries an accepted warning request because a delayed first request could otherwise create a duplicate prompt loop.

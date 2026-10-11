@@ -15,6 +15,11 @@ export const CONTEXT_PRESSURE = {
   hard: 300_000,
 } as const;
 
+export const STEP_BUDGET = {
+  warning: 100,
+  hard: 150,
+} as const;
+
 export const COMPACTION_LIMIT = CONTEXT_PRESSURE.hard; // Hard token stop for delegate children.
 export const COMPACTION_RESERVED = 25_000; // Default token budget reserved below the model input limit.
 export const COMPACTION_NUDGES = [CONTEXT_PRESSURE.soft, CONTEXT_PRESSURE.final] as const;
