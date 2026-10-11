@@ -24,6 +24,7 @@ import (
 const (
 	coverWorkspace = 7
 	barrierSubmap  = "lockbarrier"
+	glavaTag       = "lock"
 	lockEnv        = "LOCK_MODE=lock"
 	intentPending  = "pending"
 	intentAcquired = "acquired"
@@ -366,7 +367,24 @@ func (l *Lock) cover() {
 	if err := l.hypr.FocusWorkspace(coverWorkspace); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: switch to workspace %d: %v\n", coverWorkspace, err)
 	}
+	l.tagGLava("+" + glavaTag)
 	enterBlackout()
+}
+
+func (l *Lock) tagGLava(tag string) {
+	windows, err := l.hypr.Clients()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: list GLava windows: %v\n", err)
+		return
+	}
+	for _, w := range windows {
+		if w.Class != "GLava" {
+			continue
+		}
+		if err := l.hypr.Tag(w.Address, tag); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: tag GLava %s: %v\n", w.Address, err)
+		}
+	}
 }
 
 func intentPath() string {
@@ -572,7 +590,6 @@ func (l *Lock) capture() *lockState {
 }
 
 func enterBlackout() {
-	coverRun("killall", "glava")
 	coverRun("dunstctl", "close-all")
 	coverRun("dunstctl", "set-paused", "true")
 	closeEwwWidgets()
@@ -601,6 +618,7 @@ func closeEwwWidgets() {
 // exitBlackout requires l.mu to be held.
 func (l *Lock) exitBlackout(saved *lockState) error {
 	cfg := l.state.GetConfig()
+	l.tagGLava("-" + glavaTag)
 	if err := l.hypr.FocusWorkspace(saved.workspace); err != nil {
 		return fmt.Errorf("lock: restore workspace %d: %w", saved.workspace, err)
 	}
@@ -608,7 +626,6 @@ func (l *Lock) exitBlackout(saved *lockState) error {
 		fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
 	}
 
-	dispatchGLava(l.hypr)
 	if bt := cfg.Bluetooth; bt.Enabled && bt.Device != "" {
 		connectBluetooth(bt.Device)
 	}

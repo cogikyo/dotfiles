@@ -175,6 +175,12 @@ hl.window_rule({
 })
 
 hl.window_rule({
+	name = "glava-lock",
+	match = { tag = "lock", title = "GLava" },
+	opacity = "0.01 override 0.01 override",
+})
+
+hl.window_rule({
 	name = "dialog",
 	match = { title = [[^(File|Settings|Authentication|Save As)]] },
 	float = true,

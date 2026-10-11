@@ -70,6 +70,14 @@ func (c *Client) FocusNamedWorkspace(name string) error {
 	))
 }
 
+// Tag edits the tags of the window at the raw hex address; "+name" adds and "-name" removes.
+func (c *Client) Tag(address, tag string) error {
+	return c.eval("Tag", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.window.tag({ tag = %s, window = %s }))",
+		luaQuote(tag), luaQuote(windowAddress(address)),
+	))
+}
+
 // FocusWindow focuses the window at the raw hex address.
 func (c *Client) FocusWindow(address string) error {
 	return c.eval("FocusWindow", fmt.Sprintf(

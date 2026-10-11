@@ -347,7 +347,7 @@ ShellRoot {
         const monitor = focused[0]
         if (monitor.activeWorkspace?.id !== cover || monitor.specialWorkspace?.id !== 0)
             return ""
-        if (clients.some(c => c.pinned !== false || c.workspace?.id === cover))
+        if (clients.some(c => c.class !== "GLava" && (c.pinned !== false || c.workspace?.id === cover)))
             return ""
         const levels = layers[monitor.name]?.levels
         if (!levels || ["1", "2", "3"].some(level => levels[level]?.length !== 0))

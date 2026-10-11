@@ -155,8 +155,10 @@ Startup also relaunches a lock when the compositor is locked without a client, a
 `hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
 
 On the first launch, the desktop cover runs after hyprd enters `lockbarrier` and before the lock client starts, with 2-second timeouts on cover helper commands.
-It saves the workspace, switches to the empty workspace 7, pauses dunst, stops GLava, and closes eww widgets.
-Release restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, restarts GLava, and reconnects configured Bluetooth.
+It saves the workspace, switches to the empty workspace 7, tags GLava windows `lock`, pauses dunst, and closes eww widgets.
+The `glava-lock` rule in `config/hypr/hyprland.lua` drops tagged desktop GLava windows to 0.01 opacity.
+The opacity stays above 0 because Hyprland skips drawing a window at 0, which stops its frame callbacks and would stall GLava.
+Release removes the tag, restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, and reconnects configured Bluetooth.
 Lock and release do not touch Spotify or other media players.
 
 Hyprland's `misc:session_lock_xray` keeps the wallpaper layers rendering under the transparent lock surface, so the lock shows the live wallpaper in either mode.
