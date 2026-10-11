@@ -104,9 +104,9 @@ A **lane** is a named child that you resume across turns with deltas.
 - When a lane **rolls over** after a context limit, re-brief the fresh child with the objective, accepted work, and open deltas.
 - **Compact** an idle lane before resuming it past **200K** or when its scope changes.
   - The lane stays trusted.
-- **Close** finished lanes with `task_close`, or run `clear-lanes` to sweep them.
   - Scope briefs so most lanes finish under **200K**.
   - A lane reaching the **300K hard stop** means the work needed a better split.
+- **Close** finished lanes with `task_close`, or run `clear-lanes` to sweep them.
 
 ## Councils
 
