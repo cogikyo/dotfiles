@@ -49,6 +49,8 @@ Think as an attacker who uses every capability the threat model grants, and no c
 - Stay within the named threat model, files, and trust boundaries.
 - Do not run destructive scans, exfiltrate secrets, or search for secrets beyond the approved scope.
 - Use shell and API tools for read-only evidence.
+  - After a **404** on a guessed raw URL, stop guessing variants and follow [verify/source's discovery ladder](../verify/source.md#discovery-ladder) to find the repo, ref, and path.
+  - After a **418 or bot challenge**, stop retrying that host.
 
 ## Report
 

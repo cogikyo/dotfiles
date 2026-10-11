@@ -44,6 +44,8 @@ Find reachable correctness bugs and the root-cause repair.
 - Stay on correctness; pursue style or structure when it explains a bug or its repair.
 - Propose new tests or checks for the parent's approval instead of writing them.
 - Use shell and API tools for read-only evidence.
+  - After a **404** on a guessed raw URL, stop guessing variants and follow [verify/source's discovery ladder](../verify/source.md#discovery-ladder) to find the repo, ref, and path.
+  - After a **418 or bot challenge**, stop retrying that host.
 
 ## Report
 
