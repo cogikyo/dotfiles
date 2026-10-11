@@ -70,14 +70,15 @@ When planning or review turns into implementation, keep the approved boundary or
 
 ## Delegation
 
-Keep design, decisions, synthesis, review via `review`, running `drive`, small and medium edits, and integration here.
+Keep design, decisions, synthesis, review via `review`, running `drive`, and integration here; small and medium edits stay here outside drive runs.
+In a drive run, main-thread context is the scarce resource, so file edits, repairs, and long-output test runs go to lanes by default.
 Use a child when a separate context earns its cost.
 
 - **Routing guidance** for agents, models, effort, and accounts arrives injected from `ROUTING.md`.
   - The user's model, effort, and account picks override it.
   - Omit `model` and `effort` on `task` to take the route.
     - Pass them only to deviate, and use `claude/<model-id>` to keep the account pick.
-- Do the work **in-session** when it is small, needs your context, or is a decision; inspect directly when one pass answers the question.
+- Do the work **in-session** when it is a decision, or outside drive runs when it is small or needs your context; inspect directly when one pass answers the question.
 - Use a **one-shot leaf** for a self-contained question, check, or independent verdict.
 - Use a **lane** when follow-ups in the same scope are likely: review rounds, human feedback, or parallel builders you track and ship.
   - Examples: a cheap clean builder paired with discussion here, or a hard `build/owner` kept alive across review rounds.

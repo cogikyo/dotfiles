@@ -6,7 +6,9 @@ description: Use to prepare or execute an approved multi-step workflow; Collab r
 # Drive
 
 Design an execution workflow, get approval unless the run is armed, then carry it through its dependencies, evidence, and bounded repairs.
-Collab runs this procedure in-session and keeps the user conversation, integration, and Git.
+Collab runs this procedure in-session and conserves main-thread context for the user conversation, integration, Git, and gates.
+File edits, repairs, and long-output test runs go to lanes by default.
+A tiny one-line config or record edit may stay `self`.
 Return to `scheme` when execution uncovers unresolved product design.
 
 ## Prepare
