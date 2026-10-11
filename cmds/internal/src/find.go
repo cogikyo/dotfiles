@@ -89,14 +89,6 @@ func (a app) findHits(query, dir string) ([]hit, []string) {
 		hits = append(hits, hit{tier: "node_modules", path: path})
 	}
 
-	tried = append(tried, "~/repos")
-	if bareName(query) {
-		path := filepath.Join(a.home, "repos", query)
-		if isDir(path) {
-			hits = append(hits, hit{tier: "~/repos", path: path})
-		}
-	}
-
 	tried = append(tried, "cache")
 	for _, path := range a.cacheHits(query) {
 		hits = append(hits, hit{tier: "cache", path: path})

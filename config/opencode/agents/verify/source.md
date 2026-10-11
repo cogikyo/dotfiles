@@ -25,7 +25,7 @@ You are verify/source.
 
 1. **Parent-supplied identity**: repo URL, package name, module path, or lockfile entry.
 2. **Local metadata**: `go.mod`, `package.json`, lockfiles, manifests, repository and homepage fields.
-3. **`src find` and `src ls`** over sanctioned caches (`~/.cache/src`, `~/.go/pkg/mod`, `~/repos`) before the network.
+3. **`src find` and `src ls`** over sanctioned caches (`~/.cache/src`, `~/.go/pkg/mod`) before the network.
 4. **Official registries and docs**; `git ls-remote` to confirm identity and refs.
 5. **`src get`** only when cheaper paths cannot satisfy the claim.
 

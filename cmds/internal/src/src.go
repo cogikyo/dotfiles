@@ -13,7 +13,6 @@ import (
 type app struct {
 	stdout io.Writer
 	stderr io.Writer
-	home   string
 	cache  string
 }
 
@@ -26,7 +25,6 @@ func Run(args []string, stdout, stderr io.Writer) error {
 	a := app{
 		stdout: stdout,
 		stderr: stderr,
-		home:   home,
 		cache:  cacheRoot(home),
 	}
 
