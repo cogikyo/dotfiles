@@ -443,8 +443,6 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 		timeout = *spec.Timeout
 	}
 
-	iconSuffix := style.IconSuffix
-
 	args := []string{
 		"-a", app,
 		"-u", urgency,
@@ -466,7 +464,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	if style.Frame != "" {
 		args = append(args, "-h", "string:frcolor:"+style.Frame)
 	}
-	if icon := n.workspaceIconPath(ctx, iconSuffix); icon != "" {
+	if icon := n.workspaceIconPath(ctx, style.Foreground); icon != "" {
 		args = append(args, "-I", icon)
 	} else if spec.IconPath != "" {
 		args = append(args, "-I", spec.IconPath)

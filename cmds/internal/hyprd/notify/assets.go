@@ -1,7 +1,7 @@
 package notify
 
 const soundsDir = "~/dotfiles/share/sounds"
-const workspaceIconsDir = "~/dotfiles/config/eww/art/ws-icons"
+const iconsDir = "~/dotfiles/config/eww/icons"
 
 var workspaceIcons = map[int]string{
 	1: "network",

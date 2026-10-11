@@ -148,7 +148,6 @@ type ResolvedStyle struct {
 	Timeout    int
 	Urgency    string
 	Persistent bool
-	IconSuffix string
 	Background string
 	Foreground string
 	Frame      string
@@ -173,7 +172,6 @@ func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
 		Timeout:    event.Timeout,
 		Urgency:    urgency,
 		Persistent: event.Timeout == 0,
-		IconSuffix: "-" + event.Style,
 		Background: visual.Background,
 		Foreground: visual.Foreground,
 		Frame:      visual.Frame,

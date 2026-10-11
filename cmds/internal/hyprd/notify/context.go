@@ -1,16 +1,22 @@
 package notify
 
 import (
+	"bytes"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	"dotfiles/cmds/internal/hyprd/wm"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+var rootFill = regexp.MustCompile(`\sfill="[^"]*"`)
 
 func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyContext {
 	ctx := &kittyContext{
@@ -180,20 +186,66 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 	return best
 }
 
-func (n *Notifier) workspaceIconPath(ctx *kittyContext, suffix string) string {
+// workspaceIconPath writes the workspace's symbolic master recolored to color under the runtime dir and returns that path.
+//
+// The master's root <svg> element carries the only fill, so replacing it recolors the whole icon.
+func (n *Notifier) workspaceIconPath(ctx *kittyContext, color string) string {
 	if ctx == nil {
 		return ""
 	}
 	name := workspaceIcons[ctx.WorkspaceID]
-	if name == "" {
+	hex := strings.TrimPrefix(color, "#")
+	if len(hex) == 8 {
+		hex = hex[:6]
+	}
+	if name == "" || len(hex) != 6 {
 		return ""
 	}
 
-	path := filepath.Join(config.ExpandPath(workspaceIconsDir), name+suffix+".svg")
-	if _, err := os.Stat(path); err == nil {
-		return path
+	master, err := os.ReadFile(filepath.Join(config.ExpandPath(iconsDir), "ws-"+name+"-symbolic.svg"))
+	if err != nil {
+		return ""
 	}
-	return ""
+	start := bytes.Index(master, []byte("<svg"))
+	end := bytes.IndexByte(master[max(start, 0):], '>')
+	if start < 0 || end < 0 {
+		logf("icon %s: no root <svg> tag", name)
+		return ""
+	}
+	fill := rootFill.FindIndex(master[start : start+end])
+	if fill == nil {
+		logf("icon %s: root <svg> has no fill", name)
+		return ""
+	}
+	icon := slices.Concat(master[:start+fill[0]+1], []byte(`fill="#`+hex+`"`), master[start+fill[1]:])
+
+	runtime := os.Getenv("XDG_RUNTIME_DIR")
+	if runtime == "" {
+		logf("icon %s: XDG_RUNTIME_DIR is unset", name)
+		return ""
+	}
+	dir := filepath.Join(runtime, "hyprd", "icons")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		logf("icon %s: %v", name, err)
+		return ""
+	}
+	path := filepath.Join(dir, "ws-"+name+"-"+hex+".svg")
+	tmp, err := os.CreateTemp(dir, ".ws-*.svg")
+	if err != nil {
+		logf("icon %s: %v", name, err)
+		return ""
+	}
+	_, err = tmp.Write(icon)
+	err = errors.Join(err, tmp.Close())
+	if err == nil {
+		err = os.Rename(tmp.Name(), path)
+	}
+	if err != nil {
+		_ = os.Remove(tmp.Name())
+		logf("icon %s: %v", name, err)
+		return ""
+	}
+	return path
 }
 
 func (n *Notifier) focusContext(ctx *kittyContext) {
