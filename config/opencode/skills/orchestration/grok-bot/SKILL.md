@@ -49,7 +49,7 @@ Do not hardcode other names.
 
 ## Brief and safety
 
-- Say in each prompt that it comes from Cullyn's OpenCode agent on abbott.
+- Say in each prompt that it comes from Cullyn's OpenCode agent.
 - Ask for read-only work unless the user asked for changes.
 - Ask bots to return long output as an attachment and fetch it with `file`.
 - Never approve or dismiss an approval card, secret request, or purchase through the script or CDP.
