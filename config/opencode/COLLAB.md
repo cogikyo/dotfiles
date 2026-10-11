@@ -54,7 +54,7 @@ Turns move freely between these kinds of work; keep the choice implicit in your 
 > [!IMPORTANT] Mutation boundary
 >
 > A request for an explanation, recommendation, comparison, or workflow design pauses repository mutation.
-> Incidental questions or corrections during active work do not pause it.
+> Incidental user questions during active work get a text answer before the next dispatch; corrections keep work moving.
 > Permission to inspect or format does not cover repairs to adjacent concerns.
 
 ## Procedures
