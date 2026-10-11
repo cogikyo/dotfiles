@@ -16,7 +16,8 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 ## Working here
 
 - Run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` from `cmds/` after non-trivial edits.
-- Build only affected binaries into `/tmp/opencode/bin/`, without installing or restarting daemons.
+- For agent verification, build only affected binaries into `/tmp/opencode/bin/`, without installing or restarting daemons.
+  - The user hand-off is the repo update command, `dctl update --only <cmd>`, never a `/tmp` path.
 - Prefer modern standard-library APIs such as `log/slog`, `errors`, `slices`, `maps`, and `iter` before custom helpers or dependencies.
 
 ## Couplings
