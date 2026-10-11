@@ -5,6 +5,10 @@ import QtQuick.Effects
 Rectangle {
     id: root
     color: root.clear ? "transparent" : "black"
+    opacity: root.clear ? root.reveal : 1
+
+    property real reveal
+    NumberAnimation on reveal { from: 0; to: 1; duration: 450; easing.type: Easing.OutCubic }
 
     readonly property color navy: "#222536"
     readonly property color lavender: "#aeb9f8"

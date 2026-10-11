@@ -434,7 +434,7 @@ ShellRoot {
 
     WlSessionLock {
         id: lock
-        locked: shell.locking
+        locked: shell.locking && shell.checked
         onSecureChanged: console.warn(secure ? "lock-secure: acquired" : "lock-secure: lost")
 
         WlSessionLockSurface {
