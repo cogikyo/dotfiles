@@ -22,6 +22,7 @@ Rectangle {
     readonly property real s: height / 1080
     readonly property real edge: 96 * s
 
+    readonly property color tint: music.tint
     property bool clear: false
     property bool busy: false
     property var weather: null
@@ -240,6 +241,7 @@ Rectangle {
     }
 
     Music {
+        id: music
         anchors.right: parent.right
         anchors.top: parent.top
         room: helix.y - 36 * root.s

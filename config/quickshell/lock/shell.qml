@@ -395,6 +395,8 @@ ShellRoot {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
+            if (event.name === "openwindow" && event.parse(4)[2] === "GLava")
+                return
             if (shell.exposures.includes(event.name))
                 shell.inspect()
         }
@@ -403,6 +405,28 @@ ShellRoot {
     }
 
     Component.onCompleted: inspect()
+
+    Process {
+        id: bar
+        property color tint: "transparent"
+        readonly property var monitor: Hyprland.focusedMonitor?.lastIpcObject ?? null
+        readonly property int depth: Math.round((monitor?.height ?? 0) * 100 / 1080)
+        running: true
+        stdinEnabled: true
+        command: monitor?.width > 0 && depth > 0 ? [
+            "setpriv", "--pdeathsig", "TERM",
+            "glava", "-e", "lock_rc.glsl", "--stdin",
+            "-r", `setgeometry ${monitor.x} ${monitor.y + monitor.height - depth} ${monitor.width} ${depth}`
+        ] : []
+        onRunningChanged: paint.restart()
+        onTintChanged: paint.restart()
+    }
+
+    Timer {
+        id: paint
+        interval: 100
+        onTriggered: if (bar.running) bar.write(`${bar.tint.r},${bar.tint.g},${bar.tint.b},${bar.tint.a}\n`)
+    }
 
     component Screen: Face {
         id: face
@@ -413,6 +437,12 @@ ShellRoot {
         feed: shell.feed
         player: shell.player
         onSubmitted: password => shell.check(password)
+
+        Binding {
+            target: bar
+            property: "tint"
+            value: face.tint
+        }
 
         Connections {
             target: shell

@@ -165,7 +165,7 @@ end)
 -- GLava — desktop audio visualizer, fully passthrough.
 hl.window_rule({
 	name = "glava",
-	match = { title = [[^(GLava)$]] },
+	match = { title = [[GLava( lock)?]] },
 	border_size = 0,
 	no_focus = true,
 	no_shadow = true,
