@@ -10,6 +10,10 @@
 
   &-confirmed {
     border-color: $grn-2;
+
+    .picker-ws-selected {
+      color: $ws-confirmed;
+    }
   }
 
   &-morph {
@@ -72,13 +76,19 @@
     min-height: 48px;
     margin: 6px;
     border-radius: 12px 18px 10px 22px;
+    color: $ws-empty;
     opacity: 0.75;
     transition: all 0.25s ease-out;
+
+    &-occupied {
+      color: $ws-occupied;
+    }
 
     &-selected {
       min-width: 60px;
       min-height: 60px;
       margin: 0;
+      color: $ws-active;
       opacity: 1;
     }
   }

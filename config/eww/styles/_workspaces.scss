@@ -1,11 +1,49 @@
+@use "sass:math";
+
+$ws-active: #ff9e64;
+$ws-occupied: #7aa2f7;
+$ws-empty: #3f4e74;
+$ws-grok: $rby-0;
+$ws-slack: $orn-0;
+$ws-confirmed: $emr-2;
+
+@function around($pivot, $transform) {
+  $x: nth($pivot, 1);
+  $y: nth($pivot, 2);
+  @return translate($x, $y) $transform translate(-$x, -$y);
+}
+
+@function keyframe($i, $steps) {
+  @return math.percentage(math.div($i, $steps));
+}
+
+@function settle($progress, $from, $decay, $swings) {
+  $wave: math.cos($swings * 180deg * $progress);
+  @return 1 + ($from - 1) * math.pow(math.$e, -$decay * $progress) * $wave;
+}
+
+@function smooth($progress) {
+  @return $progress * $progress * (3 - 2 * $progress);
+}
+
 .workspace {
-  transition: all 0.25s $ease-out-snap;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 90%;
-  min-width: 36px;
-  min-height: 36px;
-  margin-bottom: 10px;
+  min-width: 56px;
+  min-height: 56px;
+
+  image {
+    color: $ws-empty;
+    transition: color 0.25s ease-out;
+    padding: 12px;
+  }
+
+  &.ws-occupied image {
+    color: $ws-occupied;
+  }
+
+  &.ws-current image,
+  &.ws-hover image {
+    color: $ws-active;
+  }
 }
 
 .workspacesbox {
@@ -15,11 +53,354 @@
   border-width: 0 0 2px 2px;
   border-radius: 100px;
   box-shadow: 0 0 5px 1px rgba($blu-1, 0.32);
-  padding: 20px 12px 10px;
+  padding: 14px 2px 10px 2px;
   margin: -10px -2px 20px 20px;
 
   &-hover {
     border-color: $orn-3;
     box-shadow: 0 0 5px 1px rgba($rby-1, 0.42);
+  }
+}
+
+$net-hub: (0.873px, 1.455px);
+$net-enter: 1.2s;
+$net-pulse: 1.6s ease-in-out infinite;
+$net-steps: 12;
+$net-spokes: (
+  1: (angle: 270deg, length: 13.964px, period: 2.6s, phase: 1, attention: grok),
+  2: (angle: 315deg, length: 13.165px, period: 3.4s, phase: -1, attention: slack),
+  3: (angle: 43.53deg, length: 16.05px, period: 3s, phase: 1, attention: grok),
+  4: (angle: 135deg, length: 13.165px, period: 3.8s, phase: 1, attention: slack),
+  5: (angle: 223.73deg, length: 18.518px, period: 3.2s, phase: -1, attention: grok),
+);
+
+@function net-edge($angle, $scale) {
+  @return around($net-hub, rotate($angle) scaleX($scale) rotate(-$angle));
+}
+
+@function net-node($angle, $length, $scale) {
+  @return around($net-hub, rotate($angle) translate(($scale - 1) * $length, 0px) rotate(-$angle));
+}
+
+@function net-breath($progress, $phase) {
+  $wave: $phase * math.sin($progress * 360deg);
+  @return 1 + if($wave > 0, 0.04, 0.12) * $wave;
+}
+
+@keyframes ws-net-hub-enter {
+  @for $i from 0 through $net-steps * 2 {
+    #{keyframe($i, $net-steps * 2)} {
+      -gtk-icon-transform: around($net-hub, scale(settle(math.div($i, $net-steps * 2), 1.6, 3.5, 1.5)));
+    }
+  }
+}
+
+@each $name, $alert, $bright in (grok $ws-grok $rby-2, slack $ws-slack $orn-1) {
+  @keyframes ws-net-#{$name} {
+    0% {
+      color: $alert;
+      -gtk-icon-shadow: 0 0 2px rgba($alert, 0.6);
+    }
+
+    50% {
+      color: $bright;
+      -gtk-icon-shadow: 0 0 6px $alert;
+    }
+
+    100% {
+      color: $alert;
+      -gtk-icon-shadow: 0 0 2px rgba($alert, 0.6);
+    }
+  }
+}
+
+@each $k, $spoke in $net-spokes {
+  $angle: map-get($spoke, angle);
+  $length: map-get($spoke, length);
+  $phase: map-get($spoke, phase);
+
+  @keyframes ws-net-edge-#{$k}-enter {
+    @for $i from 0 through $net-steps * 2 {
+      #{keyframe($i, $net-steps * 2)} {
+        -gtk-icon-transform: net-edge($angle, settle(math.div($i, $net-steps * 2), 0, 3.5, 1.5));
+      }
+    }
+  }
+
+  @keyframes ws-net-node-#{$k}-enter {
+    @for $i from 0 through $net-steps * 2 {
+      #{keyframe($i, $net-steps * 2)} {
+        -gtk-icon-transform: net-node($angle, $length, settle(math.div($i, $net-steps * 2), 0, 3.5, 1.5));
+      }
+    }
+  }
+
+  @keyframes ws-net-edge-#{$k}-loop {
+    @for $i from 0 through $net-steps {
+      #{keyframe($i, $net-steps)} {
+        -gtk-icon-transform: net-edge($angle, net-breath(math.div($i, $net-steps), $phase));
+      }
+    }
+  }
+
+  @keyframes ws-net-node-#{$k}-loop {
+    @for $i from 0 through $net-steps {
+      #{keyframe($i, $net-steps)} {
+        -gtk-icon-transform: net-node($angle, $length, net-breath(math.div($i, $net-steps), $phase));
+      }
+    }
+  }
+}
+
+.workspace.ws-1 {
+  &.ws-current .network-hub {
+    animation: ws-net-hub-enter $net-enter linear;
+  }
+
+  @each $k, $spoke in $net-spokes {
+    $period: map-get($spoke, period);
+    $attention: map-get($spoke, attention);
+    $edge: ws-net-edge-#{$k}-enter $net-enter linear, ws-net-edge-#{$k}-loop $period linear $net-enter infinite;
+    $node: ws-net-node-#{$k}-enter $net-enter linear, ws-net-node-#{$k}-loop $period linear $net-enter infinite;
+    $pulse: ws-net-#{$attention} $net-pulse;
+
+    &.ws-current .network-edge-#{$k} {
+      animation: $edge;
+    }
+
+    &.ws-current .network-node-#{$k} {
+      animation: $node;
+    }
+
+    &.ws-#{$attention} .network-node-#{$k} {
+      animation: $pulse;
+    }
+
+    &.ws-current.ws-#{$attention} .network-node-#{$k} {
+      animation: $node, $pulse;
+    }
+  }
+}
+
+$learn-center: (0.59px, -2.59px);
+$learn-enter: 1.4s;
+$learn-period: 20s;
+$learn-steps: 28;
+$learn-exit: math.div($learn-enter, $learn-period);
+
+@function learn-spin($progress) {
+  $x: $progress;
+  @return 3 * $x * $x - 2 * $x * $x * $x + $learn-exit * ($x * $x * $x - $x * $x);
+}
+
+@keyframes ws-learn-enter {
+  @for $i from 0 through $learn-steps {
+    #{keyframe($i, $learn-steps)} {
+      -gtk-icon-transform: around($learn-center, rotate(360deg * learn-spin(math.div($i, $learn-steps))));
+    }
+  }
+}
+
+@keyframes ws-learn-loop {
+  from {
+    -gtk-icon-transform: around($learn-center, rotate(0deg));
+  }
+
+  to {
+    -gtk-icon-transform: around($learn-center, rotate(360deg));
+  }
+}
+
+.workspace.ws-2.ws-current image {
+  animation:
+    ws-learn-enter $learn-enter linear,
+    ws-learn-loop $learn-period linear $learn-enter infinite;
+}
+
+@function ease-out($progress) {
+  @return 1 - math.pow(1 - $progress, 3);
+}
+
+@function track($keys, $t, $curve: smooth) {
+  @for $i from 1 to length($keys) {
+    $a: nth($keys, $i);
+    $b: nth($keys, $i + 1);
+
+    @if $t <= nth($b, 1) {
+      $span: math.max(0, math.div($t - nth($a, 1), nth($b, 1) - nth($a, 1)));
+      $eased: if($curve == ease-out, ease-out($span), smooth($span));
+      @return nth($a, 2) + (nth($b, 2) - nth($a, 2)) * $eased;
+    }
+  }
+
+  @return nth(nth($keys, length($keys)), 2);
+}
+
+$leadpier-enter: 1.1s;
+$leadpier-steps: 28;
+$leadpier-faint: 0.35;
+$leadpier-slide: ((0 1) (0.09 1) (0.45 0) (1 0));
+$leadpier-rim: ((0 0) (0.09 0) (0.4 1) (1 1));
+$leadpier-fill: ((0 0) (0.5 0) (0.85 1) (1 1));
+
+@each $side, $dir in (left -1, right 1) {
+  @each $part, $alpha in (#{$side}-rim $leadpier-rim, #{$side} $leadpier-fill) {
+    @keyframes ws-leadpier-#{$part} {
+      @for $i from 0 through $leadpier-steps {
+        $t: math.div($i, $leadpier-steps);
+        $dx: $dir * 10px * track($leadpier-slide, $t, ease-out);
+
+        #{keyframe($i, $leadpier-steps)} {
+          color: rgba($ws-active, track($alpha, $t));
+          -gtk-icon-transform: translate($dx, 0);
+        }
+      }
+    }
+
+    .workspace.ws-3.ws-current .leadpier-#{$part} {
+      animation: ws-leadpier-#{$part} $leadpier-enter linear;
+    }
+  }
+}
+
+.workspace.ws-3 {
+  &.ws-empty {
+    .leadpier-left,
+    .leadpier-right {
+      color: rgba($ws-empty, $leadpier-faint);
+    }
+  }
+
+  &.ws-occupied {
+    .leadpier-left,
+    .leadpier-right {
+      color: rgba($ws-occupied, $leadpier-faint);
+    }
+  }
+
+  &.ws-current image {
+    transition: none;
+  }
+}
+
+$dna-enter: 1.4s;
+$dna-steps: 28;
+
+@function dna-turn($progress) {
+  $x: smooth($progress);
+  @return scale(1 + 0.3 * math.sin(180deg * $x)) rotate(-12deg * math.sin(360deg * $x)) scaleX(math.cos(360deg * $x));
+}
+
+@keyframes ws-dna-turn {
+  @for $i from 0 through $dna-steps {
+    #{keyframe($i, $dna-steps)} {
+      -gtk-icon-transform: dna-turn(math.div($i, $dna-steps));
+    }
+  }
+}
+
+.workspace.ws-4.ws-current image {
+  animation: ws-dna-turn $dna-enter linear;
+}
+
+$dot-steps: 24;
+$dot-turns: 720deg;
+$dot-wheels: (
+  gear: (pivot: (3.699px, -4.089px), ratio: 1),
+  cog: (pivot: (-7.962px, 8.352px), ratio: math.div(-5, 3)),
+  lens: (pivot: (0px, 0px), ratio: 0),
+);
+
+@each $wheel, $spec in $dot-wheels {
+  @keyframes ws-dot-#{$wheel} {
+    @for $i from 0 through $dot-steps {
+      $progress: math.div($i, $dot-steps);
+      $grow: 1 + 0.25 * math.sin(180deg * smooth($progress));
+      $spin: $dot-turns * map-get($spec, ratio) * (1 - math.pow(1 - $progress, 3));
+
+      #{keyframe($i, $dot-steps)} {
+        -gtk-icon-transform: scale($grow) around(map-get($spec, pivot), rotate($spin));
+      }
+    }
+  }
+
+  @keyframes ws-dot-#{$wheel}-loop {
+    from {
+      -gtk-icon-transform: around(map-get($spec, pivot), rotate(0deg));
+    }
+
+    to {
+      -gtk-icon-transform: around(map-get($spec, pivot), rotate(360deg * map-get($spec, ratio)));
+    }
+  }
+
+  .workspace.ws-5.ws-current .dotfiles-#{$wheel} {
+    animation:
+      ws-dot-#{$wheel} 1.2s linear,
+      ws-dot-#{$wheel}-loop 15s linear 1.2s infinite;
+  }
+}
+
+$music-disc: (-0.535px, -0.511px);
+$music-spin: ws-music-spin 10s linear infinite;
+
+@keyframes ws-music-spin {
+  from {
+    -gtk-icon-transform: around($music-disc, rotate(0deg));
+  }
+
+  to {
+    -gtk-icon-transform: around($music-disc, rotate(360deg));
+  }
+}
+
+@keyframes ws-music-flash {
+  0% {
+    -gtk-icon-shadow: 0 0 0 rgba($ws-active, 0);
+  }
+
+  35% {
+    -gtk-icon-shadow: 0 0 7px rgba($ws-active, 0.9);
+  }
+
+  100% {
+    -gtk-icon-shadow: 0 0 3px rgba($ws-active, 0);
+  }
+}
+
+@keyframes ws-music-glow {
+  0% {
+    -gtk-icon-shadow: 0 0 0 rgba($ws-active, 0);
+  }
+
+  20% {
+    -gtk-icon-shadow: 0 0 6px rgba($ws-active, 0.8);
+  }
+
+  50% {
+    -gtk-icon-shadow: 0 0 2px rgba($ws-active, 0);
+  }
+
+  100% {
+    -gtk-icon-shadow: 0 0 2px rgba($ws-active, 0);
+  }
+}
+
+.workspace.ws-6 {
+  image {
+    animation: $music-spin;
+    animation-play-state: paused;
+  }
+
+  &.ws-current image {
+    animation:
+      $music-spin,
+      ws-music-flash 1.2s ease-in-out,
+      ws-music-glow 4s ease-out 1.2s infinite;
+    animation-play-state: paused, running, running;
+  }
+
+  &.ws-playing image {
+    animation-play-state: running;
   }
 }

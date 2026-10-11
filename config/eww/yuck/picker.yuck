@@ -16,12 +16,9 @@
     :cursor "pointer"
     :tooltip "  󰳽 select workspace  "
     (box
-      :class "picker-ws ${picker-data.ws == num ? "picker-ws-selected" : ""}"
-      :style "background-image: url('art/ws-icons/${icon}${
-        picker-data.confirmed && picker-data.ws == num ? "-success" :
-        picker-data.ws == num ? "-primary" :
-        "${matches(picker-data.occupied, "${num}") ? "" : "-empty"}"
-      }.svg');"
+      :class "picker-ws ${picker-data.ws == num ? "picker-ws-selected" : ""} ${
+        matches(picker-data.occupied, "${num}") ? "picker-ws-occupied" : ""}"
+      :style "background-image: -gtk-icontheme('ws-${icon}-symbolic');"
     )
   )
 )

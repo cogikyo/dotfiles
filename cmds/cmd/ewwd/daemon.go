@@ -3,6 +3,7 @@ package main
 // daemon.go defines ewwd runtime orchestration, provider wiring, and socket command handlers.
 
 import (
+	"cmp"
 	"context"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/daemon"
@@ -359,7 +360,18 @@ func (d *Daemon) ensureEwwDaemon() error {
 		}
 	}
 
+	runtime := os.Getenv("XDG_RUNTIME_DIR")
+	if runtime == "" {
+		return fmt.Errorf("eww icons: XDG_RUNTIME_DIR is unset")
+	}
+	eww := config.ExpandPath("~/dotfiles/config/eww")
+	parts := filepath.Join(runtime, "ewwd")
+	if err := splitIcons(filepath.Join(eww, "icons"), filepath.Join(parts, "icons")); err != nil {
+		return fmt.Errorf("eww icons: %w", err)
+	}
+	dataDirs := cmp.Or(os.Getenv("XDG_DATA_DIRS"), "/usr/local/share:/usr/share")
 	cmd := exec.CommandContext(d.ctx, "eww", "--no-daemonize", "daemon")
+	cmd.Env = append(os.Environ(), "XDG_DATA_DIRS="+eww+":"+parts+":"+dataDirs)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
