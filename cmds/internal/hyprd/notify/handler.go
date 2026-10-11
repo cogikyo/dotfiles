@@ -400,8 +400,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 		cmd := exec.Command("dunstify", args...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			var exitErr *exec.ExitError
-			if !errors.As(err, &exitErr) {
+			if _, ok := errors.AsType[*exec.ExitError](err); !ok {
 				return fmt.Errorf("dunstify: %w", err)
 			}
 		}
