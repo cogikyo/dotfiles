@@ -109,7 +109,7 @@ ShellRoot {
             onStreamFinished: {
                 try {
                     shell.hides = JSON.parse(text).data[0]
-                        .map(rule => Object.fromEntries(Object.entries(rule).map(([key, value]) => [key, value.data])))
+                        .map(rule => Object.entries(rule).reduce((out, [key, value]) => Object.assign(out, { [key]: value.data }), {}))
                         .filter(rule => rule.enabled && (rule.skip_display || rule.format === ""))
                 } catch (e) {
                     console.warn("lock dunst rules:", e)
