@@ -6,13 +6,14 @@ routes:
   build/patch: claude/claude-sonnet-5-5 high
   build/scribe: openai/gpt-6.1-sol high
   scout/*: claude/claude-sonnet-5-5 xhigh
+  scout/web: opencode-go/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/critic: claude/claude-opus-5-5 high
   review/entropy: claude/claude-opus-5-5 max
   verify/*: openai/gpt-6.1-sol high
 fallbacks:
-  claude/claude-opus-5-5: cursor/claude-opus-5-5-fast
-  claude/claude-sonnet-5-5: cursor/claude-opus-5-5-fast
+  claude/claude-opus-5-5: opencode-go/grok-4.7
+  claude/claude-sonnet-5-5: opencode-go/grok-4.7
 ---
 
 # Routing
@@ -60,7 +61,7 @@ The task tool lists each agent's description; these lines cover when to pick one
 - Give each scout one factual question, bounds, required evidence, and a stopping point.
 - Start with `scout/context` only when ownership and relevant files are unknown.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
-- Use `scout/web` for the option space and prior art; it orchestrates web search and `x` calls.
+- Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default.
 
 ### Reviewers
 
@@ -112,7 +113,7 @@ Most models start at `high` for every role until evidence says otherwise.
 - Routes: `build/owner`, `build/general`, `build/git`, `review/critic`, and `review/entropy`; all important building runs here.
 - Reasoning: `high` by default, or `xhigh` when time is not a constraint.
   - Below `max`, it appears to reason less on its own when the task allows.
-- Fallback: `cursor/claude-opus-5-5-fast` without effort when both Anthropic accounts are capped.
+- Fallback: `opencode-go/grok-4.7` without effort when both Anthropic accounts are capped.
 
 ### `openai/gpt-6.1-sol`
 
@@ -126,21 +127,26 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### `claude-sonnet-5-5`
 
-- Routes: `scout/*` at `xhigh` and `build/patch` at `high`; also suits other high-token filtering, summarizing, and high-level scoping.
-- Best scout available; it orchestrates web search and `x` calls well, and realtime user insight from `x` is valuable.
-- Fallback: `cursor/claude-opus-5-5-fast` without effort, because Cursor has no working Sonnet fast variant.
+- Routes: `scout/*` except `scout/web` at `xhigh` and `build/patch` at `high`; also suits other high-token filtering, summarizing, and high-level scoping.
+- Best scout available outside web scouting; it orchestrates web search and `x` calls well, and realtime user insight from `x` is valuable.
+- Fallback: `opencode-go/grok-4.7` without effort when both Anthropic accounts are capped.
 - It uses more tokens, so its context can fill before the compaction warning; this is fine.
 
-### `xai/grok-4.6`
+### `xai/grok-4.7`
 
-- Not worth using as a task model; the `x` tool still runs the Grok CLI for native X search.
+- Grok runs on three pools: `xai`, `cursor`, and `opencode-go`.
+- Route web scouting and quick context searches there freely; treat findings as leads and verify claims that decide a design.
+- The `x` tool runs the Grok CLI on the xAI pool for native X search.
 - A possible council member for web or verify searches.
 
 ### Fallback providers
 
-- `cursor/*`: C and O are separate pools; only `claude-opus-5-5-fast` is routed, always as the fast variant, and Fable is admin-blocked.
+- `cursor/*`: C and O are separate pools; O is named-model API usage and is small.
+  - About **1,200 Opus fast steps** used up a month.
+  - Cursor children report no tokens, so lane context guards don't fire; use it for **short, bounded jobs**.
+  - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
-- `opencode-go/*`: `glm-5.3` at `high`; use it to test new open-source models such as DeepSeek V5 when they release.
+- `opencode-go/*`: currently `grok-4.7`; the best model there changes often, and it is the fallback when both Anthropic accounts are capped.
 
 ## Overrides
 

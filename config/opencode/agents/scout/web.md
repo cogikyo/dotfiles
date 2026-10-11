@@ -32,8 +32,9 @@ Use these dimensions **when they help answer the question**:
 - Where the field is **converging** and what it is **abandoning**.
 - **Date stamps** on fast-moving claims.
 - Options that need a deeper **`verify/web` or `verify/source` pass** before load-bearing use.
-- **Live community signal** when the parent asks for it or adoption would change the ranking.
-  - Load the **`x` skill** and call the **`x` tool**.
+- **X is on by default** for community signal, tool and library choices, and maintainer statements.
+  - Load the **`x` skill** and call the **`x` tool** once per brief; make a second call only for a named gap in the first output.
+  - Treat **X and Grok output as leads**, and flag design-deciding claims for verification.
 
 ## Boundaries
 

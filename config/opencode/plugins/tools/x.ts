@@ -4,7 +4,7 @@ const timeout = 10 * 60 * 1000;
 
 const flags = [
   "--model",
-  "grok-4.6",
+  "grok-4.7",
   "--reasoning-effort",
   "high",
   "--no-plan",

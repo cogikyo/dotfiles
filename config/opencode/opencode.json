@@ -234,8 +234,8 @@
     },
     "xai": {
       "models": {
-        "grok-4.6": {
-          "name": "Grok 4.6",
+        "grok-4.7": {
+          "name": "Grok 4.7",
           "options": {
             "reasoningEffort": "high"
           },
@@ -250,8 +250,8 @@
     },
     "opencode-go": {
       "models": {
-        "grok-4.6": {
-          "name": "Grok 4.6",
+        "grok-4.7": {
+          "name": "Grok 4.7",
           "options": {
             "reasoningEffort": "high"
           },
