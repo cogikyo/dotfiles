@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Grok Bot
-Exec=grok-bot --force-device-scale-factor=1.25 --remote-debugging-port=9222 %U
+Exec=env SAND_LOCAL_EXEC_ROOT=/home/cullyn/.local/state/grok-bot grok-bot --force-device-scale-factor=1.25 --remote-debugging-port=9222 %U
 Terminal=false
 Type=Application
 Icon=grok-bot
