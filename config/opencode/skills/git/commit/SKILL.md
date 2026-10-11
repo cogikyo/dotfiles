@@ -115,18 +115,20 @@ The tool guard rejects a `git commit` that breaks them, before the commit runs.
 - The subject is one line of at most 72 characters.
 - A blank line separates the subject from the body.
 - The body is one bullet list with no blank lines and no prose paragraphs.
-- Every body line is a bullet: `- ` for a point, or ` -` for detail under the bullet above it.
+- Every body line is a bullet: `- ` for a point, or two spaces then `- ` for detail under the bullet above it.
 - Every line is at most 72 characters, including its indent.
 - A bullet never wraps onto a second line.
   - When a point needs more words, cut it to one line.
-  - Move supporting detail into nested ` -` bullets under it.
+  - Move supporting detail into nested bullets with two spaces then `- ` under it.
   - Split the commit when the points do not share one story.
 
 ### Body
 
 - A tiny atomic commit may use only the subject.
-- Aim for two to four short bullets about behavior, intent, constraints, or decisions.
-- More than six top-level bullets usually means several stories; split the commit.
+- The body is **1–3 main bullets**, with nested detail only when it helps.
+- Use **short phrases**, not long sentences or word dumps.
+- More points usually mean the work should be separate commits; a large intentional commit is the exception.
+- The message must read **at a glance in a lazygit preview**.
 - Bullets state facts about the change.
   - Keep questions, guesses, and investigation notes out of the message.
 - Do not inventory files or mechanically repeat the subject.
