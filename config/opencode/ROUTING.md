@@ -21,6 +21,7 @@ fallbacks:
 This file owns model routing for delegated work.
 The frontmatter sets each agent's default model and effort, and the body carries the judgment for when to depart from them.
 Treat everything here as defaults and preferences; state the reason when you depart from one.
+Recommend changes to this file, and confirm each decision with the user through `question` before editing it.
 
 ## Routes
 
