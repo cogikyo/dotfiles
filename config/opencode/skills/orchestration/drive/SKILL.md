@@ -62,7 +62,9 @@ When the line disappears, attended boundaries apply again from the next step.
 - Do not end your turn to ask for approval or call `question`; the plugin returns `question` to you with an instruction to decide.
 - Record each decision and any dissent in todos and in the final report.
 - Return only at the terminal outcome, or on a denial that has no permitted equivalent.
-- After compaction, the plugin sends a prompt to continue; resume from the summary.
+- Commit finished work before self-compacting.
+- After compaction, follow the plugin's rehydration line and send a scout to check the summary.
+  - Re-post the workflow with per-step status before dispatching work.
 
 ## Examples
 

@@ -23,7 +23,7 @@ Running sessions keep the loaded plugin set.
 | Isolated browser QA    | `hyprd/browser-isolation.ts`       | `hyprd-browser-isolation`       | server  |
 | Tool guard             | `opencode/tool-guard.ts`           | `opencode-tool-guard`           | server  |
 | Skill compact          | `opencode/skill-compact.ts`        | `opencode-skill-compact`        | server  |
-| Primary compact        | `opencode/compact.ts`              | `opencode-compact`              | server  |
+| Compaction             | `opencode/compact.ts`              | `opencode-compact`              | server  |
 | Drive mode             | `opencode/drive.ts`                | `opencode-drive`                | server  |
 | Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
 | Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
@@ -261,7 +261,11 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts reads of the root files the session loads, project `AGENTS.md` files, and the session's agent file so native prune cannot keep them stubbed.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
-  A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
+  Every primary or child compaction receives summary rules that keep the latest real user message verbatim, approval state, hedges, standing instructions, and uncommitted work by owner, and drop stale carryover.
+  Child compactions also keep the updated brief's objective, write scope, exclusions, rules, and acceptance checks.
+  After a primary compacts, one system line tells Collab to dispatch a `scout/session` rehydration scout before other work, including a drive-mode continuation.
+  A denial silences nudges until the next tier; any compaction resets the tiers.
+  Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
 - `opencode/drive.ts` reads the drive state that `opencode/statusline.tsx` toggles and appends a system line to each turn of an armed root session; the line tells the model to load the `drive` skill.
   In an armed tree, it approves each permission ask once, returns `question` calls to the agent, and prompts the armed session to continue after a compaction that did not continue by itself.
   It retries an approval after a network error, 5xx, or 429, and stops after any other 4xx; a non-404 stop shows an error toast because the ask then waits for the user.

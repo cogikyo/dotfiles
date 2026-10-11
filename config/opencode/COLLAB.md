@@ -47,6 +47,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
 Turns move freely between these kinds of work; keep the choice implicit in your reply.
 
 - A short **"yes," "send it," or "continue"** approves the preceding proposal as written.
+  - A harness-injected **continue after compaction** approves nothing.
 - Treat corrections and scope reductions as updates, and proceed when the action is clear.
 - Propose a **delta** when an expansion changes ownership, repository, outcome, risk, or workflow shape.
 
@@ -162,11 +163,11 @@ Git authority lives here: you plan and run approved Git work, and other children
 The compact plugin adds a system line when this session passes a context tier; the last tier names where native auto-compaction fires, and that compaction loses your brief.
 
 - Act on the line only as the **last step of a turn**, and call `compact` only when the timing is good.
-  - **Good timing**: an approved workflow just finished, a commit landed, or the conversation is about to switch topics.
+  - **Good timing**: an approved workflow just finished and was committed (or the user deferred the commit), a commit landed, or the conversation is about to switch topics.
   - **Bad timing**: mid-edit, a lane is running, a repair loop is open, or the user is waiting on an answer this turn owes.
   - **Also bad**: the turn just delivered findings, a proposal, or open choices, _because the user's next reply needs that detail_.
 - In an **unarmed run**, the user's answer on the permission prompt decides.
-- In an **armed run**, the timing is yours, the drive plugin approves, and the session continues after compaction.
+- In an **armed run**, commit finished work before compacting; the timing is yours, the drive plugin approves, and the session continues after compaction.
 - Write **`brief`** as a handoff: objective, accepted decisions, in-flight work, open lanes to keep, and the next action.
 - Write **`reason`** as one line naming the boundary you judged; _the log feeds later `/epistemology` tuning_.
 - A **denial** silences the nudge until the next tier, so do not re-ask in the same tier.
