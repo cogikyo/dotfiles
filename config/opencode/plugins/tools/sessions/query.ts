@@ -6,9 +6,15 @@ const store = "/home/cullyn/.local/share/opencode/opencode.db";
 const excerpt = 800;
 const brief = 160;
 const readable = new Set(["session", "message", "part", "project", "todo", "sqlite_schema"]);
+const huge = new Set(["part", "message"]);
+const scans = new Set(["Rewind", "Last", "Count"]);
+const seeks = new Set(["SeekGE", "SeekGT", "SeekLE", "SeekLT"]);
+const bounds = new Set(["IdxGE", "IdxGT", "IdxLE", "IdxLT"]);
+const HUGE =
+  "part and message are huge, so filter them by the indexed session_id, such as p.session_id = ? or p.session_id IN (SELECT id FROM session WHERE …)";
 
 type Row = Record<string, unknown>;
-type Op = { opcode: string; p2: number; p3: number };
+type Op = { opcode: string; p1: number; p2: number; p3: number };
 
 const queries: Record<Query["query"], (db: Database, args: Query, limit: number) => Row[]> = {
   list: (db, args, limit) =>
@@ -115,14 +121,21 @@ function select(db: Database, source: string, params: SQLQueryBindings[], limit:
       .map((row) => [row.rootpage, row.tbl_name]),
   );
   roots.set(1, "sqlite_schema");
-  for (const op of db.query<Op, SQLQueryBindings[]>(`EXPLAIN ${sql}`).all(...params)) {
+  const ops = db.query<Op, SQLQueryBindings[]>(`EXPLAIN ${sql}`).all(...params);
+  const cursors = new Map<number, string>();
+  for (const op of ops) {
     if (op.opcode === "OpenWrite") throw new Error("sql must not write");
     if (op.opcode === "VOpen") throw new Error("sql must not read virtual tables or table-valued functions");
     if (op.opcode !== "OpenRead" && op.opcode !== "ReopenIdx") continue;
     const table = op.p3 === 0 ? roots.get(op.p2) : undefined;
-    if (table && readable.has(table)) continue;
-    throw new Error(`sql may read only ${[...readable].join(", ")}; it reads ${table ?? `root page ${String(op.p2)}`}`);
+    if (!table || !readable.has(table)) {
+      throw new Error(
+        `sql may read only ${[...readable].join(", ")}; it reads ${table ?? `root page ${String(op.p2)}`}`,
+      );
+    }
+    if (huge.has(table)) cursors.set(op.p1, table);
   }
+  guardScans(ops, cursors);
 
   const rows: Row[] = [];
   for (const row of db.query<Row, SQLQueryBindings[]>(sql).iterate(...params)) {
@@ -130,6 +143,21 @@ function select(db: Database, source: string, params: SQLQueryBindings[], limit:
     if (rows.length >= limit) break;
   }
   return rows;
+}
+
+function guardScans(ops: Op[], cursors: Map<number, string>) {
+  const seeked = new Set<number>();
+  const bounded = new Set<number>();
+  for (const op of ops) {
+    const table = cursors.get(op.p1);
+    if (!table) continue;
+    if (scans.has(op.opcode)) throw new Error(`sql scans ${table} (${op.opcode}); ${HUGE}`);
+    if (seeks.has(op.opcode)) seeked.add(op.p1);
+    if (bounds.has(op.opcode)) bounded.add(op.p1);
+  }
+  for (const cursor of seeked) {
+    if (!bounded.has(cursor)) throw new Error(`sql reads an open-ended range of ${cursors.get(cursor)}; ${HUGE}`);
+  }
 }
 
 function clip(value: unknown) {

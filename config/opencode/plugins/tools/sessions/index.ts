@@ -47,20 +47,23 @@ export const sessions = tool({
   async execute(args, ctx) {
     await ctx.ask({ permission: "sessions", patterns: ["*"], always: ["*"], metadata: { query: args.query } });
     const query: Query = { ...args, limit: args.limit ?? (args.query === "list" ? 12 : cap) };
+    const deadline = AbortSignal.timeout(timeout);
     const proc = Bun.spawn([process.execPath, fileURLToPath(new URL("./query.ts", import.meta.url))], {
       env: { ...process.env, BUN_BE_BUN: "1" },
       stdin: new Blob([JSON.stringify(query)]),
       stdout: "pipe",
       stderr: "pipe",
       killSignal: "SIGKILL",
-      signal: AbortSignal.any([ctx.abort, AbortSignal.timeout(timeout)]),
+      signal: AbortSignal.any([ctx.abort, deadline]),
     });
     const [stdout, stderr] = await Promise.all([
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
-    if (proc.signalCode) throw new Error(`sessions query killed after ${timeout / 1000}s or abort`);
+    if (proc.signalCode && ctx.abort.aborted) throw new Error("sessions query aborted by the caller");
+    if (proc.signalCode && deadline.aborted) throw new Error(`sessions query timed out after ${timeout / 1000}s`);
+    if (proc.signalCode) throw new Error(`sessions query killed by ${proc.signalCode}`);
     const parsed = Reply.safeParse(json(stdout));
     if (!parsed.success) throw new Error(`sessions query failed: ${stderr.trim().slice(-1000) || "no output"}`);
     if ("error" in parsed.data) throw new Error(parsed.data.error);

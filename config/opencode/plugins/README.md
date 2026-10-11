@@ -197,16 +197,21 @@ Practical failure diagnosis:
 Each tool asks the permission named after it; `diagram` and `sessions` are allowed globally, and `x` is denied unless an agent's frontmatter allows it.
 
 - `x` runs `grok --single` from `/tmp` with fixed native-X-search flags, `--deny Bash`, and a 10-minute timeout; the caller supplies only the brief, which cannot start with `-`.
+  It rejects briefs that closely repeat an earlier run in the same session; there is no call cap.
   The tool guard rejects shell calls that launch `grok`, including absolute paths, common launchers and their options, `$(…)` and backtick substitutions, and `sh -c` strings; it is a guardrail, not a sandbox.
 - `diagram` checks a diagram or tree for the `diagram` skill's display-cell and connectivity rules, from `text` or a hosted file region with its prefix and width limit.
 - `sessions` queries `~/.local/share/opencode/opencode.db` read-only in a subprocess that is killed after 30 seconds or on abort, at most 20 rows, and 800-character excerpts.
-  Its `sql` mode accepts one bound `SELECT` and rejects reads outside `session`, `message`, `part`, `project`, and `todo`, including virtual tables and table-valued functions, by inspecting `EXPLAIN` output.
+  Its `sql` mode accepts one bound `SELECT` or `WITH` statement and rejects reads outside `session`, `message`, `part`, `project`, `todo`, and `sqlite_schema`, including virtual tables and table-valued functions, by inspecting `EXPLAIN` output.
+  It also rejects query plans that scan `part` or `message`; filter them through an indexed `session_id` lookup.
+  Timeout and caller abort return distinct errors.
 
 Practical failure diagnosis:
 
 - `x` denied or missing for an agent → the agent needs `x: allow` in its frontmatter permissions.
 - `grok exited …` → run `grok models` to refresh Grok CLI auth, then retry.
-- `sessions query killed after 30s` → the query scanned `part` without a `session_id` filter; select sessions first.
+- `sql scans part` or `sql scans message` → select sessions first, then filter by the indexed `session_id`.
+- `sessions query timed out after 30s` → the query exceeded the time limit.
+- `sessions query aborted by the caller` → the caller stopped the query.
 
 ## Claude auth
 
