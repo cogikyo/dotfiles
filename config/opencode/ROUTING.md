@@ -5,7 +5,10 @@ routes:
   build/git: claude/claude-opus-5-5 high
   build/patch: claude/claude-sonnet-5-5 high
   build/scribe: openai/gpt-6.1-sol high
-  scout/*: claude/claude-sonnet-5-5 xhigh
+  scout/*: claude/claude-opus-5-5 high
+  scout/context: claude/claude-sonnet-5-5 high
+  scout/dirty: claude/claude-sonnet-5-5 high
+  scout/session: openai/gpt-6-astra xhigh
   scout/web: opencode-go/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/critic: claude/claude-opus-5-5 high
@@ -99,9 +102,15 @@ Pick a builder by how much the brief settles.
 - Send trivial edits to `build/patch` on Sonnet `high`, which is slightly faster than Opus.
   - Keep a `{scope}-patch` lane open for repeated patches in the same scope.
 - Use Opus `max` when the user asks for it.
-- Run architecture reviews as a council: Sol `review/architect` beside Opus `review/architect`.
-- For repo-wide `review/entropy` sweeps, pair the Opus `max` lane with Sol at `xhigh` as a council.
-- Send Sol findings that need filtering through Opus `review/critic`, and brief it with those findings.
+- Add Sol or Astra leaves eagerly beside Opus work; Collab picks between them.
+  - Run a parallel OpenAI scout on the same brief when a second independent read could change the answer.
+  - Send any claim the answer or design rests on to `verify/*`.
+  - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
+- Pass `openai/gpt-6-astra` or `openai/gpt-6.1-sol` with effort `high` when Collab picks one explicitly.
+- Seat a fresh Opus reviewer beside Sol or Astra in each review council.
+  - Pass `claude/claude-opus-5-5` with effort `high` for the Opus seat.
+  - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
+- Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
 - Run a `build/scribe` pass on touched docs and comments before most commits.
 
 ## Models
@@ -111,7 +120,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### `claude-opus-5-5`
 
-- Routes: `build/owner`, `build/general`, `build/git`, `review/critic`, and `review/entropy`; all important building runs here.
+- Routes: `build/owner`, `build/general`, `build/git`, `review/critic`, `review/entropy`, and the `scout/*` default; all important building runs here.
 - Reasoning: `high` by default, or `xhigh` when time is not a constraint.
   - Below `max`, it appears to reason less on its own when the task allows.
 - Fallback: `opencode-go/grok-4.7` without effort when both Anthropic accounts are capped.
@@ -126,12 +135,21 @@ Most models start at `high` for every role until evidence says otherwise.
 - Gathers wide context well and makes sound architecture calls.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
+### `openai/gpt-6-astra`
+
+- Routes: `scout/session` at `xhigh`; otherwise Collab adds it as a council seat or a parallel leaf.
+- OpenAI positions it as its most capable model, and Sol as near-Astra at one fifth of the API price.
+- Only model here with a published long-context score: 96.3% on MRCR v2 with eight needles at 512K–1M tokens.
+- Reasoning: `high`, `xhigh`, and `max` are available.
+- Fallback: Opus when OpenAI is capped, because Astra and Sol share one OpenAI window.
+- Strength relative to Sol and Opus on this work is untested; record evidence as councils compare it.
+
 ### `claude-sonnet-5-5`
 
-- Routes: `scout/*` except `scout/web` at `xhigh` and `build/patch` at `high`; also suits other high-token filtering, summarizing, and high-level scoping.
-- Best scout available outside web scouting; it orchestrates web search and `x` calls well, and realtime user insight from `x` is valuable.
+- Routes: `scout/context`, `scout/dirty`, and `build/patch`, all at `high`.
+- Orchestrates web search and `x` calls well.
 - Fallback: `opencode-go/grok-4.7` without effort when both Anthropic accounts are capped.
-- It uses more tokens, so its context can fill before the compaction warning; this is fine.
+- Let `/papercuts` or `/epistemology` evidence decide which roles return to smaller models.
 
 ### `xai/grok-4.7`
 
@@ -161,6 +179,7 @@ Check `usage_status` before any dispatch to a non-pool route, and choose routes 
 Mention usage only when the user asks, or when every route for a step is capped.
 
 - Spend every provider up to 100% freely; do not conserve, downgrade, or hedge, and the user says when to be careful.
+- OpenAI's weekly window tends to reset mostly unspent, so add Sol and Astra leaves freely; default routes stay on Opus.
 - The primary session keeps working past Anthropic's hourly 100%, only slower.
 - **Enforced**: the task plugin waits for reset when a window that limits the child's model is at 100%, so route non-pool steps around capped providers yourself.
   - On an Anthropic account, those are the hourly window, the all-model weekly window, and that model's weekly window; elsewhere, every window counts.
