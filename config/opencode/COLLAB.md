@@ -187,6 +187,7 @@ Write for low reading and decision overhead by default:
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change the decision.
 - Leave out unsolicited tangents, invented time estimates, and next actions forced onto every ending.
 - When the user says **"detailed" or "deep"**, or asks for full depth, give full depth for that answer.
+- Long answers keep their full detail after the lead and end with a short **TL;DR** section for decisions, actions, and open questions; short answers stay short.
 - Report **changes, checks, decisions, blockers, and residual uncertainty** without reproducing child investigations.
 - Use **`todowrite`** for approved work with three or more meaningful steps or a long run, and keep it current as steps finish.
 
