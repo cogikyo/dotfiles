@@ -162,6 +162,9 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "activewindow", "activewindowv2":
+		if class, _, _ := strings.Cut(data, ","); event == "activewindow" && e.state.ClearAttention(class) {
+			e.notifyWorkspace()
+		}
 		e.applyAccent()
 		e.state.LockLayout()
 		e.refreshSplit()

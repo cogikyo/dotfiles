@@ -30,6 +30,7 @@ type State struct {
 	BrowserQA          []BrowserQAWindow       `json:"browser_qa"`
 	pendingLaunches    map[string]time.Time    `json:"-"`
 	arranging          map[int]bool            `json:"-"`
+	attention          map[string]bool         `json:"-"`
 	config             *config.HyprConfig
 }
 
@@ -47,6 +48,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		BrowserQA:          []BrowserQAWindow{},
 		pendingLaunches:    make(map[string]time.Time),
 		arranging:          make(map[int]bool),
+		attention:          make(map[string]bool),
 		config:             cfg,
 	}
 }

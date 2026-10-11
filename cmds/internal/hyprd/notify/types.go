@@ -55,9 +55,10 @@ type kittyContext struct {
 
 // Notifier routes notification requests through dunstify and paplay.
 type Notifier struct {
-	hypr  *hypr.Client
-	state *state.State
-	cfg   *config.HyprConfig
+	hypr    *hypr.Client
+	state   *state.State
+	cfg     *config.HyprConfig
+	publish func() // pushes the workspace payload after the attention set changes
 }
 
 type idleBackoff struct {
@@ -65,6 +66,6 @@ type idleBackoff struct {
 	Interval    time.Duration
 }
 
-func NewNotifier(h *hypr.Client, s *state.State, cfg *config.HyprConfig) *Notifier {
-	return &Notifier{hypr: h, state: s, cfg: cfg}
+func NewNotifier(h *hypr.Client, s *state.State, cfg *config.HyprConfig, publish func()) *Notifier {
+	return &Notifier{hypr: h, state: s, cfg: cfg, publish: publish}
 }

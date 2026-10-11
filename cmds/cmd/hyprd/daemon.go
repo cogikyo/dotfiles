@@ -77,7 +77,7 @@ func New() (*Daemon, error) {
 		return nil, fmt.Errorf("adopt lock: %w", err)
 	}
 	d.opencode = opencodepkg.New(func(title, body string) {
-		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 		if err := notifier.Handle(notifypkg.NotifyRequest{
 			Source:  "send",
 			App:     "hyprd",
@@ -401,7 +401,7 @@ func (d *Daemon) handleThreeBody(arg string) string {
 		return "usage: three-body {editor|agents|browser}"
 	}
 	if name == "agents" {
-		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 		result, handled, err := notifier.ActivateDisplayed()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -437,7 +437,7 @@ func (d *Daemon) handleNotify(arg string) string {
 		return fmt.Sprintf("error: parse notify request: %v", err)
 	}
 
-	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 	req = notifier.Prepare(req)
 	if !notifier.CanDispatch(req) {
 		return "missing-context"
@@ -580,7 +580,7 @@ func (d *Daemon) newInit() *session.Init {
 }
 
 func (d *Daemon) notify(app, urgency, title, body string) {
-	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 	notifier.Handle(notifypkg.NotifyRequest{
 		Source:  "send",
 		App:     app,
@@ -686,13 +686,16 @@ func (d *Daemon) query(topic string) (string, error) {
 func workspacePayload(s *state.State) map[string]any {
 	current := s.GetWorkspace()
 	occupied := s.GetOccupied()
+	attention := s.GetAttention()
 
 	return map[string]any{
-		"current":      current,
-		"current_str":  strconv.Itoa(current),
-		"occupied":     occupied,
-		"occupied_str": joinWorkspaceIDs(occupied),
-		"browser_qa":   s.GetBrowserQA(),
+		"current":       current,
+		"current_str":   strconv.Itoa(current),
+		"occupied":      occupied,
+		"occupied_str":  joinWorkspaceIDs(occupied),
+		"attention":     attention,
+		"attention_str": strings.Join(attention, " "),
+		"browser_qa":    s.GetBrowserQA(),
 	}
 }
 

@@ -108,6 +108,26 @@ func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 
 	globalAppRouter.Start(n.hypr, n.state)
 	globalAppRouter.Remember(uint32(max(req.NotificationID, 0)), target)
+	n.armAttention(target.Class)
+}
+
+// armAttention marks class as unseen until a window of that class gains focus; the event loop clears it.
+//
+// Unlike routes, attention survives the toast closing or expiring.
+func (n *Notifier) armAttention(class string) {
+	if n.hypr == nil {
+		return
+	}
+	if active, err := n.hypr.ActiveWindow(); err == nil && active != nil && strings.EqualFold(active.Class, class) {
+		return
+	}
+	if !n.state.ArmAttention(class) {
+		return
+	}
+	logf("attention armed: class=%s", class)
+	if n.publish != nil {
+		n.publish()
+	}
 }
 
 // ActivateDisplayed acts on a visible notification, reporting whether it handled the keypress.
