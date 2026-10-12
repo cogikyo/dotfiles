@@ -1,7 +1,10 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { Plugin } from "@opencode/plugin";
 import { claudeAccounts } from "./accounts.ts";
 import { isLongContextError, LONG_CONTEXT_BETAS } from "./claude-auth/betas.js";
 import { fetchWithRetry } from "./claude-auth/http.js";
+import { config } from "./claude-auth/model-config.js";
 import { SYSTEM_IDENTITY, transformBody, transformResponseStream } from "./claude-auth/transforms.js";
 import { Credentials, type Failure } from "./credentials.ts";
 import { sign } from "./headers.ts";
@@ -24,6 +27,19 @@ function apiError(status: number, type: string, message: string, headers: Record
   });
 }
 
+async function detectVersion() {
+  if (process.env.ANTHROPIC_CLI_VERSION) return;
+  try {
+    const { stdout } = await promisify(execFile)("claude", ["--version"], { timeout: 3000 });
+    const version = stdout.trim().split(/\s+/)[0];
+    if (!/^\d+\.\d+\.\d+/.test(version)) throw new Error(`unexpected output ${JSON.stringify(stdout.trim())}`);
+    process.env.ANTHROPIC_CLI_VERSION = version;
+    console.info(`anthropic: ANTHROPIC_CLI_VERSION=${version} from claude --version`);
+  } catch (error) {
+    console.warn(`anthropic: claude --version failed, using ccVersion ${config.ccVersion}: ${String(error)}`);
+  }
+}
+
 function shape(text: string) {
   const body = JSON.parse(text, (key, value) => (key === "cache_control" && value ? cacheControl : value));
   if (typeof body.system === "string") body.system = [{ type: "text", text: body.system }];
@@ -36,6 +52,7 @@ function shape(text: string) {
 export default Plugin.define({
   id: "anthropic",
   async setup(ctx) {
+    await detectVersion();
     await ctx.provider.transform((providers) => {
       const source = providers.get("anthropic");
       for (const [id, ids] of Object.entries(disabledVariants)) {
