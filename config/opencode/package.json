@@ -8,21 +8,21 @@
     "fmt": "oxfmt plugins",
     "check": "tsc -p . && oxlint plugins && oxfmt --check plugins"
   },
-  "dependencies": {
-    "@opencode-ai/plugin": "1.18.32",
-    "zod": "^4.1.8"
-  },
   "devDependencies": {
-    "@opencode-ai/sdk": "1.18.32",
-    "@opentui/core": "0.4.5",
-    "@opentui/keymap": "0.4.5",
-    "@opentui/solid": "0.4.5",
-    "@types/bun": "1.3.13",
+    "@opencode/plugin": "2.0.27",
+    "@opencode/theme": "2.0.27",
+    "@opentui/core": "0.5.17",
+    "@opentui/solid": "0.5.17",
+    "@types/bun": "1.4.0",
+    "effect": "4.0.1",
     "eslint-plugin-solid": "0.18.0",
     "oxfmt": "0.70.0",
     "oxlint": "1.85.0",
     "oxlint-tsgolint": "7.0.2002",
-    "solid-js": "1.9.12",
+    "solid-js": "1.9.15",
     "typescript": "7.0.2"
+  },
+  "overrides": {
+    "solid-js": "$solid-js"
   }
 }
