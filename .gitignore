@@ -7,6 +7,7 @@ cmds/cmd/newtab/newtab
 # Plaintext secrets (safety net)
 secrets/identity
 /.secrets.dctl-*/
+config/gh/hosts.yml
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/
