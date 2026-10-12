@@ -33,8 +33,6 @@ hl.on("hyprland.start", function()
 	hl.exec_cmd([[sh -c 'taskset -cp 0-6,8-14,16-1023 "$PPID" >/dev/null']])
 	for _, command in ipairs({
 		"taskset -c 7,15 dunst",
-		"hyprpolkitagent",
-		"hypridle",
 		"hyprpaper",
 	}) do
 		hl.exec_cmd(command)
