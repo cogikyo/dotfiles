@@ -27,7 +27,7 @@
       "description": "The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.",
       "mode": "primary",
       "color": "#f8b486",
-      "system": "{file:./COLLAB.md}",
+      "system": "{file:./COLLAB.md}\n\nInstructions from: ROUTING.md\n{file:./ROUTING.md}",
       "permissions": [
         { "action": "usage_status", "resource": "*", "effect": "allow" },
         { "action": "lanes", "resource": "*", "effect": "allow" },

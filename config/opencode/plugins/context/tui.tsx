@@ -11,7 +11,7 @@ import { configRoot, identity, isConfigAgents, isGlobal, isMarkdown, isSubagent,
 type Context = Plugin.Context;
 type Session = NonNullable<ReturnType<Context["data"]["session"]["get"]>>;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
-type Prompts = Record<string, string>;
+type Prompts = Record<string, string[]>;
 type Load = { path: string; time: number };
 
 type Item = {
@@ -155,7 +155,8 @@ function pinnedFiles(context: Context, session: Session, prompts: Prompts) {
     files.push(path.join(dir, "AGENTS.md"));
     if (dir === stop || dir === path.dirname(dir)) break;
   }
-  if (session.agent) files.push(prompts[session.agent] ?? path.join(configRoot, "agents", `${session.agent}.md`));
+  if (session.agent)
+    files.push(...(prompts[session.agent] ?? [path.join(configRoot, "agents", `${session.agent}.md`)]));
   return files;
 }
 
@@ -252,8 +253,11 @@ function agentPrompts(): Prompts {
   );
   return Object.fromEntries(
     Object.entries(config.agents ?? {}).flatMap(([name, agent]) => {
-      const match = typeof agent.system === "string" ? /^\{file:(.+)\}$/.exec(agent.system) : null;
-      return match ? [[name, path.resolve(configRoot, match[1])]] : [];
+      if (typeof agent.system !== "string") return [];
+      const files = [...agent.system.matchAll(/\{file:([^}]+)\}/g)].map(([, file]) =>
+        path.resolve(configRoot, file.startsWith("~/") ? path.join(homedir(), file.slice(2)) : file),
+      );
+      return files.length > 0 ? [[name, files]] : [];
     }),
   );
 }

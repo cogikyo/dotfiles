@@ -3,6 +3,7 @@
   "theme": {
     "name": "vagari"
   },
+  // TODO: keybind review with the user; `keys` lists clashes such as <leader>q on app.exit and session.queued_prompts.
   "keybinds": {
     "leader": "ctrl+h",
     "command.palette.show": "<leader>l",
