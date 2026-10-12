@@ -11,7 +11,7 @@ import { claudeAccounts } from "../anthropic/accounts.ts";
 type Ref = { providerID: string; id: string; variant?: string };
 type Status = "running" | "idle" | "error" | "interrupted";
 type Window = { label: string; usedPercent?: number; resetAt?: string };
-type Account = { id: string; known: boolean; capped: number[]; weekly: number };
+type Account = { id: string; age?: number; known: boolean; capped: number[]; weekly: number };
 type Input = {
   agent: string;
   description: string;
@@ -91,7 +91,8 @@ async function usage(id: string, modelID: string, now: number): Promise<Account>
   const data = await readFile(cacheFile(id), "utf8").then(JSON.parse, () => undefined);
   const fetchedAt = data?.fetchedAt;
   const all: Window[] | undefined = data?.usage?.windows;
-  if (typeof fetchedAt !== "number" || now - fetchedAt > staleAfter || !Array.isArray(all)) return unknown;
+  if (typeof fetchedAt !== "number" || !Array.isArray(all)) return unknown;
+  const age = now - fetchedAt;
   const scoped = modelID
     .split("-")
     .find((part) => part !== "claude")?.[0]
@@ -103,10 +104,11 @@ async function usage(id: string, modelID: string, now: number): Promise<Account>
       const stale = reset !== undefined && reset <= now && fetchedAt <= reset;
       return { ...window, reset: reset ?? Infinity, known: !stale && typeof window.usedPercent === "number" };
     });
-  if (!windows.length) return unknown;
+  if (!windows.length) return { ...unknown, age };
   return {
     id,
-    known: windows.every((window) => window.known),
+    age,
+    known: age <= staleAfter && windows.every((window) => window.known),
     capped: windows.filter((window) => window.known && window.usedPercent! >= 100).map((window) => window.reset),
     weekly: windows.find((window) => window.label === "W" && window.known)?.reset ?? Infinity,
   };
@@ -117,12 +119,16 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
   const list = await Promise.all(accounts.map((id) => usage(id, route.id, now)));
   const open = list.filter((account) => !account.capped.length);
   const sticky = open.find((account) => account.id === current?.providerID);
+  const stale = list
+    .filter((account) => account.age !== undefined && account.age > staleAfter)
+    .map((account) => `${account.id} ${Math.round(account.age! / 60_000)}m old`);
+  const notes = stale.length
+    ? [`lanes: Claude usage is stale (${stale.join(", ")}); picked by last known numbers.`]
+    : [];
   if (!open.length && fallback) {
     const ref = { providerID: fallback.providerID, id: fallback.id };
-    return {
-      ref,
-      note: `lanes: both Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`,
-    };
+    notes.push(`lanes: both Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`);
+    return { ref, note: notes.join("\n") };
   }
   const [account] =
     sticky !== undefined
@@ -130,7 +136,7 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
       : open.length
         ? open.toSorted((a, b) => Number(b.known) - Number(a.known) || a.weekly - b.weekly)
         : list.toSorted((a, b) => Math.max(...a.capped) - Math.max(...b.capped));
-  return { ref: { ...route, providerID: account.id }, note: undefined };
+  return { ref: { ...route, providerID: account.id }, note: notes.join("\n") || undefined };
 }
 
 const laneOf = (session: Session.Info) =>
@@ -152,6 +158,7 @@ export default Plugin.define({
     Effect.gen(function* () {
       const live = new Map<string, Status>();
       const creating = new Set<string>();
+      const prompting = new Map<string, string>();
 
       yield* ctx.event.subscribe().pipe(
         Stream.runForEach((event) =>
@@ -160,6 +167,11 @@ export default Plugin.define({
             if (event.type === "session.execution.succeeded") live.set(event.data.sessionID, "idle");
             if (event.type === "session.execution.failed") live.set(event.data.sessionID, "error");
             if (event.type === "session.execution.interrupted") live.set(event.data.sessionID, "interrupted");
+            if (event.type === "session.inbox.enqueued") {
+              const key = prompting.get(event.data.sessionID);
+              if (key !== undefined) creating.delete(key);
+              prompting.delete(event.data.sessionID);
+            }
           }),
         ),
         Effect.tapCause(Effect.logError),
@@ -244,7 +256,7 @@ export default Plugin.define({
               if (!tagged && typeof update.sessionID === "string") {
                 tagged = true;
                 yield* tag(context.sessionID, update.sessionID, lane);
-                creating.delete(key);
+                if (lane && creating.has(key)) prompting.set(update.sessionID, key);
               }
               yield* context.progress(update);
             });
@@ -270,7 +282,15 @@ export default Plugin.define({
                   : [...(result.content ?? []), { type: "text" as const, text: note }],
             metadata: { ...result.metadata, ...(lane ? { lane } : {}) },
           };
-        }).pipe(Effect.ensuring(Effect.sync(() => lane && creating.delete(key))));
+        }).pipe(
+          Effect.ensuring(
+            Effect.sync(() => {
+              if (!lane) return;
+              creating.delete(key);
+              for (const [childID, pending] of prompting) if (pending === key) prompting.delete(childID);
+            }),
+          ),
+        );
       });
 
       yield* ctx.tool.transform((editor) => {
