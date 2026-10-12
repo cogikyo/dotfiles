@@ -87,7 +87,7 @@ alias ls='echo; lsd'
 alias n='nvim'
 alias update='dctl update'
 function c() {
-    opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
+    opencode "$@"
 }
 crq() { hyprd opencode queue }
 crn() { hyprd opencode now }

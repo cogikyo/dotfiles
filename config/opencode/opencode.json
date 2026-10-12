@@ -305,7 +305,7 @@
       "disabled": true
     },
     "markdown": {
-      "command": ["sh", "-c", "out=$(prettierd \"$1\" < \"$1\") && printf '%s\\n' \"$out\" > \"$1\"", "_", "$FILE"],
+      "command": ["sh", "-c", "out=$(\"$HOME/.local/share/nvim/mason/bin/prettierd\" \"$1\" < \"$1\") && printf '%s\\n' \"$out\" > \"$1\"", "_", "$FILE"],
       "extensions": [".md"]
     }
   },

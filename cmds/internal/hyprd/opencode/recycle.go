@@ -18,28 +18,52 @@ const (
 )
 
 func recycle(snapshot Snapshot, skip map[paneKey]string, force bool) []string {
-	results := make([]string, 0, len(snapshot.Panes))
+	closed, details := closeTUIs(snapshot, skip, force)
+	return append(details, relaunch(closed)...)
+}
+
+func closeTUIs(snapshot Snapshot, skip map[paneKey]string, force bool) ([]Pane, []string) {
+	var closed []Pane
+	var details []string
 	for _, pane := range snapshot.Panes {
 		key := paneKey{KittyPID: pane.KittyPID, PaneID: pane.KittyPaneID}
-		label := fmt.Sprintf("kitty %d pane %d", pane.KittyPID, pane.KittyPaneID)
 		if reason := skip[key]; reason != "" {
-			results = append(results, label+": skipped ("+reason+")")
+			details = append(details, pane.label()+": skipped ("+reason+")")
 			continue
 		}
 		if !force {
 			if reason := currentPaneGate(pane); reason != "" {
-				results = append(results, label+": skipped ("+reason+")")
+				details = append(details, pane.label()+": skipped ("+reason+")")
 				continue
 			}
 		}
-		result, err := recyclePane(pane)
-		if err != nil {
-			results = append(results, label+": failed ("+err.Error()+")")
-			continue
+		skipped, err := closeTUI(pane)
+		switch {
+		case err != nil:
+			details = append(details, pane.label()+": failed ("+err.Error()+")")
+		case skipped != "":
+			details = append(details, pane.label()+": skipped ("+skipped+")")
+		default:
+			closed = append(closed, pane)
 		}
-		results = append(results, label+": "+result)
 	}
-	return results
+	return closed, details
+}
+
+func relaunch(panes []Pane) []string {
+	details := make([]string, 0, len(panes))
+	for _, pane := range panes {
+		result, err := launchTUI(pane)
+		if err != nil {
+			result = "failed (" + err.Error() + ")"
+		}
+		details = append(details, pane.label()+": "+result)
+	}
+	return details
+}
+
+func (p Pane) label() string {
+	return fmt.Sprintf("kitty %d pane %d", p.KittyPID, p.KittyPaneID)
 }
 
 func currentPaneGate(target Pane) string {
@@ -61,7 +85,44 @@ func currentPaneGate(target Pane) string {
 	return ""
 }
 
-func recyclePane(snapshot Pane) (string, error) {
+func closeTUI(snapshot Pane) (string, error) {
+	client := kitty.NewClient(snapshot.KittyPID)
+	pane, found, err := client.Pane(snapshot.KittyPaneID)
+	if err != nil {
+		return "", err
+	}
+	if !found {
+		return "pane closed", nil
+	}
+
+	if !loginZshReady(pane) {
+		if !tuiIsForeground(snapshot, pane) {
+			return "foreground changed", nil
+		}
+		if err := signal(snapshot.TUIPID, syscall.SIGTERM); err != nil {
+			return "", fmt.Errorf("SIGTERM TUI %d: %w", snapshot.TUIPID, err)
+		}
+		if !waitTUIExit(client, snapshot, termWait) {
+			current, found, err := client.Pane(snapshot.KittyPaneID)
+			if err != nil {
+				return "", fmt.Errorf("inspect TUI before SIGKILL: %w", err)
+			}
+			if !found || !tuiIsForeground(snapshot, current) {
+				return "foreground changed before SIGKILL", nil
+			}
+			if err := signal(snapshot.TUIPID, syscall.SIGKILL); err != nil {
+				return "", fmt.Errorf("SIGKILL TUI %d: %w", snapshot.TUIPID, err)
+			}
+		}
+	}
+
+	if !waitLoginZsh(client, snapshot.KittyPaneID, shellWait) {
+		return "login zsh did not become ready", nil
+	}
+	return "", nil
+}
+
+func launchTUI(snapshot Pane) (string, error) {
 	client := kitty.NewClient(snapshot.KittyPID)
 	pane, found, err := client.Pane(snapshot.KittyPaneID)
 	if err != nil {
@@ -70,33 +131,11 @@ func recyclePane(snapshot Pane) (string, error) {
 	if !found {
 		return "skipped (pane closed)", nil
 	}
-
 	if !loginZshReady(pane) {
-		if !snapshotAttachIsForeground(snapshot, pane) {
-			return "skipped (foreground changed)", nil
-		}
-		if err := signal(snapshot.AttachPID, syscall.SIGTERM); err != nil {
-			return "", fmt.Errorf("SIGTERM attach %d: %w", snapshot.AttachPID, err)
-		}
-		if !waitAttachExit(client, snapshot, termWait) {
-			current, found, err := client.Pane(snapshot.KittyPaneID)
-			if err != nil {
-				return "", fmt.Errorf("inspect attach before SIGKILL: %w", err)
-			}
-			if !found || !snapshotAttachIsForeground(snapshot, current) {
-				return "skipped (foreground changed before SIGKILL)", nil
-			}
-			if err := signal(snapshot.AttachPID, syscall.SIGKILL); err != nil {
-				return "", fmt.Errorf("SIGKILL attach %d: %w", snapshot.AttachPID, err)
-			}
-		}
-	}
-
-	if !waitLoginZsh(client, snapshot.KittyPaneID, shellWait) {
-		return "skipped (login zsh did not become ready)", nil
+		return "skipped (foreground changed before relaunch)", nil
 	}
 	command := "c\n"
-	result := "recycled (unpinned picker)"
+	result := "recycled (home)"
 	if validSessionID(snapshot.SessionID) {
 		command = "c --session " + snapshot.SessionID + "\n"
 		result = "recycled " + snapshot.SessionID
@@ -107,12 +146,12 @@ func recyclePane(snapshot Pane) (string, error) {
 	return result, nil
 }
 
-func snapshotAttachIsForeground(snapshot Pane, pane kitty.Pane) bool {
-	if snapshot.AttachPID <= 0 || snapshot.AttachPID == pane.PID {
+func tuiIsForeground(snapshot Pane, pane kitty.Pane) bool {
+	if snapshot.TUIPID <= 0 || snapshot.TUIPID == pane.PID {
 		return false
 	}
 	for _, process := range pane.ForegroundProcesses {
-		if process.PID == snapshot.AttachPID && isAttachCommand(process.Cmdline) {
+		if process.PID == snapshot.TUIPID && isTUICommand(process.Cmdline) {
 			return true
 		}
 	}
@@ -167,11 +206,11 @@ func signal(pid int, sig syscall.Signal) error {
 	return err
 }
 
-func waitAttachExit(client *kitty.Client, snapshot Pane, timeout time.Duration) bool {
+func waitTUIExit(client *kitty.Client, snapshot Pane, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for {
 		pane, found, err := client.Pane(snapshot.KittyPaneID)
-		if err == nil && (!found || !snapshotAttachIsForeground(snapshot, pane)) {
+		if err == nil && (!found || !tuiIsForeground(snapshot, pane)) {
 			return true
 		}
 		if !time.Now().Before(deadline) {

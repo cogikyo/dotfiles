@@ -4,6 +4,7 @@ package opencode
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"strconv"
@@ -256,13 +257,13 @@ func (c *Controller) take() *job {
 func (c *Controller) run(job *job) result {
 	mode := c.mode(job)
 	if mode == ModeRecycle {
-		c.update(job, "running", "health", "checking OpenCode backend health")
+		c.update(job, "running", "health", "checking OpenCode service health")
 		if err := c.api.health(context.Background()); err != nil {
-			return result{state: "error", message: "backend is unavailable: " + err.Error()}
+			return result{state: "error", message: "service is unavailable: " + err.Error()}
 		}
 	}
 
-	c.update(job, "running", "snapshot", "capturing OpenCode attach panes")
+	c.update(job, "running", "snapshot", "capturing OpenCode TUI panes")
 	snapshot, details, err := takeSnapshot(job.status.ID, mode)
 	if err != nil {
 		return result{state: "error", message: "snapshot failed: " + err.Error()}
@@ -271,7 +272,7 @@ func (c *Controller) run(job *job) result {
 	if mode == ModeRecycle {
 		block, skip := paneGates(snapshot)
 		maps.Copy(skip, block)
-		c.update(job, "running", "recycle", fmt.Sprintf("recycling %d attach panes", len(snapshot.Panes)))
+		c.update(job, "running", "recycle", fmt.Sprintf("recycling %d TUI panes", len(snapshot.Panes)))
 		details = append(details, recycle(snapshot, skip, false)...)
 		return result{state: "done", message: recycleSummary(snapshot), details: details}
 	}
@@ -287,7 +288,7 @@ func (c *Controller) run(job *job) result {
 		details = append(details, gateResult.details...)
 	}
 
-	c.update(job, "running", "snapshot", "recapturing OpenCode attach panes")
+	c.update(job, "running", "snapshot", "recapturing OpenCode TUI panes")
 	fresh, snapDetails, err := takeSnapshot(job.status.ID, c.mode(job))
 	if err != nil {
 		return result{state: "error", message: "snapshot failed: " + err.Error(), details: details}
@@ -295,28 +296,42 @@ func (c *Controller) run(job *job) result {
 	snapshot = fresh
 	details = append(details, snapDetails...)
 
-	if !c.beginRestart(job) {
+	if !c.beginStop(job) {
 		return result{state: "canceled", message: "queued refresh canceled", details: details}
 	}
-	if err := restartService(context.Background()); err != nil {
-		return result{state: "error", message: "restart failed: " + err.Error(), details: details}
+	active, activeErr := c.api.active(context.Background())
+	c.update(job, "running", "close", fmt.Sprintf("closing %d TUI panes", len(snapshot.Panes)))
+	closed, closeDetails := closeTUIs(snapshot, skip, c.mode(job) == ModeNow)
+	details = append(details, closeDetails...)
+
+	c.update(job, "running", "stop", "stopping the OpenCode service")
+	if err := stopService(context.Background()); err != nil {
+		details = append(details, relaunch(closed)...)
+		return result{state: "error", message: "stop failed: " + err.Error(), details: details}
 	}
-	c.update(job, "running", "health", "waiting for OpenCode backend health")
-	if err := c.api.waitHealthy(context.Background(), healthCeiling); err != nil {
-		return result{state: "error", message: "backend health failed: " + err.Error(), details: details}
+	message := "OpenCode service refreshed"
+	switch {
+	case len(active) > 0:
+		message += fmt.Sprintf("; interrupted %d active sessions, which the new service resumes", len(active))
+	case activeErr != nil && !errors.Is(activeErr, errAbsent):
+		message += "; active sessions unknown (" + activeErr.Error() + ")"
 	}
 
-	c.update(job, "running", "recycle", fmt.Sprintf("recycling %d attach panes", len(snapshot.Panes)))
-	details = append(details, recycle(snapshot, skip, c.mode(job) == ModeNow)...)
-	return result{state: "done", message: "OpenCode backend refreshed; " + recycleSummary(snapshot), details: details}
+	c.update(job, "running", "recycle", fmt.Sprintf("relaunching %d TUI panes", len(closed)))
+	details = append(details, relaunch(closed)...)
+	if len(closed) == 0 {
+		return result{state: "done", message: message + "; service stopped until the next c starts it", details: details}
+	}
+
+	c.update(job, "running", "health", "waiting for the TUI-started OpenCode service")
+	if err := c.api.waitHealthy(context.Background(), healthCeiling); err != nil {
+		return result{state: "error", message: "service health failed: " + err.Error(), details: details}
+	}
+	return result{state: "done", message: message + "; " + recycleSummary(snapshot), details: details}
 }
 
 func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[paneKey]string, result) {
 	deadline := time.Now().Add(queueCeiling)
-	directories := make(map[string]struct{}, len(snapshot.Directories))
-	for _, directory := range snapshot.Directories {
-		addDirectory(directories, directory)
-	}
 	quiet := 0
 	lastReason := "quiet window was incomplete"
 	for {
@@ -338,12 +353,19 @@ func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[pa
 		}
 
 		pollContext, cancel := context.WithDeadline(context.Background(), deadline)
-		busy, reason, err := c.api.busy(pollContext, directoryList(directories))
+		active, err := c.api.active(pollContext)
 		cancel()
-		if err != nil {
-			c.update(job, "running", "gate", "backend down; skipping quiet wait")
+		busy, reason := len(active) > 0, strings.Join(active, ", ")+" running"
+		switch {
+		case err == nil:
+		case errors.Is(err, errAbsent):
+			c.update(job, "running", "gate", "service down; skipping quiet wait")
 			_, skip := paneGates(snapshot)
-			return snapshot, skip, result{details: []string{"backend down; skipped quiet wait"}}
+			return snapshot, skip, result{details: []string{"service down; skipped quiet wait: " + err.Error()}}
+		case errors.Is(err, errUnavailable):
+			busy, reason = true, err.Error()
+		default:
+			return snapshot, nil, result{state: "error", message: "cannot observe OpenCode sessions: " + err.Error()}
 		}
 		if busy {
 			quiet = 0
@@ -382,9 +404,6 @@ func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[pa
 		fresh, _, snapErr := takeSnapshot(job.status.ID, ModeQueue)
 		if snapErr != nil {
 			continue
-		}
-		for _, directory := range fresh.Directories {
-			addDirectory(directories, directory)
 		}
 		snapshot = fresh
 	}
@@ -427,15 +446,15 @@ func (c *Controller) RebuildBlocked() string {
 	return "opencode refresh job " + job.status.ID + " in flight"
 }
 
-func (c *Controller) beginRestart(job *job) bool {
+func (c *Controller) beginStop(job *job) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if job.cancel {
 		return false
 	}
 	job.status.State = "running"
-	job.status.Phase = "restart"
-	job.status.Message = "restarting opencode.service"
+	job.status.Phase = "stop"
+	job.status.Message = "preparing to stop the OpenCode service"
 	job.status.UpdatedAt = time.Now()
 	return true
 }
@@ -502,9 +521,9 @@ func wake(channel chan struct{}) {
 
 func recycleSummary(snapshot Snapshot) string {
 	if len(snapshot.Panes) == 0 {
-		return "no attach panes found"
+		return "no TUI panes found"
 	}
-	return fmt.Sprintf("processed %d attach panes", len(snapshot.Panes))
+	return fmt.Sprintf("processed %d TUI panes", len(snapshot.Panes))
 }
 
 func notificationBody(status Status) string {

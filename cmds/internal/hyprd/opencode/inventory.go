@@ -2,9 +2,12 @@ package opencode
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,36 +17,25 @@ import (
 )
 
 type Snapshot struct {
-	JobID       string    `json:"job_id"`
-	Mode        Mode      `json:"mode"`
-	CreatedAt   time.Time `json:"created_at"`
-	Directories []string  `json:"directories"`
-	Panes       []Pane    `json:"panes"`
+	JobID     string    `json:"job_id"`
+	Mode      Mode      `json:"mode"`
+	CreatedAt time.Time `json:"created_at"`
+	Panes     []Pane    `json:"panes"`
 }
 
 type Pane struct {
 	KittyPaneID int    `json:"kitty_pane_id"`
 	KittyPID    int    `json:"kitty_pid"`
-	AttachPID   int    `json:"attach_pid"`
+	TUIPID      int    `json:"tui_pid"`
 	Directory   string `json:"directory"`
 	SessionID   string `json:"session_id,omitempty"`
 	Focused     bool   `json:"focused"`
 	PromptDirty *bool  `json:"prompt_dirty,omitempty"`
-	Generation  int64  `json:"generation,omitempty"`
 }
 
 type paneKey struct {
 	KittyPID int
 	PaneID   int
-}
-
-type contextRecord struct {
-	KittyPID    int    `json:"kitty_pid"`
-	KittyWindow int    `json:"kitty_window_id"`
-	UpdatedAt   int64  `json:"updated_at"`
-	Directory   string `json:"directory"`
-	Generation  int64  `json:"generation"`
-	sessionID   string
 }
 
 func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
@@ -56,46 +48,24 @@ func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
 		warnings = append(warnings, "kitty inventory incomplete: "+err.Error())
 	}
 
-	contexts, contextErr := readContexts()
-	live := make(map[paneKey]struct{}, len(panes))
-	for _, pane := range panes {
-		live[paneKey{KittyPID: pane.KittyPID, PaneID: pane.Pane.ID}] = struct{}{}
-	}
-	byPane := contextsByPane(contexts, live)
-	directories := make(map[string]struct{})
-	for _, ctx := range byPane {
-		addDirectory(directories, ctx.Directory)
-	}
-
 	snapshot := Snapshot{JobID: jobID, Mode: mode, CreatedAt: time.Now()}
 	for _, located := range panes {
-		attach, found := attachProcess(located.Pane)
+		tui, found := tuiProcess(located.Pane)
 		if !found {
 			continue
 		}
 
-		key := paneKey{KittyPID: located.KittyPID, PaneID: located.Pane.ID}
-		ctx := byPane[key]
-		directory := option(attach.Cmdline, "--dir")
-		if directory != "" && !filepath.IsAbs(directory) {
-			base := attach.CWD
-			if base == "" {
-				base = located.Pane.CWD
-			}
-			directory = filepath.Join(base, directory)
-		}
-		if directory == "" {
-			directory = attach.CWD
-		}
+		directory := tui.CWD
 		if directory == "" {
 			directory = located.Pane.CWD
 		}
-		directory = cleanDirectory(directory)
-		addDirectory(directories, directory)
 
-		sessionID := option(attach.Cmdline, "--session", "-s")
-		if !validSessionID(sessionID) {
-			sessionID = ctx.sessionID
+		sessionID, recorded, contextErr := shownSession(tui.PID)
+		if contextErr != nil {
+			warnings = append(warnings, fmt.Sprintf("TUI %d context unavailable: %v", tui.PID, contextErr))
+		}
+		if !recorded {
+			sessionID = option(tui.Cmdline, "--session", "-s")
 		}
 		if !validSessionID(sessionID) {
 			sessionID = ""
@@ -104,11 +74,10 @@ func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
 		snapshot.Panes = append(snapshot.Panes, Pane{
 			KittyPaneID: located.Pane.ID,
 			KittyPID:    located.KittyPID,
-			AttachPID:   attach.PID,
-			Directory:   directory,
+			TUIPID:      tui.PID,
+			Directory:   cleanDirectory(directory),
 			SessionID:   sessionID,
 			Focused:     located.Focused,
-			Generation:  ctx.Generation,
 		})
 	}
 
@@ -118,36 +87,49 @@ func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
 		}
 		return snapshot.Panes[i].KittyPaneID < snapshot.Panes[j].KittyPaneID
 	})
-	for directory := range directories {
-		snapshot.Directories = append(snapshot.Directories, directory)
-	}
-	sort.Strings(snapshot.Directories)
 
 	if err := persistSnapshot(snapshot); err != nil {
 		return Snapshot{}, nil, err
 	}
-	if contextErr != nil {
-		warnings = append(warnings, "Kitty context unavailable: "+contextErr.Error())
-	}
 	return snapshot, warnings, nil
 }
 
-func attachProcess(pane kitty.Pane) (kitty.Process, bool) {
+func tuiProcess(pane kitty.Pane) (kitty.Process, bool) {
 	for _, process := range pane.ForegroundProcesses {
-		if process.PID > 0 && process.PID != pane.PID && isAttachCommand(process.Cmdline) {
+		if process.PID > 0 && process.PID != pane.PID && isTUICommand(process.Cmdline) {
 			return process, true
 		}
 	}
 	return kitty.Process{}, false
 }
 
-func isAttachCommand(args []string) bool {
-	for i := 0; i+1 < len(args); i++ {
-		if filepath.Base(args[i]) == "opencode" && args[i+1] == "attach" {
-			return true
+var (
+	subcommands = []string{
+		"upgrade", "update", "uninstall", "acp", "api", "debug", "auth", "mcp", "plugin",
+		"models", "stats", "mini", "run", "session", "service", "reload", "pair", "serve",
+	}
+	valueFlags = []string{"--server", "--session", "-s", "--prompt", "--log-level", "--completions"}
+)
+
+func isTUICommand(args []string) bool {
+	if len(args) == 0 || filepath.Base(args[0]) != "opencode" {
+		return false
+	}
+	positionals := 0
+	for i := 1; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			if slices.Contains(valueFlags, arg) {
+				i++
+			}
+			continue
+		}
+		positionals++
+		if positionals > 1 || slices.Contains(subcommands, arg) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func option(args []string, names ...string) string {
@@ -177,45 +159,50 @@ func validSessionID(id string) bool {
 	return true
 }
 
-func readContexts() (map[string]contextRecord, error) {
-	path := contextPath()
+func shownSession(pid int) (string, bool, error) {
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if runtimeDir == "" {
+		return "", false, fmt.Errorf("XDG_RUNTIME_DIR is unset")
+	}
+	path := filepath.Join(runtimeDir, "opencode", "tui", strconv.Itoa(pid)+".json")
 	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", false, nil
+	}
 	if err != nil {
-		if os.IsNotExist(err) {
-			return map[string]contextRecord{}, nil
-		}
-		return map[string]contextRecord{}, fmt.Errorf("read %s: %w", path, err)
+		return "", false, err
 	}
-	var contexts map[string]contextRecord
-	if err := json.Unmarshal(data, &contexts); err != nil {
-		return map[string]contextRecord{}, fmt.Errorf("parse %s: %w", path, err)
+	var shown struct {
+		Start   string  `json:"start"`
+		Session *string `json:"session"`
 	}
-	for id, ctx := range contexts {
-		ctx.sessionID = id
-		contexts[id] = ctx
+	if err := json.Unmarshal(data, &shown); err != nil {
+		return "", false, fmt.Errorf("parse %s: %w", path, err)
 	}
-	return contexts, nil
+	start, err := processStart(pid)
+	if err != nil {
+		return "", false, err
+	}
+	if shown.Start != start {
+		return "", false, nil
+	}
+	if shown.Session == nil {
+		return "", true, nil
+	}
+	return *shown.Session, true, nil
 }
 
-func contextsByPane(contexts map[string]contextRecord, live map[paneKey]struct{}) map[paneKey]contextRecord {
-	byPane := make(map[paneKey]contextRecord)
-	for _, ctx := range contexts {
-		key := paneKey{KittyPID: ctx.KittyPID, PaneID: ctx.KittyWindow}
-		if _, ok := live[key]; !ok {
-			continue
-		}
-		if current, ok := byPane[key]; !ok || ctx.UpdatedAt > current.UpdatedAt {
-			byPane[key] = ctx
-		}
+func processStart(pid int) (string, error) {
+	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	if err != nil {
+		return "", err
 	}
-	return byPane
-}
-
-func contextPath() string {
-	if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
-		return filepath.Join(runtimeDir, "opencode", "kitty-context.json")
+	end := strings.LastIndexByte(string(data), ')')
+	fields := strings.Fields(string(data)[end+1:])
+	if end < 0 || len(fields) < 20 {
+		return "", fmt.Errorf("unexpected /proc/%d/stat", pid)
 	}
-	return filepath.Join("/tmp", "opencode-"+strconv.Itoa(os.Getuid()), "kitty-context.json")
+	return fields[19], nil
 }
 
 func persistSnapshot(snapshot Snapshot) error {
@@ -245,20 +232,6 @@ func persistSnapshot(snapshot Snapshot) error {
 		return fmt.Errorf("publish snapshot: %w", err)
 	}
 	return nil
-}
-
-func addDirectory(set map[string]struct{}, directory string) {
-	if directory = cleanDirectory(directory); directory != "" {
-		set[directory] = struct{}{}
-	}
-}
-
-func directoryList(set map[string]struct{}) []string {
-	list := make([]string, 0, len(set))
-	for directory := range set {
-		list = append(list, directory)
-	}
-	return list
 }
 
 func cleanDirectory(directory string) string {

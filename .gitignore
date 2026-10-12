@@ -8,6 +8,7 @@ cmds/cmd/newtab/newtab
 secrets/identity
 /.secrets.dctl-*/
 config/gh/hosts.yml
+config/opencode/service*.json
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/

@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func restartService(ctx context.Context) error {
+func stopService(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "systemctl", "--user", "restart", "opencode.service").CombinedOutput()
+	out, err := exec.CommandContext(ctx, "opencode", "service", "stop").CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("systemctl restart: %w: %s", err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("opencode service stop: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }

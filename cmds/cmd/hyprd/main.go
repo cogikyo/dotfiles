@@ -173,7 +173,7 @@ func cmdInit() {
 	dbusArgs := append([]string{"--systemd"}, envNames...)
 	runInitCommand("dbus-update-activation-environment", dbusArgs...)
 	runInitCommand("systemctl", "--user", "start", "hyprland-session.target")
-	runInitCommand("systemctl", "--user", "start", "hyprd.service", "ewwd.service", "opencode.service")
+	runInitCommand("systemctl", "--user", "start", "hyprd.service", "ewwd.service")
 
 	if !waitHyprdReady(10 * time.Second) {
 		fmt.Fprintln(os.Stderr, "hyprd init: hyprd.service did not become ready; skipping daemon init")
@@ -445,7 +445,7 @@ Lock:
 OpenCode:
   hyprd opencode queue          Refresh after three quiet polls; notify on completion
   hyprd opencode now            Refresh immediately and watch progress
-  hyprd opencode recycle        Recycle safe attach panes and watch progress
+  hyprd opencode recycle        Recycle safe TUI panes and watch progress
   hyprd opencode status [job]   Poll the active or named refresh job
   hyprd opencode cancel [job]   Cancel a waiting or queued refresh job
 

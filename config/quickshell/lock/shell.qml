@@ -142,7 +142,21 @@ ShellRoot {
     property string feedKey: ""
     property var sessions: []
 
-    function request(path, directory, done) {
+    FileView {
+        id: service
+        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/opencode/service.json"
+        blockLoading: true
+        printErrors: false
+    }
+
+    function request(path, done) {
+        let registration
+        try {
+            registration = JSON.parse(service.text())
+        } catch (e) {
+            done(null)
+            return
+        }
         const xhr = new XMLHttpRequest()
         xhr.onreadystatechange = () => {
             if (xhr.readyState !== XMLHttpRequest.DONE)
@@ -155,41 +169,25 @@ ShellRoot {
                     console.warn("lock opencode:", path, e)
                 }
             }
-            done(body)
+            done(body?.data ?? null)
         }
-        xhr.open("GET", "http://127.0.0.1:4096" + path)
-        if (directory)
-            xhr.setRequestHeader("x-opencode-directory", directory)
+        xhr.open("GET", registration.url + path)
+        if (registration.password)
+            xhr.setRequestHeader("Authorization", "Basic " + Qt.btoa("opencode:" + registration.password))
         xhr.send()
     }
 
     function scanAgents() {
+        service.reload()
         if (Object.keys(tints).length === 0 && theme.loaded)
             loadTints()
-        request("/project", "", projects => {
-            const dirs = [...new Set((projects ?? []).reduce((all, p) => all.concat(p.worktree, p.sandboxes ?? []), []).filter(d => d && d !== "/"))]
-            if (dirs.length === 0) {
-                shell.sessions = []
-                return
-            }
-            let pending = dirs.length
-            const busy = []
-            for (const dir of dirs) {
-                request("/session/status", dir, statuses => {
-                    for (const [id, status] of Object.entries(statuses ?? {}))
-                        if (status.type === "busy" || status.type === "retry")
-                            busy.push({ id: id, dir: dir })
-                    if (--pending === 0)
-                        shell.group(busy)
-                })
-            }
-        })
+        request("/api/session/active", active => shell.group(Object.keys(active ?? {})))
     }
 
-    function root(id, dir, done) {
-        request("/session/" + id, dir, info => {
+    function root(id, done) {
+        request("/api/session/" + id, info => {
             if (info?.parentID)
-                shell.root(info.parentID, dir, done)
+                shell.root(info.parentID, done)
             else
                 done(info)
         })
@@ -213,15 +211,15 @@ ShellRoot {
                 .sort((a, b) => b.id.localeCompare(a.id))
                 .map(r => ({ title: r.title, subs: r.agents.sort().map(name => shell.tints[name] ?? "") }))
         }
-        for (const session of busy) {
-            request("/session/" + session.id, session.dir, info => {
+        for (const id of busy) {
+            request("/api/session/" + id, info => {
                 if (!info?.parentID) {
                     if (info)
                         entry(info)
                     finish()
                     return
                 }
-                shell.root(info.parentID, session.dir, top => {
+                shell.root(info.parentID, top => {
                     if (top)
                         entry(top).agents.push(info.agent ?? "")
                     finish()
@@ -240,7 +238,7 @@ ShellRoot {
             console.warn("lock theme:", e)
             return
         }
-        request("/agent", "", agents => {
+        request("/api/agent", agents => {
             const out = {}
             for (const agent of agents ?? []) {
                 let value = palette.theme?.[agent.color] ?? agent.color
@@ -248,7 +246,7 @@ ShellRoot {
                     value = value?.dark
                 const hex = palette.defs?.[value] ?? value
                 if (typeof hex === "string" && hex.startsWith("#"))
-                    out[agent.name] = hex
+                    out[agent.id] = hex
             }
             shell.tints = out
         })

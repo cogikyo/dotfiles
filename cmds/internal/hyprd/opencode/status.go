@@ -3,59 +3,114 @@ package opencode
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
+	"net"
 	"net/http"
+	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
-	"sync"
+	"syscall"
 	"time"
 )
 
-const serverURL = "http://127.0.0.1:4096"
+var (
+	errAbsent      = errors.New("OpenCode service is not running")
+	errUnavailable = errors.New("OpenCode service is unavailable")
+)
 
 type apiClient struct {
 	http *http.Client
 }
 
-type project struct {
-	ID        string   `json:"id"`
-	Worktree  string   `json:"worktree"`
-	Sandboxes []string `json:"sandboxes"`
-}
-
-type sessionStatus struct {
-	Type string `json:"type"`
+type registration struct {
+	URL      string `json:"url"`
+	Password string `json:"password"`
 }
 
 func newAPIClient() *apiClient {
 	return &apiClient{http: &http.Client{Timeout: 3 * time.Second}}
 }
 
-func (a *apiClient) health(ctx context.Context) error {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/global/health", nil)
+func registrationPath() (string, error) {
+	state := os.Getenv("XDG_STATE_HOME")
+	if state == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		state = filepath.Join(home, ".local", "state")
+	}
+	return filepath.Join(state, "opencode", "service.json"), nil
+}
+
+func readRegistration() (registration, error) {
+	path, err := registrationPath()
+	if err != nil {
+		return registration{}, err
+	}
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return registration{}, fmt.Errorf("%w: no %s", errAbsent, path)
+	}
+	if err != nil {
+		return registration{}, fmt.Errorf("service registration: %w", err)
+	}
+	var found registration
+	if err := json.Unmarshal(data, &found); err != nil {
+		return registration{}, fmt.Errorf("parse %s: %w", path, err)
+	}
+	if found.URL == "" {
+		return registration{}, fmt.Errorf("%s has no url", path)
+	}
+	return found, nil
+}
+
+func (a *apiClient) get(ctx context.Context, path string, target any) error {
+	service, err := readRegistration()
 	if err != nil {
 		return err
 	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSuffix(service.URL, "/")+path, nil)
+	if err != nil {
+		return err
+	}
+	if service.Password != "" {
+		request.SetBasicAuth("opencode", service.Password)
+	}
 	response, err := a.http.Do(request)
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		return fmt.Errorf("%w: %s refused the connection", errAbsent, service.URL)
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() || errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%w: %s timed out", errUnavailable, path)
+	}
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
+	if response.StatusCode == http.StatusServiceUnavailable {
+		return fmt.Errorf("%w: %s is starting or stopping", errUnavailable, service.URL)
+	}
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %s", response.Status)
+		return fmt.Errorf("%s: HTTP %s", path, response.Status)
 	}
-	var health struct {
-		Healthy bool `json:"healthy"`
-	}
-	if err := decodeJSON(response.Body, &health); err != nil {
-		return err
-	}
-	if !health.Healthy {
-		return fmt.Errorf("backend reported unhealthy")
+	if err := decodeJSON(response.Body, target); err != nil {
+		return fmt.Errorf("%s: invalid response: %w", path, err)
 	}
 	return nil
+}
+
+func (a *apiClient) health(ctx context.Context) error {
+	var info struct {
+		Version string `json:"version"`
+	}
+	return a.get(ctx, "/api/info", &info)
 }
 
 func (a *apiClient) waitHealthy(ctx context.Context, ceiling time.Duration) error {
@@ -75,110 +130,19 @@ func (a *apiClient) waitHealthy(ctx context.Context, ceiling time.Duration) erro
 	}
 }
 
-func (a *apiClient) busy(ctx context.Context, base []string) (bool, string, error) {
-	if err := a.health(ctx); err != nil {
-		return false, "", err
+func (a *apiClient) active(ctx context.Context) ([]string, error) {
+	var active struct {
+		Data map[string]struct {
+			Type string `json:"type"`
+		} `json:"data"`
 	}
-
-	directories := make(map[string]struct{}, len(base))
-	for _, directory := range base {
-		addDirectory(directories, directory)
-	}
-
-	projects, err := a.projects(ctx)
-	if err != nil {
-		return false, "", err
-	}
-	for _, project := range projects {
-		if project.ID != "global" && cleanDirectory(project.Worktree) != string(filepath.Separator) {
-			addDirectory(directories, project.Worktree)
-		}
-		for _, sandbox := range project.Sandboxes {
-			addDirectory(directories, sandbox)
-		}
-	}
-	if len(directories) == 0 {
-		return false, "", nil
-	}
-
-	type result struct {
-		directory string
-		idle      bool
-		reason    string
-	}
-	results := make(chan result, len(directories))
-	var group sync.WaitGroup
-	for directory := range directories {
-		group.Go(func() {
-			idle, reason := a.directoryIdle(ctx, directory)
-			results <- result{directory: directory, idle: idle, reason: reason}
-		})
-	}
-	group.Wait()
-	close(results)
-
-	var blocked []string
-	for result := range results {
-		if !result.idle {
-			blocked = append(blocked, fmt.Sprintf("%s: %s", result.directory, result.reason))
-		}
-	}
-	sort.Strings(blocked)
-	return len(blocked) > 0, strings.Join(blocked, "; "), nil
-}
-
-func (a *apiClient) projects(ctx context.Context) ([]project, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/project", nil)
-	if err != nil {
+	if err := a.get(ctx, "/api/session/active", &active); err != nil {
 		return nil, err
 	}
-	response, err := a.http.Do(request)
-	if err != nil {
-		return nil, err
+	if active.Data == nil {
+		return nil, errors.New("/api/session/active: invalid response: missing data")
 	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %s", response.Status)
-	}
-	var projects []project
-	if err := decodeJSON(response.Body, &projects); err != nil {
-		return nil, err
-	}
-	return projects, nil
-}
-
-func (a *apiClient) directoryIdle(ctx context.Context, directory string) (bool, string) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/session/status", nil)
-	if err != nil {
-		return false, err.Error()
-	}
-	request.Header.Set("x-opencode-directory", directory)
-	response, err := a.http.Do(request)
-	if err != nil {
-		return false, err.Error()
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return false, "HTTP " + response.Status
-	}
-	var statuses map[string]sessionStatus
-	if err := decodeJSON(response.Body, &statuses); err != nil {
-		return false, "invalid status: " + err.Error()
-	}
-	if statuses == nil {
-		return false, "invalid null status"
-	}
-	for id, status := range statuses {
-		switch status.Type {
-		case "idle":
-			continue
-		case "busy", "retry":
-			return false, id + " is " + status.Type
-		default:
-			return false, id + " has unknown status " + fmt.Sprintf("%q", status.Type)
-		}
-	}
-	return true, ""
+	return slices.Sorted(maps.Keys(active.Data)), nil
 }
 
 func decodeJSON(reader io.Reader, target any) error {
