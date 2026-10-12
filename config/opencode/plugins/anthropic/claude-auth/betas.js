@@ -8,12 +8,11 @@ function getRequiredBetas() {
         .filter(Boolean);
 }
 // Session-level cache of excluded beta flags per model (resets on process restart)
-export function createBetaState() {
 const excludedBetas = new Map();
 // Track the last-seen beta flags env var and model to detect changes
 let lastBetaFlagsEnv = process.env.ANTHROPIC_BETA_FLAGS;
 let lastModelId;
-function getExcludedBetas(modelId) {
+export function getExcludedBetas(modelId) {
     // Reset exclusions if user changed ANTHROPIC_BETA_FLAGS
     const currentBetaFlags = process.env.ANTHROPIC_BETA_FLAGS;
     if (currentBetaFlags !== lastBetaFlagsEnv) {
@@ -27,21 +26,21 @@ function getExcludedBetas(modelId) {
     lastModelId = modelId;
     return excludedBetas.get(modelId) ?? new Set();
 }
-function addExcludedBeta(modelId, beta) {
+export function addExcludedBeta(modelId, beta) {
     const existing = excludedBetas.get(modelId) ?? new Set();
     existing.add(beta);
     excludedBetas.set(modelId, existing);
 }
-function resetExcludedBetas() {
+export function resetExcludedBetas() {
     excludedBetas.clear();
     lastModelId = undefined;
 }
-function isLongContextError(responseBody) {
+export function isLongContextError(responseBody) {
     return (responseBody.includes("Extra usage is required for long context requests") ||
         responseBody.includes("long context beta is not yet available") ||
         responseBody.includes("You're out of extra usage"));
 }
-function getNextBetaToExclude(modelId) {
+export function getNextBetaToExclude(modelId) {
     const excluded = getExcludedBetas(modelId);
     for (const beta of LONG_CONTEXT_BETAS) {
         if (!excluded.has(beta)) {
@@ -50,9 +49,6 @@ function getNextBetaToExclude(modelId) {
     }
     return null; // All long-context betas already excluded
 }
-return { getExcludedBetas, addExcludedBeta, resetExcludedBetas, getNextBetaToExclude, isLongContextError };
-}
-export const { getExcludedBetas, addExcludedBeta, resetExcludedBetas, getNextBetaToExclude, isLongContextError } = createBetaState();
 export function getModelBetas(modelId, excluded) {
     let betas = [...getRequiredBetas()];
     // The legacy context-1m-2025-08-07 beta is never sent — the API supports
