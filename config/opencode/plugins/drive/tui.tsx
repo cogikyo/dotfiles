@@ -1,0 +1,128 @@
+import { Plugin } from "@opencode/plugin/tui";
+import { createEffect, Show } from "solid-js";
+import { createStore } from "solid-js/store";
+import { api, type Entry } from "./rpc.ts";
+
+export default Plugin.define({
+  id: "drive",
+  setup(context) {
+    const rpc = context.client.rpc(api);
+    const [armed, setArmed] = createStore<Record<string, boolean>>({});
+
+    const options = (root: string) => {
+      const session = context.data.session.get(root);
+      return session ? { location: { directory: session.location.directory } } : undefined;
+    };
+    const current = () => {
+      const route = context.ui.router.current();
+      return route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
+    };
+    const sync = async (root: string) => {
+      const state = await rpc.state({ sessionID: root }, options(root));
+      setArmed(state.root, state.armed);
+      return state.armed;
+    };
+    const fail = (error: unknown) =>
+      context.ui.toast.show({
+        message: `Drive: ${error instanceof Error ? error.message : JSON.stringify(error)}`,
+        variant: "error",
+      });
+
+    const toggle = async () => {
+      const root = current();
+      if (!root) return context.ui.toast.show({ message: "Open a session to toggle drive mode", variant: "warning" });
+      const state = await rpc.arm({ sessionID: root, armed: !(armed[root] ?? (await sync(root))) }, options(root));
+      setArmed(state.root, state.armed);
+      context.ui.toast.show(
+        state.armed
+          ? { message: "Drive mode on: a reviewer answers permission requests", variant: "warning" }
+          : { message: "Drive mode off", variant: "info" },
+      );
+    };
+
+    const review = async () => {
+      const root = current();
+      if (!root)
+        return context.ui.toast.show({ message: "Open a session to review drive decisions", variant: "warning" });
+      const entries = await rpc.journal({ sessionID: root, limit: 100 }, options(root));
+      if (entries.length === 0) return context.ui.toast.show({ message: "No drive decisions for this session yet" });
+      const entry = await context.ui.dialog.select({
+        title: "Drive decisions",
+        placeholder: "Search decisions",
+        options: entries.map(choice),
+      });
+      if (entry) await context.ui.dialog.alert({ title: `Drive ${entry.decision}`, message: details(entry) });
+    };
+
+    context.ui.slot({
+      append: "prompt.footer.status",
+      render: (input) => {
+        const root = () => (input.sessionID ? context.data.session.root(input.sessionID) : undefined);
+        createEffect(() => {
+          const id = root();
+          if (id && !(id in armed)) sync(id).catch(fail);
+        });
+        return <Badge context={context} armed={armed[root() ?? ""] ?? false} />;
+      },
+    });
+
+    context.keymap.layer(() => ({
+      commands: [
+        {
+          id: "drive.toggle",
+          title: "Toggle drive mode",
+          description: "Let a reviewer model answer permission requests for this session tree",
+          group: "Session",
+          bind: "<leader>d",
+          palette: true,
+          slash: { name: "drive" },
+          run: () => toggle().catch(fail),
+        },
+        {
+          id: "drive.journal",
+          title: "Review drive decisions",
+          description: "List the reviewer's recent decisions for this session tree",
+          group: "Session",
+          palette: true,
+          slash: { name: "drive-log" },
+          run: () => review().catch(fail),
+        },
+      ],
+    }));
+
+    return rpc.events.on("changed", (event) => setArmed(event.data.root, event.data.armed));
+  },
+});
+
+function Badge(props: { context: Plugin.Context; armed: boolean }) {
+  return (
+    <Show when={props.armed}>
+      <text fg={props.context.theme.text.feedback.warning.base} flexShrink={0}>
+        <b>DRIVE</b>
+      </text>
+    </Show>
+  );
+}
+
+function choice(entry: Entry) {
+  return {
+    title: `${entry.decision.padEnd(5)} ${entry.action}: ${entry.resources.join(" ")}`,
+    description: entry.reason,
+    footer: new Date(entry.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    value: entry,
+  };
+}
+
+function details(entry: Entry) {
+  return [
+    `time: ${entry.time}`,
+    `session: ${entry.session}`,
+    `agent: ${entry.agent ?? "unknown"}`,
+    `action: ${entry.action}`,
+    ...entry.resources.map((resource) => `- ${resource}`),
+    "",
+    entry.reason,
+    "",
+    `model: ${entry.model}`,
+  ].join("\n");
+}
