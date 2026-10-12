@@ -11,92 +11,96 @@ import (
 )
 
 var (
-	gatherSite = regexp.MustCompile(`keybinds\.gather\(`)
-	getSite    = regexp.MustCompile(`keybinds\.get\("([^"\\]+)"\)`)
+	layerSite  = regexp.MustCompile(`\.(createLayer|layer)\(\(\)=>`)
+	commandID  = regexp.MustCompile(`\{id:"[^"\\]+"`)
 	actionSite = regexp.MustCompile(`command:"([\w.-]+)"`)
-	mapField   = regexp.MustCompile(`^([\w$]+)\.map\(\(?([\w$]+)\)?=>([\w$]+)\.(\w+)\)$`)
+	memo       = regexp.MustCompile(`^[\w$]+\(\(\)=>\[`)
+	mapField   = regexp.MustCompile(`^(.+)\.map\(\(?([\w$]+)\)?=>([\w$]+)\.(\w+)\)$`)
 	identifier = regexp.MustCompile(`^[\w$]+$`)
 	member     = regexp.MustCompile(`^([\w$]+)\.(\w+)$`)
 )
 
-func opencodeCommands(data []byte, first string) (map[string]string, error) {
-	needle := []byte("{" + first + `:"`)
-	for at := 0; ; {
-		i := bytes.Index(data[at:], needle)
-		if i < 0 {
-			return nil, fmt.Errorf("command map starting with %s not found", first)
+func opencodeSites(data []byte, names []string) (map[string]string, error) {
+	known := map[string]bool{}
+	for _, name := range names {
+		known[name] = true
+	}
+	sites := map[string]string{}
+	add := func(names []string, global bool, scope string) {
+		for _, name := range names {
+			if !known[name] {
+				continue
+			}
+			if current, ok := sites[name]; ok && (current == "" || !global) {
+				continue
+			}
+			switch {
+			case global:
+				sites[name] = ""
+			case scope != "":
+				sites[name] = scope
+			default:
+				sites[name], _, _ = strings.Cut(name, ".")
+			}
 		}
-		at += i + 1
-		end, err := jsEnd(data, at-1)
+	}
+
+	var layers [][2]int
+	for _, m := range layerSite.FindAllSubmatchIndex(data, -1) {
+		open := m[1] - len("()=>") - 1
+		end, err := jsEnd(data, open)
 		if err != nil {
 			continue
 		}
-		commands := map[string]string{}
-		for _, prop := range jsSplit(string(data[at : end-1])) {
+		layers = append(layers, [2]int{open, end})
+		object, ok := jsLayer(data[m[1] : end-1])
+		if !ok {
+			continue
+		}
+		global := string(data[m[2]:m[3]]) == "createLayer"
+		var commands, bindings string
+		for _, prop := range jsSplit(object[1 : len(object)-1]) {
 			name, value, _ := strings.Cut(prop, ":")
-			command, err := strconv.Unquote(value)
-			if err != nil {
-				commands = nil
-				break
+			switch name {
+			case "mode":
+				global = value == `"global"` || value == `"base"`
+			case "commands":
+				commands = value
+			case "bindings":
+				bindings = value
 			}
-			commands[name] = command
 		}
-		if len(commands) > 0 {
-			return commands, nil
+		if commands != "" {
+			add(jsCommands(data, commands, open), global, "")
+		}
+		if bindings != "" {
+			list, _ := jsList(data, bindings, open, 0)
+			add(list, global, "")
 		}
 	}
-}
-
-func opencodeScopes(data []byte, commands []string) (map[string][]string, error) {
-	known := map[string]bool{}
-	for _, c := range commands {
-		known[c] = true
-	}
-	scopes := map[string][]string{}
-	add := func(command, scope string) {
-		if known[command] && !slices.Contains(scopes[command], scope) {
-			scopes[command] = append(scopes[command], scope)
-		}
+	if len(layers) == 0 {
+		return nil, errors.New("no keymap layer sites")
 	}
 
-	gathers := gatherSite.FindAllIndex(data, -1)
-	if len(gathers) == 0 {
-		return nil, errors.New("no keybinds.gather sites")
-	}
-	for _, loc := range gathers {
-		open := loc[1] - 1
+	needle := []byte("bindings:[")
+	for at := 0; ; {
+		i := bytes.Index(data[at:], needle)
+		if i < 0 {
+			break
+		}
+		at += i + len(needle)
+		open := at - 1
+		if slices.ContainsFunc(layers, func(l [2]int) bool { return l[0] < open && open < l[1] }) {
+			continue
+		}
 		end, err := jsEnd(data, open)
 		if err != nil {
-			return nil, fmt.Errorf("keybinds.gather at %d: %w", open, err)
+			continue
 		}
-		args := jsSplit(string(data[open+1 : end-1]))
-		if len(args) != 2 {
-			return nil, fmt.Errorf("keybinds.gather at %d: %d arguments", open, len(args))
-		}
-		layer, err := strconv.Unquote(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("keybinds.gather at %d: layer %s: %w", open, args[0], err)
-		}
-		list, err := jsList(data, args[1], open, 0)
-		if err != nil {
-			return nil, fmt.Errorf("keybinds.gather(%q): %w", layer, err)
-		}
-		for _, command := range list {
-			add(command, layer)
-		}
+		list, _ := jsList(data, string(data[open:end]), open, 0)
+		add(list, true, "")
 	}
 
-	gets := getSite.FindAllSubmatch(data, -1)
-	if len(gets) == 0 {
-		return nil, errors.New("no keybinds.get sites")
-	}
-	for _, m := range gets {
-		command := string(m[1])
-		namespace := command[:max(0, strings.LastIndex(command, "."))]
-		add(command, namespace)
-	}
-
-	dialogs := 0
 	for _, loc := range actionSite.FindAllSubmatchIndex(data, -1) {
 		from := max(0, loc[0]-512)
 		open := bytes.LastIndexAny(data[from:loc[0]], "{}")
@@ -108,25 +112,72 @@ func opencodeScopes(data []byte, commands []string) (map[string][]string, error)
 			continue
 		}
 		props := jsSplit(string(data[from+open+1 : end-1]))
-		if !slices.ContainsFunc(props, func(p string) bool {
+		if slices.ContainsFunc(props, func(p string) bool {
 			return strings.HasPrefix(p, "onTrigger:") || strings.HasPrefix(p, "onTrigger(")
 		}) {
-			continue
+			add([]string{string(data[loc[2]:loc[3]])}, false, "dialog")
 		}
-		add(string(data[loc[2]:loc[3]]), "dialog")
-		dialogs++
 	}
-	if dialogs == 0 {
-		return nil, errors.New("no dialog action sites")
+	if len(sites) == 0 {
+		return nil, errors.New("no keybinding sites")
 	}
-	return scopes, nil
+	return sites, nil
+}
+
+func jsLayer(body []byte) (string, bool) {
+	at := 0
+	switch {
+	case bytes.HasPrefix(body, []byte("({")):
+		at = 1
+	case bytes.HasPrefix(body, []byte("{")):
+		i := bytes.Index(body, []byte("return{"))
+		if i < 0 {
+			return "", false
+		}
+		at = i + len("return")
+	default:
+		return "", false
+	}
+	end, err := jsEnd(body, at)
+	if err != nil {
+		return "", false
+	}
+	return string(body[at:end]), true
+}
+
+func jsCommands(data []byte, expr string, near int) []string {
+	scan := func(literal string) ([]string, error) {
+		var ids []string
+		for _, loc := range commandID.FindAllStringIndex(literal, -1) {
+			end, err := jsEnd([]byte(literal), loc[0])
+			if err != nil {
+				continue
+			}
+			object := literal[loc[0]:end]
+			if slices.Contains(jsSplit(object[1:len(object)-1]), "bind:!1") {
+				continue
+			}
+			id, _ := jsProperty(object, "id")
+			ids = append(ids, id)
+		}
+		if len(ids) == 0 {
+			return nil, errors.New("no command IDs")
+		}
+		return ids, nil
+	}
+	if identifier.MatchString(expr) {
+		ids, _ := jsDefinition(data, expr, '[', near, scan)
+		return ids
+	}
+	ids, _ := scan(expr)
+	return ids
 }
 
 func jsList(data []byte, expr string, near, depth int) ([]string, error) {
 	if depth > 4 {
 		return nil, fmt.Errorf("%s: references nest too deep", expr)
 	}
-	if strings.HasPrefix(expr, "[") {
+	if jsArray(expr) {
 		var list []string
 		for _, item := range jsSplit(expr[1 : len(expr)-1]) {
 			values, err := jsItem(data, item, near, depth)
@@ -143,22 +194,63 @@ func jsList(data []byte, expr string, near, depth int) ([]string, error) {
 		})
 	}
 	if m := mapField.FindStringSubmatch(expr); m != nil && m[2] == m[3] {
-		return jsDefinition(data, m[1], '[', near, func(literal string) ([]string, error) {
-			var list []string
-			for _, item := range jsSplit(literal[1 : len(literal)-1]) {
-				if !strings.HasPrefix(item, "{") {
-					return nil, fmt.Errorf("%s: element is not an object", m[1])
-				}
-				value, ok := jsProperty(item, m[4])
-				if !ok {
-					return nil, fmt.Errorf("%s: element without string %s", m[1], m[4])
-				}
-				list = append(list, value)
+		objects, err := jsObjects(data, m[1], near, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		var list []string
+		for _, object := range objects {
+			value, ok := jsProperty(object, m[4])
+			if !ok {
+				return nil, fmt.Errorf("%s: element without string %s", m[1], m[4])
 			}
-			return list, nil
-		})
+			list = append(list, value)
+		}
+		return list, nil
+	}
+	if i := strings.Index(expr, "?["); i > 0 && strings.HasSuffix(expr, ":[]") {
+		return jsList(data, expr[i+1:len(expr)-len(":[]")], near, depth+1)
 	}
 	return nil, fmt.Errorf("unresolvable command list %.60s", expr)
+}
+
+func jsObjects(data []byte, expr string, near, depth int) ([]string, error) {
+	if depth > 4 {
+		return nil, fmt.Errorf("%s: references nest too deep", expr)
+	}
+	if jsArray(expr) {
+		var objects []string
+		for _, item := range jsSplit(expr[1 : len(expr)-1]) {
+			if spread, ok := strings.CutPrefix(item, "..."); ok {
+				nested, err := jsObjects(data, spread, near, depth+1)
+				if err != nil {
+					return nil, err
+				}
+				objects = append(objects, nested...)
+				continue
+			}
+			if !strings.HasPrefix(item, "{") {
+				return nil, fmt.Errorf("element is not an object: %.60s", item)
+			}
+			objects = append(objects, item)
+		}
+		return objects, nil
+	}
+	name := strings.TrimSuffix(expr, "()")
+	if !identifier.MatchString(name) {
+		return nil, fmt.Errorf("unresolvable object list %.60s", expr)
+	}
+	return jsDefinition(data, name, '[', near, func(literal string) ([]string, error) {
+		return jsObjects(data, literal, near, depth+1)
+	})
+}
+
+func jsArray(expr string) bool {
+	if !strings.HasPrefix(expr, "[") {
+		return false
+	}
+	end, err := jsEnd([]byte(expr), 0)
+	return err == nil && end == len(expr)
 }
 
 func jsItem(data []byte, item string, near, depth int) ([]string, error) {
@@ -182,7 +274,7 @@ func jsItem(data []byte, item string, near, depth int) ([]string, error) {
 }
 
 func jsDefinition(data []byte, name string, open byte, near int, parse func(string) ([]string, error)) ([]string, error) {
-	needle := []byte(name + "=" + string(open))
+	needle := []byte(name + "=")
 	var starts []int
 	for at := 0; ; {
 		i := bytes.Index(data[at:], needle)
@@ -193,7 +285,14 @@ func jsDefinition(data []byte, name string, open byte, near int, parse func(stri
 		if before := data[at-len(needle)-1]; before == '_' || before == '$' || before == '.' || isAlnum(before) {
 			continue
 		}
-		starts = append(starts, at-1)
+		switch {
+		case at < len(data) && data[at] == open:
+			starts = append(starts, at)
+		case open == '[':
+			if m := memo.Find(data[at:min(len(data), at+64)]); m != nil {
+				starts = append(starts, at+len(m)-1)
+			}
+		}
 	}
 	slices.SortFunc(starts, func(a, b int) int { return abs(a-near) - abs(b-near) })
 	for _, start := range starts {

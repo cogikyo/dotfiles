@@ -11,7 +11,7 @@ Read-only Svalboard keymap viewer with app bind overlays.
 - Hyprland: live compositor binds from IPC, excluding submaps.
 - kitty: its config loader, including defaults, `kitty.conf`, and included files.
 - Neovim: headless Neovim loading the user config; global normal-mode maps only, without buffer-local maps.
-- OpenCode: defaults and scopes from the installed binary, with overrides from the user config's `opencode/tui.json`.
+- OpenCode: defaults and scopes from the installed binary, with overrides from the user config's `opencode/cli.json`.
 
 ## Open
 

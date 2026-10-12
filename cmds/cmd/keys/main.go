@@ -49,7 +49,7 @@ func main() {
 		kittyConf = filepath.Join(dir, "kitty.conf")
 	}
 	nvimConfig := filepath.Join(configDir, "nvim")
-	tui := filepath.Join(configDir, "opencode", "tui.json")
+	cli := filepath.Join(configDir, "opencode", "cli.json")
 	kittyBin, nvimBin, opencodeBin := binary("kitty"), binary("nvim"), binary("opencode")
 
 	s := server{
@@ -66,8 +66,8 @@ func main() {
 				extract: nvim,
 			},
 			{
-				inputs:  func() []string { return []string{tui, opencodeBin} },
-				extract: func() (App, []string) { return opencode(opencodeBin, tui), nil },
+				inputs:  func() []string { return []string{cli, opencodeBin} },
+				extract: func() (App, []string) { return opencode(opencodeBin, cli), nil },
 			},
 		},
 	}

@@ -16,7 +16,7 @@ import (
 const leaderText = `"Leader key for keybind combinations"`
 
 var (
-	defaultEntry = regexp.MustCompile(`^(\w+|"[^"\\]*"):[\w$]+\(("(?:[^"\\]|\\.)*"|[\w$]+|\{[^{}]*\}),("(?:[^"\\]|\\.)*")\),?`)
+	defaultEntry = regexp.MustCompile(`^(\w+|"[^"\\]*"):[\w$]+\(("(?:[^"\\]|\\.)*"|!1|[\w$]+|\{[^{}]*\}),("(?:[^"\\]|\\.)*")\),?`)
 	objectKey    = regexp.MustCompile(`key:("(?:[^"\\]|\\.)*")`)
 )
 
@@ -26,7 +26,7 @@ type keybind struct {
 	user                bool
 }
 
-func opencode(binary, tui string) App {
+func opencode(binary, config string) App {
 	app := App{ID: "opencode", Name: "OpenCode", Binds: []Bind{}}
 	data, err := os.ReadFile(binary)
 	var defaults []keybind
@@ -34,22 +34,24 @@ func opencode(binary, tui string) App {
 		defaults, err = opencodeDefaults(data)
 	}
 	if err != nil {
-		app.Note = "Defaults unavailable (" + err.Error() + "); showing only tui.json overrides."
+		app.Note = "Defaults unavailable (" + err.Error() + "); showing only cli.json overrides."
 	}
-	scope := func(string) (string, bool) { return "", false }
-	if len(defaults) > 1 {
-		if s, err := opencodeScope(data, defaults); err != nil {
+	var sites map[string]string
+	if len(defaults) > 0 {
+		names := make([]string, len(defaults))
+		for i, k := range defaults {
+			names[i] = k.action
+		}
+		if sites, err = opencodeSites(data, names); err != nil {
 			app.Error = "opencode scopes: " + err.Error()
-		} else {
-			scope = s
 		}
 	}
-	var config struct {
+	var cli struct {
 		Keybinds map[string]any `json:"keybinds"`
 	}
-	if data, err := os.ReadFile(tui); err == nil {
-		if err := json.Unmarshal(data, &config); err != nil {
-			app.Error = fmt.Sprintf("%s: %v", tui, err)
+	if data, err := os.ReadFile(config); err == nil {
+		if err := json.Unmarshal(data, &cli); err != nil {
+			app.Error = fmt.Sprintf("%s: %v", config, err)
 			return app
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -58,13 +60,13 @@ func opencode(binary, tui string) App {
 	}
 
 	binds := defaults
-	for _, action := range slices.Sorted(maps.Keys(config.Keybinds)) {
+	for _, action := range slices.Sorted(maps.Keys(cli.Keybinds)) {
 		i := slices.IndexFunc(binds, func(k keybind) bool { return k.action == action })
 		if i < 0 {
 			binds = append(binds, keybind{action: action})
 			i = len(binds) - 1
 		}
-		binds[i].value = config.Keybinds[action]
+		binds[i].value = cli.Keybinds[action]
 		binds[i].user = true
 	}
 
@@ -82,9 +84,9 @@ func opencode(binary, tui string) App {
 		}
 		label := k.description
 		if label == "" {
-			label = strings.ReplaceAll(k.action, "_", " ")
+			label = strings.NewReplacer(".", " ", "_", " ").Replace(k.action)
 		}
-		layer, sited := scope(k.action)
+		layer, sited := sites[k.action]
 		for _, seq := range opencodeSequences(k.value, leader) {
 			last := len(seq) - 1
 			app.Binds = append(app.Binds, Bind{Prefix: seq[:last], Chord: seq[last], Label: label, Detail: k.action, Builtin: !k.user, Scope: layer})
@@ -99,43 +101,26 @@ func opencode(binary, tui string) App {
 	return app
 }
 
-func opencodeScope(data []byte, defaults []keybind) (func(string) (string, bool), error) {
-	commands, err := opencodeCommands(data, defaults[1].action)
-	if err != nil {
-		return nil, err
-	}
-	command := func(action string) string {
-		if c, ok := commands[action]; ok {
-			return c
-		}
-		return action
-	}
-	var ids []string
-	for _, k := range defaults {
-		ids = append(ids, command(k.action))
-	}
-	layers, err := opencodeScopes(data, ids)
-	if err != nil {
-		return nil, err
-	}
-	return func(action string) (string, bool) {
-		sites := layers[command(action)]
-		if len(sites) == 0 || slices.ContainsFunc(sites, globalLayer) {
-			return "", len(sites) > 0
-		}
-		return sites[0], true
-	}, nil
-}
-
-func globalLayer(layer string) bool {
-	return layer == "app" || layer == "session" || strings.HasPrefix(layer, "app.") || strings.HasPrefix(layer, "app_") || strings.HasPrefix(layer, "session.")
-}
-
 func opencodeDefaults(data []byte) ([]keybind, error) {
-	at := bytes.Index(data, []byte(leaderText))
-	if at < 0 {
-		return nil, errors.New("keybind table not found")
+	err := errors.New("keybind table not found")
+	for at := 0; ; {
+		i := bytes.Index(data[at:], []byte(leaderText))
+		if i < 0 {
+			return nil, err
+		}
+		at += i + len(leaderText)
+		var binds []keybind
+		binds, err = opencodeTable(data, at-len(leaderText))
+		if err == nil && slices.ContainsFunc(binds, func(k keybind) bool { return strings.Contains(k.action, ".") }) {
+			return binds, nil
+		}
+		if err == nil {
+			err = errors.New("only legacy keybind tables found")
+		}
 	}
+}
+
+func opencodeTable(data []byte, at int) ([]keybind, error) {
 	start := bytes.LastIndex(data[max(0, at-256):at], []byte("{leader:"))
 	if start < 0 {
 		return nil, errors.New("keybind table start not found")
@@ -169,6 +154,8 @@ func opencodeDefaults(data []byte) ([]keybind, error) {
 
 func jsValue(expr string, before []byte) (any, error) {
 	switch {
+	case expr == "!1":
+		return false, nil
 	case strings.HasPrefix(expr, `"`):
 		return strconv.Unquote(expr)
 	case strings.HasPrefix(expr, "{"):
@@ -266,6 +253,12 @@ func opencodeSequence(s string, leader []Chord) ([]Chord, bool) {
 	}
 	if s == "" {
 		return nil, false
+	}
+	if len(s) > 1 && strings.Count(s, s[:1]) == len(s) {
+		for range len(s) - 1 {
+			seq = append(seq, press(m, s[:1]))
+		}
+		s = s[:1]
 	}
 	return append(seq, press(m, s)), true
 }
