@@ -21,6 +21,7 @@ noto-fonts-cjk
 noto-fonts-extra
 npm
 obs-studio
+opencode
 postgresql
 qbittorrent
 qemu-img
@@ -43,7 +44,6 @@ brave-bin
 claude-code
 clickhouse-client-bin
 grok-bot-bin
-opencode-bin
 pandoc-bin
 slack-desktop
 tableplus
