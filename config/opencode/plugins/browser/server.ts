@@ -3,6 +3,9 @@ import { Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 import { Catalog, MCP, version, type Tool } from "./mcp.ts";
 
+const Target = Schema.Struct({ url: Schema.String });
+const web = new Set(["http:", "https:"]);
+
 export default Plugin.define({
   id: "browser",
   async setup(ctx) {
@@ -42,6 +45,9 @@ export default Plugin.define({
           input: item.inputSchema,
           options: { codemode: false },
           async execute(input, context) {
+            const url = Schema.is(Target)(input) ? input.url : undefined;
+            if (url !== undefined && url !== "about:blank" && !web.has(URL.parse(url)?.protocol ?? ""))
+              throw new Error(`${item.name} only opens http(s) URLs: ${url}`);
             const result = await (await open(context.sessionID)).call(item.name, input ?? {});
             const text = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
             if (result.isError) throw new Error(text || `${item.name} failed`);
