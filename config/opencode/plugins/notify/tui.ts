@@ -24,7 +24,6 @@ export default Plugin.define({
     const { data, ui } = context;
     const seen = new Set<string>();
     const ended = new Set<string>();
-    const failed = new Set<string>();
     const idle = new Map<string, ReturnType<typeof setTimeout>>();
     let focused = false;
 
@@ -80,12 +79,11 @@ export default Plugin.define({
       });
     };
 
-    const finish = (sessionID: string) => {
+    const finish = (sessionID: string, complete: boolean) => {
       if (data.session.get(sessionID)?.parentID || ended.has(sessionID)) return;
       ended.add(sessionID);
-      if (failed.delete(sessionID)) return remind(sessionID);
       remind(sessionID);
-      if (quiet(sessionID)) return;
+      if (!complete || quiet(sessionID)) return;
       send("complete", { message: title(sessionID), last_assistant_message: reply(sessionID) ?? title(sessionID) });
     };
 
@@ -110,22 +108,20 @@ export default Plugin.define({
       data.on("form.cancelled", (event) => seen.delete(event.data.id)),
       data.on("session.execution.started", (event) => {
         ended.delete(event.data.sessionID);
-        failed.delete(event.data.sessionID);
         stop(event.data.sessionID);
       }),
-      data.on("session.execution.succeeded", (event) => finish(event.data.sessionID)),
+      data.on("session.execution.succeeded", (event) => finish(event.data.sessionID, true)),
       data.on("session.execution.interrupted", (event) => {
         if (event.data.reason === "user") return;
-        finish(event.data.sessionID);
+        finish(event.data.sessionID, true);
       }),
       data.on("session.execution.failed", (event) => {
         const sessionID = event.data.sessionID;
         const message = event.data.error.message;
         ui.toast.show({ sessionID, title: "Session failed", message, variant: "error" });
-        if (data.session.get(sessionID)?.parentID || ended.has(sessionID) || failed.has(sessionID)) return;
-        failed.add(sessionID);
+        if (data.session.get(sessionID)?.parentID || ended.has(sessionID)) return;
         if (!quiet(sessionID)) send("error", { message: `${title(sessionID)}: ${message}` });
-        finish(sessionID);
+        finish(sessionID, false);
       }),
     ];
 
