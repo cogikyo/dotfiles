@@ -1,9 +1,9 @@
 ---
 description: "Adversarial trust-boundary review: auth, secrets, injection, traversal, SSRF, deserialization, crypto, supply chain, exposure; findings need a credible exploit path."
 mode: subagent
-permission:
-  edit: deny
-color: error
+color: "#f08898"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/security.

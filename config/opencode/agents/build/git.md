@@ -1,114 +1,111 @@
 ---
 description: Executes one approved commit, rebase/conflict, or branch/worktree lifecycle workflow for attended Collab.
 mode: subagent
-permission:
-  task: deny
-  question: deny
-  doom_loop: deny
-  skill:
-    "commit": allow
-    "rebase": allow
-    "worktrees": allow
-  bash:
-    "*": deny
-    "pwd": allow
-    "ls *": allow
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git rev-parse*": allow
-    "git rev-list*": allow
-    "git ls-files*": allow
-    "git cat-file*": allow
-    "git merge-base*": allow
-    "git range-diff*": allow
-    "git reflog show*": allow
-    "git reflog -*": allow
-    "git remote -v": allow
-    "git branch": allow
-    "git branch --show-current": allow
-    "git branch --list*": allow
-    "git branch --contains*": allow
-    "git branch --merged*": allow
-    "git branch -a": allow
-    "git branch -vv": allow
-    "git worktree list*": allow
-    "git config --get*": allow
-    "git add -- *": allow
-    "git apply --cached *": allow
-    "git restore --staged -- *": allow
-    "git commit -F -": allow
-    "git commit -F - *": allow
-    "git commit --no-edit": allow
-    "git commit --fixup=*": allow
-    "git rebase --onto *": allow
-    "git rebase --autosquash --onto *": allow
-    "git rebase --continue": allow
-    "GIT_EDITOR=true git rebase --continue": allow
-    "git rebase --abort": allow
-    "git fetch *": allow
-    "git branch -- *": allow
-    "git branch -d -- *": allow
-    "git worktree add -- *": allow
-    "git worktree add -b *": allow
-    "git worktree remove -- *": allow
-    "git grep *": allow
-    "git merge-tree *": allow
-    "git cherry *": allow
-    "git config --list*": allow
-    "git version": allow
-    "git branch -a --contains *": allow
-    "*--force*": deny
-    "*--open-files-in-pager*": deny
-    "*git grep *-O*": deny
-    "*--no-verify*": deny
-    "*--unsafe-paths*": deny
-    "*--exec*": deny
-    "*--output*": deny
-    "*--ext-diff*": deny
-    "*--textconv*": deny
-    "*git apply *--index*": deny
-    "*git push*": deny
-    "*git reset*": deny
-    "*git clean*": deny
-    "*git checkout*": deny
-    "*git switch*": deny
-    "*git stash*": deny
-    "git stash list": allow
-    "*git add -- .": deny
-    "*git add -- . *": deny
-    '*git add -- "."*': deny
-    "*git add -- '.'*": deny
-    "*git add -A*": deny
-    "*git add --all*": deny
-    "*git add -u*": deny
-    "*git commit *--amend*": deny
-    "*git commit *--fixup=*:*": deny
-    "*git commit *--squash*": deny
-    "*git commit *--all*": deny
-    "*git commit *--allow-empty*": deny
-    "*git commit * -a*": deny
-    "*git commit * -n*": deny
-    "*git rebase *--interactive*": deny
-    "*git rebase * -i*": deny
-    "*git rebase * -f*": deny
-    "*git rebase *--skip*": deny
-    "*git rebase *--autostash*": deny
-    "*git rebase *--update-refs*": deny
-    "*git rebase *--rebase-merges*": deny
-    "*git rebase *--empty=drop*": deny
-    "*git rebase * -x*": deny
-    "*git worktree add * -f*": deny
-    "*git worktree add -f*": deny
-    "*git worktree add * -B*": deny
-    "*git worktree add -B*": deny
-    "*git fetch *--prune*": deny
-    "*git fetch *--delete*": deny
-    "*git fetch * -f*": deny
-    "*git fetch -f*": deny
-    "*git fetch * +*": deny
-color: secondary
+color: "#6380ec"
+permissions:
+  - { "action": "subagent", "resource": "*", "effect": "deny" }
+  - { "action": "question", "resource": "*", "effect": "deny" }
+  - { "action": "skill", "resource": "commit", "effect": "allow" }
+  - { "action": "skill", "resource": "rebase", "effect": "allow" }
+  - { "action": "skill", "resource": "worktrees", "effect": "allow" }
+  - { "action": "shell", "resource": "*", "effect": "deny" }
+  - { "action": "shell", "resource": "pwd", "effect": "allow" }
+  - { "action": "shell", "resource": "ls *", "effect": "allow" }
+  - { "action": "shell", "resource": "git status*", "effect": "allow" }
+  - { "action": "shell", "resource": "git diff*", "effect": "allow" }
+  - { "action": "shell", "resource": "git log*", "effect": "allow" }
+  - { "action": "shell", "resource": "git show*", "effect": "allow" }
+  - { "action": "shell", "resource": "git rev-parse*", "effect": "allow" }
+  - { "action": "shell", "resource": "git rev-list*", "effect": "allow" }
+  - { "action": "shell", "resource": "git ls-files*", "effect": "allow" }
+  - { "action": "shell", "resource": "git cat-file*", "effect": "allow" }
+  - { "action": "shell", "resource": "git merge-base*", "effect": "allow" }
+  - { "action": "shell", "resource": "git range-diff*", "effect": "allow" }
+  - { "action": "shell", "resource": "git reflog show*", "effect": "allow" }
+  - { "action": "shell", "resource": "git reflog -*", "effect": "allow" }
+  - { "action": "shell", "resource": "git remote -v", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch --show-current", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch --list*", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch --contains*", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch --merged*", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -a", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -vv", "effect": "allow" }
+  - { "action": "shell", "resource": "git worktree list*", "effect": "allow" }
+  - { "action": "shell", "resource": "git config --get*", "effect": "allow" }
+  - { "action": "shell", "resource": "git add -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git apply --cached *", "effect": "allow" }
+  - { "action": "shell", "resource": "git restore --staged -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git commit -F -", "effect": "allow" }
+  - { "action": "shell", "resource": "git commit -F - *", "effect": "allow" }
+  - { "action": "shell", "resource": "git commit --no-edit", "effect": "allow" }
+  - { "action": "shell", "resource": "git commit --fixup=*", "effect": "allow" }
+  - { "action": "shell", "resource": "git rebase --onto *", "effect": "allow" }
+  - { "action": "shell", "resource": "git rebase --autosquash --onto *", "effect": "allow" }
+  - { "action": "shell", "resource": "git rebase --continue", "effect": "allow" }
+  - { "action": "shell", "resource": "GIT_EDITOR=true git rebase --continue", "effect": "allow" }
+  - { "action": "shell", "resource": "git rebase --abort", "effect": "allow" }
+  - { "action": "shell", "resource": "git fetch *", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -d -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git worktree add -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git worktree add -b *", "effect": "allow" }
+  - { "action": "shell", "resource": "git worktree remove -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git grep *", "effect": "allow" }
+  - { "action": "shell", "resource": "git merge-tree *", "effect": "allow" }
+  - { "action": "shell", "resource": "git cherry *", "effect": "allow" }
+  - { "action": "shell", "resource": "git config --list*", "effect": "allow" }
+  - { "action": "shell", "resource": "git version", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -a --contains *", "effect": "allow" }
+  - { "action": "shell", "resource": "*--force*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--open-files-in-pager*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git grep *-O*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--no-verify*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--unsafe-paths*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--exec*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--output*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--ext-diff*", "effect": "deny" }
+  - { "action": "shell", "resource": "*--textconv*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git apply *--index*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git reset*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git clean*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git checkout*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git switch*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git stash*", "effect": "deny" }
+  - { "action": "shell", "resource": "git stash list", "effect": "allow" }
+  - { "action": "shell", "resource": "*git add -- .", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add -- . *", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add -- \".\"*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add -- '.'*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add -A*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add --all*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git add -u*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit *--amend*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit *--fixup=*:*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit *--squash*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit *--all*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit *--allow-empty*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit * -a*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git commit * -n*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--interactive*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase * -i*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase * -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--skip*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--autostash*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--update-refs*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--rebase-merges*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase *--empty=drop*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git rebase * -x*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git worktree add * -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git worktree add -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git worktree add * -B*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git worktree add -B*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git fetch *--prune*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git fetch *--delete*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git fetch * -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git fetch -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git fetch * +*", "effect": "deny" }
 ---
 
 You are build/git.

@@ -1,125 +1,304 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "autoupdate": false,
-  "enabled_providers": ["anthropic", "anthropic-personal", "openai", "xai", "opencode-go", "cursor"],
+  "update": "disable",
   "model": "anthropic-personal/claude-opus-5-5",
-  "small_model": "openai/gpt-5.6-luna-fast",
   "default_agent": "collab",
-  "agent": {
-    "build": { "disable": true },
-    "plan": { "disable": true },
-    "explore": { "disable": true },
-    "general": { "disable": true },
+  "share": "manual",
+  "snapshots": true,
+  "lsp": false,
+  "agents": {
+    "build": {
+      "disabled": true
+    },
+    "plan": {
+      "disabled": true
+    },
+    "explore": {
+      "disabled": true
+    },
+    "general": {
+      "disabled": true
+    },
     "title": {
-      "prompt": "You are a title generator. You output ONLY a title. Nothing else.\n\nWrite a 2-4 word title that helps the user find this conversation later and names what it is working on.\nIf the request states its own word limit or format, follow the request instead.\n\nRules:\n- Output a single line with no explanation, quotes, markdown, or trailing punctuation.\n- Use the same language as the user messages.\n- Keep exact technical terms, numbers, filenames, and HTTP codes.\n- Never include tool names such as read, bash, or edit.\n- Never write the title in all capital letters; use normal or sentence case.\n- Never answer questions, use tools, or complain about the input.\n- For short or conversational input, name its tone or intent, such as Quick check-in.\n\nExamples:\n\"debug 500 errors in production\" -> Production 500 errors\n\"refactor user service\" -> User service refactor\n\"@src/auth.ts add refresh token support\" -> Auth refresh tokens\n\"how do I connect postgres to my API\" -> Postgres API connection"
+      "model": "openai/gpt-6-luna-fast",
+      "system": "You are a title generator. You output ONLY a title. Nothing else.\n\nWrite a 2-4 word title that helps the user find this conversation later and names what it is working on.\nIf the request states its own word limit or format, follow the request instead.\n\nRules:\n- Output a single line with no explanation, quotes, markdown, or trailing punctuation.\n- Use the same language as the user messages.\n- Keep exact technical terms, numbers, filenames, and HTTP codes.\n- Never include tool names such as read, bash, or edit.\n- Never write the title in all capital letters; use normal or sentence case.\n- Never answer questions, use tools, or complain about the input.\n- For short or conversational input, name its tone or intent, such as Quick check-in.\n\nExamples:\n\"debug 500 errors in production\" -> Production 500 errors\n\"refactor user service\" -> User service refactor\n\"@src/auth.ts add refresh token support\" -> Auth refresh tokens\n\"how do I connect postgres to my API\" -> Postgres API connection"
     },
     "collab": {
       "description": "The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.",
       "mode": "primary",
-      "color": "primary",
-      "prompt": "{file:./COLLAB.md}",
-      "permission": {
-        "x": "allow",
-        "bash": {
-          "git *": "allow",
-          "*git add*": "allow",
-          "*git commit*": "allow",
-          "*git rebase*": "ask",
-          "*git checkout*": "ask",
-          "*git checkout -b*": "allow",
-          "*git restore*": "ask",
-          "*git switch*": "ask",
-          "*git switch --detach*": "allow",
-          "*git merge*": "ask",
-          "*git cherry-pick*": "allow",
-          "*git revert*": "ask",
-          "*git reset*": "ask",
-          "*git stash*": "ask",
-          "*git fetch*": "allow",
-          "*git pull*": "ask",
-          "*git apply*": "allow",
-          "*git apply *-R*": "ask",
-          "*git apply *--reverse*": "ask",
-          "*git am": "ask",
-          "*git am *": "ask",
-          "*git branch*": "ask",
-          "*git tag*": "ask",
-          "*git worktree*": "allow",
-          "*git merge-base*": "allow",
-          "*git merge-tree*": "allow",
-          "*git stash list*": "allow",
-          "*git stash show*": "allow",
-          "*git branch": "allow",
-          "*git branch --show-current*": "allow",
-          "*git branch --list*": "allow",
-          "*git branch *--list*": "allow",
-          "*git branch *--contains*": "allow",
-          "*git branch *--no-contains*": "allow",
-          "*git branch *--merged*": "allow",
-          "*git branch *--no-merged*": "allow",
-          "*git branch -a*": "allow",
-          "*git branch -r*": "allow",
-          "*git branch -vv*": "allow",
-          "*git tag": "allow",
-          "*git tag --list*": "allow",
-          "*git tag -l*": "allow",
-          "*git tag --contains*": "allow",
-          "*git restore --staged*": "allow",
-          "*git restore *--worktree*": "ask",
-          "*git add .": "deny",
-          "*git add . *": "deny",
-          "*git add -- .": "deny",
-          "*git add -- . *": "deny",
-          "*git add -A*": "deny",
-          "*git add --all*": "deny",
-          "*git add -u*": "deny",
-          "*git add --update*": "deny",
-          "*git commit -a*": "deny",
-          "*git commit *--all*": "deny",
-          "*git commit *--amend*": "ask",
-          "*git commit *--fixup*": "ask",
-          "*git commit *--squash*": "ask",
-          "*git commit *--no-verify*": "deny",
-          "*git commit *--allow-empty*": "deny",
-          "*git merge --squash*": "ask",
-          "*git apply *--unsafe-paths*": "deny",
-          "*git push*": "deny",
-          "*git reset --hard*": "deny",
-          "*git clean*": "deny",
-          "*git checkout -- .": "deny",
-          "*git checkout -- . *": "deny",
-          "*git restore -- .": "deny",
-          "*git restore -- . *": "deny",
-          "*git restore --worktree .": "deny",
-          "*git restore --worktree . *": "deny",
-          "*git restore --worktree -- .": "deny",
-          "*git restore --worktree -- . *": "deny",
-          "*git restore --staged --worktree .": "deny",
-          "*git restore --staged --worktree . *": "deny",
-          "*git restore --staged --worktree -- .": "deny",
-          "*git restore --staged --worktree -- . *": "deny",
-          "*git restore --worktree --staged .": "deny",
-          "*git restore --worktree --staged . *": "deny",
-          "*git restore --worktree --staged -- .": "deny",
-          "*git restore --worktree --staged -- . *": "deny",
-          "*git restore .": "deny",
-          "*git restore . *": "deny"
-        },
-        "skill": {
-          "commit": "allow",
-          "rebase": "allow",
-          "worktrees": "allow"
-        },
-        "task": {
-          "*": "allow",
-          "build/git": "ask"
-        }
-      }
+      "color": "#f8b486",
+      "system": "{file:./COLLAB.md}",
+      "permissions": [
+        { "action": "usage_status", "resource": "*", "effect": "allow" },
+        { "action": "lanes", "resource": "*", "effect": "allow" },
+        { "action": "x", "resource": "*", "effect": "allow" },
+        { "action": "shell", "resource": "git *", "effect": "allow" },
+        { "action": "shell", "resource": "*git add*", "effect": "allow" },
+        { "action": "shell", "resource": "*git commit*", "effect": "allow" },
+        { "action": "shell", "resource": "*git rebase*", "effect": "ask" },
+        { "action": "shell", "resource": "*git checkout*", "effect": "ask" },
+        { "action": "shell", "resource": "*git checkout -b*", "effect": "allow" },
+        { "action": "shell", "resource": "*git restore*", "effect": "ask" },
+        { "action": "shell", "resource": "*git switch*", "effect": "ask" },
+        { "action": "shell", "resource": "*git switch --detach*", "effect": "allow" },
+        { "action": "shell", "resource": "*git merge*", "effect": "ask" },
+        { "action": "shell", "resource": "*git cherry-pick*", "effect": "allow" },
+        { "action": "shell", "resource": "*git revert*", "effect": "ask" },
+        { "action": "shell", "resource": "*git reset*", "effect": "ask" },
+        { "action": "shell", "resource": "*git stash*", "effect": "ask" },
+        { "action": "shell", "resource": "*git fetch*", "effect": "allow" },
+        { "action": "shell", "resource": "*git pull*", "effect": "ask" },
+        { "action": "shell", "resource": "*git apply*", "effect": "allow" },
+        { "action": "shell", "resource": "*git apply *-R*", "effect": "ask" },
+        { "action": "shell", "resource": "*git apply *--reverse*", "effect": "ask" },
+        { "action": "shell", "resource": "*git am", "effect": "ask" },
+        { "action": "shell", "resource": "*git am *", "effect": "ask" },
+        { "action": "shell", "resource": "*git branch*", "effect": "ask" },
+        { "action": "shell", "resource": "*git tag*", "effect": "ask" },
+        { "action": "shell", "resource": "*git worktree*", "effect": "allow" },
+        { "action": "shell", "resource": "*git merge-base*", "effect": "allow" },
+        { "action": "shell", "resource": "*git merge-tree*", "effect": "allow" },
+        { "action": "shell", "resource": "*git stash list*", "effect": "allow" },
+        { "action": "shell", "resource": "*git stash show*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch --show-current*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch --list*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch *--list*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch *--contains*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch *--no-contains*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch *--merged*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch *--no-merged*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch -a*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch -r*", "effect": "allow" },
+        { "action": "shell", "resource": "*git branch -vv*", "effect": "allow" },
+        { "action": "shell", "resource": "*git tag", "effect": "allow" },
+        { "action": "shell", "resource": "*git tag --list*", "effect": "allow" },
+        { "action": "shell", "resource": "*git tag -l*", "effect": "allow" },
+        { "action": "shell", "resource": "*git tag --contains*", "effect": "allow" },
+        { "action": "shell", "resource": "*git restore --staged*", "effect": "allow" },
+        { "action": "shell", "resource": "*git restore *--worktree*", "effect": "ask" },
+        { "action": "shell", "resource": "*git add .", "effect": "deny" },
+        { "action": "shell", "resource": "*git add . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git add -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git add -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git add -A*", "effect": "deny" },
+        { "action": "shell", "resource": "*git add --all*", "effect": "deny" },
+        { "action": "shell", "resource": "*git add -u*", "effect": "deny" },
+        { "action": "shell", "resource": "*git add --update*", "effect": "deny" },
+        { "action": "shell", "resource": "*git commit -a*", "effect": "deny" },
+        { "action": "shell", "resource": "*git commit *--all*", "effect": "deny" },
+        { "action": "shell", "resource": "*git commit *--amend*", "effect": "ask" },
+        { "action": "shell", "resource": "*git commit *--fixup*", "effect": "ask" },
+        { "action": "shell", "resource": "*git commit *--squash*", "effect": "ask" },
+        { "action": "shell", "resource": "*git commit *--no-verify*", "effect": "deny" },
+        { "action": "shell", "resource": "*git commit *--allow-empty*", "effect": "deny" },
+        { "action": "shell", "resource": "*git merge --squash*", "effect": "ask" },
+        { "action": "shell", "resource": "*git apply *--unsafe-paths*", "effect": "deny" },
+        { "action": "shell", "resource": "*git push*", "effect": "deny" },
+        { "action": "shell", "resource": "*git reset --hard*", "effect": "deny" },
+        { "action": "shell", "resource": "*git clean*", "effect": "deny" },
+        { "action": "shell", "resource": "*git checkout -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git checkout -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --staged --worktree .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --staged --worktree . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --staged --worktree -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --staged --worktree -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree --staged .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree --staged . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree --staged -- .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore --worktree --staged -- . *", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore .", "effect": "deny" },
+        { "action": "shell", "resource": "*git restore . *", "effect": "deny" },
+        { "action": "skill", "resource": "commit", "effect": "allow" },
+        { "action": "skill", "resource": "rebase", "effect": "allow" },
+        { "action": "skill", "resource": "worktrees", "effect": "allow" },
+        { "action": "subagent", "resource": "*", "effect": "allow" },
+        { "action": "subagent", "resource": "build/git", "effect": "ask" }
+      ]
     }
   },
-  "share": "manual",
-  "snapshot": true,
-  "lsp": false,
+  "permissions": [
+    { "action": "*", "resource": "*", "effect": "allow" },
+    { "action": "edit", "resource": "/home/cullyn/.ssh/**", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.gnupg/**", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/.owm_api_key", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.mozilla/firefox/**/logins.json", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.mozilla/firefox/**/key4.db", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.ssh/**", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.gnupg/**", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/.owm_api_key", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.mozilla/firefox/**/logins.json", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.mozilla/firefox/**/key4.db", "effect": "deny" },
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+    { "action": "external_directory", "resource": "/?", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/**", "effect": "allow" },
+    { "action": "external_directory", "resource": "/usr/**", "effect": "allow" },
+    { "action": "external_directory", "resource": "/var/cache/pacman/pkg/**", "effect": "allow" },
+    { "action": "external_directory", "resource": "/home/cullyn/.ssh/**", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.gnupg/**", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/.owm_api_key", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
+    {
+      "action": "external_directory",
+      "resource": "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*",
+      "effect": "deny"
+    },
+    { "action": "external_directory", "resource": "/home/cullyn/.mozilla/firefox/**/logins.json", "effect": "deny" },
+    { "action": "external_directory", "resource": "/home/cullyn/.mozilla/firefox/**/key4.db", "effect": "deny" },
+    { "action": "external_directory", "resource": "/run/user/1000/opencode/**", "effect": "allow" },
+    { "action": "external_directory", "resource": "/tmp/**", "effect": "allow" },
+    { "action": "chrome-devtools_*", "resource": "*", "effect": "deny" },
+    { "action": "diagram", "resource": "*", "effect": "allow" },
+    { "action": "sessions", "resource": "*", "effect": "allow" },
+    { "action": "usage_status", "resource": "*", "effect": "deny" },
+    { "action": "lanes", "resource": "*", "effect": "deny" },
+    { "action": "x", "resource": "*", "effect": "deny" },
+    { "action": "skill", "resource": "commit", "effect": "deny" },
+    { "action": "skill", "resource": "rebase", "effect": "deny" },
+    { "action": "skill", "resource": "worktrees", "effect": "deny" },
+    { "action": "shell", "resource": "sudo *", "effect": "ask" },
+    { "action": "shell", "resource": "su *", "effect": "ask" },
+    { "action": "shell", "resource": "gh *", "effect": "ask" },
+    { "action": "shell", "resource": "gh pr view*", "effect": "allow" },
+    { "action": "shell", "resource": "gh pr list*", "effect": "allow" },
+    { "action": "shell", "resource": "gh pr diff*", "effect": "allow" },
+    { "action": "shell", "resource": "gh issue view*", "effect": "allow" },
+    { "action": "shell", "resource": "gh issue list*", "effect": "allow" },
+    { "action": "shell", "resource": "gh run view*", "effect": "allow" },
+    { "action": "shell", "resource": "gh run list*", "effect": "allow" },
+    { "action": "shell", "resource": "gh repo view*", "effect": "allow" },
+    { "action": "shell", "resource": "gh search *", "effect": "allow" },
+    { "action": "shell", "resource": "gh release list*", "effect": "allow" },
+    { "action": "shell", "resource": "gh release view*", "effect": "allow" },
+    { "action": "shell", "resource": "gh api *", "effect": "allow" },
+    { "action": "shell", "resource": "*gh api *-X*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api *--method*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api -f*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api * -f*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api *-F*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api *--field*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api *--raw-field*", "effect": "deny" },
+    { "action": "shell", "resource": "*gh api *--input*", "effect": "deny" },
+    { "action": "shell", "resource": "rm *", "effect": "deny" },
+    { "action": "shell", "resource": "sudo rm*", "effect": "deny" },
+    { "action": "shell", "resource": "trash *", "effect": "allow" },
+    { "action": "shell", "resource": "trash-put *", "effect": "allow" },
+    { "action": "shell", "resource": "gio trash *", "effect": "allow" },
+    { "action": "shell", "resource": "chmod *", "effect": "allow" },
+    { "action": "shell", "resource": "chown *", "effect": "allow" },
+    { "action": "shell", "resource": "yay *", "effect": "deny" },
+    { "action": "shell", "resource": "yay -Ss *", "effect": "allow" },
+    { "action": "shell", "resource": "yay -Si *", "effect": "allow" },
+    { "action": "shell", "resource": "yay -Sii *", "effect": "allow" },
+    { "action": "shell", "resource": "yay -Q*", "effect": "allow" },
+    { "action": "shell", "resource": "yay -Gp *", "effect": "allow" },
+    { "action": "shell", "resource": "paru *", "effect": "deny" },
+    { "action": "shell", "resource": "npm install*", "effect": "ask" },
+    { "action": "shell", "resource": "npm ci*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm install*", "effect": "ask" },
+    { "action": "shell", "resource": "pnpm install --frozen-lockfile*", "effect": "allow" },
+    { "action": "shell", "resource": "yarn install*", "effect": "ask" },
+    { "action": "shell", "resource": "ls \".yarn\"*", "effect": "allow" },
+    { "action": "shell", "resource": "yarn install --immutable*", "effect": "allow" },
+    { "action": "shell", "resource": "bun install*", "effect": "ask" },
+    { "action": "shell", "resource": "bun install --frozen-lockfile*", "effect": "allow" },
+    { "action": "shell", "resource": "go install*", "effect": "ask" },
+    { "action": "shell", "resource": "go get*", "effect": "ask" },
+    { "action": "shell", "resource": "docker system prune*", "effect": "ask" },
+    { "action": "shell", "resource": "docker compose down*", "effect": "ask" },
+    { "action": "shell", "resource": "docker compose rm*", "effect": "ask" },
+    { "action": "shell", "resource": "docker compose pull*", "effect": "ask" },
+    { "action": "shell", "resource": "docker compose push*", "effect": "ask" },
+    { "action": "shell", "resource": "docker rm*", "effect": "ask" },
+    { "action": "shell", "resource": "docker rmi*", "effect": "ask" },
+    { "action": "shell", "resource": "docker volume rm*", "effect": "ask" },
+    { "action": "shell", "resource": "kubectl *", "effect": "ask" },
+    { "action": "shell", "resource": "helm *", "effect": "ask" },
+    { "action": "shell", "resource": "terraform apply*", "effect": "ask" },
+    { "action": "shell", "resource": "terraform destroy*", "effect": "ask" },
+    { "action": "shell", "resource": "*git add*", "effect": "deny" },
+    { "action": "shell", "resource": "*git apply*", "effect": "deny" },
+    { "action": "shell", "resource": "*git am", "effect": "deny" },
+    { "action": "shell", "resource": "*git am *", "effect": "deny" },
+    { "action": "shell", "resource": "*git commit*", "effect": "deny" },
+    { "action": "shell", "resource": "*git push*", "effect": "deny" },
+    { "action": "shell", "resource": "*git pull*", "effect": "deny" },
+    { "action": "shell", "resource": "*git fetch*", "effect": "deny" },
+    { "action": "shell", "resource": "*git merge*", "effect": "deny" },
+    { "action": "shell", "resource": "*git merge-base*", "effect": "allow" },
+    { "action": "shell", "resource": "*git merge-tree*", "effect": "allow" },
+    { "action": "shell", "resource": "*git rebase*", "effect": "deny" },
+    { "action": "shell", "resource": "*git cherry-pick*", "effect": "deny" },
+    { "action": "shell", "resource": "*git revert*", "effect": "deny" },
+    { "action": "shell", "resource": "*git reset*", "effect": "deny" },
+    { "action": "shell", "resource": "*git checkout*", "effect": "deny" },
+    { "action": "shell", "resource": "*git switch*", "effect": "deny" },
+    { "action": "shell", "resource": "*git restore*", "effect": "deny" },
+    { "action": "shell", "resource": "*git stash*", "effect": "deny" },
+    { "action": "shell", "resource": "*git stash list*", "effect": "allow" },
+    { "action": "shell", "resource": "*git stash show*", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch*", "effect": "deny" },
+    { "action": "shell", "resource": "*git branch", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch --show-current*", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch --list*", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch -a*", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch -r*", "effect": "allow" },
+    { "action": "shell", "resource": "*git branch -vv*", "effect": "allow" },
+    { "action": "shell", "resource": "*git tag*", "effect": "deny" },
+    { "action": "shell", "resource": "*git tag", "effect": "allow" },
+    { "action": "shell", "resource": "*git tag --list*", "effect": "allow" },
+    { "action": "shell", "resource": "*git tag -l*", "effect": "allow" },
+    { "action": "shell", "resource": "*git tag --contains*", "effect": "allow" },
+    { "action": "shell", "resource": "*git worktree*", "effect": "deny" },
+    { "action": "shell", "resource": "*git worktree list*", "effect": "allow" },
+    { "action": "shell", "resource": "*git clean*", "effect": "deny" },
+    { "action": "shell", "resource": "*git config*", "effect": "deny" },
+    { "action": "shell", "resource": "*git config --get*", "effect": "allow" },
+    { "action": "shell", "resource": "*git config --get-all*", "effect": "allow" },
+    { "action": "shell", "resource": "*git config --list*", "effect": "allow" },
+    { "action": "shell", "resource": "*git remote add*", "effect": "deny" },
+    { "action": "shell", "resource": "*git remote remove*", "effect": "deny" },
+    { "action": "shell", "resource": "*git remote rename*", "effect": "deny" },
+    { "action": "shell", "resource": "*git remote set-url*", "effect": "deny" },
+    { "action": "shell", "resource": "*git remote prune*", "effect": "deny" },
+    { "action": "shell", "resource": "*git submodule*", "effect": "deny" },
+    { "action": "shell", "resource": "*git notes*", "effect": "deny" },
+    { "action": "shell", "resource": "*git update-ref*", "effect": "deny" },
+    { "action": "shell", "resource": "*git update-index*", "effect": "deny" },
+    { "action": "shell", "resource": "*git filter-*", "effect": "deny" },
+    { "action": "shell", "resource": "*git reflog expire*", "effect": "deny" },
+    { "action": "shell", "resource": "grok *", "effect": "deny" },
+    { "action": "subagent", "resource": "*", "effect": "deny" }
+  ],
+  "compaction": {
+    "auto": true,
+    "buffer": 25000
+  },
   "formatter": {
     "prettier": {
       "disabled": true
@@ -130,54 +309,91 @@
     }
   },
   "mcp": {
-    "clickhouse-docs": {
-      "type": "remote",
-      "url": "https://clickhouse.com/docs/mcp",
-      "enabled": false,
-      "oauth": false,
-      "timeout": 30000
-    }
-  },
-  "providers": {
-    "anthropic": {
-      "name": "Anthropic [Trend]",
-      "settings": { "apiKey": "oauth-required" }
-    },
-    "anthropic-personal": {
-      "canonical": "anthropic",
-      "name": "Anthropic [Cogikyo]",
-      "settings": { "apiKey": "oauth-required" },
-      "models": {
-        "claude-opus-5-5": {},
-        "claude-sonnet-5-5": {},
-        "claude-fable-5-1": {
-          "settings": {
-            "thinking": { "type": "adaptive", "display": "summarized" },
-            "effort": "medium"
-          }
+    "servers": {
+      "clickhouse-docs": {
+        "type": "remote",
+        "url": "https://clickhouse.com/docs/mcp",
+        "disabled": true,
+        "oauth": false,
+        "timeout": {
+          "catalog": 30000,
+          "execution": 30000
         }
       }
     }
   },
-  "provider": {
+  "watcher": {
+    "ignore": [".git/**", "node_modules/**", "dist/**", "build/**"]
+  },
+  "providers": {
+    "anthropic": {
+      "name": "Anthropic [Trend]",
+      "settings": {
+        "apiKey": "oauth-required"
+      },
+      "models": {
+        "claude-opus-5-5": {
+          "limit": { "input": 325000 }
+        },
+        "claude-sonnet-5-5": {
+          "limit": { "input": 325000 }
+        },
+        "claude-fable-5-1": {
+          "limit": { "input": 325000 }
+        }
+      }
+    },
+    "anthropic-personal": {
+      "canonical": "anthropic",
+      "name": "Anthropic [Cogikyo]",
+      "settings": {
+        "apiKey": "oauth-required"
+      },
+      "models": {
+        "claude-opus-5-5": {
+          "limit": { "input": 325000 }
+        },
+        "claude-sonnet-5-5": {
+          "limit": { "input": 325000 }
+        },
+        "claude-fable-5-1": {
+          "settings": {
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "effort": "medium"
+          },
+          "limit": { "input": 325000 }
+        }
+      }
+    },
     "cursor": {
-      "npm": "@ai-sdk/openai-compatible",
       "name": "Cursor",
-      "options": {
+      "package": "aisdk:@ai-sdk/openai-compatible",
+      "settings": {
         "baseURL": "http://127.0.0.1:3000/v1",
         "apiKey": "not-needed"
       },
       "models": {
-        "grok-4.6-fast": { "name": "Grok 4.6 Fast" },
-        "claude-opus-5-5-fast": { "name": "Claude Opus 5.5 Fast" }
+        "grok-4.6-fast": {
+          "name": "Grok 4.6 Fast"
+        },
+        "claude-opus-5-5-fast": {
+          "name": "Claude Opus 5.5 Fast"
+        }
       }
     },
     "openai": {
       "models": {
         "gpt-6.1-sol": {
-          "options": {
+          "settings": {
             "reasoningEffort": "high"
-          }
+          },
+          "limit": { "input": 325000 }
+        },
+        "gpt-6-astra": {
+          "limit": { "input": 325000 }
         }
       }
     },
@@ -185,15 +401,36 @@
       "models": {
         "grok-4.7": {
           "name": "Grok 4.7",
-          "options": {
+          "settings": {
             "reasoningEffort": "high"
           },
-          "variants": {
-            "low": { "reasoningEffort": "low" },
-            "medium": { "reasoningEffort": "medium" },
-            "high": { "reasoningEffort": "high" },
-            "xhigh": { "reasoningEffort": "xhigh" }
-          }
+          "variants": [
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
+            },
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
+            },
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
+            },
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
+            }
+          ],
+          "limit": { "input": 325000 }
         }
       }
     },
@@ -201,268 +438,49 @@
       "models": {
         "grok-4.7": {
           "name": "Grok 4.7",
-          "options": {
+          "settings": {
             "reasoningEffort": "high"
           },
-          "variants": {
-            "low": { "reasoningEffort": "low" },
-            "medium": { "reasoningEffort": "medium" },
-            "high": { "reasoningEffort": "high" },
-            "xhigh": { "reasoningEffort": "xhigh" }
-          }
+          "variants": [
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
+            },
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
+            },
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
+            },
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
+            }
+          ],
+          "limit": { "input": 325000 }
         }
       }
     }
   },
-  "permission": {
-    "edit": {
-      "*": "allow",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny"
-    },
-    "read": {
-      "*": "allow",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny"
-    },
-    "glob": {
-      "*": "allow",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny"
-    },
-    "list": {
-      "*": "allow",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny"
-    },
-    "todowrite": "allow",
-    "question": "allow",
-    "task": "allow",
-    "chrome-devtools_*": "deny",
-    "task_status": "allow",
-    "task_close": "allow",
-    "compact": "ask",
-    "diagram": "allow",
-    "sessions": "allow",
-    "x": "deny",
-    "external_directory": {
-      "/": "deny",
-      "/?": "deny",
-      "~/**": "allow",
-      "$HOME/**": "allow",
-      "/home/cullyn/**": "allow",
-      "/usr": "allow",
-      "/usr/**": "allow",
-      "/var/cache/pacman/pkg/**": "allow",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny",
-      "/run/user/1000/opencode": "allow",
-      "/run/user/1000/opencode/**": "allow",
-      "/tmp/**": "allow"
-    },
-    "doom_loop": "ask",
-    "webfetch": "allow",
-    "websearch": "allow",
-    "clickhouse-docs_*": "allow",
-    "skill": {
-      "*": "allow",
-      "commit": "deny",
-      "rebase": "deny",
-      "worktrees": "deny"
-    },
-    "lsp": "deny",
-    "grep": {
-      "*": "allow",
-      "/": "deny",
-      "/home/cullyn/.ssh/**": "deny",
-      "/home/cullyn/.gnupg/**": "deny",
-      "/home/cullyn/.password-store/**": "deny",
-      "/home/cullyn/.local/share/keyrings/**": "deny",
-      "/home/cullyn/.local/.owm_api_key": "deny",
-      "/home/cullyn/.local/.owm_api_key*": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env": "deny",
-      "/home/cullyn/.local/share/dotfiles/porkbun.env*": "deny",
-      "/home/cullyn/.local/share/dotfiles/vpn/**": "deny",
-      "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*": "deny",
-      "/home/cullyn/.mozilla/firefox/**/logins.json": "deny",
-      "/home/cullyn/.mozilla/firefox/**/key4.db": "deny"
-    },
-    "bash": {
-      "*": "allow",
-      "rg *": "allow",
-      "sudo *": "ask",
-      "su *": "ask",
-      "gh *": "ask",
-      "gh pr view*": "allow",
-      "gh pr list*": "allow",
-      "gh pr diff*": "allow",
-      "gh issue view*": "allow",
-      "gh issue list*": "allow",
-      "gh run view*": "allow",
-      "gh run list*": "allow",
-      "gh repo view*": "allow",
-      "gh search *": "allow",
-      "gh release list*": "allow",
-      "gh release view*": "allow",
-      "gh api *": "allow",
-      "*gh api *-X*": "deny",
-      "*gh api *--method*": "deny",
-      "*gh api -f*": "deny",
-      "*gh api * -f*": "deny",
-      "*gh api *-F*": "deny",
-      "*gh api *--field*": "deny",
-      "*gh api *--raw-field*": "deny",
-      "*gh api *--input*": "deny",
-      "rm *": "deny",
-      "sudo rm*": "deny",
-      "trash *": "allow",
-      "trash-put *": "allow",
-      "gio trash *": "allow",
-      "chmod *": "allow",
-      "chown *": "allow",
-      "yay *": "deny",
-      "yay -Ss *": "allow",
-      "yay -Si *": "allow",
-      "yay -Sii *": "allow",
-      "yay -Q*": "allow",
-      "yay -Gp *": "allow",
-      "paru *": "deny",
-      "npm install*": "ask",
-      "npm ci*": "allow",
-      "pnpm install*": "ask",
-      "pnpm install --frozen-lockfile*": "allow",
-      "yarn install*": "ask",
-      "ls \".yarn\"*": "allow",
-      "yarn install --immutable*": "allow",
-      "bun install*": "ask",
-      "bun install --frozen-lockfile*": "allow",
-      "go install*": "ask",
-      "go get*": "ask",
-      "docker system prune*": "ask",
-      "docker compose down*": "ask",
-      "docker compose rm*": "ask",
-      "docker compose pull*": "ask",
-      "docker compose push*": "ask",
-      "docker rm*": "ask",
-      "docker rmi*": "ask",
-      "docker volume rm*": "ask",
-      "kubectl *": "ask",
-      "helm *": "ask",
-      "terraform apply*": "ask",
-      "terraform destroy*": "ask",
-      "*git add*": "deny",
-      "*git apply*": "deny",
-      "*git am": "deny",
-      "*git am *": "deny",
-      "*git commit*": "deny",
-      "*git push*": "deny",
-      "*git pull*": "deny",
-      "*git fetch*": "deny",
-      "*git merge*": "deny",
-      "*git merge-base*": "allow",
-      "*git merge-tree*": "allow",
-      "*git rebase*": "deny",
-      "*git cherry-pick*": "deny",
-      "*git revert*": "deny",
-      "*git reset*": "deny",
-      "*git checkout*": "deny",
-      "*git switch*": "deny",
-      "*git restore*": "deny",
-      "*git stash*": "deny",
-      "*git stash list*": "allow",
-      "*git stash show*": "allow",
-      "*git branch*": "deny",
-      "*git branch": "allow",
-      "*git branch --show-current*": "allow",
-      "*git branch --list*": "allow",
-      "*git branch -a*": "allow",
-      "*git branch -r*": "allow",
-      "*git branch -vv*": "allow",
-      "*git tag*": "deny",
-      "*git tag": "allow",
-      "*git tag --list*": "allow",
-      "*git tag -l*": "allow",
-      "*git tag --contains*": "allow",
-      "*git worktree*": "deny",
-      "*git worktree list*": "allow",
-      "*git clean*": "deny",
-      "*git config*": "deny",
-      "*git config --get*": "allow",
-      "*git config --get-all*": "allow",
-      "*git config --list*": "allow",
-      "*git remote add*": "deny",
-      "*git remote remove*": "deny",
-      "*git remote rename*": "deny",
-      "*git remote set-url*": "deny",
-      "*git remote prune*": "deny",
-      "*git submodule*": "deny",
-      "*git notes*": "deny",
-      "*git update-ref*": "deny",
-      "*git update-index*": "deny",
-      "*git filter-*": "deny",
-      "*git reflog expire*": "deny",
-      "grok *": "deny"
-    }
-  },
   "experimental": {
-    "primary_tools": ["usage_status", "task_status", "task_close", "compact"]
-  },
-  "compaction": {
-    "auto": true,
-    "prune": true,
-    "reserved": 25000
-  },
-  "watcher": {
-    "ignore": [".git/**", "node_modules/**", "dist/**", "build/**"]
+    "policies": [
+      { "action": "provider.use", "resource": "*", "effect": "deny" },
+      { "action": "provider.use", "resource": "anthropic", "effect": "allow" },
+      { "action": "provider.use", "resource": "anthropic-personal", "effect": "allow" },
+      { "action": "provider.use", "resource": "openai", "effect": "allow" },
+      { "action": "provider.use", "resource": "xai", "effect": "allow" },
+      { "action": "provider.use", "resource": "opencode-go", "effect": "allow" },
+      { "action": "provider.use", "resource": "cursor", "effect": "allow" }
+    ]
   }
 }

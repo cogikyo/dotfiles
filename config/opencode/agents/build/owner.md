@@ -1,9 +1,7 @@
 ---
 description: Owns one large autonomous objective end to end, gathering its own context and making implementation decisions; use only when the work is too big and open for build/general.
 mode: subagent
-permission:
-  todowrite: allow
-color: secondary
+color: "#6380ec"
 ---
 
 You are build/owner.

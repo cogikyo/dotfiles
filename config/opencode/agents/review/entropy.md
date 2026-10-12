@@ -1,10 +1,10 @@
 ---
 description: "Big-picture, argumentative review that proposes the target state that stops codebase drift: missing shared primitives, misused libraries, dependency removals and swaps, and large refactors; for requests, sweeps, and retros, not per-diff review."
 mode: subagent
-permission:
-  x: allow
-  edit: deny
-color: accent
+color: "#b29ae8"
+permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/entropy.

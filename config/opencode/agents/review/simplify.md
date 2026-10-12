@@ -1,9 +1,9 @@
 ---
 description: "Reviews cognitive load, slop, and obsolete code: visible concepts, nesting, indirection, duplicated knowledge, dead code, stale idioms, deprecated APIs, compatibility cruft; prefers deletion over new abstraction."
 mode: subagent
-permission:
-  edit: deny
-color: success
+color: "#5fc976"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/simplify.

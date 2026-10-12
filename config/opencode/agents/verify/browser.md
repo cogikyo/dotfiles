@@ -1,11 +1,11 @@
 ---
 description: Performs explicit browser QA for visual layout across viewports, interactions, screenshots, console and network failures, and performance; browser-only and repository-read-only.
 mode: subagent
-permission:
-  "*": deny
-  "chrome-devtools_*": allow
-  "chrome-devtools_upload_file": deny
-color: success
+color: "#5fc976"
+permissions:
+  - { "action": "*", "resource": "*", "effect": "deny" }
+  - { "action": "chrome-devtools_*", "resource": "*", "effect": "allow" }
+  - { "action": "chrome-devtools_upload_file", "resource": "*", "effect": "deny" }
 ---
 
 You are verify/browser.

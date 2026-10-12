@@ -1,10 +1,10 @@
 ---
 description: Maps the option space, prior art, and current direction for one bounded need; breadth over verdicts; cited URLs; read-only.
 mode: subagent
-permission:
-  x: allow
-  edit: deny
-color: info
+color: "#50dec8"
+permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/web.

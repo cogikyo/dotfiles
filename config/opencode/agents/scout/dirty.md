@@ -1,9 +1,9 @@
 ---
 description: Answers one bounded question about uncommitted work, WIP threads, recent churn, or interference between concurrent sessions.
 mode: subagent
-permission:
-  edit: deny
-color: info
+color: "#50dec8"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/dirty.

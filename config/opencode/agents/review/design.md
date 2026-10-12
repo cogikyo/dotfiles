@@ -1,9 +1,9 @@
 ---
 description: "Judges frontend work against its product intent: task flow, hierarchy, visual language, and character."
 mode: subagent
-permission:
-  edit: deny
-color: secondary
+color: "#6380ec"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/design.

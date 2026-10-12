@@ -1,9 +1,9 @@
 ---
 description: "Cuts UI clutter in frontend work: text, labels, badges, icons, values, and emphasis that do not earn attention; deletes by default and returns per-element verdicts a builder can apply."
 mode: subagent
-permission:
-  edit: deny
-color: secondary
+color: "#6380ec"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/copy.

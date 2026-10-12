@@ -1,9 +1,9 @@
 ---
 description: "Performance-shape review: algorithms, allocations, I/O batching, repeated work, hot paths, caching; findings require hotness or blast-radius evidence."
 mode: subagent
-permission:
-  edit: deny
-color: info
+color: "#50dec8"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/profile.

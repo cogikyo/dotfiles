@@ -1,9 +1,9 @@
 ---
 description: "Root-cause and correctness review: control flow, state, parsing, concurrency, partial failures, edge cases; returns hypotheses plus the next discriminating check."
 mode: subagent
-permission:
-  edit: deny
-color: error
+color: "#f08898"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are review/debug.

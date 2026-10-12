@@ -33,5 +33,6 @@
     "acceleration": true
   },
   "diffs": {},
-  "mouse": true
+  "mouse": true,
+  "plugins": ["-opencode.notifications", "-opencode.sidebar.mcp"]
 }

@@ -1,9 +1,9 @@
 ---
 description: Maps ownership, governing instructions, relevant files, and next evidence questions when that big picture is not yet understood; read-only.
 mode: subagent
-permission:
-  edit: deny
-color: info
+color: "#50dec8"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/context.

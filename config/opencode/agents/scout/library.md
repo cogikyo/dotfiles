@@ -1,9 +1,9 @@
 ---
 description: Answers one bounded reuse question about existing shared utils, stdlib, or modern language facilities, including misuse or overlap when that is in scope.
 mode: subagent
-permission:
-  edit: deny
-color: info
+color: "#50dec8"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/library.

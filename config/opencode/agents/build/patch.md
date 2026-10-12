@@ -1,9 +1,7 @@
 ---
 description: Applies exact fast edits when the parent already supplies the files, targets, and intended mechanics; use when no discovery or solution choice remains.
 mode: subagent
-permission:
-  todowrite: allow
-color: secondary
+color: "#6380ec"
 ---
 
 You are build/patch.

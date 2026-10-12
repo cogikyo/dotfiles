@@ -1,9 +1,9 @@
 ---
 description: Answers one bounded session question, or maps recovery and coordination state across concurrent OpenCode sessions when that is the objective.
 mode: subagent
-color: info
-permission:
-  edit: deny
+color: "#50dec8"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/session.

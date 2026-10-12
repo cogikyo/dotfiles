@@ -1,9 +1,7 @@
 ---
 description: Audits or edits bounded documentation, comments, and structural banners without changing code behavior or governing intent.
 mode: subagent
-permission:
-  todowrite: allow
-color: accent
+color: "#b29ae8"
 ---
 
 You are build/scribe.

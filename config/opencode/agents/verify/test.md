@@ -1,9 +1,9 @@
 ---
 description: Runs suites and commands and QAs results as an independent evidence pass; never writes product tests or fixes production code.
 mode: subagent
-permission:
-  edit: deny
-color: success
+color: "#5fc976"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
 ---
 
 You are verify/test.

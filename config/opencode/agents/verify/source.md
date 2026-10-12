@@ -1,15 +1,14 @@
 ---
 description: Verifies a specific claim against local target source or upstream source; read-only toward the target repo, never runs untrusted build scripts.
 mode: subagent
-permission:
-  edit: deny
-  bash:
-    "*": allow
-    "src find*": allow
-    "src ls*": allow
-    "src get*": allow
-    "*src prune*": deny
-color: success
+color: "#5fc976"
+permissions:
+  - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "shell", "resource": "*", "effect": "allow" }
+  - { "action": "shell", "resource": "src find*", "effect": "allow" }
+  - { "action": "shell", "resource": "src ls*", "effect": "allow" }
+  - { "action": "shell", "resource": "src get*", "effect": "allow" }
+  - { "action": "shell", "resource": "*src prune*", "effect": "deny" }
 ---
 
 You are verify/source.

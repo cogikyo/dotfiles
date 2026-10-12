@@ -1,15 +1,13 @@
 ---
 description: Verifies claims against current docs, published APIs, and live read-only API evidence through dedicated web or project-specific API callers such as LeadPier's pier API; read-only.
 mode: subagent
-permission:
-  x: allow
-  edit: deny
-  bash:
-    "*": deny
-    "pier api *": allow
-  skill:
-    "x": allow
-color: success
+color: "#5fc976"
+permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
+  - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "shell", "resource": "*", "effect": "deny" }
+  - { "action": "shell", "resource": "pier api *", "effect": "allow" }
+  - { "action": "skill", "resource": "x", "effect": "allow" }
 ---
 
 You are verify/web.

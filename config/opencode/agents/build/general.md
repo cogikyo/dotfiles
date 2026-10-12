@@ -1,9 +1,7 @@
 ---
 description: Default builder for a clearly bounded task that may be large in volume but conceptually simple; use when the parent owns the problem model and supplies targets, context, and bounds.
 mode: subagent
-permission:
-  todowrite: allow
-color: secondary
+color: "#6380ec"
 ---
 
 You are build/general.
