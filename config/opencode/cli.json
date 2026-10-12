@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/v2/cli.json",
+  "theme": {
+    "name": "vagari"
+  },
+  "keybinds": {
+    "leader": "ctrl+h",
+    "command.palette.show": "<leader>l",
+    "theme.switch": "<leader>_",
+    "opencode.status": "<leader>s",
+    "session.list": "<leader>r",
+    "session.share": "none",
+    "session.unshare": "none",
+    "session.parent": "up,ctrl+alt+up",
+    "model.list": "<leader>m",
+    "model.cycle_favorite": "ctrl+m",
+    "agent.list": "<leader>a",
+    "variant.cycle": "ctrl+i",
+    "session.first": "ctrl+g",
+    "session.last": "ctrl+alt+g",
+    "input.line.home": "home,ctrl+a",
+    "input.line.end": "end,ctrl+e",
+    "input.select.line.home": "shift+home,ctrl+shift+a",
+    "input.select.line.end": "shift+end,ctrl+shift+e",
+    "input.buffer.home": "alt+home",
+    "input.buffer.end": "alt+end",
+    "input.select.buffer.home": "alt+shift+home",
+    "input.select.buffer.end": "alt+shift+end",
+    "terminal.suspend": "none"
+  },
+  "scroll": {
+    "speed": 3,
+    "acceleration": true
+  },
+  "diffs": {},
+  "mouse": true
+}
