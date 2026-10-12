@@ -3,6 +3,9 @@ import { createEffect, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { api, type Entry } from "./rpc.ts";
 
+const AWAY =
+  "Drive mode is on and the user is away, so nobody will answer this question. Decide yourself, record the decision and your reasons, and continue.";
+
 export default Plugin.define({
   id: "drive",
   setup(context) {
@@ -38,6 +41,9 @@ export default Plugin.define({
           ? { message: "Drive mode on: a reviewer answers permission requests", variant: "warning" }
           : { message: "Drive mode off", variant: "info" },
       );
+      if (!state.armed) return;
+      const request = options(state.root);
+      await handoff(context, request, (sessions) => rpc.sweep({ sessionID: state.root, sessions }, request));
     };
 
     const review = async () => {
@@ -55,7 +61,7 @@ export default Plugin.define({
     };
 
     context.ui.slot({
-      append: "prompt.footer.status",
+      before: "prompt.footer.status",
       render: (input) => {
         const root = () => (input.sessionID ? context.data.session.root(input.sessionID) : undefined);
         createEffect(() => {
@@ -93,6 +99,26 @@ export default Plugin.define({
     return rpc.events.on("changed", (event) => setArmed(event.data.root, event.data.armed));
   },
 });
+
+async function handoff(
+  context: Plugin.Context,
+  request: { location: { directory: string } } | undefined,
+  sweep: (sessions: string[]) => Promise<readonly string[]>,
+) {
+  const [requests, forms] = await Promise.all([
+    context.client.permission.request.list(request),
+    context.client.form.list(request),
+  ]);
+  const questions = forms.data.filter((form) => form.metadata?.kind === "question");
+  const sessions = [...requests.data, ...questions].map((item) => item.sessionID);
+  if (sessions.length === 0) return;
+  const tree = new Set(await sweep(sessions));
+  await Promise.allSettled(
+    questions
+      .filter((form) => tree.has(form.sessionID))
+      .map((form) => context.client.session.form.cancel({ sessionID: form.sessionID, formID: form.id, message: AWAY })),
+  );
+}
 
 function Badge(props: { context: Plugin.Context; armed: boolean }) {
   return (

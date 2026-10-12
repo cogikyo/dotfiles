@@ -8,8 +8,6 @@ import { api, Decision, type Entry } from "./rpc.ts";
 type Context = Plugin.Context;
 type Session = Awaited<ReturnType<Context["session"]["get"]>>;
 type Message = Awaited<ReturnType<Context["session"]["context"]>>[number];
-type Event = ReturnType<Context["event"]["subscribe"]> extends AsyncIterable<infer E> ? E : never;
-type Asked = Extract<Event, { type: "permission.asked" }>["data"];
 
 interface Ask {
   readonly sessionID: string;
@@ -55,7 +53,7 @@ Answer with one JSON object and nothing else: {"decision":"allow"|"deny"|"ask","
 
 class Drive {
   private readonly parents = new Map<string, string | undefined>();
-  readonly pending = new Map<string, Asked>();
+  private readonly swept = new Set<string>();
 
   constructor(private readonly ctx: Context) {}
 
@@ -85,11 +83,25 @@ class Drive {
     event.message = denial(verdict.reason);
   }
 
-  async sweep(root: string) {
-    const pending = [...this.pending.values()];
-    const roots = await Promise.all(pending.map((ask) => this.root(ask.sessionID)));
-    const asks = pending.filter((_, index) => roots[index] === root);
-    const reviewed = await Promise.all(asks.map(async (ask) => ({ ask, verdict: await this.review(root, ask) })));
+  async sweep(root: string, sessions: readonly string[]) {
+    const candidates = [...new Set(sessions)];
+    const roots = await Promise.allSettled(candidates.map((sessionID) => this.root(sessionID)));
+    const tree = candidates.filter((_, index) => {
+      const result = roots[index];
+      return result?.status === "fulfilled" && result.value === root;
+    });
+    const lists = await Promise.allSettled(tree.map((sessionID) => this.ctx.permission.list({ sessionID })));
+    const asks = lists
+      .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+      .filter((ask) => !this.swept.has(ask.id));
+    for (const ask of asks) this.swept.add(ask.id);
+    this.settle(root, asks).catch((error: unknown) => log("review pending asks", error));
+    return tree;
+  }
+
+  private async settle(root: string, asks: readonly (Ask & { id: string })[]) {
+    const results = await Promise.allSettled(asks.map(async (ask) => ({ ask, verdict: await this.review(root, ask) })));
+    const reviewed = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
     const order: Decision[] = ["allow", "deny"];
     for (const decision of order)
       for (const { ask, verdict } of reviewed) {
@@ -105,20 +117,13 @@ class Drive {
       }
   }
 
-  async watch(signal: AbortSignal) {
-    for await (const event of this.ctx.event.subscribe({ signal })) {
-      if (event.type === "permission.asked") this.pending.set(event.data.id, event.data);
-      if (event.type === "permission.replied") this.pending.delete(event.data.requestID);
-    }
-  }
-
   private async review(root: string, ask: Ask): Promise<Verdict | undefined> {
     const verdict = await this.judge(root, ask).catch((error: unknown): Verdict => ({
       decision: "ask",
       reason: `reviewer failed: ${explain(error)}`,
     }));
     if (!(await this.armed(root))) return;
-    await record({
+    record({
       time: new Date().toISOString(),
       root,
       session: ask.sessionID,
@@ -193,21 +198,29 @@ function denial(reason: string) {
   return `Drive mode reviewer denied this request: ${reason}`;
 }
 
-async function record(entry: Entry) {
+let writes = Promise.resolve();
+
+function record(entry: Entry) {
+  writes = writes.then(() => append(entry)).catch((error: unknown) => log("journal", error));
+}
+
+async function append(entry: Entry) {
   await mkdir(path.dirname(journal), { recursive: true });
   const size = await stat(journal).then(
     (info) => info.size,
     () => 0,
   );
-  if (size > rotation) await rename(journal, `${journal}.1`);
+  if (size > rotation) await rename(journal, `${journal}.1`).catch(missing);
   await appendFile(journal, `${JSON.stringify(entry)}\n`);
 }
 
+function missing(error: NodeJS.ErrnoException) {
+  if (error.code !== "ENOENT") throw error;
+}
+
 async function entries(root: string, limit: number) {
-  const text = await readFile(journal, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return "";
-    throw error;
-  });
+  await writes;
+  const text = (await readFile(journal, "utf8").catch(missing)) ?? "";
   return text
     .split("\n")
     .flatMap((line): Entry[] => {
@@ -235,8 +248,6 @@ export default Plugin.define({
   id: "drive",
   async setup(ctx) {
     const drive = new Drive(ctx);
-    const controller = new AbortController();
-    drive.watch(controller.signal).catch((error: unknown) => log("watch permissions", error));
 
     await ctx.permission.hook("evaluate", (event) =>
       drive.evaluate(event).catch((error: unknown) => log("review", error)),
@@ -261,12 +272,13 @@ export default Plugin.define({
         const root = await drive.root(sessionID);
         await drive.arm(root, armed);
         await rpc.events.emit("changed", { root, armed });
-        if (armed) drive.sweep(root).catch((error: unknown) => log("review pending asks", error));
         return { root, armed };
+      },
+      sweep: async ({ sessionID, sessions }) => {
+        const root = await drive.root(sessionID);
+        return (await drive.armed(root)) ? drive.sweep(root, sessions) : [];
       },
       journal: async ({ sessionID, limit }) => entries(await drive.root(sessionID), limit ?? 50),
     });
-
-    return () => controller.abort();
   },
 });

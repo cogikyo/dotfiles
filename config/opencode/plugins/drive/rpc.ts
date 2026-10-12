@@ -25,6 +25,10 @@ export const api = Rpc.define({
   methods: {
     state: { input: Schema.toStandardSchemaV1(Schema.Struct(session)), output: State },
     arm: { input: Schema.toStandardSchemaV1(Schema.Struct({ ...session, armed: Schema.Boolean })), output: State },
+    sweep: {
+      input: Schema.toStandardSchemaV1(Schema.Struct({ ...session, sessions: Schema.Array(Schema.String) })),
+      output: Schema.toStandardSchemaV1(Schema.Array(Schema.String)),
+    },
     journal: {
       input: Schema.toStandardSchemaV1(Schema.Struct({ ...session, limit: Schema.optional(Schema.Int) })),
       output: Schema.toStandardSchemaV1(Schema.Array(Entry)),
