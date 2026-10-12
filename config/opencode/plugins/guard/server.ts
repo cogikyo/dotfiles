@@ -16,6 +16,10 @@ const secrets = [
   ".local/share/dotfiles/porkbun.env",
   ".local/share/dotfiles/vpn",
   ".mozilla/firefox",
+  ".claude/.credentials.json",
+  ".claude-cogikyo/.credentials.json",
+  ".local/share/opencode/auth.json",
+  ".local/share/opencode-v2/opencode/auth.json",
 ].map((secret) => path.join(home, secret));
 
 function text(input: unknown, key: string) {

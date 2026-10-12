@@ -144,6 +144,11 @@ class Lexer {
       return;
     }
     if (char === '"') return this.quoted();
+    if (this.source.startsWith("$'", this.at)) return this.ansi();
+    if (this.source.startsWith('$"', this.at)) {
+      this.at++;
+      return this.quoted();
+    }
     if (this.substitution()) return;
     this.at++;
     if (char === "&" && /[<>]/u.test(this.source[this.at - 2] ?? "")) return this.take(char);
@@ -170,6 +175,13 @@ class Lexer {
       else if (!this.substitution()) this.take(this.source[this.at++]);
     }
     this.at++;
+  }
+
+  private ansi() {
+    let end = this.at + 2;
+    while (end < this.source.length && this.source[end] !== "'") end += this.source[end] === "\\" ? 2 : 1;
+    this.take(decode(this.source.slice(this.at + 2, end)));
+    this.at = end + 1;
   }
 
   private substitution() {
@@ -199,6 +211,32 @@ class Lexer {
     this.word = "";
     this.open = false;
   }
+}
+
+const escapes: Record<string, string> = {
+  a: "\x07",
+  b: "\b",
+  e: "\x1b",
+  E: "\x1b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  v: "\v",
+};
+const ansiEscape = /\\(?:([0-7]{1,3})|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c(.)|([\s\S]))/gu;
+
+function decode(body: string) {
+  return body.replace(ansiEscape, (...parts: string[]) => {
+    const [, octal, hex, short, long, control, other] = parts;
+    if (octal) return String.fromCharCode(Number.parseInt(octal, 8) & 0xff);
+    if (hex) return String.fromCharCode(Number.parseInt(hex, 16));
+    const point = short ?? long;
+    if (point) return String.fromCodePoint(Math.min(Number.parseInt(point, 16), 0x10ffff));
+    if (control) return String.fromCharCode(control.charCodeAt(0) & 0x1f);
+    if (other in escapes) return escapes[other];
+    return `\\'"?`.includes(other) ? other : `\\${other}`;
+  });
 }
 
 function closing(source: string, start: number) {
