@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin";
-import { Schema } from "effect";
+import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 import { Catalog, MCP, version, type Tool } from "./mcp.ts";
 
@@ -9,6 +9,9 @@ const web = new Set(["http:", "https:"]);
 export default Plugin.define({
   id: "browser",
   async setup(ctx) {
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("browser: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
     const browsers = new Map<string, Promise<MCP>>();
     let catalog: readonly Tool[] = [];
 
@@ -68,13 +71,13 @@ export default Plugin.define({
         catalog = tools;
         return ctx.tool.reload();
       })
-      .catch((error: unknown) => console.error(`browser: tool discovery failed: ${explain(error)}`));
+      .catch((error: unknown) => log(Effect.logError("browser: tool discovery failed", { error: explain(error) })));
 
     (async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal }))
         if (event.type === "session.idle" || event.type === "session.deleted") await close(event.data.sessionID);
     })().catch((error: unknown) => {
-      if (!controller.signal.aborted) console.error(`browser: session watch failed: ${explain(error)}`);
+      if (!controller.signal.aborted) log(Effect.logError("browser: session watch failed", { error: explain(error) }));
     });
 
     return async () => {

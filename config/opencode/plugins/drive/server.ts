@@ -1,11 +1,12 @@
 import { Plugin } from "@opencode/plugin";
-import { Schema } from "effect";
+import { Effect, Fiber, Schema } from "effect";
 import { appendFile, mkdir, readFile, rename, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { api, Decision, type Entry } from "./rpc.ts";
 
 type Context = Plugin.Context;
+type Fail = (what: string, error: unknown) => void;
 type Session = Awaited<ReturnType<Context["session"]["get"]>>;
 type Message = Awaited<ReturnType<Context["session"]["context"]>>[number];
 
@@ -55,7 +56,10 @@ class Drive {
   private readonly parents = new Map<string, string | undefined>();
   private readonly swept = new Set<string>();
 
-  constructor(private readonly ctx: Context) {}
+  constructor(
+    private readonly ctx: Context,
+    private readonly fail: Fail,
+  ) {}
 
   async root(sessionID: string): Promise<string> {
     if (!this.parents.has(sessionID)) this.parents.set(sessionID, (await this.ctx.session.get({ sessionID })).parentID);
@@ -95,7 +99,7 @@ class Drive {
       .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
       .filter((ask) => !this.swept.has(ask.id));
     for (const ask of asks) this.swept.add(ask.id);
-    this.settle(root, asks).catch((error: unknown) => log("review pending asks", error));
+    this.settle(root, asks).catch((error: unknown) => this.fail("review pending asks", error));
     return tree;
   }
 
@@ -113,7 +117,7 @@ class Drive {
             decision: decision === "allow" ? "once" : "reject",
             message: decision === "deny" ? denial(verdict.reason) : undefined,
           })
-          .catch((error: unknown) => log(`reply to ${ask.id}`, error));
+          .catch((error: unknown) => this.fail(`reply to ${ask.id}`, error));
       }
   }
 
@@ -123,17 +127,20 @@ class Drive {
       reason: `reviewer failed: ${explain(error)}`,
     }));
     if (!(await this.armed(root))) return;
-    record({
-      time: new Date().toISOString(),
-      root,
-      session: ask.sessionID,
-      agent: ask.agent,
-      action: ask.action,
-      resources: [...ask.resources],
-      decision: verdict.decision,
-      reason: verdict.reason,
-      model,
-    });
+    record(
+      {
+        time: new Date().toISOString(),
+        root,
+        session: ask.sessionID,
+        agent: ask.agent,
+        action: ask.action,
+        resources: [...ask.resources],
+        decision: verdict.decision,
+        reason: verdict.reason,
+        model,
+      },
+      this.fail,
+    );
     return verdict;
   }
 
@@ -200,8 +207,8 @@ function denial(reason: string) {
 
 let writes = Promise.resolve();
 
-function record(entry: Entry) {
-  writes = writes.then(() => append(entry)).catch((error: unknown) => log("journal", error));
+function record(entry: Entry, fail: Fail) {
+  writes = writes.then(() => append(entry)).catch((error: unknown) => fail("journal", error));
 }
 
 async function append(entry: Entry) {
@@ -240,17 +247,17 @@ function explain(error: unknown) {
   return error instanceof Error ? error.message : JSON.stringify(error);
 }
 
-function log(what: string, error: unknown) {
-  console.error(`drive: ${what} failed: ${explain(error)}`);
-}
-
 export default Plugin.define({
   id: "drive",
   async setup(ctx) {
-    const drive = new Drive(ctx);
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("drive: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
+    const fail: Fail = (what, error) => log(Effect.logError(`drive: ${what} failed`, { error: explain(error) }));
+    const drive = new Drive(ctx, fail);
 
     await ctx.permission.hook("evaluate", (event) =>
-      drive.evaluate(event).catch((error: unknown) => log("review", error)),
+      drive.evaluate(event).catch((error: unknown) => fail("review", error)),
     );
 
     await ctx.session.hook("context", async (event) => {
@@ -259,7 +266,7 @@ export default Plugin.define({
         delete event.tools.question;
         event.system.push({ type: "text", text: ARMED });
       } catch (error) {
-        log("armed context", error);
+        fail("armed context", error);
       }
     });
 

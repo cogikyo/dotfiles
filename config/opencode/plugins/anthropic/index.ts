@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { Plugin } from "@opencode/plugin";
+import { Effect, Fiber } from "effect";
 import { claudeAccounts } from "./accounts.ts";
 import { isLongContextError, LONG_CONTEXT_BETAS } from "./claude-auth/betas.js";
 import { fetchWithRetry } from "./claude-auth/http.js";
@@ -28,15 +29,18 @@ function apiError(status: number, type: string, message: string, headers: Record
 }
 
 async function detectVersion() {
-  if (process.env.ANTHROPIC_CLI_VERSION) return;
+  if (process.env.ANTHROPIC_CLI_VERSION) return Effect.void;
   try {
     const { stdout } = await promisify(execFile)("claude", ["--version"], { timeout: 3000 });
     const version = stdout.trim().split(/\s+/)[0];
     if (!/^\d+\.\d+\.\d+/.test(version)) throw new Error(`unexpected output ${JSON.stringify(stdout.trim())}`);
     process.env.ANTHROPIC_CLI_VERSION = version;
-    console.info(`anthropic: ANTHROPIC_CLI_VERSION=${version} from claude --version`);
+    return Effect.logInfo("anthropic: ANTHROPIC_CLI_VERSION from claude --version", { version });
   } catch (error) {
-    console.warn(`anthropic: claude --version failed, using ccVersion ${config.ccVersion}: ${String(error)}`);
+    return Effect.logWarning("anthropic: claude --version failed", {
+      ccVersion: config.ccVersion,
+      error: String(error),
+    });
   }
 }
 
@@ -52,7 +56,10 @@ function shape(text: string) {
 export default Plugin.define({
   id: "anthropic",
   async setup(ctx) {
-    await detectVersion();
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("anthropic: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
+    log(await detectVersion());
     await ctx.provider.transform((providers) => {
       const source = providers.get("anthropic");
       for (const [id, ids] of Object.entries(disabledVariants)) {
@@ -64,7 +71,7 @@ export default Plugin.define({
     });
 
     for (const { id: providerID, configDir, loginCommand } of Object.values(claudeAccounts)) {
-      const credentials = new Credentials(configDir);
+      const credentials = new Credentials(configDir, log);
       const excluded = new Map<string, Set<string>>();
       const pending = new WeakMap<Request, Pending>();
       const failure = (kind: Failure) =>

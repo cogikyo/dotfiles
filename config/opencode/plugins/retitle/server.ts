@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin";
+import { Effect, Fiber } from "effect";
 
 const TRIGGER = 2;
 const COOLDOWN_MS = 5 * 60_000;
@@ -52,6 +53,9 @@ function clean(raw: string) {
 export default Plugin.define({
   id: "retitle",
   async setup(ctx) {
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("retitle: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
     const states = new Map<string, State>();
     const controller = new AbortController();
 
@@ -91,12 +95,12 @@ export default Plugin.define({
         if (event.type === "session.deleted") states.delete(event.data.sessionID);
         if (event.type === "session.execution.succeeded") {
           retitle(event.data.sessionID).catch((error: unknown) =>
-            console.error(`retitle: ${event.data.sessionID} failed: ${String(error)}`),
+            log(Effect.logError("retitle: failed", { sessionID: event.data.sessionID, error: String(error) })),
           );
         }
       }
     };
-    watch().catch((error: unknown) => console.error(`retitle: event stream failed: ${String(error)}`));
+    watch().catch((error: unknown) => log(Effect.logError("retitle: event stream failed", { error: String(error) })));
 
     return () => controller.abort();
   },

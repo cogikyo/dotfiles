@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin";
-import { Schema } from "effect";
+import { Effect, Fiber, Schema } from "effect";
 
 const timeout = 10 * 60 * 1000;
 
@@ -93,11 +93,14 @@ function jaccard(left: Set<string>, right: Set<string>) {
 export default Plugin.define({
   id: "x",
   async setup(ctx) {
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("x: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
     const controller = new AbortController();
     void (async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal }))
         if (event.type === "session.deleted") forget(event.data.sessionID);
-    })().catch((error: unknown) => console.error(`x: watch sessions failed: ${String(error)}`));
+    })().catch((error: unknown) => log(Effect.logError("x: watch sessions failed", { error: String(error) })));
 
     await ctx.tool.transform((editor) =>
       editor.add({

@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Effect } from "effect";
 
 const tokenURL = "https://claude.ai/v1/oauth/token";
 const clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
@@ -99,7 +100,10 @@ export class Credentials {
   private readonly file: string;
   private readonly lock: string;
 
-  constructor(configDir: string) {
+  constructor(
+    configDir: string,
+    private readonly log: (effect: Effect.Effect<void>) => void,
+  ) {
     this.file = path.join(configDir, ".credentials.json");
     const digest = createHash("sha256").update(`file:${configDir}`).digest("hex").slice(0, 16);
     this.lock = path.join(lockDir, `claude-auth-refresh-${digest}.lock`);
@@ -193,7 +197,7 @@ export class Credentials {
       try {
         if (temp) unlinkSync(temp);
       } catch {}
-      console.warn(`anthropic: refreshed token not written to ${this.file}: ${String(error)}`);
+      this.log(Effect.logWarning("anthropic: refreshed token not written", { file: this.file, error: String(error) }));
     }
   }
 }
