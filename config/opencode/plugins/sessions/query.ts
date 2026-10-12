@@ -1,25 +1,5 @@
 import { Database, type SQLQueryBindings } from "bun:sqlite";
-
-export type Query = {
-  readonly query: "list" | "text" | "reasoning" | "tools" | "part" | "sql";
-  readonly session?: string;
-  readonly part?: string;
-  readonly directory?: string;
-  readonly agent?: string;
-  readonly parent?: string;
-  readonly nested?: boolean;
-  readonly since?: string;
-  readonly until?: string;
-  readonly role?: "user" | "assistant";
-  readonly synthetic?: boolean;
-  readonly match?: string;
-  readonly tool?: string;
-  readonly from?: number;
-  readonly sql?: string;
-  readonly params?: readonly (string | number | null)[];
-  readonly limit: number;
-  readonly offset?: number;
-};
+import type { Query } from "./server.ts";
 
 const excerpt = 800;
 const brief = 160;

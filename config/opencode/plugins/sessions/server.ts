@@ -3,7 +3,6 @@ import { Option, Schema } from "effect";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Query } from "./query.ts";
 
 const cap = 20;
 const timeout = 30_000;
@@ -50,6 +49,8 @@ const Input = Schema.Struct({
   ),
   offset: count("Rows to skip for paging."),
 });
+
+export type Query = typeof Input.Type & { readonly limit: number };
 
 const Reply = Schema.Union([Schema.Struct({ output: Schema.String }), Schema.Struct({ error: Schema.String })]);
 
