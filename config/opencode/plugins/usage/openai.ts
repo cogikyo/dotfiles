@@ -6,6 +6,7 @@ const { id, label, staleAfterMS } = usageProviders.openai;
 const FETCH_TIMEOUT_MS = 15_000;
 const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
+const CODEX_METHODS = new Set(["chatgpt-browser", "chatgpt-headless"]);
 
 export function openaiUsage(credentials: Credentials): ProviderAdapter {
   return {
@@ -25,6 +26,7 @@ export function openaiUsage(credentials: Credentials): ProviderAdapter {
 async function load(credentials: Credentials): Promise<ProviderUsage> {
   const credential = await credentials("openai");
   if (credential?.type !== "oauth") return usage([], "no auth");
+  if (!CODEX_METHODS.has(credential.methodID)) return { ...usage([], "needs Codex login"), noteKind: "warn" };
 
   const accountID = str(credential.metadata?.accountID) || accountIDFromToken(credential.access);
   const headers = new Headers({

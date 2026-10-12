@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Option, Schema } from "effect";
+import { Usage } from "./rpc.ts";
 import { num, record, str, type NoteKind, type ProviderUsage, type UsageWindow } from "./types.ts";
 
 export type CachedProviderUsage = {
@@ -28,62 +30,25 @@ class Malformed extends Error {}
 const MAX_CACHE_WINDOWS = 12;
 const MAX_FUTURE_SKEW_MS = 5_000;
 const WINDOW_LABEL = /^[A-Za-z0-9_-]{1,8}$/;
-const NOTE_KINDS = new Set<string>(["info", "warn", "error"]);
+const NOTE_KINDS = new Set<unknown>(["info", "warn", "error"]);
 
-function isNoteKind(value: string | undefined): value is NoteKind {
-  return value !== undefined && NOTE_KINDS.has(value);
+function isNoteKind(value: unknown): value is NoteKind {
+  return NOTE_KINDS.has(value);
 }
 
-function optional<T>(value: unknown, pick: (value: unknown) => T | undefined) {
-  if (value === undefined) return undefined;
-  const picked = pick(value);
-  if (picked === undefined) throw new Malformed();
-  return picked;
-}
-
-function decodeWindow(value: unknown): UsageWindow {
-  const window = record(value);
-  const label = str(window?.label);
-  if (!window || label === undefined) throw new Malformed();
-  return {
-    label,
-    usedPercent: optional(window.usedPercent, num),
-    resetAt: optional(window.resetAt, str),
-  };
-}
-
-function decodeUsage(value: unknown): ProviderUsage {
-  const usage = record(value);
-  const id = str(usage?.id);
-  const label = str(usage?.label);
-  if (!usage || id === undefined || label === undefined || !Array.isArray(usage.windows)) throw new Malformed();
-  const noteKind = str(usage.noteKind);
-  const placeholders = usage.placeholders;
-  if (
-    placeholders !== undefined &&
-    !(Array.isArray(placeholders) && placeholders.every((item) => str(item) !== undefined))
-  )
-    throw new Malformed();
-  return {
-    id,
-    label,
-    windows: usage.windows.map(decodeWindow),
-    note: str(usage.note),
-    noteKind: isNoteKind(noteKind) ? noteKind : undefined,
-    placeholders: placeholders as string[] | undefined,
-  };
-}
-
-function decodeCache(value: unknown): CachedProviderUsage {
-  const cache = record(value);
-  if (!cache) throw new Malformed();
-  return {
-    fetchedAt: optional(cache.fetchedAt, num),
-    backoffUntil: optional(cache.backoffUntil, num),
-    usage: cache.usage === undefined ? undefined : decodeUsage(cache.usage),
-    error: optional(cache.error, str),
-  };
-}
+const Cache = Schema.Struct({
+  fetchedAt: Schema.optional(Schema.Finite),
+  backoffUntil: Schema.optional(Schema.Finite),
+  usage: Schema.optional(
+    Usage.mapFields((fields) => ({
+      ...fields,
+      note: Schema.optional(Schema.Unknown),
+      noteKind: Schema.optional(Schema.Unknown),
+    })),
+  ),
+  error: Schema.optional(Schema.String),
+});
+const decodeCache = Schema.decodeUnknownOption(Cache);
 
 async function readCache(providerID: string): Promise<CachedProviderUsage | undefined> {
   let text: string;
@@ -93,7 +58,12 @@ async function readCache(providerID: string): Promise<CachedProviderUsage | unde
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
     throw error;
   }
-  return decodeCache(JSON.parse(text));
+  const decoded = decodeCache(JSON.parse(text));
+  if (Option.isNone(decoded)) throw new Malformed();
+  const { usage, ...cache } = decoded.value;
+  if (!usage) return cache;
+  const { note, noteKind } = usage;
+  return { ...cache, usage: { ...usage, note: str(note), noteKind: isNoteKind(noteKind) ? noteKind : undefined } };
 }
 
 export async function inspectProviderCache(

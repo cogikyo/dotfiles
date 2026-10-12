@@ -16,7 +16,7 @@ export type ProviderUsage = {
 };
 
 export type Credential =
-  | { type: "oauth"; access: string; metadata?: Readonly<Record<string, unknown>> }
+  | { type: "oauth"; methodID: string; access: string; metadata?: Readonly<Record<string, unknown>> }
   | { type: "key"; key: string }
   | { type: "external" };
 

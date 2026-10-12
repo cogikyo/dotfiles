@@ -4,7 +4,8 @@ import { cursorUsage } from "./cursor.ts";
 import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
 import { refresh } from "./poll.ts";
-import { Definition, type Snapshot } from "./rpc.ts";
+import { Schema } from "effect";
+import { Definition, Snapshot } from "./rpc.ts";
 import { renderUsageStatus } from "./status.ts";
 import type { Credentials, ProviderAdapter } from "./types.ts";
 import { xaiUsage } from "./xai.ts";
@@ -44,13 +45,15 @@ export default Plugin.define({
           })),
         ),
       ).then(async (providers) => {
-        latest = { providers };
-        await rpc.events.emit("updated", latest).catch(() => undefined);
+        latest = Schema.decodeUnknownSync(Snapshot)(JSON.parse(JSON.stringify({ providers })));
+        await rpc.events.emit("updated", latest);
         return latest;
       });
-      running = task.finally(() => {
+      const clear = () => {
         if (running === task) running = undefined;
-      });
+      };
+      task.then(clear, clear);
+      running = task;
       return task;
     };
 
@@ -69,8 +72,9 @@ export default Plugin.define({
       }),
     );
 
-    void poll();
-    const timer = setInterval(() => void poll(), POLL_MS);
+    const background = () => void poll().catch(() => undefined);
+    background();
+    const timer = setInterval(background, POLL_MS);
     return () => clearInterval(timer);
   },
 });
