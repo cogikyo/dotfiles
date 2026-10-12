@@ -5,9 +5,6 @@ color: "#5fc976"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "shell", "resource": "*", "effect": "allow" }
-  - { "action": "shell", "resource": "src find*", "effect": "allow" }
-  - { "action": "shell", "resource": "src ls*", "effect": "allow" }
-  - { "action": "shell", "resource": "src get*", "effect": "allow" }
   - { "action": "shell", "resource": "*src prune*", "effect": "deny" }
 ---
 
