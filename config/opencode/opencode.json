@@ -138,6 +138,27 @@
       "timeout": 30000
     }
   },
+  "providers": {
+    "anthropic": {
+      "name": "Anthropic [Trend]",
+      "settings": { "apiKey": "oauth-required" }
+    },
+    "anthropic-personal": {
+      "canonical": "anthropic",
+      "name": "Anthropic [Cogikyo]",
+      "settings": { "apiKey": "oauth-required" },
+      "models": {
+        "claude-opus-5-5": {},
+        "claude-sonnet-5-5": {},
+        "claude-fable-5-1": {
+          "settings": {
+            "thinking": { "type": "adaptive", "display": "summarized" },
+            "effort": "medium"
+          }
+        }
+      }
+    }
+  },
   "provider": {
     "cursor": {
       "npm": "@ai-sdk/openai-compatible",
@@ -156,60 +177,6 @@
         "gpt-6.1-sol": {
           "options": {
             "reasoningEffort": "high"
-          }
-        }
-      }
-    },
-    "anthropic": {
-      "name": "Anthropic [Trend]",
-      "options": { "apiKey": "oauth-required" },
-      "models": {
-        "claude-opus-5-5": {
-          "options": { "cacheControl": { "type": "ephemeral", "ttl": "1h" } },
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true } }
-        },
-        "claude-opus-5-5-fast": {
-          "options": { "cacheControl": { "type": "ephemeral", "ttl": "1h" } }
-        },
-        "claude-sonnet-5-5": {
-          "options": { "cacheControl": { "type": "ephemeral", "ttl": "1h" } },
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
-        }
-      }
-    },
-    "anthropic-personal": {
-      "npm": "@ai-sdk/anthropic",
-      "name": "Anthropic [Cogikyo]",
-      "options": { "apiKey": "oauth-required" },
-      "models": {
-        "claude-opus-5-5": {
-          "name": "Claude Opus 5.5",
-          "attachment": true,
-          "reasoning": true,
-          "modalities": { "input": ["text", "image", "pdf"] },
-          "limit": { "context": 1000000, "output": 128000 },
-          "options": { "cacheControl": { "type": "ephemeral", "ttl": "1h" } },
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true } }
-        },
-        "claude-sonnet-5-5": {
-          "name": "Claude Sonnet 5.5",
-          "attachment": true,
-          "reasoning": true,
-          "modalities": { "input": ["text", "image", "pdf"] },
-          "limit": { "context": 1000000, "output": 128000 },
-          "options": { "cacheControl": { "type": "ephemeral", "ttl": "1h" } },
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
-        },
-        "claude-fable-5-1": {
-          "name": "Claude Fable 5.1",
-          "attachment": true,
-          "reasoning": true,
-          "modalities": { "input": ["text", "image", "pdf"] },
-          "limit": { "context": 1000000, "output": 128000 },
-          "options": {
-            "thinking": { "type": "adaptive", "display": "summarized" },
-            "effort": "medium",
-            "cacheControl": { "type": "ephemeral", "ttl": "1h" }
           }
         }
       }
