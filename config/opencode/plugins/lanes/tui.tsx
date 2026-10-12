@@ -1,3 +1,4 @@
+import { MouseButton, type MouseEvent } from "@opentui/core";
 import { Plugin } from "@opencode/plugin/tui";
 import { createMemo, For, Show } from "solid-js";
 
@@ -47,6 +48,10 @@ async function act(context: Context, session: Session) {
 function Sidebar(props: { context: Context; sessionID: string }) {
   const root = createMemo(() => props.context.data.session.get(props.sessionID)?.parentID === undefined);
   const list = createMemo(() => (root() ? lanes(props.context, props.sessionID) : []));
+  const click = (event: MouseEvent, session: Session) => {
+    if (event.button === MouseButton.RIGHT) return void act(props.context, session);
+    props.context.ui.router.navigate({ type: "session", sessionID: session.id });
+  };
   const color = (value: Status) => {
     const text = props.context.theme.text;
     if (value === "error") return text.feedback.error.base;
@@ -62,7 +67,7 @@ function Sidebar(props: { context: Context; sessionID: string }) {
         </text>
         <For each={list()}>
           {(session) => (
-            <box flexDirection="row" gap={1} onMouseDown={() => void act(props.context, session)}>
+            <box flexDirection="row" gap={1} onMouseUp={(event) => click(event, session)}>
               <text fg={color(status(props.context, session))}>{status(props.context, session)}</text>
               <text fg={props.context.theme.text.base}>{laneOf(session) ?? "-"}</text>
               <text fg={props.context.theme.text.muted}>{session.agent ?? ""}</text>
