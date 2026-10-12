@@ -8,7 +8,7 @@ description: Use when the user invokes /papercuts or asks to diagnose failed com
 ## Authority
 
 Collab owns this procedure.
-Do not dispatch a child unless the log window is too large to classify here.
+Do not dispatch a child unless the evidence window is too large to classify here.
 Do not edit permissions, skills, or agents unless the user asks after the report.
 
 ## Scope
@@ -16,15 +16,12 @@ Do not edit permissions, skills, or agents unless the user asks after the report
 Default to today and the current workspace.
 Treat `$ARGUMENTS` as the window: a session id, directory, agent, or time bound.
 
-Source of truth is the live OpenCode log:
-
-`/home/cullyn/.local/share/opencode/log/opencode.log`
-
-Start from:
-
-- `evaluated permission=bash` with `action.action=deny` or `ask`
-- nearby `message=created id=` lines for session, agent, parent, directory, and title
-- later evaluations of the same command family, to see whether a legal form then succeeded
+Start with the V2 `sessions` tool and any log or `/drive-log` evidence supplied by the user.
+Select sessions by directory and time, then inspect `tools` with `tool: "shell"` for failed calls.
+Use `part` with the returned `<message ID>#<index>` address to read the command, error, and output.
+Include `subagent` failures when the question concerns agent use or dispatch.
+Compare later calls from the same command family to see whether a legal form succeeded.
+Tool history does not prove every permission ask or reviewer decision; report missing permission evidence instead of inferring it from a failed command.
 
 Ignore read-only git that already has an allowed twin unless the agent never switched to it.
 
@@ -63,7 +60,7 @@ If nothing failed in the window, say that and stop.
 ## Epistemology handoff
 
 For each reported command family, include the relevant session IDs, time range, diagnosis, and whether the evidence suggests a skill or instruction-content issue.
-Make that judgment from the log classification and do not turn papercuts into a transcript miner.
+Make that judgment from the command classification and do not widen into general transcript mining.
 When content improvement is indicated, append a paste-ready scope in this form:
 
 `/epistemology sessions <ids>; time <range>; focus on <command family>; papercuts diagnosis: <diagnosis>`

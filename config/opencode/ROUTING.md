@@ -24,40 +24,46 @@ fallbacks:
 This file owns model routing for delegated work.
 The frontmatter sets each agent's default model and effort, and the body carries the judgment for when to depart from them.
 Treat everything here as defaults and preferences; state the reason when you depart from one.
-Recommend changes to this file, and confirm each decision with the user through `question` before editing it.
+Recommend changes to this file and confirm each decision with the user before editing it.
+When drive mode hides `question`, leave routing changes for the user unless already approved.
 
 ## Routes
 
-Each route maps an agent name or `*` glob to `provider/model-id effort`, and the effort is optional.
+Frontmatter maps an agent name or `*` glob to `provider/model [variant]`, with an optional space-separated variant.
+Explicit `subagent` model values use `provider/model#variant` instead.
 An exact agent name beats a glob, and a longer glob beats a shorter one.
-The `claude` provider is the Anthropic account pool; the task plugin resolves it to `anthropic` or `anthropic-personal` for each call.
+The `claude` provider is the Anthropic account pool; the lanes plugin resolves it to `anthropic` or `anthropic-personal` for each call.
 Each `fallbacks` entry names the model to use when both Anthropic accounts are capped.
 
-Omit `model` and `effort` on `task` to take the route; this is the normal case.
-Pass `effort` alone to change effort on the routed model.
-Pass `model` to change the model, and pass `effort` with it, because an explicit model does not take the route's effort.
-Use `claude/<model-id>` as an explicit model to keep the account pick.
+Omit `model` on `subagent` to take the route; this is the normal case.
+To change reasoning effort, pass the model and its variant together, such as `claude/claude-opus-5-5#xhigh`.
+An explicit model does not take the route's variant.
+Use `claude/<model>#<variant>` to keep account selection, or omit `#<variant>` to use the model's default.
 
-- **Enforced**: an explicit `model` or `effort` on the call beats the route.
-- **Enforced**: invalid frontmatter fails every `task` call that omits `model`, and the error shows above this file in your system prompt.
-- **Enforced**: an agent with no route uses its pinned model, else your current model with a note in the task result.
+- **Enforced**: an explicit `model` beats the route, including its variant.
+- **Enforced**: unusable frontmatter fails calls that omit `model` or use the `claude` pool; a concrete explicit provider bypasses this file.
+- An agent with no route keeps native model selection; the lanes plugin adds no routing note for that case.
 
 ## Anthropic accounts
 
 **Trend** (`anthropic`) and **Cogikyo** (`anthropic-personal`) both serve every repository.
 The pool spends each weekly window before it resets.
 
-- **Enforced**: the task plugin skips an account when its hourly window, its all-model weekly window, or the routed model's weekly window is at 100%; another model's capped window does not block it.
-- **Enforced**: among the rest, it prefers accounts with fully known usage, then the one whose weekly window resets first.
-- **Enforced**: when both accounts are blocked, it uses the model's fallback without effort and notes the switch in the task result.
+- **Enforced**: the pool skips an account when its hourly `H`, all-model weekly `W`, or routed model's scoped window is at 100%; another model's cap does not block it.
+- **Enforced**: a resumed child keeps its account while that account is open; otherwise the pool prefers fully known usage, then the earliest weekly reset.
+- **Enforced**: cached usage older than ten minutes can still influence the pick, and the result notes its age.
+- **Enforced**: when both accounts are capped, the pool uses the model's fallback without a variant and notes the switch in the result.
+  - Without a fallback, it picks the account whose limiting caps reset first; it does not wait for reset.
 - Pass `anthropic/…` or `anthropic-personal/…` only when the user names an account; that pins the account and skips the pick.
-- **Enforced**: Opus runs only at `high`, `xhigh`, or `max`, and Sonnet only at `high` or `xhigh`; `opencode.json` disables their other variants.
+- Use Opus at `high`, `xhigh`, or `max`, and Sonnet at `high` or `xhigh`.
+  - The Anthropic plugin filters low variants from the canonical provider; this is guidance, not a lanes validation rule.
 - Authentication failures return a blocker rather than trigger quota overflow.
   - The user refreshes auth through the Claude CLI with the zsh helper `claude-auth trend` or `claude-auth cogikyo`.
 
 ## Which agent
 
-The task tool lists each agent's description; these lines cover when to pick one.
+Use the `subagent` agent descriptions and these guidelines to pick a child.
+Only Collab dispatches children; every child is a leaf, including reusable lanes.
 
 ### Scouts
 
@@ -106,9 +112,9 @@ Pick a builder by how much the brief settles.
   - Run a parallel OpenAI scout on the same brief when a second independent read could change the answer.
   - Send any claim the answer or design rests on to `verify/*`.
   - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
-- Pass `openai/gpt-6-astra` or `openai/gpt-6.1-sol` with effort `high` when Collab picks one explicitly.
+- Pass `openai/gpt-6-astra#high` or `openai/gpt-6.1-sol#high` when Collab picks one explicitly.
 - Seat a fresh Opus reviewer beside Sol or Astra in each review council.
-  - Pass `claude/claude-opus-5-5` with effort `high` for the Opus seat.
+  - Pass `claude/claude-opus-5-5#high` for the Opus seat.
   - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
 - Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
 - Run a `build/scribe` pass on touched docs and comments before most commits.
@@ -129,7 +135,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - Routes: every `review/*` lens except `review/critic` and `review/entropy`, every `verify/*` leaf, and `build/scribe`.
 - Reasoning: `high` by default; `xhigh` is available.
-- Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5` yourself.
+- Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5#high` yourself.
 - Fast and cheap with plenty of usage, so route review and verification here.
 - Best `build/scribe`, and best at browser QA and computer use.
 - Gathers wide context well and makes sound architecture calls.
@@ -162,7 +168,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - `cursor/*`: C and O are separate pools; O is named-model API usage and is small.
   - About **1,200 Opus fast steps** used up a month.
-  - Cursor children report no tokens, so lane context guards don't fire; use it for **short, bounded jobs**.
+  - Cursor usage is unavailable in the V2 adapter, so do not infer headroom from its `no auth` row; use it for **short, bounded jobs**.
   - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
 - `opencode-go/*`: currently `grok-4.7`; the best model there changes often, and it is the fallback when both Anthropic accounts are capped.
@@ -170,7 +176,7 @@ Most models start at `high` for every role until evidence says otherwise.
 ## Overrides
 
 Explicit user picks of model, effort, or account beat this file and every default in it.
-Carry those picks into the `task` call and into child briefs.
+Carry those picks into the `subagent` model string and into child briefs.
 
 ## Usage
 
@@ -181,5 +187,4 @@ Mention usage only when the user asks, or when every route for a step is capped.
 - Spend every provider up to 100% freely; do not conserve, downgrade, or hedge, and the user says when to be careful.
 - OpenAI's weekly window tends to reset mostly unspent, so add Sol and Astra leaves freely; default routes stay on Opus.
 - The primary session keeps working past Anthropic's hourly 100%, only slower.
-- **Enforced**: the task plugin waits for reset when a window that limits the child's model is at 100%, so route non-pool steps around capped providers yourself.
-  - On an Anthropic account, those are the hourly window, the all-model weekly window, and that model's weekly window; elsewhere, every window counts.
+- The lanes plugin does not wait for quota resets or gate concrete provider calls; route non-pool steps around known caps yourself.

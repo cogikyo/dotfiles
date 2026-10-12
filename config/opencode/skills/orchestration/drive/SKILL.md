@@ -17,7 +17,7 @@ Start from the terminal outcome and work backward through real contract, impleme
 
 1. Split the work into coherent scopes that deserve their own lane or leaf.
 2. Freeze the interfaces that let scopes run in parallel, and put shared changes in an earlier foundation step or a later integration step.
-3. Name the agent and lane for each delegated step, and a model or effort only where it departs from the route.
+3. Name the agent and lane for each delegated step, and a `provider/model#variant` only where it departs from the route.
 4. Name each step's write scope, checks, and repair limit.
 5. Present the workflow as plain numbered steps.
 
@@ -29,12 +29,16 @@ Stop and report when two scopes turn out to need the same design change.
 ## Execute
 
 1. Reconcile the tree and Git state, and find the steps whose inputs are ready.
-2. Dispatch ready steps on their approved routes, in parallel where they are independent.
+2. Dispatch ready steps with `subagent`, using `lane` for reusable children and `background: true` for independent work.
 3. Judge each result and take the approved next step: continue, repair, or return.
 4. Keep todos current with accepted steps, active lanes, repair counts, and blockers.
 
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
+Background calls return immediately, and completion, cancellation, or error arrives in an inbox item that wakes Collab.
+Keep the conversation moving while lanes run, but hold dependent steps until their inputs are accepted.
+Use `lanes` to inspect children and reuse the `subagent` lane name to steer or resume them.
+Only Collab dispatches children; lanes never delegate.
 Return to the user when a condition has no approved next step, a repair limit runs out, or evidence breaks a design assumption.
 In an armed run, these conditions are your decisions; record each one and continue, as `Armed runs` describes.
 
@@ -45,6 +49,7 @@ Later edits invalidate affected review and verification evidence; repeat only th
 Send repairs to the lane that built the change, with the finding as the delta.
 Use a fresh review leaf when the verdict needs independence from earlier rounds.
 After an interruption, reconcile the tree before you reissue write work, because the earlier attempt may have changed files.
+Inspect `lanes` too, because a parent interruption can leave background children running.
 
 ## Return boundaries
 
@@ -55,18 +60,19 @@ At a commit boundary, include the exact scope and a proposed message.
 
 ## Armed runs
 
-The user arms drive mode with a toggle in the input bar of a top-level session, and a system line says so on every turn while it is on.
+The user arms drive mode with `<leader>d` or `/drive`, and a `DRIVE` badge marks the session tree.
+The plugin adds a system line while armed and hides the `question` tool.
 Only the user can change it, and loading this skill yourself does not arm drive mode.
 When the line disappears, attended boundaries apply again from the next step.
 
-- Attended boundaries become your decisions: check classes, repairs, compaction, commits through `build/git`, and rebases.
-- Deny rules still apply.
-- Do not end your turn to ask for approval or call `question`; the plugin returns `question` to you with an instruction to decide.
-- Record each decision and any dissent in todos and in the final report.
-- Return only at the terminal outcome, or on a denial that has no permitted equivalent.
-- Commit finished work before self-compacting.
-- After compaction, follow the plugin's rehydration line and send a scout to check the summary.
-  - Re-post the workflow with per-step status before dispatching work.
+- Make in-scope execution decisions and record the reason and any dissent in todos and the final report.
+- A reviewer model decides each permission ask before it reaches the user, with `allow`, `deny`, or `ask`.
+- Deny rules and explicit user limits still apply; drive mode does not expand scope or grant every permission.
+- Adapt to a denial when a permitted action meets the same approved objective, and never retry it through a bypass.
+- A reviewer `ask` or failure leaves the permission waiting for the user; report the blocker and continue independent permitted work.
+- The plugin journals reviewer decisions, and the user can inspect them with `/drive-log`.
+- Do not call `question` or stop only to request routine approval while armed.
+- V2 auto-compaction continues the turn; recover the workflow state from the summary, todos, lanes, and tree before new writes.
 
 ## Examples
 
@@ -111,8 +117,8 @@ Lanes 3 to 5 write disjoint files; shared registries stay with lane `core`.
 6. `build/owner`, lane `sync`: Own the hard sync rewrite.
 7. `self`: Review each result and report per request.
 
-Collab dispatches the ready steps in one message and waits for them today.
-With OpenCode 2 background tasks, the same lanes can run while the conversation continues.
+Collab dispatches ready steps as background subagents and can keep talking while they run.
+Step 7 waits for the required completion inbox items and accepted results.
 
 ### Long AFK run with a commit boundary
 
@@ -131,7 +137,8 @@ With OpenCode 2 background tasks, the same lanes can run while the conversation 
 6. `self`: Relay findings; gate 6 repairs or returns at the commit boundary.
 
 Repairs re-enter at the fork but resume only the lanes that have findings.
-An unarmed run ends at gate 6 because the commit is an attended boundary; in an armed run, Collab takes step 7 itself and continues.
+An unarmed run ends at gate 6 because the commit is an attended boundary.
+In an armed run, Collab records the commit decision and continues within scope, subject to the reviewer's permission decisions.
 
 ```text
 you: 7 ─→ (8) ─→ 9 ─→ 10 ─→ (11) ─→ RETURN user

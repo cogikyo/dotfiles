@@ -25,7 +25,7 @@ Accept a papercuts handoff in this form and use its session IDs, time range, com
 
 `/epistemology sessions <ids>; time <range>; focus on <command family>; papercuts diagnosis: <diagnosis>`
 
-Default bound: the 12 most recent top-level sessions (`parent_id IS NULL`) whose `session.directory` matches the current directory, with `time_updated` in the last 14 days.
+Default bound: the 12 most recent top-level sessions (`parent_id IS NULL`) whose `session_v2.directory` matches the current directory, with `time_updated` in the last 14 days.
 If that match is empty, retry against the repository root.
 Report the actual sampled count and the oldest-to-newest `time_updated` span.
 Do not claim complete coverage when the cap or window truncated the store.
@@ -36,19 +36,20 @@ Read sessions through the `sessions` tool.
 It opens the store read-only, binds every value, and caps each call at 20 rows with 800-character excerpts.
 Pass `$ARGUMENTS` values as tool arguments or `params`; do not write them into SQL text.
 
-`session.directory` is the authority for current-directory selection.
+`session_v2.directory` is the authority for current-directory selection.
 Do not join `project` or build a project-resolution layer; many sessions use `project_id='global'`.
 
 1. Select candidates with `list`, filtered by `directory` and `since`; it returns top-level sessions with their `agent`, so user-role text is human input.
 2. Pull children with `list` and `parent` only after selecting a relevant parent, or when delegation behavior is the focus.
 3. Read one session at a time with `text`, filtered by `role` or `match` when the focus is known.
-4. Use `tools` for a session's tool inventory; filter `tool: "skill"` to see skill loads, whose input carries the skill name.
-5. Read one `part` for its input and output only after that part matters.
+4. Use `tools` for a session's tool inventory; filter `tool: "skill"` to see skill calls, whose input carries the skill `id`.
+5. Read one `part` for its input and output only after that item matters, using the returned `<message ID>#<index>` address.
 
 Treat a parent plus its children as one occurrence unless they independently evidence the finding.
 Inspect `reasoning` only after narrowing to a session that still needs it.
 The tool skips empty reasoning; also skip encrypted or redacted text, and do not use reasoning alone as evidence.
-Use `sql` only when no operation answers the question, and keep it to one session's parts.
+Use `sql` only when no operation answers the question, and bind `session_message.session_id` to one selected session.
+Assistant content items are in `session_message.data.content`; `json_each` can inspect them.
 
 ## Find
 
@@ -74,7 +75,7 @@ If evidence does not support a change, say so.
 
 For each finding include:
 
-- Session IDs, `session.agent`, and a minimal excerpt or concrete tool trace.
+- Session IDs, `session_v2.agent`, and a minimal excerpt or concrete tool trace.
 - Why the evidence is reusable rather than task-specific.
 - The exact proposed artifact and a focused change.
 - Confidence and blast radius.

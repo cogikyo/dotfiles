@@ -42,13 +42,14 @@ For that objective, these dimensions apply **as needed**:
 
 ## Store
 
-OpenCode keeps sessions in **SQLite** at `/home/cullyn/.local/share/opencode/opencode.db`.
-The old `storage/` directory holds only `migration` and `session_diff`, so it has **no transcripts**.
+OpenCode keeps sessions in **SQLite** at `${XDG_DATA_HOME:-~/.local/share}/opencode/opencode.db`.
+V2 stores sessions in `session_v2` and messages in `session_message`.
 
 - Query the store with the **`sessions` tool**.
-  - Its bounded queries cover the common reads, and its guarded raw mode accepts **one read-only `SELECT`**.
-- Pick sessions first and then read **one session's parts at a time**.
-  - _Parts are indexed only by session and message._
+  - Its bounded queries cover common reads, and its guarded raw mode accepts **one read-only `SELECT` or `WITH`**.
+- Pick sessions first and then read **one session's messages at a time**.
+  - Raw message queries must use an indexed `session_id` bound.
+  - Address an assistant content item with `part: "<message ID>#<index>"`; a bare message ID reads non-assistant text.
 - Read **tool outputs** only after a specific part matters.
 
 ## Boundaries

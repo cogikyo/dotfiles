@@ -36,6 +36,9 @@ Choose lenses from the risk map, not the file list:
 - `review/entropy`: the target state that stops drift across a package or app, for sweeps and retros rather than small diffs.
 
 Give each leaf the same baseline and constraints, one bounded concern, and a falsifying check.
+Collab dispatches direct children with `subagent`; reviewers and verifiers never delegate.
+Use `background: true` for independent lenses and wait for their completion inbox items before synthesis.
+Use `lane` for follow-up rounds, `lanes` to inspect status, and the same `subagent` lane name to steer or resume a reviewer.
 Verifiers settle source, published, or browser evidence; they do not vote.
 A lane that built the change is a poor judge of it; use a fresh leaf for a final verdict.
 
