@@ -12,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/pierrec/lz4/v4 v4.1.22
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	golang.org/x/sys v0.46.0
 	golang.org/x/term v0.38.0
 	google.golang.org/protobuf v1.36.11

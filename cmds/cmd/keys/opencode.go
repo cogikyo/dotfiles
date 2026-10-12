@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/tailscale/hujson"
 )
 
 const leaderText = `"Leader key for keybind combinations"`
@@ -50,7 +52,11 @@ func opencode(binary, config string) App {
 		Keybinds map[string]any `json:"keybinds"`
 	}
 	if data, err := os.ReadFile(config); err == nil {
-		if err := json.Unmarshal(data, &cli); err != nil {
+		data, err := hujson.Standardize(data)
+		if err == nil {
+			err = json.Unmarshal(data, &cli)
+		}
+		if err != nil {
 			app.Error = fmt.Sprintf("%s: %v", config, err)
 			return app
 		}
