@@ -9,6 +9,8 @@ Agents must not read credential files or change account state.
 
 `index.ts` registers account-bound HTTP hooks, adds the Claude system identity and one-hour cache hints, and tracks rejected long-context betas per account and model in memory.
 `headers.ts` builds request headers from local settings and the vendored model and beta rules.
+At startup, `index.ts` detects the CLI version with `claude --version` unless `ANTHROPIC_CLI_VERSION` is already set.
+Detection failure logs a warning and keeps the vendored `ccVersion` default.
 `claude-auth/` holds request transforms, signing, beta rules, model configuration, and HTTP retry code from upstream 2.2.1.
 Keep vendored files byte-identical when updating them, and put local policy in the wrapper modules.
 

@@ -60,12 +60,19 @@ It generates a two-to-four-word title with the configured `title` agent's model,
 A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session; there is no tool, key, or TUI slot.
 
-## Notify
+## Hyprd
 
-`notify/tui.ts` sends permission, question, completion, idle, error, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
+`hyprd/tui.ts` loads the notification and pane-context plugins together.
+`hyprd/notify.ts` sends permission, question, completion, idle, error, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
 It needs `KITTY_PID` and `KITTY_WINDOW_ID`, follows child requests to their root, and sends desktop notices for open sessions outside the focused view.
 Idle reminders repeat every ten minutes; child completion does not produce a root completion notice.
-There is no context file, tool, key, or TUI slot; deduplication and timers live in memory.
+Notification deduplication and timers live in memory.
+
+`hyprd/context.ts` publishes the displayed root session to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json` once per second when the selection changes.
+It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records `session` or `null` with the process `start` time from `/proc/self/stat`, and removes the file on disposal.
+It creates the directory with mode `0700` and the file with mode `0600`, then publishes by atomic rename.
+Hyprd matches the record to a discovered TUI pane and checks the process start time before using its session for relaunch.
+There is no tool, key, or TUI slot.
 
 ## Sessions
 

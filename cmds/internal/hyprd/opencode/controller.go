@@ -1,4 +1,4 @@
-// Package opencode coordinates safe OpenCode backend refreshes and Kitty attach recycling.
+// Package opencode coordinates OpenCode managed-service refreshes and Kitty TUI recycling.
 package opencode
 
 import (
