@@ -55,7 +55,7 @@ export default Plugin.define({
       mark();
       context.ui.toast.show(
         state.armed
-          ? { message: "Drive mode on: a reviewer answers permission requests", variant: "warning" }
+          ? { message: "Drive mode on", variant: "warning" }
           : { message: "Drive mode off", variant: "info" },
       );
       if (!state.armed) return;
