@@ -11,7 +11,9 @@ Read-only Svalboard keymap viewer with app bind overlays.
 - Hyprland: live compositor binds from IPC, excluding submaps.
 - kitty: its config loader, including defaults, `kitty.conf`, and included files.
 - Neovim: headless Neovim loading the user config; global normal-mode maps only, without buffer-local maps.
-- OpenCode: defaults and scopes from the installed binary, plus commands with a literal `bind` in `opencode/plugins/**/*.ts{,x}`, with overrides by command ID from the user config's `opencode/cli.json`.
+- OpenCode: defaults and scopes from the installed binary, literal plugin `bind` values (including id-less inline binds) in `opencode/plugins/**/*.ts{,x}`, and command-ID overrides from the user config's `opencode/cli.json`.
+
+An id-less plugin bind uses the ID of a named command with the same title in the same file, or its title when no match exists.
 
 ## Open
 

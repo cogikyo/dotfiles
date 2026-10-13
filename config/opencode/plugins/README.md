@@ -6,6 +6,9 @@ OpenCode discovers immediate plugin directories and loads their server and TUI e
 The sidebar shows usage, Markdown Context, lanes, then browser; claims that share a placement render in plugin directory-name order.
 Run `npm run check` from `config/opencode` for type, lint, and format checks.
 
+Drive, sidebar, and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
+Their four leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
+
 ## Lanes
 
 `lanes/server.ts` extends native `subagent` with a reusable `lane` name and applies `ROUTING.md` routes.
@@ -37,6 +40,16 @@ V2 has no slot for that title, so `drive/title.ts` polls every 250 ms from the `
 When that title is hidden or not found, such as a closed sidebar, a terminal or panel pane, a child session, or an upstream change, a DRIVE badge before `prompt.footer.status` shows instead.
 Arming also reviews pending permission asks and cancels pending question forms in the tree.
 Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~/.local/share}/opencode/drive.jsonl`, rotated to `.1` after 2 MiB.
+
+## Compact
+
+`compact/server.ts` exposes `compact` with `brief` and `reason`; `delivery: "queue"` runs compaction after the current turn, then the session waits for the user.
+V2 gives plugins no permission-ask path, so the agent must get the user's approval in chat; in an armed drive run, commit finished work, then compact without asking.
+The `context` hook nudges root sessions at 100K and 250K tokens; hold compaction while edits, lanes, or repairs are in flight.
+
+The `compaction` hook adds summary rules for user wording, approvals, remaining work, and path ownership, plus the stored handoff brief.
+Child summaries also preserve the delegate brief's objective, scope, limits, and checks.
+The brief lives in plugin storage at `pending/<sessionID>` until compaction ends, fails, or is cancelled, or the session is deleted.
 
 ## Usage
 
@@ -144,10 +157,21 @@ A linked worktree shows its main repository path and a worktree glyph in place o
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
 The pulse and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
 It also draws the `prompt.queue` shortcut as Mac-style glyphs, such as `󰘳 󰌑`, in the input's top-right corner, unless typed text or the placeholder reaches it.
-`statusline/toast.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
+`statusline/toasts.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
+The card matches the native border color to theme feedback colors to choose a variant icon.
+It has at least three rows, centers single-row content, and truncates title and message lines at the end with `…` instead of wrapping.
+A footer row shows `+N more` and the action when present.
+The countdown bar assumes the native 5000 ms default and hides if the toast lasts longer; hover is forwarded to pause the native timer and the bar.
 It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
 Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.
 Drive owns its own toggle and badge.
+
+## Byline
+
+`byline/tui.tsx` hides primary-agent labels, currently Collab, on the prompt model row and assistant message footers, and gives the model name the agent color.
+Non-primary agents keep their labels.
+V2 has no slot for these rows, so `byline/rewrite.ts` rewrites native text nodes in a lifecycle pass each frame.
+An upstream layout change can leave the native label visible; assistant footers also keep the native label below 28 terminal columns.
 
 ## Markdown context
 
