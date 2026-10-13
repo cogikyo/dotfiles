@@ -78,7 +78,7 @@ This plugin has no tool, key, or TUI slot.
 
 `guard/server.ts` denies recognized shell deletion with `rm`, shell Grok launches, OpenCode API calls, and credential or database reads.
 It also denies recognized shell mutations for read-only agents, rejects broad home or secret-ancestor `grep` and `glob` roots, and checks commit-message shape before execution.
-Use `trash -- <path>` for deletion, `x` for X search, and `sessions` for history.
+Use `trash -- <path>` for deletion, `x` for X search, `sessions` for history, and `session_create` for new sessions.
 These checks are guardrails rather than a shell sandbox.
 There is no persistent plugin state, tool, key, or TUI slot.
 
@@ -119,6 +119,17 @@ Use `list`, `text`, `reasoning`, `tools`, or `part` before raw `sql`.
 Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-assistant text.
 Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
 Message reads must use an indexed `session_id` bound; there is no key, TUI slot, or separate state file.
+
+## Launch
+
+`launch/server.ts` adds `session_create` to the `opencode` Code Mode namespace, so agents call `tools.opencode.session_create` through `execute`.
+Inputs are `directory`, `title`, and optional `prompt` and `agent`; the directory must be absolute or start with `~` and must exist.
+It creates a top-level session with session metadata `origin` set to the caller's session ID, then sends `prompt` as the first message to start a turn.
+Without `agent`, the session uses the configured default primary agent; a named agent must be a visible primary agent at that directory.
+Only top-level sessions can call it, and the new session is not a lane and is not armed for drive.
+V2 gives plugins no permission-ask path, so the user's request in chat is the approval; the guard's `opencode api` denial points here.
+If the prompt fails, the error names the created session, so the agent does not retry and create a duplicate.
+There is no persistent state, key, or TUI slot.
 
 ## Diagram
 

@@ -82,7 +82,7 @@ export function denial(resource: string, agent: string | undefined) {
   if (commands.some(([name]) => name === "rm")) return "rm is disabled; move files to trash with `trash -- <path>`";
   if (commands.some(([name]) => name === "grok")) return "grok is disabled in the shell; use the `x` tool for X search";
   if (commands.some(([name, ...args]) => (name === "opencode" || name === "opencode-v2") && args.includes("api"))) {
-    return "agents must not call the OpenCode server API; `opencode api` is disabled in the shell";
+    return "agents must not call the OpenCode server API; `opencode api` is disabled in the shell; to create a session the user asked for, call `tools.opencode.session_create` through `execute`";
   }
   const dynamic = commands.find(([name]) => unresolved(name));
   if (dynamic) {
