@@ -9,10 +9,6 @@ function command_not_found_handler {
     return 127
 }
 
-dctl_next=${XDG_STATE_HOME:-$HOME/.local/state}/dctl/next
-[[ -r $dctl_next ]] && print -r -- $'\e[2m'"dctl · $(<$dctl_next)"$'\e[0m'
-unset dctl_next
-
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │ History                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
@@ -210,7 +206,7 @@ alias el='eww logs'
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
-    command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
+    command git clone --quiet https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
 fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
@@ -261,6 +257,10 @@ bindkey '^[[1;5B'  history-incremental-search-forward  # C-Down
 eval "$(atuin init zsh --disable-up-arrow)"
 
 source $HOME/.config/zsh/vagari-highlights.zsh
+
+dctl_next=${XDG_STATE_HOME:-$HOME/.local/state}/dctl/next
+[[ -r $dctl_next ]] && print -r -- $'\e[2m'"dctl · $(<$dctl_next)"$'\e[0m'
+unset dctl_next
 
 if [[ -n ${HYPRD_LAUNCH_COMMAND:-} ]]; then
     hyprd_command=$HYPRD_LAUNCH_COMMAND
