@@ -31,7 +31,10 @@ Only Collab delegates, with one level of children.
 `drive/server.ts` sends each permission ask in an armed session tree to `openai/gpt-6-sol-fast` before asking the user.
 The reviewer can allow, deny with a reason, or leave an ask waiting for the user; reviewer failure also leaves the ask.
 Configured denials remain denied, and the plugin hides `question` while armed.
-`drive/tui.tsx` adds `<leader>d` and `/drive`, a badge before `prompt.footer.status`, and `/drive-log` for recent decisions.
+`drive/tui.tsx` adds `<leader>d`, `/drive`, and `/drive-log` for recent decisions.
+It marks an armed tree on the native sidebar title with a steering-wheel glyph, blue text, and the title shimmer while any session in the tree runs.
+V2 has no slot for that title, so `drive/title.ts` polls every 250 ms from the `session-pane` row, finds the node by its `_rename` and `pendingTitle` fields, and intercepts its `rename` setter to keep the shimmer on.
+When that title is hidden or not found, such as a closed sidebar, a terminal or panel pane, a child session, or an upstream change, a DRIVE badge before `prompt.footer.status` shows instead.
 Arming also reviews pending permission asks and cancels pending question forms in the tree.
 Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~/.local/share}/opencode/drive.jsonl`, rotated to `.1` after 2 MiB.
 

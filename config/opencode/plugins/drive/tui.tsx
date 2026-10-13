@@ -1,7 +1,11 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { colors } from "../statusline/palette.ts";
 import { api, type Entry } from "./rpc.ts";
+import { title } from "./title.ts";
+
+const poll = 250;
 
 const AWAY =
   "Drive mode is on and the user is away, so nobody will answer this question. Decide yourself, record the decision and your reasons, and continue.";
@@ -11,6 +15,8 @@ export default Plugin.define({
   setup(context) {
     const rpc = context.client.rpc(api);
     const [armed, setArmed] = createStore<Record<string, boolean>>({});
+    const [decorated, setDecorated] = createSignal<string>();
+    const decor = title(context.renderer.root);
 
     const options = (root: string) => {
       const session = context.data.session.get(root);
@@ -20,9 +26,19 @@ export default Plugin.define({
       const route = context.ui.router.current();
       return route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
     };
+    const mark = () => {
+      const root = current();
+      if (!root || !armed[root]) {
+        decor.hide();
+        setDecorated(undefined);
+        return;
+      }
+      setDecorated(decor.show(busy(context, root)) ? root : undefined);
+    };
     const sync = async (root: string) => {
       const state = await rpc.state({ sessionID: root }, options(root));
       setArmed(state.root, state.armed);
+      mark();
       return state.armed;
     };
     const fail = (error: unknown) =>
@@ -36,6 +52,7 @@ export default Plugin.define({
       if (!root) return context.ui.toast.show({ message: "Open a session to toggle drive mode", variant: "warning" });
       const state = await rpc.arm({ sessionID: root, armed: !(armed[root] ?? (await sync(root))) }, options(root));
       setArmed(state.root, state.armed);
+      mark();
       context.ui.toast.show(
         state.armed
           ? { message: "Drive mode on: a reviewer answers permission requests", variant: "warning" }
@@ -68,7 +85,8 @@ export default Plugin.define({
           const id = root();
           if (id && !(id in armed)) sync(id).catch(fail);
         });
-        return <Badge context={context} armed={armed[root() ?? ""] ?? false} />;
+        const key = () => root() ?? "";
+        return <Badge context={context} visible={(armed[key()] ?? false) && decorated() !== key()} />;
       },
     });
 
@@ -96,7 +114,16 @@ export default Plugin.define({
       ],
     }));
 
-    return rpc.events.on("changed", (event) => setArmed(event.data.root, event.data.armed));
+    const off = rpc.events.on("changed", (event) => {
+      setArmed(event.data.root, event.data.armed);
+      mark();
+    });
+    const timer = setInterval(mark, poll);
+    return () => {
+      clearInterval(timer);
+      off();
+      decor.hide();
+    };
   },
 });
 
@@ -120,10 +147,14 @@ async function handoff(
   );
 }
 
-function Badge(props: { context: Plugin.Context; armed: boolean }) {
+function busy(context: Plugin.Context, root: string) {
+  return [root, ...context.data.session.family(root)].some((id) => context.data.session.status(id) === "running");
+}
+
+function Badge(props: { context: Plugin.Context; visible: boolean }) {
   return (
-    <Show when={props.armed}>
-      <text fg={props.context.theme.text.feedback.warning.base} flexShrink={0}>
+    <Show when={props.visible}>
+      <text fg={colors.brightBlue} flexShrink={0}>
         <b>DRIVE</b>
       </text>
     </Show>
