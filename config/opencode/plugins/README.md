@@ -138,8 +138,10 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
 It replaces the built-in prompt footer, disabled in `cli.json`, with running subagent and shell counts and context size, without session cost.
-It replaces the built-in sidebar footer, also disabled, with the same location line plus the OpenCode version; clicking the location runs `session.move`.
+It replaces the built-in sidebar footer, also disabled, with the OpenCode version line.
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
+`statusline/toast.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
+It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
 Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.
 Drive owns its own toggle and badge.
 

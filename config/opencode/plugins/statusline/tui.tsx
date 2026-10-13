@@ -3,6 +3,7 @@ import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createResource, createRoot, createSignal, For, onCleanup, Show } from "solid-js";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
+import { mirror } from "./toast.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -71,9 +72,14 @@ export default Plugin.define({
           <Usage context={context} sessionID={input.sessionID} mode={input.mode} details={input.showDetails} />
         ),
       });
+      const Mirror = mirror(context);
       context.ui.slot({
         append: "sidebar.footer",
-        render: (input) => <Footer context={context} sessionID={input.sessionID} />,
+        render: () => (
+          <Mirror>
+            <Footer context={context} />
+          </Mirror>
+        ),
       });
       return dispose;
     });
@@ -131,22 +137,17 @@ function Git(props: { status: GitStatus; worktree: boolean }) {
   );
 }
 
-function Footer(props: { context: Context; sessionID: string }) {
+function Footer(props: { context: Context }) {
   const theme = () => props.context.theme.text;
 
   return (
-    <box flexDirection="column">
-      <box flexDirection="row" onMouseUp={() => props.context.keymap.dispatch("session.move")}>
-        <Location context={props.context} sessionID={props.sessionID} />
-      </box>
-      <text fg={theme().muted} wrapMode="none">
-        <span style={{ fg: colors.green }}>{glyph.bullet}</span>
-        <span style={{ fg: theme().base }}>
-          <b>{" OpenCode"}</b>
-        </span>
-        {` ${props.context.app.version}`}
-      </text>
-    </box>
+    <text fg={theme().muted} wrapMode="none">
+      <span style={{ fg: colors.green }}>{glyph.bullet}</span>
+      <span style={{ fg: theme().base }}>
+        <b>{" OpenCode"}</b>
+      </span>
+      {` ${props.context.app.version}`}
+    </text>
   );
 }
 
