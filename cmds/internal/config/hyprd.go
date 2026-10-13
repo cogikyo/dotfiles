@@ -83,6 +83,7 @@ type SplitPresets struct {
 	Narrow  string `yaml:"narrow"`
 	Default string `yaml:"default"`
 	Wide    string `yaml:"wide"`
+	Mobile  string `yaml:"mobile"`
 }
 
 // Ratio resolves preset for the share mode; unknown presets resolve to "default".
@@ -96,6 +97,8 @@ func (c SplitConfig) Ratio(preset string, share bool) (name, mfact string) {
 		return preset, p.Narrow
 	case "wide":
 		return preset, p.Wide
+	case "mobile":
+		return preset, p.Mobile
 	}
 	return "default", p.Default
 }

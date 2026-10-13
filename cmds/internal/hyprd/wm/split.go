@@ -22,9 +22,8 @@ func NewSplit(h *hypr.Client, s *state.State) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute applies "wide" or "narrow" from "default" and returns any other preset to "default".
-//
-// It also accepts "default" and "reapply"/"-r".
+// Execute cycles "wide" through default, wide, and mobile, and "narrow" through default and narrow.
+// Either flag returns other presets to default; Execute also accepts "default" and "reapply"/"-r".
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -41,10 +40,14 @@ func (s *Split) Execute(flag string) (string, error) {
 	current, _ := s.ratio(ws)
 	switch flag {
 	case "wide", "narrow":
-		if current != "default" {
-			return s.Apply("default")
+		next := "default"
+		switch {
+		case current == "default":
+			next = flag
+		case current == "wide" && flag == "wide":
+			next = "mobile"
 		}
-		return s.Apply(flag)
+		return s.Apply(next)
 	case "default":
 		return s.Apply("default")
 	case "reapply", "-r":

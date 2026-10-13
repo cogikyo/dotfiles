@@ -67,7 +67,7 @@ Use a scratch build for build-only checks; `hyprd rebuild` changes the running d
 ```bash
 hyprd monocle                # float focused window in place and park tiled siblings
 hyprd float                  # toggle floating, centered at monocle size
-hyprd split wide             # wide from default, otherwise back to default
+hyprd split wide             # wide from default, mobile from wide, otherwise back to default
 hyprd split narrow           # narrow from default, otherwise back to default
 hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace

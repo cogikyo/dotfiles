@@ -403,7 +403,7 @@ Window commands:
   hyprd monocle          Toggle monocle (isolate focused window)
   hyprd float            Toggle floating (centered at monocle size)
   hyprd swap             Toggle swap between master and slave
-  hyprd split wide       Wide from default, otherwise back to default
+  hyprd split wide       Wide from default, mobile from wide, otherwise back to default
   hyprd split narrow     Narrow from default, otherwise back to default
   hyprd split default    Set default split ratio
   hyprd ws <n>           Switch to workspace n, focus master
