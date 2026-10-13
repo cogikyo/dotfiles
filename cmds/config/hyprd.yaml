@@ -94,7 +94,6 @@ sessions:
       browser: leadpier
       tabs:
         editor: leadpier
-        agents: agents-all
 
   # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
   4: # personal projects
