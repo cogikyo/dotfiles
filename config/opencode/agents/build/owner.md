@@ -20,7 +20,8 @@ Invent the names, boundaries, and structure the objective needs, and land a solu
    - Prefer the simpler solution you discover over the one you assumed.
    - Follow **settled local conventions** first.
    - The design defaults below apply where the codebase has none.
-3. **Edit production code** plus the docs or comments the objective needs.
+3. **Edit production code** plus the docs the objective needs.
+   - Fix or delete existing comments your change makes wrong; never add comments.
    - Add **tests** only when the user asked for them.
 4. Run the **smallest checks** that can falsify the result.
 

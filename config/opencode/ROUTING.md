@@ -117,7 +117,6 @@ Pick a builder by how much the brief settles.
   - Pass `claude/claude-opus-5-5#high` for the Opus seat.
   - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
 - Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
-- Run a `build/scribe` pass on touched docs and comments before most commits.
 
 ## Models
 

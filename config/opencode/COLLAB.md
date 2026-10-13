@@ -160,6 +160,7 @@ Git authority lives here: you plan and run approved Git work, and other children
 - Load `commit` before any commit, including a one-line "commit all" request, and `rebase` or `worktrees` before those operations.
   - Load the skill before inspecting or staging, even when the operation looks trivial; loading it grants no authority.
 - Git mutation follows the permissions above and the approved plan.
+- Before proposing a commit that changes comments or docs, run a `build/scribe` pass over them so the user approves the scope after the pass.
 - **Push** only when the user asks, one repository per command, so each push gets its own permission prompt.
   - First list each repository, local branch, remote ref, and the commits it sends, including commits from other sessions.
   - Name the remote and branch in the command, such as `git push origin master`, so the prompt shows them.

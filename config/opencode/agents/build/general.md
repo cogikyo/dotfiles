@@ -16,7 +16,8 @@ The task may be long or repetitive, and volume alone is fine.
 1. **Read** the named context, targets, governing instructions, and the nearby code needed to place each edit correctly.
    - OpenCode attaches `AGENTS.md` from the directories you read; find others with `Glob` instead of guessing paths.
 2. Apply **ordinary craft** inside the boundary: error handling, local structure, and small improvements the brief implies.
-3. **Edit production code** together with the docs or comments the brief requires.
+3. **Edit production code** together with the docs the brief requires.
+   - Fix or delete existing comments your change makes wrong; never add comments.
    - Add **tests** only when the user asked for them.
 4. Run the **smallest relevant checks**.
 

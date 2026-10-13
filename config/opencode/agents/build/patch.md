@@ -16,7 +16,8 @@ The parent has already named the files, the targets, and the mechanics.
 1. **Read** the given files and nothing else unless a line you must edit is unreadable without it.
 2. Reproduce the **intended mechanics** faithfully and keep the diff narrow.
    - A tight batch of adjacent edits is fine.
-   - Touch **tests, docs, or comments** only when the patch names them.
+   - Touch **tests or docs** only when the patch names them.
+   - Fix or delete existing comments your change makes wrong; never add comments.
 3. Run the **cheapest check** that can catch a placement, syntax, or mechanical error.
 
 ## Intent and overlap

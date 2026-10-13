@@ -239,8 +239,9 @@ Use tables only for compact comparisons across stable columns.
 
 ### Code Comments
 
-- Do not add or edit comments; names and structure should carry meaning where possible.
-- Dedicate skills or agents handle proper comments instead.
+- Do not add comments; names and structure should carry meaning where possible.
+- When a change makes an existing comment wrong, fix or delete that comment in the same edit.
+- `build/scribe` owns writing, auditing, and sweeping comments.
 - Comments must earn their place by documenting contracts, coupling, invariants, external formats, surprises, or hard-won context.
 
 ## User Details
