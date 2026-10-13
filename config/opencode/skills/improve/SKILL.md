@@ -10,8 +10,6 @@ description: Use when the user invokes /improve or asks for an improvement sweep
 Collab owns triage, synthesis, user questions, and any approved changes.
 Run papercuts and epistemology triage in-session; do not dispatch either procedure.
 Find uses bounded past-mode retros in `scout/session` leaves; Solve uses the crowd lane.
-Stay read-only until the user approves specific proposals.
-Do not mutate Git.
 
 ## Find
 
@@ -27,12 +25,8 @@ Select top-level sessions only (`parent_id IS NULL`) and exclude the current ses
 
 ### Store
 
-Read the store through the `sessions` tool and follow epistemology's evidence-reading discipline.
 Use `list` for exact-directory selection; prefix selection needs `sql` because `list.directory` is exact.
 For prefix selection, match the project path itself or paths beginning with that path plus `/`.
-Bind paths, dates, the current session ID, and any argument values through `params`; never insert them into SQL text.
-Page results as needed within the selected window.
-Pull children with `list` and `parent` only for relevant parents.
 Report the sampled top-level count and oldest-to-newest `time_updated` span once, disclosing any truncation without claiming full coverage.
 
 ### Triage
@@ -55,10 +49,8 @@ Synthesize after the leaves return; report failed or incomplete leaves as eviden
 ### Synthesize
 
 Deduplicate the triage and leaf findings, preserving distinct evidence and open questions.
-Treat a parent and its children as one occurrence.
 Promote findings that recur across independent sessions using epistemology's evidence bar.
 Batch the leaves' open questions to the user; discard single-session findings unless the user confirms the reusable lesson.
-Read each affected file's current content before claiming a gap.
 State problems and their evidence without proposing fixes.
 End Find with a confirmed problem list.
 
@@ -67,24 +59,20 @@ End Find with a confirmed problem list.
 Load `crowd` for the confirmed problems, then combine local fixes with any crowd ideas into ranked proposals.
 Use epistemology's smallest-owner list, plus `opencode.json` permissions and plugins or tools.
 Prefer editing or deleting over adding, and rank the strongest evidence first.
-Mark primary agent prompts, global `AGENTS.md`, `ROUTING.md`, and project `AGENTS.md` as high blast radius.
 Keep papercuts' permission protections and omit secrets from evidence.
-“Nothing worth changing” is a valid result.
 
 ## Apply
 
 Apply only proposals the user specifically approves.
 Global-config edits land in the dotfiles checkout; say when that is a separate repository from the current project before approval.
-Keep edits inside approved targets and inspect the resulting changes without mutating Git.
+Keep edits inside approved targets and inspect the resulting changes.
 
 ## Report
 
-Return confirmed problems and their evidence for find-only runs, or ranked proposals otherwise, with the scope and any coverage gaps.
-For each proposal include:
+Return confirmed problems and their evidence for find-only runs, or ranked proposals otherwise.
+Report as epistemology does, plus:
 
-- Evidence: session IDs, agents, and message references or tool traces, with a minimal excerpt.
-- Why the finding is reusable, including independent recurrence or user confirmation.
-- Target file, exact proposed change, and any crowd source URL and date used.
-- Confidence and blast radius.
+- Scope and any coverage gaps.
+- Any crowd source URL and date used.
 
 Distinguish proposals from approved changes actually applied.

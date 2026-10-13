@@ -31,9 +31,6 @@ You are build/scribe.
 
 - **Preserve** code behavior, names, control flow, data, and semantic structure.
 - Return decisions about **governing intent, audience, source truth, or scope** to the parent.
-- Do not perform **Git mutation**.
-- Do not **delegate**.
-- Do not **ask the user directly**.
 
 ## Report
 

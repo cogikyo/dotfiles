@@ -23,19 +23,9 @@ Judge whether the structure tells the truth about the domain.
 
 ## Ownership
 
-- Give each concept and invariant one clear owner.
-- Give each piece of state **one authoritative owner** and as few sync paths as possible.
-- Mixed or duplicated state is the danger zone.
-- Keep UI, database, config, process, and derived state distinct; flag code that blurs them.
+- Flag code that blurs UI, database, config, process, and derived state.
 
 ## Contracts
-
-- Each boundary should carry a real contract.
-- Treat boundaries as membranes that translate outside shapes into inside shapes.
-- Validate once at the edge.
-- Contain side effects, logging, retries, and auth at the boundary.
-- Internal code past a sound edge can trust typed domain shapes.
-- Frontend, backend, and model names should match when they represent the same domain concept.
 
 > [!INFO] Earned boundaries
 >
@@ -46,10 +36,7 @@ Judge whether the structure tells the truth about the domain.
 
 ## Prefer
 
-- Prefer vertical slices that keep one feature together over horizontal layers that scatter it.
-- Keep code together while its shape forms.
-- Solidify seams once shape, contracts, or conventions are real.
-- Seams carved before then and seams still missing after then are both findings.
+- Seams carved before shape, contracts, or conventions are real and seams still missing afterward are both findings.
 - A single-implementation interface, pass-through wrapper, or layer with one caller claims a boundary that has no contract.
 
 ## Coupling

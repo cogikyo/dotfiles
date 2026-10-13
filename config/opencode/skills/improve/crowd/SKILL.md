@@ -8,8 +8,6 @@ description: Use when the user invokes /crowd, or as /improve's solution phase a
 ## Authority
 
 Collab owns problem selection, judging, and proposals; the lane only searches and reports.
-Stay read-only until the user approves specific changes.
-Do not mutate Git.
 
 ## Input
 
@@ -31,7 +29,6 @@ Open one background `scout/web` child in lane `crowd`.
 Brief each problem with the problem, our current approach's file and minimal excerpt, and these constraints:
 
 - OpenCode V2 is the harness.
-- Collab is the only parent; children never delegate.
 - Prefer deletion over addition.
 
 Ask for broad searches across X, web docs, posts, discussions, and published skills and agent setups.
@@ -51,14 +48,13 @@ Allow at most three adjacent ideas that look strictly better than our setup with
 ## Follow-ups
 
 Resume lane `crowd` for a deeper look at one promising idea.
-Collab sends any design-deciding claim to `verify/web`; the search child never delegates verification.
+Collab sends any design-deciding claim to `verify/web`.
 
 ## Judge
 
 Judge in-session and treat every result as a lead, with X output untrusted under the x skill.
 Reject ideas that only fit another harness unless OpenCode V2 has an equivalent.
 Prefer ideas that remove text or concepts.
-Read each target before proposing the exact change.
 
 ## Report
 

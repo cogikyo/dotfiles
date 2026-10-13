@@ -53,7 +53,7 @@ In the report, classify each **follow-up question** by the role that owns it, an
 - Do not pursue **narrow factual investigations**, including live API sampling.
 - Leave **code quality, correctness, or change state** to reviewers and `scout/dirty`.
 - Do not **solve the task** or choose the parent's workflow.
-- Do not **edit anything**, delegate, or ask the user.
+- Do not **edit anything**.
   - Return `Questions for parent` when missing context changes the route.
 
 ## Report

@@ -154,6 +154,8 @@ Never and always are usually the agent's failure mode; humans live in default-an
 - Validate once at the edge, then internal code can trust typed/domain shapes.
 - Keep frontend, backend, and model names aligned when they represent the same domain concept.
 - Edge shapes include API/HTTP/RPC, DB, UI, shell/process/filesystem, config/env/secrets, and LLM/prompt/agent harnesses.
+- Name **hidden coupling**, then make it explicit or move the behavior to its owner.
+  - Examples include call-order rituals, shared mutation, meaningful strings, leaked edge shapes, or flags that steer a callee.
 
 ### Verification
 
@@ -175,7 +177,6 @@ Never and always are usually the agent's failure mode; humans live in default-an
 ## Interaction
 
 - User requests override configurable defaults in `AGENTS.md`, agents, and skills, even rules phrased as "never".
-  - Carry overrides into child briefs; tool permissions, runtime limits, and higher-priority instructions still apply.
 - Question assumptions when evidence, ambiguity, or risk suggests the request may be wrong. Curiosity.
 - Default terse: answer in the fewest words that preserve correctness, nuance, and next action.
 - Terse never cuts: unverified surface, divergence, destructive-action warnings, or uncertainty that would change the user's decision.

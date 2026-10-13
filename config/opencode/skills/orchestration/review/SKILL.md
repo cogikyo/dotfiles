@@ -23,22 +23,9 @@ Recommend repairs without applying them during the review.
 
 Review directly when one coherent pass can settle the important claims.
 Send review leaves for orthogonal risks, independence from the implementation context, or evidence that would crowd synthesis.
-Choose lenses from the risk map, not the file list:
-
-- `review/debug`: correctness, state, concurrency, parsing, and root cause.
-- `review/security`: credible adversarial paths and trust boundaries.
-- `review/architect`: ownership, coupling, system shape, and conceptual truth.
-- `review/critic`: assumptions, alternatives, plans, and acceptance criteria.
-- `review/simplify`: accidental complexity, dead code, and obsolete mechanisms.
-- `review/profile`: evidenced performance risk.
-- `review/design`: product intent, visual language, UX, and interaction design.
-- `review/copy`: user-visible UI text; deletes by default.
-- `review/entropy`: the target state that stops drift across a package or app, for sweeps and retros rather than small diffs.
+Pick lenses from the risk map; each review agent's description says what it covers.
 
 Give each leaf the same baseline and constraints, one bounded concern, and a falsifying check.
-Collab dispatches direct children with `subagent`; reviewers and verifiers never delegate.
-Use `background: true` for independent lenses and wait for their completion inbox items before synthesis.
-Use `lane` for follow-up rounds, `lanes` to inspect status, and the same `subagent` lane name to steer or resume a reviewer.
 Verifiers settle source, published, or browser evidence; they do not vote.
 A lane that built the change is a poor judge of it; use a fresh leaf for a final verdict.
 

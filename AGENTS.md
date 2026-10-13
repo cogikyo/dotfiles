@@ -17,7 +17,7 @@ Edits to linked `config/` files change what applications read; see [setup](./REA
 | `secrets/`         | Age ciphertext and manifest                                  | `dctl secrets decrypt`          |
 | `iso/`             | Archiso profile                                              | `sudo dctl iso build`           |
 | `share/`           | Fonts and assets                                             | Setup or application references |
-| `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config; plugin restart   |
+| `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config                   |
 
 User units and their `.wants` links live only in `config/systemd/user/`.
 Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packages/`.

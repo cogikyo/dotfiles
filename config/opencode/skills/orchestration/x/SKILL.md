@@ -6,8 +6,7 @@ description: Use when the user invokes /x or asks for live X/Twitter community s
 # X
 
 Live community signal through the `x` tool, which runs Grok CLI native X search.
-Collab, `scout/web`, `verify/web`, and `review/entropy` may call it.
-Call it from the current session; do not dispatch a child to search X.
+Collab may call it directly or brief a `scout/web` child that searches X alongside other sources; don't dispatch a child for X search alone.
 
 ## Brief
 

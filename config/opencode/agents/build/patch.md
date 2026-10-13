@@ -35,10 +35,7 @@ _A wrong fast edit costs more than the handoff back._
 
 ## Must not
 
-- Never **commit, rebase, integrate, publish, or alter Git configuration**.
-- Do not **delegate**.
-- Do not **ask the user directly**.
-  - Return **`Questions for parent`**.
+- Never publish or release.
 
 ## Report
 

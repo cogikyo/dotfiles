@@ -9,7 +9,6 @@ description: Use when the user invokes /epistemology or asks to mine OpenCode se
 
 Collab owns this attended procedure.
 Do not dispatch it.
-Stay read-only and return proposals only unless the user separately asks to apply a resulting proposal.
 
 ## Scope
 
@@ -33,7 +32,6 @@ Do not claim complete coverage when the cap or window truncated the store.
 ## Store
 
 Read sessions through the `sessions` tool.
-It opens the store read-only, binds every value, and caps each call at 20 rows with 800-character excerpts.
 Pass `$ARGUMENTS` values as tool arguments or `params`; do not write them into SQL text.
 
 `session_v2.directory` is the authority for current-directory selection.

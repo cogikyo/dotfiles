@@ -12,7 +12,7 @@ It does not change the owner's write scope or authority.
 
 Read the subskills the task needs; they combine freely:
 
-- `prose-docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
+- `docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
 - `diagram` (`prose/diagrams/diagram/SKILL.md`) for an architecture diagram or annotated tree that has already earned its place.
 - `workflow` (`prose/diagrams/workflow/SKILL.md`) for numbered workflow graphs in proposals and runs.
 

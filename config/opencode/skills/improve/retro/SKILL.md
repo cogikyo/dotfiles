@@ -9,8 +9,7 @@ description: Use when the user invokes /retro or asks for an end-of-session retr
 
 Collab owns the live conversation and any approved changes.
 A `scout/session` leaf may run past mode for `/improve`.
-Past mode is read-only: do not ask the user questions, edit files, or continue the session's work.
-Do not mutate Git in either mode.
+Past mode is read-only: do not edit files or continue the session's work.
 
 ## Scope
 
@@ -21,9 +20,6 @@ Keep all transcript searches inside the target session and its children.
 
 Use what Collab remembers from the live conversation first.
 Use the `sessions` tool for compacted early turns, lane transcripts, and tool failures.
-Pull children with `list` and `parent`.
-Page bounded results when needed; name missing or truncated evidence.
-Read `text` for relevant turns, `tools` for failures, and `part` for a specific message or tool trace.
 Quote minimally and omit secrets.
 
 ## Gather
@@ -47,7 +43,6 @@ A candidate qualifies when at least one condition holds:
 One-off task detail does not qualify as reusable guidance.
 In live mode, user confirmation can stand in for the cross-session recurrence that epistemology requires.
 In past mode, mark every finding **unconfirmed** and include the question the user must answer to confirm it.
-Treat the target and its children as one occurrence.
 
 ## Converse
 
@@ -61,11 +56,8 @@ Past mode returns findings and open questions to the parent without this exchang
 
 Pick the smallest owner from epistemology's owner list that prevents the repeat.
 Also consider `opencode.json` permissions and plugins or tools when they own the friction.
-Read each target's current content before claiming a gap.
 Prefer editing or deleting existing guidance over adding more.
-Mark primary agent prompts, global `AGENTS.md`, `ROUTING.md`, and project `AGENTS.md` as high blast radius.
 Keep papercuts' Proper deny and Recovered protections; an agent miss alone does not justify wider permissions.
-“Nothing worth changing” is a valid result.
 
 ## Apply
 
@@ -76,11 +68,8 @@ Keep edits inside the approved targets and inspect the resulting changes.
 ## Report
 
 Return a short finding list rather than a transcript dump.
-For each finding include:
+Report as epistemology does, plus:
 
-- Evidence: session and message IDs or a tool trace, with a minimal excerpt.
-- Target file and the exact proposed change.
-- Confidence and blast radius.
 - Confirmation status, with a confirmation question for every past-mode finding.
 
 Distinguish proposals from approved changes actually applied.

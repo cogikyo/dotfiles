@@ -39,16 +39,10 @@ A join waits for every required predecessor; an alternative merge takes only the
 State that difference beside conditional graphs, because geometry alone cannot show it.
 Reroute unrelated crossings; `┼` means a real connected junction.
 
-Collab launches direct children with `subagent`, using `lane` for reuse and `background: true` for independent steps.
-Background launch returns immediately; its completion inbox item wakes Collab and supplies the result for a dependent join.
-Conversation can continue before that join is ready, and children never delegate.
-The `lanes` tool lists children; reuse a `subagent` lane name to steer or resume one.
-
 Every loop names its repair owner, attempt limit, affected evidence, and re-entry point.
 Repairs usually resume the same lane with the findings as a delta.
 Denied permission, exhausted repair, and missing approval return a blocker unless an approved permitted route remains.
 An attended Git boundary is a gate owned by Collab, with its own approval.
-In drive mode, Collab records its decision and the reviewer handles permission asks; a reviewer `ask` still waits for the user.
 
 ## Examples
 

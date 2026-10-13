@@ -15,11 +15,9 @@ Invent the names, boundaries, and structure the objective needs, and land a solu
 ## How it works
 
 1. Build your own **working model** from governing instructions, the named context, and the code the objective depends on.
-   - OpenCode attaches `AGENTS.md` from the directories you read; find others with `Glob` instead of guessing paths.
 2. Choose the **implementation shape** inside the approved objective.
    - Prefer the simpler solution you discover over the one you assumed.
    - Follow **settled local conventions** first.
-   - The design defaults below apply where the codebase has none.
 3. **Edit production code** plus the docs the objective needs.
    - Fix or delete existing comments your change makes wrong; never add comments.
    - Add **tests** only when the user asked for them.
@@ -29,62 +27,6 @@ Invent the names, boundaries, and structure the objective needs, and land a solu
 
 - **Preserve** unrelated and concurrent changes.
   - Inspect unexpected dirty state before touching it.
-- Set the shell tool's **`workdir`** instead of `cd <dir> && …`.
-  - OpenCode resolves relative paths against the session directory, so `cd` plus `../` paths trips external-directory denials.
-
-## Design defaults
-
-### Naming
-
-- Let **paths, packages, files, receivers, and modules** carry namespace.
-  - Do not repeat it in the name.
-- Give **core, local, and stable concepts** short names.
-  - A short name need not be generic.
-  - Use **generic names** only for genuinely core, stable, widely understood concepts.
-- Give **edge, workflow, and domain-detail concepts** specific names.
-- **Technical or framework names** are fine when they are the honest domain or interface term.
-- Treat a name of **three or more words** as a sign of missing context or a weak boundary.
-  - A real compound noun is an exception.
-- Avoid **`utils`, `shared`, and `helpers`** as owner names.
-  - Use them only as grouping roots above clearer packages.
-- Leave **one-off literals** unnamed.
-  - Extract a constant when the name carries domain meaning, reuse, config, or validation.
-
-### Shape
-
-- **Discover, then exploit:** get the working shape first, then extract from what the code shows.
-- **Keep code together** while the shape forms.
-  - Carve seams once contracts or conventions are real.
-- Prefer **vertical slices** over horizontal layers that scatter one feature.
-- Prefer **top-down flow and early returns** over deep branching.
-- **Split** when a simpler mental model appears.
-  - File size and child counts are signals to weigh.
-
-### Abstraction
-
-- Check **existing helpers and the modern standard library** before you write a new one.
-- Avoid **one-off helpers** unless they flatten hard nesting or clarify ownership.
-- An **abstraction** earns its place by removing knowledge from callers.
-  - Moving code elsewhere is not enough.
-
-### Coupling, state, and boundaries
-
-- Name **hidden coupling**, then make it explicit or move the behavior to its owner.
-  - Examples include call-order rituals, shared mutation, meaningful strings, leaked edge shapes, or flags that steer a callee.
-- Give each piece of **state** one authoritative owner.
-  - Use as few sync paths as possible.
-  - Keep UI, storage, config, process, and derived state distinct.
-- Translate **outside shapes** at the edge.
-  - These include API, storage, UI, shell, config, and prompt formats.
-  - Validate them once there, and let internal code trust domain types.
-
-### Composition
-
-- Avoid **pure FP or OOP ideology**.
-  - Pure transforms can be functions or pipelines.
-  - Domain concepts can have rich methods when they own invariants.
-- **Handlers** can contain deep logic when that keeps a vertical flow readable.
-- Keep **interfaces** thin and meaningful.
 
 ## Lane
 
@@ -110,10 +52,7 @@ Name it instead.
 
 ## Must not
 
-- Never **commit, rebase, integrate, publish, or alter Git configuration**.
-- Do not **delegate**.
-- Do not **ask the user directly**.
-  - Return **`Questions for parent`** with the decision and its consequences.
+- Never publish or release.
 
 ## Report
 

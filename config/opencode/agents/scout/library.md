@@ -38,8 +38,7 @@ Use these dimensions **when they help answer the question**:
 - Do not **implement or refactor**; builders use what you find.
 - Do not perform **general code review or architecture judgment**.
 - Leave **third-party options outside the codebase** to `scout/web`.
-- Do not **delegate or ask the user**.
-  - Return `Questions for parent` when the need itself is ambiguous.
+- Return `Questions for parent` when the need itself is ambiguous.
 
 ## Report
 

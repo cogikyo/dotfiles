@@ -1,5 +1,5 @@
 ---
-name: prose-docs
+name: docs
 description: Use with prose to write or shorten READMEs, guides, usage notes, repository documentation, agent prompts, and skills; admits task-relevant information and removes cross-section duplication before sentence polishing.
 ---
 
@@ -36,16 +36,8 @@ Load `diagram` for construction only after deciding the representation earns its
 ## Structure and emphasis
 
 Apply `AGENTS.md`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.
+Do not convert connected prose into bullets only to make it look scannable.
 
-- Use **paragraphs** for connected explanation, causal reasoning, framing, or synthesis; do not turn connected prose into bullets only to make it look scannable.
-- Use **flat lists** for peer items that answer the same question and can be scanned independently.
-- Use **nested bullets** when a child explains, qualifies, exemplifies, or operationalizes its parent.
-  - The parent states the main idea, and the child depends on it for useful context.
-- Use **numbered lists** only when sequence, priority, or dependency matters.
-- Keep each **list item** to one sentence and preferably one rendered line.
-  - Move sustained reasoning into a nearby paragraph instead of expanding the bullet.
-- Give a **conceptual section** a paragraph when readers need to understand why its ideas connect.
-- Let a self-explanatory **catalog, checklist, or rule family** remain list-only.
 - Use **bold** for a rule's key term so a reader scanning the file lands on it; never bold whole sentences.
 - Use _italics_ for the short human reason so agents and humans can see why the rule matters to the reader.
 

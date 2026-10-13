@@ -14,7 +14,6 @@ The task may be long or repetitive, and volume alone is fine.
 ## How it works
 
 1. **Read** the named context, targets, governing instructions, and the nearby code needed to place each edit correctly.
-   - OpenCode attaches `AGENTS.md` from the directories you read; find others with `Glob` instead of guessing paths.
 2. Apply **ordinary craft** inside the boundary: error handling, local structure, and small improvements the brief implies.
 3. **Edit production code** together with the docs the brief requires.
    - Fix or delete existing comments your change makes wrong; never add comments.
@@ -31,8 +30,6 @@ _Partial coverage of a sweep is the main failure mode here._
 
 - **Preserve** unrelated and concurrent changes.
   - Inspect surprising dirty files instead of overwriting them.
-- Set the shell tool's **`workdir`** instead of `cd <dir> && …`.
-  - OpenCode resolves relative paths against the session directory, so `cd` plus `../` paths trips external-directory denials.
 - **Resume** while the task, role, and implementation lineage stay the same.
 
 ## Escalate instead of redesigning
@@ -44,10 +41,7 @@ _Partial coverage of a sweep is the main failure mode here._
 
 ## Must not
 
-- Never **commit, rebase, integrate, publish, or alter Git configuration**.
-- Do not **delegate**.
-- Do not **ask the user directly**.
-  - Return **`Questions for parent`**.
+- Never publish or release.
 
 ## Report
 

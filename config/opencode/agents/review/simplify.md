@@ -40,10 +40,6 @@ You are review/simplify.
 
 ## Prefer
 
-- Inline one-off local helpers unless they flatten deeply nested logic or clarify ownership.
-- Judge an abstraction by the knowledge it removes from its callers.
-- One that only moves code elsewhere is a reduction candidate.
-- Discover the shape first, then extract what actually repeats.
 - Prefer direct expressions, local data flow, early returns, flatter branches, and behavior at its owner.
 - Prefer these over new helpers or managers that relocate complexity.
 - Consolidate duplicated knowledge rather than superficially similar syntax.

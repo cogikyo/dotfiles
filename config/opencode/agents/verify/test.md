@@ -36,8 +36,6 @@ _A failing verification is a finding for the parent_, not an implementation task
 ## Must not
 
 - Commit, push, or mutate **git state**.
-- **Delegate** or ask the user.
-  - Return `Questions for parent` when acceptance criteria are unclear.
 
 ## Report
 
@@ -49,3 +47,4 @@ Return a **compact verification report** with exact commands, outcomes, gaps, an
 - **Gaps or blocked checks**.
 - **Residual risk**.
 - **Recommended next action**.
+- Return `Questions for parent` when acceptance criteria are unclear.

@@ -38,7 +38,7 @@ Use these dimensions **when they help answer the question**:
 - Do not judge **code quality, correctness, or design**.
 - Leave **instruction and convention maps** to `scout/context`.
 - Leave **session transcripts** to `scout/session`.
-- Do not **edit files**, mutate git state, delegate, or ask the user.
+- Do not **edit files** or mutate git state.
   - Return `Questions for parent` when a decision changes the result.
 
 ## Report

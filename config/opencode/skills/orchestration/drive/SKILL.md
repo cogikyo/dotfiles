@@ -8,7 +8,7 @@ description: Use to prepare or execute an approved multi-step workflow; Collab r
 Design an execution workflow, get approval unless the run is armed, then carry it through its dependencies, evidence, and bounded repairs.
 Collab runs this procedure in-session and conserves main-thread context for the user conversation, integration, Git, and gates.
 File edits, repairs, and long-output test runs go to lanes by default.
-A tiny one-line config or record edit may stay `self`.
+A tiny one-line config or record edit may stay in-session.
 Return to `scheme` when execution uncovers unresolved product design.
 
 ## Prepare
@@ -28,17 +28,12 @@ Stop and report when two scopes turn out to need the same design change.
 
 ## Execute
 
-1. Reconcile the tree and Git state, and find the steps whose inputs are ready.
-2. Dispatch ready steps with `subagent`, using `lane` for reusable children and `background: true` for independent work.
-3. Judge each result and take the approved next step: continue, repair, or return.
-4. Keep todos current with accepted steps, active lanes, repair counts, and blockers.
+1. Reconcile the tree and Git state, and find the steps whose inputs are ready. Dispatch them.
+2. Judge each result and take the approved next step: continue, repair, or return.
+3. Keep todos current with accepted steps, active lanes, repair counts, and blockers.
 
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
-Background calls return immediately, and completion, cancellation, or error arrives in an inbox item that wakes Collab.
-Keep the conversation moving while lanes run, but hold dependent steps until their inputs are accepted.
-Use `lanes` to inspect children and reuse the `subagent` lane name to steer or resume them.
-Only Collab dispatches children; lanes never delegate.
 Return to the user when a condition has no approved next step, a repair limit runs out, or evidence breaks a design assumption.
 In an armed run, these conditions are your decisions; record each one and continue, as `Armed runs` describes.
 
@@ -60,7 +55,7 @@ At a commit boundary, include the exact scope and a proposed message.
 
 ## Armed runs
 
-The user arms drive mode with `<leader>d` or `/drive`, and a `DRIVE` badge marks the session tree.
+The user arms drive mode with `<leader>d` or `/drive`, and a glyph in the session title marks the armed state, with a `DRIVE` badge as a fallback when the title cannot be decorated.
 The plugin adds a system line while armed and hides the `question` tool.
 Only the user can change it, and loading this skill yourself does not arm drive mode.
 When the line disappears, attended boundaries apply again from the next step.
@@ -72,7 +67,7 @@ When the line disappears, attended boundaries apply again from the next step.
 - A reviewer `ask` or failure leaves the permission waiting for the user; report the blocker and continue independent permitted work.
 - The plugin journals reviewer decisions, and the user can inspect them with `/drive-log`.
 - Do not call `question` or stop only to request routine approval while armed.
-- V2 auto-compaction continues the turn; recover the workflow state from the summary, todos, lanes, and tree before new writes.
+- Recover the workflow state from the summary, todos, lanes, and tree before new writes.
 
 ## Examples
 

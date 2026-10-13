@@ -6,8 +6,6 @@ description: Use when the user invokes /clear-lanes or asks to close stale deleg
 # Clear lanes
 
 Collab owns this procedure and runs it without asking for each lane.
-Closing a lane hides it from the sidebar and frees its name: the next `subagent` call with that name starts a fresh child.
-A closed lane can't be resumed, including by its `sessionID`, and every permission on the closed child is denied.
 Its history stays, so a wrong close costs a re-brief.
 
 ## Read
@@ -34,7 +32,6 @@ User arguments override this judgment: close exactly the lanes they name, or kee
 ## Close
 
 Call `lanes_close` once with a `lanes` array of every name to close.
-It never closes a running child and returns one line per name: `closed <name>` or `skipped <name>: <reason>` for running, missing, or already closed lanes.
 Report skipped lanes with the reason the tool returned.
 
 ## Report

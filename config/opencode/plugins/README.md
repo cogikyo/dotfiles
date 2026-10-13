@@ -1,6 +1,6 @@
 # OpenCode V2 plugins
 
-This guide covers the local plugins for OpenCode 2.0.27.
+This guide covers the local plugins for OpenCode V2.
 OpenCode discovers immediate plugin directories and loads their server and TUI entrypoints from source.
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
 The sidebar shows usage, Markdown Context, lanes, then browser; claims that share a placement render in plugin directory-name order.

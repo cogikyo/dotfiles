@@ -22,10 +22,6 @@ Leave reversible implementation mechanics open unless a constraint depends on th
 Inspect directly when the question fits the current context.
 Send a scout or verifier for a consequential evidence gap that would crowd the conversation.
 Use a `review/*` leaf for a real uncertainty or an independent challenge, usually `review/critic` or `review/architect`.
-Collab dispatches these direct children with `subagent`; children never delegate.
-Use `background: true` for independent evidence work and keep discussing the design while it runs.
-Accept the completion inbox item before using its findings in a dependent step.
-Name a reusable child with `lane`, inspect it with `lanes`, and reuse that name to steer or resume it with a delta.
 Skip the multi-stage workflow when the design is already settled.
 For each load-bearing conjecture, name what would falsify it.
 Continue until the remaining uncertainty is harmless implementation freedom or a real decision for the user.
