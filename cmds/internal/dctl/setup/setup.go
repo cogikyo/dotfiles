@@ -150,18 +150,23 @@ func (s Stage) section(ctx context.Context, u *ui.UI, force bool) (Report, error
 	if err != nil {
 		return r, err
 	}
-	for _, it := range r.Items {
-		if it.State == Done || it.shown {
-			continue
-		}
+	r.show(u)
+	u.End(level(r.State), "")
+	return r, nil
+}
+
+func (r Report) show(u *ui.UI) {
+	items := slices.DeleteFunc(slices.Clone(r.Items), func(it Result) bool { return it.State == Done || it.shown })
+	for _, it := range items {
 		head, rest, _ := strings.Cut(it.Detail, "\n")
-		u.Row(level(it.State), short(r, it.Item)+": "+head)
+		if len(items) > 1 {
+			head = strings.ReplaceAll(strings.TrimPrefix(it.Item, r.Stage+"-"), "-", " ") + ": " + head
+		}
+		u.Row(level(it.State), head)
 		if rest != "" {
 			u.Detail("%s", rest)
 		}
 	}
-	u.End(level(r.State), "")
-	return r, nil
 }
 
 var ErrRefused = errors.New("sudo authorization failed; no root stages applied")
@@ -187,7 +192,8 @@ func (s Stage) Evaluate(ctx context.Context) Report {
 	return r
 }
 
-// Apply stops at a canceled prompt or context and returns that error so the whole run ends.
+// Apply records Esc at a prompt as manual work and skips the rest of the stage without returning an error.
+// Other prompt or context cancellation returns an error so the caller can stop the run.
 func (s Stage) Apply(ctx context.Context, force bool) (Report, error) {
 	r := Report{Stage: s.Name}
 	err := ctx.Err()
@@ -197,6 +203,12 @@ func (s Stage) Apply(ctx context.Context, force bool) (Report, error) {
 		}
 		var res Result
 		res, err = it.apply(ctx, force)
+		if errors.Is(err, ui.ErrEscaped) && ctx.Err() == nil {
+			res.State, res.Detail = ManualState, fmt.Sprintf("skipped; run `dctl setup %s`", s.Name)
+			r.Items = append(r.Items, res)
+			err = nil
+			break
+		}
 		r.Items = append(r.Items, res)
 		if err == nil {
 			err = ctx.Err()
@@ -233,13 +245,16 @@ func (it Item) apply(ctx context.Context, force bool) (Result, error) {
 		if err := it.Fix(ctx); err != nil {
 			r := Result{Item: it.Name, State: Failed, Detail: err.Error(), shown: execx.Shown(err)}
 			switch {
+			case errors.Is(err, ui.ErrCanceled):
+				r.State, r.Detail = Pending, "canceled"
+				return r, err
+			case ctx.Err() != nil:
+				r.State, r.Detail = Pending, "interrupted"
+				return r, err
 			case isManual(err):
 				r.State = ManualState
 			case isLater(err):
 				r.State = LaterState
-			}
-			if errors.Is(err, ui.ErrCanceled) {
-				return r, err
 			}
 			return r, nil
 		}
@@ -284,10 +299,6 @@ func level(s State) ui.Level {
 		return ui.Err
 	}
 	return ui.Warn
-}
-
-func short(r Report, item string) string {
-	return strings.TrimPrefix(item, r.Stage+"-")
 }
 
 func Outcome(reports []Report) (ui.Level, string) {

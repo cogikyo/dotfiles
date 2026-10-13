@@ -40,7 +40,7 @@ func (u *UI) Command(line, reason string) *Block {
 	u.ensure()
 	u.flush(false)
 	if b.width > 20 {
-		line = ansi.Wrap(line, b.width-10, "")
+		line = wrap(line, b.width-10)
 	}
 	rows := strings.Split(line, "\n")
 	u.print(u.out, fmt.Sprintf("%s %s %s\n", styleStep.Render(u.glyph.branch), pill(command), styleCommand.Render(rows[0])))
@@ -110,6 +110,8 @@ func (b *Block) End(err error) {
 	u.flush(false)
 	level := OK
 	switch {
+	case err == nil && !b.open && !b.attach:
+		return
 	case err == nil:
 	case errors.Is(err, context.Canceled) || errors.Is(err, ErrCanceled):
 		level = Warn

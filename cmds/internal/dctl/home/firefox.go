@@ -55,7 +55,8 @@ func Firefox(r paths.Root, run execx.Runner) setup.Stage {
 				return err
 			}
 			defer os.RemoveAll(dir)
-			return execx.Reason(run, "create the Developer Edition profile").Run(ctx, "", "firefox-developer-edition", "--headless", "--screenshot", filepath.Join(dir, "first-run.png"), "about:blank")
+			_, err = run.Output(ctx, "", "firefox-developer-edition", "--headless", "--screenshot", filepath.Join(dir, "first-run.png"), "about:blank")
+			return err
 		},
 	}
 	return setup.Stage{Name: "firefox", Items: []setup.Item{

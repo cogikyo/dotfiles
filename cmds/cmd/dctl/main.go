@@ -53,6 +53,8 @@ func main() {
 	case errors.Is(err, ui.ErrCanceled):
 		u.Close(ui.Warn, "canceled")
 		os.Exit(130)
+	case errors.Is(err, ui.ErrReported):
+		os.Exit(1)
 	case err != nil:
 		u.Error("%v", err)
 		os.Exit(1)

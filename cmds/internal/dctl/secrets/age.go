@@ -248,7 +248,7 @@ const (
 )
 
 func (k *Keys) unlock(ciphertext []byte) ([]byte, bool, error) {
-	for {
+	for tried := false; ; tried = true {
 		ids, serials, err := k.inserted()
 		if err == nil && len(ids) > 0 {
 			var data []byte
@@ -266,6 +266,9 @@ func (k *Keys) unlock(ciphertext []byte) ([]byte, bool, error) {
 		switch {
 		case err == nil:
 			err, title, retry = errNoKey, "Insert an enrolled YubiKey", "Retry"
+			if tried {
+				title = "No enrolled YubiKey detected; insert one"
+			}
 		case wrongPIN(err):
 			left, blocked := k.tries(serials)
 			err = fmt.Errorf("PIV PIN rejected · %s", left)

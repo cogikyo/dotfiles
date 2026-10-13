@@ -10,9 +10,12 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/ui"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wait func(context.Context) (Report, error), err error) {
@@ -25,16 +28,9 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 	if err != nil {
 		return nil, err
 	}
-	validate := exec.CommandContext(ctx, "sudo", "-v")
-	validate.Stdin, validate.Stdout, validate.Stderr = os.Stdin, os.Stderr, os.Stderr
-	err = validate.Run()
-	if ctx.Err() != nil {
+	if err := Sudo(ctx, u, "install "+s.Name+" in the background"); err != nil {
 		log.Close()
-		return nil, ctx.Err()
-	}
-	if err != nil {
-		log.Close()
-		return nil, ErrRefused
+		return nil, err
 	}
 	run, stop := context.WithCancel(context.WithoutCancel(ctx))
 	keep := keepalive(run)
@@ -45,6 +41,14 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 		defer close(done)
 		r, applyErr = s.Apply(execx.Logged(run, log), force)
 	}()
+	waiting := "waiting for " + s.Name + " to finish"
+	hints := make(chan string, 2)
+	hint := func(keys string) {
+		select {
+		case hints <- waiting + " · " + keys:
+		default:
+		}
+	}
 	var draining atomic.Bool
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -59,6 +63,7 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 					stop()
 					return
 				}
+				hint("Ctrl+C again interrupts it")
 			}
 		}
 	}()
@@ -67,40 +72,46 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 	return func(ctx context.Context) (Report, error) {
 		defer stop()
 		u.Begin(s.Name, s.About)
-		spin := func(ctx context.Context) error {
+		go func() {
 			select {
 			case <-done:
 			case <-ctx.Done():
+				if errors.Is(context.Cause(ctx), ui.ErrCanceled) && draining.CompareAndSwap(false, true) {
+					hint("Ctrl+C interrupts it")
+				}
 			}
-			return nil
-		}
-		err := ctx.Err()
-		if err == nil {
-			err = u.Spin(ctx, "background install", spin)
-		}
-		if err != nil || ctx.Err() != nil {
-			if errors.Is(context.Cause(ctx), ui.ErrCanceled) {
-				draining.Store(true)
-			}
-			u.Warn("waiting for %s to finish · Ctrl+C again interrupts it", s.Name)
-			_ = u.Spin(context.WithoutCancel(ctx), "background install", spin)
-		}
-		<-done
+		}()
+		u.Await(waiting, hints, done)
 		keep()
 		log.Close()
-		for _, it := range r.Items {
-			if it.State != Done {
-				head, _, _ := strings.Cut(it.Detail, "\n")
-				u.Row(level(it.State), short(r, it.Item)+": "+head)
-			}
-		}
+		r.show(u)
 		if r.State == Failed {
 			u.Row(ui.Info, "last lines of "+shown)
-			u.Detail("%s", tail(path, 20))
+			u.Detail("%s", tail(path, 8))
 		}
 		u.End(level(r.State), "")
 		return r, applyErr
 	}, nil
+}
+
+func Sudo(ctx context.Context, u *ui.UI, why string) error {
+	if exec.CommandContext(ctx, "sudo", "-n", "-v").Run() == nil {
+		return nil
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	u.Line(ui.Info, "sudo", why)
+	cmd := exec.CommandContext(ctx, "sudo", "-v", "-p", "dctl: sudo password for %u: ")
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stderr, os.Stderr
+	err := cmd.Run()
+	switch {
+	case ctx.Err() != nil:
+		return ctx.Err()
+	case err != nil:
+		return ErrRefused
+	}
+	return nil
 }
 
 func keepalive(ctx context.Context) context.CancelFunc {
@@ -125,6 +136,31 @@ func tail(path string, n int) string {
 	if err != nil {
 		return err.Error()
 	}
-	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	var lines []string
+	for l := range strings.Lines(strings.ToValidUTF8(string(data), "\uFFFD")) {
+		l = strings.TrimRight(l, "\r\n")
+		l = l[strings.LastIndexByte(l, '\r')+1:]
+		l = strings.Map(func(r rune) rune {
+			switch {
+			case r == '\t':
+				return ' '
+			case unicode.IsControl(r):
+				return -1
+			}
+			return r
+		}, ansi.Strip(l))
+		if !progress(l) {
+			lines = append(lines, strings.TrimRight(l, " "))
+		}
+	}
 	return strings.Join(lines[max(0, len(lines)-n):], "\n")
+}
+
+func progress(line string) bool {
+	fields := strings.Fields(line)
+	switch {
+	case len(fields) == 0, fields[0] == "%", fields[0] == "Dload", strings.HasSuffix(line, " downloading..."):
+		return true
+	}
+	return !strings.ContainsFunc(line, func(r rune) bool { return unicode.IsLetter(r) && !strings.ContainsRune("kMGTiB", r) })
 }

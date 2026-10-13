@@ -207,13 +207,12 @@ func elevate(ctx context.Context, u *ui.UI, root paths.Root, stages []setup.Stag
 	if err != nil {
 		return nil, err
 	}
-	validate := command(ctx, "sudo", "-v")
-	validate.Stdout = os.Stderr
-	if err := validate.Run(); err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		return nil, setup.ErrRefused
+	why := "run " + names(stages) + " as root"
+	if quiet {
+		why = "check " + names(stages) + " as root"
+	}
+	if err := setup.Sudo(ctx, u, why); err != nil {
+		return nil, err
 	}
 	flags := globals(u)
 	if quiet || u.JSON() {

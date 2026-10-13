@@ -49,6 +49,8 @@ const (
 var (
 	ErrNoTTY    = errors.New("interactive terminal required")
 	ErrCanceled = errors.New("canceled")
+	ErrEscaped  = fmt.Errorf("%w", ErrCanceled)
+	ErrReported = errors.New("failure already reported")
 )
 
 type UI struct {
@@ -204,9 +206,10 @@ func (u *UI) finish(w io.Writer, level Level, msg string) {
 
 func (u *UI) closing(w io.Writer, level Level, msg string) {
 	head, rest, _ := strings.Cut(msg, "\n")
-	u.print(w, fmt.Sprintf("%s %s %s\n", styleStep.Render(u.glyph.close), pill(level), inline(head)))
+	pad := strings.Repeat(" ", 10)
+	u.print(w, u.hang(styleStep.Render(u.glyph.close)+" "+pill(level)+" ", pad, inline(head)))
 	for l := range strings.Lines(rest) {
-		u.print(w, strings.Repeat(" ", 10)+inline(strings.TrimRight(l, "\n"))+"\n")
+		u.print(w, u.hang(pad, pad, inline(strings.TrimRight(l, "\n"))))
 	}
 }
 
@@ -221,14 +224,14 @@ func (u *UI) Line(level Level, title, note string) {
 	if note != "" {
 		head += "  " + styleDim.Render(note)
 	}
-	glyph := u.glyph.branch
+	glyph, pad := u.glyph.branch, u.stub()
 	if u.rail() {
 		u.flush(false)
 	} else {
 		u.gap(u.out)
-		glyph = "──"
+		glyph, pad = "──", strings.Repeat(" ", 10)
 	}
-	u.print(u.out, fmt.Sprintf("%s %s %s\n", styleStep.Render(glyph), pill(level), head))
+	u.print(u.out, u.hang(styleStep.Render(glyph)+" "+pill(level)+" ", pad, head))
 	u.sync()
 }
 
@@ -243,13 +246,14 @@ func (u *UI) Begin(title, note string) {
 		head += "  " + styleDim.Render(note)
 	}
 	t := tree{title: title, start: time.Now(), flat: u.rail()}
+	glyph := u.glyph.open
 	if t.flat {
 		u.flush(false)
-		u.print(u.out, fmt.Sprintf("%s %s %s\n", styleStep.Render(u.glyph.branch), pill(Info), head))
+		glyph = u.glyph.branch
 	} else {
 		u.gap(u.out)
-		u.print(u.out, fmt.Sprintf("%s %s %s\n", styleStep.Render(u.glyph.open), pill(Info), head))
 	}
+	u.print(u.out, u.hang(styleStep.Render(glyph)+" "+pill(Info)+" ", u.stub(), head))
 	u.trees = append(u.trees, t)
 	u.sync()
 }
@@ -299,7 +303,7 @@ func (u *UI) Node(level Level, title, note string) {
 	defer u.mu.Unlock()
 	u.ensure()
 	u.flush(false)
-	u.print(u.out, fmt.Sprintf("%s %s %s\n", styleStep.Render(u.glyph.branch), pill(level), msg))
+	u.print(u.out, u.hang(styleStep.Render(u.glyph.branch)+" "+pill(level)+" ", u.stub(), msg))
 }
 
 func (u *UI) Section(title, note string) { u.Node(Info, title, note) }
@@ -352,7 +356,7 @@ func (u *UI) Detail(format string, args ...any) {
 			u.pending.details = append(u.pending.details, l)
 			continue
 		}
-		u.print(u.out, fmt.Sprintf("%s%s %s\n", u.pad(), styleDim.Render(">"), l))
+		u.print(u.out, u.hang(u.pad()+styleDim.Render(">")+" ", u.pad()+"  ", l))
 	}
 }
 
@@ -453,7 +457,23 @@ func (u *UI) fold(s string, indent int) []string {
 	if err != nil || w < indent+20 {
 		return []string{s}
 	}
-	return strings.Split(ansi.Wrap(s, w-indent, ""), "\n")
+	return strings.Split(wrap(s, w-indent), "\n")
+}
+
+func wrap(s string, limit int) string {
+	const hyphen = "\u2011"
+	return strings.ReplaceAll(ansi.Wrap(strings.ReplaceAll(s, "-", hyphen), limit, ""), hyphen, "-")
+}
+
+func (u *UI) hang(lead, pad, msg string) string {
+	var b strings.Builder
+	for i, row := range u.fold(msg, ansi.StringWidth(lead)) {
+		if i > 0 {
+			lead = pad
+		}
+		b.WriteString(lead + row + "\n")
+	}
+	return b.String()
 }
 
 func note(level Level, msg string) *child {
@@ -474,6 +494,10 @@ func (u *UI) lead() string {
 
 func (u *UI) pad() string {
 	return styleStep.Render(u.glyph.stem) + strings.Repeat(" ", 10)
+}
+
+func (u *UI) stub() string {
+	return styleStep.Render(u.glyph.stem) + strings.Repeat(" ", 9)
 }
 
 type glyphs struct{ open, branch, stem, arrow, tee, close string }

@@ -17,6 +17,7 @@ const (
 	laterMark
 	optMark
 	waitMark
+	warnMark
 	errMark
 )
 
@@ -28,9 +29,9 @@ type row struct {
 	force bool
 }
 
-var levels = map[mark]ui.Level{okMark: ui.OK, todoMark: ui.Todo, fixMark: ui.Fix, laterMark: ui.Later, optMark: ui.Optional, waitMark: ui.Wait, errMark: ui.Err}
+var levels = map[mark]ui.Level{okMark: ui.OK, todoMark: ui.Todo, fixMark: ui.Fix, laterMark: ui.Later, optMark: ui.Optional, waitMark: ui.Wait, warnMark: ui.Warn, errMark: ui.Err}
 
-var labels = map[mark]string{todoMark: "TODO", fixMark: "FIX", laterMark: "LATER", waitMark: "WAIT", errMark: "ERR"}
+var labels = map[mark]string{todoMark: "TODO", fixMark: "FIX", laterMark: "LATER", waitMark: "WAIT", warnMark: "WARN", errMark: "ERR"}
 
 func (w row) show(u *ui.UI) {
 	u.Row(levels[w.mark], fmt.Sprintf("%-10s  %s", w.stage.Name, w.text))

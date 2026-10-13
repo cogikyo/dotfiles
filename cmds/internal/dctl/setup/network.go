@@ -30,7 +30,7 @@ func Network(u *ui.UI) Stage {
 				case serr != nil:
 					return serr
 				case i == 1:
-					return err
+					return Manual("online steps skipped: %v", err)
 				}
 			}
 		},

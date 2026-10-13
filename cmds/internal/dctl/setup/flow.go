@@ -38,11 +38,17 @@ func (f *Flow) Run(ctx context.Context, req Request) error {
 	}
 	host, _ := os.Hostname()
 	if req.Status {
-		reports, err := f.evaluate(ctx, sc.shown)
+		stages, open := sc.shown, !sc.full && os.Geteuid() == 0
+		if !open && !sc.full && slices.ContainsFunc(stages, func(s Stage) bool { return s.Lock }) {
+			stages = slices.DeleteFunc(slices.Clone(f.Stages), func(s Stage) bool {
+				return (s.Lock || s.Optional) && !slices.ContainsFunc(sc.shown, func(t Stage) bool { return t.Name == s.Name })
+			})
+		}
+		reports, err := f.evaluate(ctx, stages)
 		if err != nil {
 			return err
 		}
-		return f.status(sc.plan(reports, !sc.full || f.gate(reports)), reports, host)
+		return f.status(sc.plan(reports, open || f.gate(reports)), reports, host)
 	}
 	reports, err := f.evaluate(ctx, sc.shown)
 	if err != nil {
@@ -203,14 +209,21 @@ func (f *Flow) status(rows []row, reports map[string]Report, host string) error 
 	u := f.UI
 	u.Begin("status", host)
 	var list []Report
-	var parts []string
+	counts := map[mark]int{}
 	for _, w := range rows {
 		w.show(u)
 		if w.mark != optMark {
 			list = append(list, reports[w.stage.Name])
 		}
-		if w.mark != okMark && w.mark != optMark {
-			parts = append(parts, w.label())
+		counts[w.mark]++
+	}
+	var parts []string
+	for _, c := range []struct {
+		mark mark
+		text string
+	}{{errMark, "failed"}, {fixMark, "to fix"}, {todoMark, "to run"}, {waitMark, "waiting"}, {laterMark, "later"}} {
+		if n := counts[c.mark]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", n, c.text))
 		}
 	}
 	if u.JSON() {
@@ -224,13 +237,20 @@ func (f *Flow) status(rows []row, reports map[string]Report, host string) error 
 	}
 	level, msg := ui.OK, "all set up"
 	if len(parts) > 0 {
-		level, msg = ui.Warn, "not done: "+strings.Join(parts, ", ")
+		level, msg = ui.Warn, strings.Join(parts, ", ")
 	}
-	if Incomplete(list, Status) {
+	if counts[errMark] > 0 {
+		level = ui.Err
+	}
+	if !Incomplete(list, Status) {
+		u.End(level, "%s", msg)
+		return nil
+	}
+	if u.JSON() {
 		return errors.New(msg)
 	}
 	u.End(level, "%s", msg)
-	return nil
+	return ui.ErrReported
 }
 
 type execution struct {
@@ -290,7 +310,6 @@ func (e *execution) apply(ctx context.Context, todo []row) {
 			group := make([]Stage, 0, j-i)
 			for _, w := range todo[i:j] {
 				group = append(group, w.stage)
-				e.ran[w.stage.Name] = true
 			}
 			mode := All
 			if todo[i].force {
@@ -309,6 +328,7 @@ func (e *execution) apply(ctx context.Context, todo []row) {
 			}
 			for _, r := range rs {
 				e.results[r.Stage] = r
+				e.ran[r.Stage] = true
 			}
 			i = j
 		case s.Background:
@@ -319,7 +339,6 @@ func (e *execution) apply(ctx context.Context, todo []row) {
 					continue
 				}
 			}
-			e.ran[s.Name] = true
 			wait, err := Start(ctx, u, s, todo[i-1].force, f.Home)
 			switch {
 			case errors.Is(err, context.Canceled):
@@ -327,6 +346,7 @@ func (e *execution) apply(ctx context.Context, todo []row) {
 			case err != nil:
 				e.results[s.Name] = Unreached([]Stage{s}, Failed, err.Error())[0]
 			default:
+				e.ran[s.Name] = true
 				e.waits[s.Name] = wait
 			}
 		default:
@@ -342,7 +362,11 @@ func (e *execution) apply(ctx context.Context, todo []row) {
 			r, err := s.section(ctx, u, force)
 			e.results[s.Name] = r
 			if err != nil {
-				u.End(ui.Warn, "canceled")
+				note := "canceled"
+				if !errors.Is(err, ui.ErrCanceled) {
+					note = "interrupted"
+				}
+				u.End(ui.Warn, note)
 				e.cancel()
 			}
 		}
@@ -414,6 +438,9 @@ func (e *execution) lock(ctx context.Context) {
 		w.show(u)
 	}
 	ok, err := u.Confirm(lockQuestion)
+	if errors.Is(err, ui.ErrEscaped) {
+		ok, err = false, nil
+	}
 	switch {
 	case err != nil:
 		u.End(ui.Warn, "")
@@ -453,10 +480,14 @@ func (e *execution) summary(ctx context.Context, req Request) error {
 			continue
 		}
 		w := row{stage: s}
+		need := r.Wait
+		if need == "" && r.State == Pending && !s.Lock && !e.ran[s.Name] {
+			need = e.blocked(s)
+		}
 		switch {
-		case r.Wait != "":
-			w.mark, w.text = waitMark, "after "+r.Wait
-			if e.stuck(r.Wait) {
+		case need != "":
+			w.mark, w.text = waitMark, e.after(s, need)
+			if e.stuck(need) {
 				skipped = append(skipped, s.Name)
 			}
 		case r.State == Done:
@@ -471,6 +502,11 @@ func (e *execution) summary(ctx context.Context, req Request) error {
 			laters = append(laters, s.Name)
 		case s.Lock && !gate && r.State == Pending:
 			w.mark, w.text = waitMark, "after every required stage is OK"
+		case r.State == Pending && e.ran[s.Name]:
+			w.mark = warnMark
+			w.text, _ = headline(r, Pending)
+		case r.State == Pending && !s.Lock:
+			w.mark, w.text = todoMark, "not run"
 		case r.State == Pending:
 			open = append(open, s.Name)
 			continue
@@ -544,6 +580,19 @@ func (e *execution) stuck(name string) bool {
 		return e.stuck(r.Wait)
 	}
 	return r.State != Done && r.State != ManualState && r.State != LaterState
+}
+
+func (e *execution) after(s Stage, need string) string {
+	var names []string
+	for _, n := range s.Needs {
+		if r, ok := e.results[n]; ok && (r.State != Done || r.Wait != "") {
+			names = append(names, n)
+		}
+	}
+	if len(names) == 0 {
+		names = []string{need}
+	}
+	return "after " + strings.Join(names, ", ")
 }
 
 func labeled(head string, names []string) string {

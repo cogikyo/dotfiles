@@ -36,6 +36,32 @@ func (u *UI) Spin(ctx context.Context, label string, work func(context.Context) 
 	return err
 }
 
+func (u *UI) Await(label string, relabel <-chan string, done <-chan struct{}) {
+	if u.opts.JSON {
+		<-done
+		return
+	}
+	u.mu.Lock()
+	u.ensure()
+	u.flush(true)
+	live := u.Can() && !u.opts.Plain
+	u.mu.Unlock()
+	if live {
+		m := &busy{lead: u.lead(), label: label, done: done, relabel: relabel, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(styleStep))}
+		_, _ = tea.NewProgram(m, tea.WithInput(nil), tea.WithOutput(u.stdout), tea.WithoutSignalHandler()).Run()
+		<-done
+		return
+	}
+	for {
+		select {
+		case <-done:
+			return
+		case l := <-relabel:
+			u.Row(Warn, l)
+		}
+	}
+}
+
 func spin(parent context.Context, out io.Writer, lead, label string, work func(context.Context) error) error {
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
@@ -60,25 +86,41 @@ func spin(parent context.Context, out io.Writer, lead, label string, work func(c
 
 type doneMsg struct{}
 
+type labelMsg string
+
 type busy struct {
 	lead     string
 	label    string
 	done     <-chan struct{}
+	relabel  <-chan string
 	spinner  spinner.Model
 	finished bool
 }
 
 func (m *busy) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, func() tea.Msg {
+	return tea.Batch(m.spinner.Tick, m.next, func() tea.Msg {
 		<-m.done
 		return doneMsg{}
 	})
 }
 
+func (m *busy) next() tea.Msg {
+	select {
+	case l := <-m.relabel:
+		return labelMsg(l)
+	case <-m.done:
+		return nil
+	}
+}
+
 func (m *busy) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if _, ok := msg.(doneMsg); ok {
+	switch msg := msg.(type) {
+	case doneMsg:
 		m.finished = true
 		return m, tea.Quit
+	case labelMsg:
+		m.label = string(msg)
+		return m, m.next
 	}
 	var cmd tea.Cmd
 	m.spinner, cmd = m.spinner.Update(msg)

@@ -77,7 +77,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	cmd := r.command(ctx, dir, name, args)
 	if w, ok := ctx.Value(logKey{}).(io.Writer); ok {
 		cmd.Stdout, cmd.Stderr = w, w
-		return failed(cmd.Run(), name, args, "")
+		return failed(ctx, cmd.Run(), name, args, "")
 	}
 	if cmd.Stdin == nil && (!r.Group || r.Interactive) {
 		cmd.Stdin = os.Stdin
@@ -85,7 +85,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	if r.UI == nil {
 		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
-		return failed(r.wait(ctx, cmd), name, args, "")
+		return failed(ctx, r.wait(ctx, cmd), name, args, "")
 	}
 	b := r.UI.Command(shell(name, args), r.Reason)
 	if r.Interactive {
@@ -94,19 +94,24 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 		cmd.Stdout, cmd.Stderr = b, b
 	}
 	err := r.wait(ctx, cmd)
-	shown := err
-	if err != nil && ctx.Err() != nil {
-		shown = ctx.Err()
-	}
-	b.End(shown)
 	if r.UI.JSON() {
-		return failed(err, name, args, "")
+		return failed(ctx, err, name, args, "")
 	}
+	if err != nil && errors.Is(ctx.Err(), context.Canceled) {
+		err = interrupted{err}
+	}
+	b.End(err)
 	if err != nil {
 		return rendered{err}
 	}
 	return nil
 }
+
+type interrupted struct{ cause error }
+
+func (interrupted) Error() string { return "interrupted" }
+
+func (i interrupted) Unwrap() []error { return []error{context.Canceled, i.cause} }
 
 type rendered struct{ error }
 
@@ -124,7 +129,7 @@ func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...s
 	cmd := r.command(ctx, dir, name, args)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := failed(r.wait(ctx, cmd), name, args, stderr.String())
+	err := failed(ctx, r.wait(ctx, cmd), name, args, stderr.String())
 	return strings.TrimSpace(stdout.String()), err
 }
 
@@ -166,14 +171,18 @@ func shell(name string, args []string) string {
 	return strings.Join(words, " ")
 }
 
-func failed(err error, name string, args []string, stderr string) error {
-	if err == nil {
+func failed(ctx context.Context, err error, name string, args []string, stderr string) error {
+	switch {
+	case err == nil:
 		return nil
+	case errors.Is(ctx.Err(), context.Canceled):
+		return interrupted{err}
 	}
-	if len(args) > 8 {
-		args = append(args[:8:8], "…")
+	argv := strings.Join(append([]string{name}, args...), " ")
+	if len(argv) > 40 {
+		argv = argv[:max(len(name), strings.LastIndexByte(argv[:40], ' '))] + " …"
 	}
-	err = fmt.Errorf("%s: %w", strings.Join(append([]string{name}, args...), " "), err)
+	err = fmt.Errorf("%w (%s)", err, argv)
 	lines := strings.Split(strings.TrimSpace(stderr), "\n")
 	if tail := strings.Join(lines[max(0, len(lines)-20):], "\n"); tail != "" {
 		err = fmt.Errorf("%w: %s", err, tail)

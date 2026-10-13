@@ -14,7 +14,7 @@ func TestOutputError(t *testing.T) {
 		t.Fatalf("err = %v, want *exec.ExitError with exit 3", err)
 	}
 	msg := err.Error()
-	if !strings.HasPrefix(msg, "sh -c for i") || !strings.Contains(msg, "exit status 3: line 11\n") || !strings.HasSuffix(msg, "line 30") || strings.Contains(msg, "line 10\n") {
+	if !strings.HasPrefix(msg, "exit status 3 (sh -c for i") || !strings.Contains(msg, "…): line 11\n") || !strings.HasSuffix(msg, "line 30") || strings.Contains(msg, "line 10\n") {
 		t.Fatalf("message lacks the command, exit code, or 20-line stderr tail:\n%s", msg)
 	}
 }

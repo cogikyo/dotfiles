@@ -85,7 +85,13 @@ func (u *UI) run(m prompt, canceled *bool) error {
 	u.ensure()
 	u.flush(true)
 	u.mu.Unlock()
-	opts := []tea.ProgramOption{tea.WithContext(u.opts.Context), tea.WithInput(u.in), tea.WithOutput(u.stdout)}
+	escaped := false
+	opts := []tea.ProgramOption{tea.WithContext(u.opts.Context), tea.WithInput(u.in), tea.WithOutput(u.stdout), tea.WithFilter(func(_ tea.Model, msg tea.Msg) tea.Msg {
+		if key, ok := msg.(tea.KeyPressMsg); ok && key.String() == "esc" {
+			escaped = true
+		}
+		return msg
+	})}
 	if u.opts.Plain {
 		opts = append(opts, tea.WithColorProfile(colorprofile.NoTTY))
 	}
@@ -98,7 +104,10 @@ func (u *UI) run(m prompt, canceled *bool) error {
 	if err != nil {
 		return err
 	}
-	if *canceled {
+	switch {
+	case *canceled && escaped:
+		return ErrEscaped
+	case *canceled:
 		return ErrCanceled
 	}
 	return nil
