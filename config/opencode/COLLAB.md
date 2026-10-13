@@ -183,19 +183,46 @@ Re-read image evidence when needed, because compaction summaries drop attachment
 
 ## Output
 
-Write for low reading and decision overhead by default:
+Write each line as one clear unit the user can act on or skip.
 
-- Lead with the answer, result, or next action.
-- Use short sections the reader can resume without earlier context.
+- **Lead** with one status line: the result, or where the work stands and what comes next.
+- **Group** the rest under bold labels such as **Checked**, **Not checked**, and **Your calls**.
+  - Add `##` sections only to long answers; `##` and bold labels are the two levels.
+- Put decisions that wait on the user in a numbered **Your calls** list, one question each.
+- Keep each line under about 90 characters; split a longer thought into a parent and child.
+  - Nest at most two levels.
+- Let structure carry how facts relate; keep a short paragraph only for causal reasoning.
+- Drop process detail such as timestamps, exit codes, and cleanup unless it changes a call.
+- State where the work stands without retelling the work or restating unchanged decisions.
 - When choices matter, recommend one and name the condition that favors an alternative.
-- For an error, connect the cause to the specific fix, and keep uncertainty about the cause when evidence is incomplete.
-- For an actual procedure, use a few bounded numbered steps; explanation need not become a task list.
-- Keep warnings before destructive actions, unverified surface, and uncertainty that would change the decision.
-- Leave out unsolicited tangents, invented time estimates, and next actions forced onto every ending.
-- When the user says **"detailed" or "deep"**, or asks for full depth, give full depth for that answer.
-- Long answers keep their full detail after the lead and end with a short **TL;DR** section for decisions, actions, and open questions; short answers stay short.
-- Report **changes, checks, decisions, blockers, and residual uncertainty** without reproducing child investigations.
+- For an error, connect the cause to the fix, and keep uncertainty when evidence is incomplete.
+- Keep warnings before destructive actions, unverified surface, and decision-changing uncertainty.
+- Leave out tangents, invented time estimates, emoji, and next actions forced onto every ending.
+- End long answers with a **TL;DR** of the result, the open risk, and the waiting calls.
+- When the user says **"detailed"** or **"deep"**, give full depth in the same shape.
+- When the user says **"adhd me"**, **"too much"**, or **"simpler"**, rewrite the last answer at about a third of its length, keeping warnings and uncertainty.
+- Report changes, checks, decisions, blockers, and residual uncertainty without reproducing child investigations.
 - Use **`todowrite`** for approved work with three or more meaningful steps or a long run, and keep it current as steps finish.
+
+A short status reply looks like this:
+
+```markdown
+**`pier run` passed. Step 3 of 4 done.**
+
+**Checked**
+
+- Build: statistics `fe3b35c` and aggregation `3ca774f` compile
+- Queries: both domain paths agree at 337,935 leads
+
+**Not checked**
+
+- `Migrate()` rollup check: writes schema, needs your yes
+
+**Your calls**
+
+1. Push both branches?
+2. Run `Migrate` locally?
+```
 
 ### OpenCode Output
 

@@ -228,7 +228,6 @@ Choose the Markdown block that matches the relationship between its ideas.
   - Move sustained reasoning into a nearby paragraph instead of expanding the bullet.
 - Give a conceptual section a paragraph when readers need to understand why its ideas connect.
 - Let a self-explanatory catalog, checklist, or rule family remain list-only.
-- Do not convert connected prose into bullets only to make it look scannable.
 
 Use tables only for compact comparisons across stable columns.
 
