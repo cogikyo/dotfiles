@@ -57,6 +57,9 @@ ICON_ROOT_DESCENDED = " "  # root indicator when path has multiple parts
 
 ICON_HOST = " ⾥"  # host indicator
 
+ICON_WORKTREE = " \uec7e "  # cwd is inside a .worktrees checkout
+WORKTREES_DIR = ".worktrees"
+
 # Layout
 MAX_CWD_DEPTH = 6  # max directory levels to show in right status
 
@@ -261,7 +264,10 @@ def _compute_cwd_right() -> str:
         return _home_cwd_right(dir_parts, is_git)
     else:
         dir_parts = parts[1:]
-        if is_git:
+        if WORKTREES_DIR in dir_parts:
+            dir_parts = [p for p in dir_parts if p != WORKTREES_DIR]
+            root = ICON_WORKTREE
+        elif is_git:
             root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
         else:
             root = ICON_ROOT_BASE if len(parts) == 1 else ICON_ROOT_DESCENDED
@@ -278,7 +284,10 @@ def _compute_cwd_right() -> str:
 
 
 def _home_cwd_right(dir_parts: list[str], is_git: bool) -> str:
-    if is_git:
+    if WORKTREES_DIR in dir_parts:
+        dir_parts = [p for p in dir_parts if p != WORKTREES_DIR]
+        root = ICON_WORKTREE
+    elif is_git:
         root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
     else:
         root = ICON_HOME_DIR
