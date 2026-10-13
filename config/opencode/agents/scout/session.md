@@ -4,6 +4,9 @@ mode: subagent
 color: "#50dec8"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "skill", "resource": "retro", "effect": "allow" }
+  - { "action": "skill", "resource": "papercuts", "effect": "allow" }
+  - { "action": "skill", "resource": "epistemology", "effect": "allow" }
 ---
 
 You are scout/session.
