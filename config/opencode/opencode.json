@@ -6,6 +6,9 @@
   "share": "manual",
   "snapshots": true,
   "lsp": false,
+  "worktree": {
+    "directory": ".worktrees"
+  },
   "agents": {
     "build": {
       "disabled": true
