@@ -41,6 +41,9 @@ prepare ──▶ disk consent ──▶ install steps ──▶ unmount ──�
 - After success, remove the USB, reboot, and unlock with the disk passphrase.
 - Failed install steps can leave a partly modified disk; there is no rollback.
   - Unmount and LUKS-close cleanup is attempted after success or failure.
+- Most install steps show one spinner row each and write their command output to `/var/log/dctl-install.log` on the live ISO.
+  - After successful installation, the log is copied to the installed system's `/var/log/dctl-install.log`.
+  - If a logged step fails, dctl shows the log path and up to 20 trailing lines.
 
 ### Disk selection and consent
 
@@ -131,7 +134,7 @@ Applied items are checked again and the summary gives the next action.
 - Name stages to redo them and pull in unfinished dependencies.
 - Use `--from <name>` to redo that stage and later ones; optional stages need names.
 - Use `--yes` to accept the plan; rerun without it for lock work.
-- Use `--status` for a read-only check; pending, failed, or blocked work fails.
+- Use `--status` for a read-only check; pending, failed, or blocked work exits 1.
   - Manual or deferred work can exit 0; inspect the rows, not only the exit code.
 
 ### Stages and prerequisites
@@ -158,6 +161,7 @@ The optional stages do not gate security enrollment.
 | totp       | secureboot                  | Seal the boot TOTP        |
 
 - Consecutive root stages share one sudo child; user stages stay in your session.
+  - When sudo needs authentication, setup explains which stages it will check or run as root and prompts with `dctl: sudo password for <user>:`.
 - Root runs `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
 - `certs` uses sudo from the user session; user stages refuse root execution.
 
@@ -165,19 +169,25 @@ The optional stages do not gate security enrollment.
 
 Status rows distinguish work dctl can apply from work that needs your attention.
 The summary and shell hint are the next-action reference.
+The summary also lists phase-1 stages that did not run.
 
-| Pill  | Meaning                 |
-| ----- | ----------------------- |
-| OK    | Done                    |
-| TODO  | Work to run             |
-| FIX   | Manual action           |
-| LATER | Reboot or firmware step |
-| OPT   | Runs only when named    |
-| WAIT  | Needs earlier work      |
-| ERR   | Failed or unknown       |
+| Pill  | Meaning                   |
+| ----- | ------------------------- |
+| OK    | Done                      |
+| TODO  | Work to run               |
+| FIX   | Manual action             |
+| LATER | Reboot or firmware step   |
+| OPT   | Runs only when named      |
+| WAIT  | Needs earlier work        |
+| WARN  | Incomplete or interrupted |
+| ERR   | Failed or unknown         |
 
 - `ASK` marks a prompt answer; `RUN` marks a command.
-- Cancellation exits 130.
+- With pending work and no failed stages, `--status` ends with `WARN` counts, such as `6 to run, 3 waiting, 1 later`; it still exits 1.
+  - A failed stage makes the status summary `ERR`.
+- Esc at a dctl prompt inside a stage skips the rest of that stage with `FIX` and `skipped; run dctl setup <stage>`.
+  - Dependents show `WAIT`; independent stages continue.
+- Ctrl+C stops the run and exits 130; canceled or interrupted stages show `WARN` in the summary.
 - A full run records its next action under `$XDG_STATE_HOME/dctl/next`.
   - Default: `~/.local/state/dctl/next`; zsh prints it as `dctl · …`.
 
@@ -187,6 +197,8 @@ Network and authentication failures can leave dependent stages waiting.
 Independent stages can still run.
 
 - Failed network checks offer **Retry** or **Skip online steps**.
+  - **Skip online steps** leaves `network` as `FIX` with `online steps skipped`, rather than a failure.
+- For blocked phase-1 stages, summary `WAIT` rows list every unmet prerequisite.
 - Home linking backs up conflicting files but refuses to replace real directories.
 - Secrets ask for the YubiKey's PIV PIN or the age recovery phrase.
 - Enter the SSH key's passphrase when prompted.
@@ -222,7 +234,8 @@ Missing AUR and local base packages need manual installation.
   ```
 
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
-  - Output: `~/.local/state/dctl/extra.log`; failures show recent log lines.
+  - Output: `~/.local/state/dctl/extra.log`; failures show up to eight recent lines with progress output and terminal codes removed.
+  - An interrupted install shows `WARN` with `interrupted`, without a log tail.
   - Setup waits before later root work, before `certs`, and at the end.
 - First Ctrl+C stops new stages and waits for `extra`; a second sends SIGINT.
   - Setup never sends SIGTERM or SIGKILL to pacman.
@@ -254,6 +267,7 @@ Naming a lock stage still pulls in unfinished phase-1 work and requires consent.
 > Run first setup as the normal user.
 
 - `--yes` never accepts the lock confirmation.
+- Esc at the lock confirmation means **No**; Ctrl+C stops the run.
 - Named root stages under sudo run directly; each checks its own conditions.
 
 > _See [Secure Boot](#secure-boot) for the enrollment procedure._
@@ -296,6 +310,10 @@ Do not force enrollment past a failed check.
 
 The secret is sealed to SHA256 PCRs 0 and 7: firmware and Secure Boot state.
 The boot code is advisory tamper evidence; the hook does not block disk unlock.
+
+The hook prints the first code or **Boot TOTP not set up yet** on the console before the passphrase prompt.
+The unlock prompt waits up to 15 seconds for this output.
+The code refreshes every 30 seconds on a new line and can appear while you type.
 
 1. Enroll from a plain TTY, or clear terminal scrollback afterward.
 2. Scan the QR code shown once and enter its authenticator code.
@@ -795,7 +813,7 @@ The VM cannot prove hardware enrollment, boot-code stability, or recovery access
    ```
 
 - Confirm token errors fall back to passphrase/recovery without an emergency shell.
-- Confirm the TOTP hook does not delay LUKS unlock.
+- Confirm the first TOTP message appears before the unlock prompt, with a wait of at most 15 seconds.
 - With Secure Boot off, expect **NO BOOT TOTP**; restore enforcement before proceeding.
   - Investigate any remaining mismatch before resealing.
 - Avoid repeated wrong PINs that can block a key; cancel age-phrase fallback in key tests.
