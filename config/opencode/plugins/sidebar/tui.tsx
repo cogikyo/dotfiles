@@ -25,25 +25,29 @@ export default Plugin.define({
     const [side, update] = context.storage.store("side", { initial: { left: false } });
     const apply = () => place(context.renderer.root, side.left);
 
+    const flip = async () => {
+      await update((draft) => {
+        draft.left = !draft.left;
+      });
+      apply();
+      context.renderer.requestRender();
+    };
     context.keymap.layer(() => ({
+      mode: "global",
       commands: [
         {
           id: "sidebar.side.toggle",
           title: "Toggle sidebar side",
           description: "Move the session sidebar between the left and right of the transcript",
           group: "Session",
-          bind: "<leader>a",
           palette: true,
           slash: { name: "sidebar" },
-          run: async () => {
-            await update((draft) => {
-              draft.left = !draft.left;
-            });
-            apply();
-            context.renderer.requestRender();
-          },
+          run: flip,
         },
       ],
+    }));
+    context.keymap.layer(() => ({
+      commands: [{ bind: "<leader>a", title: "Toggle sidebar side", group: "Session", run: flip }],
     }));
 
     const timer = setInterval(apply, poll);

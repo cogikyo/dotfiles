@@ -96,13 +96,13 @@ export default Plugin.define({
     });
 
     context.keymap.layer(() => ({
+      mode: "global",
       commands: [
         {
           id: "retitle.now",
           title: "Retitle session",
           description: "Generate a new title now; pinned ALL CAPS titles stay in caps",
           group: "Session",
-          bind: "<leader>t",
           palette: true,
           slash: { name: "retitle" },
           run: () => run(root(), false),
@@ -112,11 +112,16 @@ export default Plugin.define({
           title: "Toggle ALL CAPS title",
           description: "Pin a long-running session's title in caps so automatic retitles skip it",
           group: "Session",
-          bind: "<leader>shift+t",
           palette: true,
           slash: { name: "caps" },
           run: () => run(root(), true),
         },
+      ],
+    }));
+    context.keymap.layer(() => ({
+      commands: [
+        { bind: "<leader>t", title: "Retitle session", group: "Session", run: () => run(root(), false) },
+        { bind: "<leader>shift+t", title: "Toggle ALL CAPS title", group: "Session", run: () => run(root(), true) },
       ],
     }));
   },

@@ -91,13 +91,13 @@ export default Plugin.define({
     });
 
     context.keymap.layer(() => ({
+      mode: "global",
       commands: [
         {
           id: "drive.toggle",
           title: "Toggle drive mode",
           description: "Let a reviewer model answer permission requests for this session tree",
           group: "Session",
-          bind: "<leader>d",
           palette: true,
           slash: { name: "drive" },
           run: () => toggle().catch(fail),
@@ -112,6 +112,9 @@ export default Plugin.define({
           run: () => review().catch(fail),
         },
       ],
+    }));
+    context.keymap.layer(() => ({
+      commands: [{ bind: "<leader>d", title: "Toggle drive mode", group: "Session", run: () => toggle().catch(fail) }],
     }));
 
     const off = rpc.events.on("changed", (event) => {
