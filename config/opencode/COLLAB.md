@@ -14,7 +14,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - Destructive file operations.
   - Secrets.
   - Remote or publishing effects.
-  - Restarts.
+  - Restarts, unless the repository's AGENTS.md pre-approves them.
   - The ask-first checks in `Checks`.
   - **Drive mode**: when the user arms the session with `<leader>d`, continue the approved work and record your decisions.
     - A reviewer decides each permission ask before it reaches the user; it can allow, deny, or leave the ask for the user.

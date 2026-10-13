@@ -408,7 +408,7 @@ Ewwd, newtab, and keys restart only when replaced.
 
 - **hyprd** replaces itself via `hyprd rebuild`.
   - Skips during full lock, an OpenCode refresh job, or when the daemon is stopped.
-- **Uncommitted `cmds/`** requires extra consent, default **No**; `--all` skips the build.
+- **Uncommitted `cmds/`** requires extra consent, default **No**; `--all` and `--yes` skip the build.
 - **Local recipes** with different installed versions ask separately, default **Yes**.
   - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
 - **Go tools** need module-proxy checksum metadata; locally built tools are skipped.

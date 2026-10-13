@@ -45,6 +45,6 @@ Reload the page after changing this file.
 
 ## Rebuild and restart
 
-Run `dctl update --only keys` as your normal user for an attended rebuild.
+Run `dctl update --only keys` as your normal user to rebuild.
 This builds from the working tree, installs `~/.local/bin/keys`, and restarts `keys.service` only when the binary is replaced.
 To restart it separately, run `systemctl --user restart keys.service`.
