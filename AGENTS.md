@@ -61,4 +61,3 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 - Run `dctl setup` and `dctl update` as the user; setup batches root stages in one sudo child.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
-- Always include `config/nvim/lua/plugins/editor/harpoon.json` in a commit when it changed, without mention.

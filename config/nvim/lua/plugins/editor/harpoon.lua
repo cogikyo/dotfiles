@@ -16,7 +16,7 @@ return {
 		local harpoon = require("harpoon")
 
 		harpoon.setup({
-			pins_path = vim.fn.stdpath("config") .. "/lua/plugins/editor/harpoon.json",
+			pins_path = vim.fn.stdpath("state") .. "/harpoon-pins.json",
 			state_path = vim.fn.stdpath("state") .. "/harpoon.json",
 			menu = {
 				borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
