@@ -173,6 +173,7 @@ function plainCopy(args: string[]) {
     for (const flag of flags) {
       if ("lst".includes(flag)) return false;
       recursive ||= "rRa".includes(flag);
+      // GNU cp applies the last symlink option, so later -a, -P, -d, or -H override -L.
       if ("aPdH".includes(flag)) deref = "P";
       if (flag === "L") deref = "L";
     }
