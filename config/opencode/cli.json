@@ -64,6 +64,6 @@
   ],
   "session": {
     "verbosity": "low",
-    "thinking": "show"
+    "thinking": "hide"
   }
 }
