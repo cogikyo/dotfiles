@@ -17,6 +17,9 @@ Keep vendored files byte-identical when updating them, and put local policy in t
 `credentials.ts` reads `.credentials.json` from the fixed account directory and refreshes expired or rejected tokens.
 It locks refresh per account, re-reads disk under the lock, and adopts a token refreshed by another process before exchanging the old one.
 Refresh writes preserve other JSON fields and file mode, with an atomic rename only if the prior access token still matches.
+Every five minutes, and once at startup, each account refreshes a token that expires within one hour, so idle accounts stay signed in.
+The check reads only the local file; network use is one refresh per token lifetime.
+A failed early refresh keeps the current token, logs the HTTP status and OAuth error code, and retries on the next check.
 Refresh locks live at `~/.local/share/opencode/claude-auth-refresh-<digest>.lock` regardless of XDG overrides.
 This fixed lock path matters when testing with an isolated V2 data directory.
 

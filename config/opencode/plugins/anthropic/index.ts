@@ -16,6 +16,7 @@ const disabledVariants: Record<string, string[]> = {
 };
 
 const cacheControl = { type: "ephemeral", ttl: "1h" };
+const renewEvery = 5 * 60_000;
 
 type Signed = { url: string; base: Headers; body: string | undefined; model: string; token: string };
 
@@ -70,8 +71,17 @@ export default Plugin.define({
       }
     });
 
+    const timers: ReturnType<typeof setInterval>[] = [];
     for (const { id: providerID, configDir, loginCommand } of Object.values(claudeAccounts)) {
       const credentials = new Credentials(configDir, log);
+      const renewEarly = () =>
+        credentials
+          .renewEarly()
+          .catch((error: unknown) =>
+            log(Effect.logWarning("anthropic: early renewal failed", { error: String(error) })),
+          );
+      void renewEarly();
+      timers.push(setInterval(() => void renewEarly(), renewEvery));
       const excluded = new Map<string, Set<string>>();
       const pending = new WeakMap<Request, Pending>();
       const failure = (kind: Failure) =>
@@ -165,5 +175,6 @@ export default Plugin.define({
         { providerID },
       );
     }
+    return () => timers.forEach(clearInterval);
   },
 });

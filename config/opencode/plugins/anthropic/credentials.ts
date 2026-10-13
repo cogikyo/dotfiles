@@ -21,12 +21,13 @@ const clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const lockDir = path.join(os.homedir(), ".local", "share", "opencode");
 const lockTTL = 20_000;
 const margin = 60_000;
+const early = 60 * 60_000;
 const terminalErrors = new Set(["invalid_grant", "invalid_client", "unauthorized_client", "unsupported_grant_type"]);
 
 export type Token = { accessToken: string; refreshToken: string; expiresAt: number };
 export type Failure = "transient" | "login";
 
-type Exchange = { token: Token } | { failure: "login" } | { failure: "transient"; retryAfter?: number };
+type Exchange = { token: Token } | { failure: Failure; detail: string; retryAfter?: number };
 
 const fresh = (token: Token, rejected?: string) =>
   token.accessToken !== rejected && token.expiresAt > Date.now() + margin;
@@ -84,11 +85,13 @@ async function exchange(refreshToken: string): Promise<Exchange> {
         },
       };
     }
-    if (terminalErrors.has(typeof data.error === "string" ? data.error : data.error?.type)) return { failure: "login" };
+    const code = typeof data.error === "string" ? data.error : data.error?.type;
+    const detail = typeof code === "string" ? `HTTP ${response.status} ${code}` : `HTTP ${response.status}`;
+    if (terminalErrors.has(code)) return { failure: "login", detail };
     const seconds = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
-    return { failure: "transient", retryAfter: seconds > 0 ? seconds * 1000 : undefined };
-  } catch {
-    return { failure: "transient" };
+    return { failure: "transient", detail, retryAfter: seconds > 0 ? seconds * 1000 : undefined };
+  } catch (error) {
+    return { failure: "transient", detail: String(error) };
   }
 }
 
@@ -119,6 +122,11 @@ export class Credentials {
     if (fresh(stored, rejected)) return (this.token = stored);
     this.inflight ??= this.refresh(stored.accessToken).finally(() => (this.inflight = undefined));
     return this.inflight;
+  }
+
+  async renewEarly() {
+    const stored = this.read();
+    if (stored && stored.expiresAt <= Date.now() + early) await this.renew(stored.accessToken);
   }
 
   private read(): Token | undefined {
@@ -164,8 +172,16 @@ export class Credentials {
       if ("token" in result) {
         this.cooldown = { until: 0, count: 0 };
         this.write(result.token, current.accessToken);
+        this.log(Effect.logInfo("anthropic: token refreshed", { file: this.file }));
         return (this.token = result.token);
       }
+      this.log(
+        Effect.logWarning("anthropic: token refresh failed", {
+          file: this.file,
+          failure: result.failure,
+          detail: result.detail,
+        }),
+      );
       if (result.failure === "login") this.dead = current.refreshToken;
       else this.backoff(result.retryAfter);
       return result.failure;
