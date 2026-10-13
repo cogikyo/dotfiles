@@ -1,6 +1,8 @@
-import type { ColorInput } from "@opentui/core";
+import type { ColorInput, MouseEvent } from "@opentui/core";
 import { Plugin } from "@opencode/plugin/tui";
 import { createSignal, For, Show } from "solid-js";
+import { hover, spinner } from "../context/section.tsx";
+import { colors } from "../statusline/palette.ts";
 import { usageProviderList } from "./providers.ts";
 import { Definition } from "./rpc.ts";
 import type { ProviderUsage } from "./types.ts";
@@ -37,6 +39,12 @@ export default Plugin.define({
     const [providers, setProviders] = createSignal<readonly Usage[]>([]);
     const [refreshing, setRefreshing] = createSignal<ReadonlySet<string>>(new Set());
     const [now, setNow] = createSignal(Date.now());
+    const [collapsed, setCollapsed] = context.storage.store<Record<string, boolean>>("collapsed", { initial: {} });
+    const toggle = (providerID: string) =>
+      void setCollapsed((draft) => {
+        if (draft[providerID]) delete draft[providerID];
+        else draft[providerID] = true;
+      });
 
     const unavailable = () =>
       setProviders(
@@ -82,7 +90,7 @@ export default Plugin.define({
       }),
       context.data.on("session.execution.succeeded", schedule),
       context.ui.slot({
-        append: "sidebar.content",
+        prepend: "sidebar.content",
         render: (input) => (
           <Show when={!context.data.session.get(input.sessionID)?.parentID}>
             <Dashboard
@@ -91,7 +99,9 @@ export default Plugin.define({
               activeID={context.data.session.get(input.sessionID)?.model?.providerID ?? ""}
               refreshing={refreshing()}
               now={now()}
+              collapsed={collapsed}
               onRefresh={refresh}
+              onToggle={toggle}
             />
           </Show>
         ),
@@ -112,7 +122,9 @@ function Dashboard(props: {
   activeID: string;
   refreshing: ReadonlySet<string>;
   now: number;
+  collapsed: Readonly<Record<string, boolean>>;
   onRefresh: (providerID: string) => void;
+  onToggle: (providerID: string) => void;
 }) {
   const theme = () => props.context.theme;
   return (
@@ -125,47 +137,51 @@ function Dashboard(props: {
               provider={provider}
               active={provider.id === props.activeID}
               refreshing={props.refreshing.has(provider.id)}
+              collapsed={provider.id in props.collapsed}
               onRefresh={() => props.onRefresh(provider.id)}
+              onToggle={() => props.onToggle(provider.id)}
             />
-            <Show
-              when={provider.windows.length > 0}
-              fallback={
-                <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
-                  {(label) => (
-                    <Row
-                      context={props.context}
-                      label={label}
-                      percent={DASH.padEnd(PERCENT_WIDTH, " ")}
-                      percentColor={theme().text.muted}
-                      bar={"░".repeat(BAR_WIDTH)}
-                      barColor={theme().text.muted}
-                      duration={DASH}
-                      exact={DASH}
-                    />
-                  )}
+            <Show when={!(provider.id in props.collapsed)}>
+              <Show
+                when={provider.windows.length > 0}
+                fallback={
+                  <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
+                    {(label) => (
+                      <Row
+                        context={props.context}
+                        label={label}
+                        percent={DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={theme().text.muted}
+                        bar={"░".repeat(BAR_WIDTH)}
+                        barColor={theme().text.muted}
+                        duration={DASH}
+                        exact={DASH}
+                      />
+                    )}
+                  </For>
+                }
+              >
+                <For each={provider.windows}>
+                  {(window) => {
+                    const reset = () => (window.resetAt ? formatReset(window.resetAt, props.now) : undefined);
+                    const pct = window.usedPercent;
+                    return (
+                      <Row
+                        context={props.context}
+                        label={window.label}
+                        percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={pct !== undefined ? pressureColor(pct) : theme().text.muted}
+                        bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
+                        barColor={pct !== undefined ? pressureColor(pct) : theme().text.muted}
+                        marker={paceMarker(window.label, window.resetAt, props.now)}
+                        markerColor={paceColor(props.context, window, props.now)}
+                        duration={reset()?.duration ?? ""}
+                        exact={reset()?.exact ?? ""}
+                      />
+                    );
+                  }}
                 </For>
-              }
-            >
-              <For each={provider.windows}>
-                {(window) => {
-                  const reset = () => (window.resetAt ? formatReset(window.resetAt, props.now) : undefined);
-                  const pct = window.usedPercent;
-                  return (
-                    <Row
-                      context={props.context}
-                      label={window.label}
-                      percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
-                      percentColor={pct !== undefined ? pressureColor(pct) : theme().text.muted}
-                      bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
-                      barColor={pct !== undefined ? pressureColor(pct) : theme().text.muted}
-                      marker={paceMarker(window.label, window.resetAt, props.now)}
-                      markerColor={paceColor(props.context, window, props.now)}
-                      duration={reset()?.duration ?? ""}
-                      exact={reset()?.exact ?? ""}
-                    />
-                  );
-                }}
-              </For>
+              </Show>
             </Show>
           </box>
         )}
@@ -179,28 +195,46 @@ function Header(props: {
   provider: Usage;
   active: boolean;
   refreshing: boolean;
+  collapsed: boolean;
   onRefresh: () => void;
+  onToggle: () => void;
 }) {
   const theme = () => props.context.theme;
   const heading = () => props.provider.label.match(/^(.*?) (\[[^\]]+\])$/);
-  const labelColor = () => (props.refreshing || props.active ? theme().text.action.primary.base : theme().text.base);
+  const labelColor = () => (props.refreshing || props.active ? colors.orange : theme().text.base);
+  const [hovered, setHovered] = createSignal(false);
+  const frame = spinner(() => props.refreshing);
+  const toggle = (event: MouseEvent) => {
+    event.stopPropagation();
+    props.onToggle();
+  };
   return (
     <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh()}>
-      <text fg={labelColor()}>
+      <text selectable={false} fg={labelColor()}>
         <b>{heading()?.[1] ?? props.provider.label}</b>
       </text>
+      <Show when={props.refreshing}>
+        <text selectable={false} fg={colors.orange}>{` ${frame()}`}</text>
+      </Show>
       <Show when={props.provider.note}>
-        <text fg={noteColor(props.context, props.provider)}>{` ${props.provider.note}`}</text>
+        <text selectable={false} fg={noteColor(props.context, props.provider)}>{` ${props.provider.note}`}</text>
       </Show>
-      <Show when={props.refreshing && !props.provider.note}>
-        <text fg={theme().text.action.primary.base}>{` refreshing`}</text>
-      </Show>
+      <box flexGrow={1} minWidth={1} />
       <Show when={heading()?.[2]}>
-        <box flexGrow={1} minWidth={1} />
-        <text fg={labelColor()} flexShrink={0}>
-          <b>{heading()?.[2]}</b>
+        <text selectable={false} fg={labelColor()} flexShrink={0}>
+          <b>{`${heading()?.[2]} `}</b>
         </text>
       </Show>
+      <text
+        selectable={false}
+        fg={hovered() ? hover : theme().text.muted}
+        flexShrink={0}
+        onMouseDown={toggle}
+        onMouseOver={() => setHovered(true)}
+        onMouseOut={() => setHovered(false)}
+      >
+        {props.collapsed ? "\u{f0b2c}" : "\u{f0b27}"}
+      </text>
     </box>
   );
 }
@@ -220,16 +254,27 @@ function Row(props: {
   const muted = () => props.context.theme.text.muted;
   return (
     <box flexDirection="row" gap={0}>
-      <text fg={muted()}>{props.label.padEnd(2, " ")}</text>
-      <text fg={props.percentColor}>{`${props.percent} `}</text>
-      <Show when={props.marker !== undefined} fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}>
-        <text fg={props.barColor}>{props.bar.slice(0, props.marker)}</text>
-        <text fg={props.markerColor ?? muted()}>┃</text>
-        <text fg={props.barColor}>{`${props.bar.slice((props.marker ?? 0) + 1)} `}</text>
+      <text selectable={false} fg={muted()}>
+        {props.label.padEnd(2, " ")}
+      </text>
+      <text selectable={false} fg={props.percentColor}>{`${props.percent} `}</text>
+      <Show
+        when={props.marker !== undefined}
+        fallback={<text selectable={false} fg={props.barColor}>{`${props.bar} `}</text>}
+      >
+        <text selectable={false} fg={props.barColor}>
+          {props.bar.slice(0, props.marker)}
+        </text>
+        <text selectable={false} fg={props.markerColor ?? muted()}>
+          ┃
+        </text>
+        <text selectable={false} fg={props.barColor}>{`${props.bar.slice((props.marker ?? 0) + 1)} `}</text>
       </Show>
-      <text fg={muted()}>{`${props.duration.padStart(DURATION_WIDTH, " ")} `}</text>
+      <text selectable={false} fg={muted()}>{`${props.duration.padStart(DURATION_WIDTH, " ")} `}</text>
       <box flexGrow={1} />
-      <text fg={muted()}>{props.exact.padStart(EXACT_WIDTH, " ")}</text>
+      <text selectable={false} fg={muted()}>
+        {props.exact.padStart(EXACT_WIDTH, " ")}
+      </text>
     </box>
   );
 }
@@ -307,7 +352,7 @@ function paceColor(context: Plugin.Context, window: Usage["windows"][number], no
   const expected = pacePercent(window.label, window.resetAt, now);
   const percent = window.usedPercent;
   if (expected === undefined || percent === undefined) return context.theme.text.muted;
-  return percent <= expected ? context.theme.text.action.primary.base : context.theme.text.feedback.error.base;
+  return percent <= expected ? colors.orange : context.theme.text.feedback.error.base;
 }
 
 function formatPercent(percent: number) {

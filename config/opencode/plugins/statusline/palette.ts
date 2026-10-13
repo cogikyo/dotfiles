@@ -7,6 +7,7 @@ export const colors = {
   brightGreen: RGBA.fromHex("#9fd883"),
   yellow: RGBA.fromHex("#f5c069"),
   brightYellow: RGBA.fromHex("#f5d599"),
+  orange: RGBA.fromHex("#f8b486"),
   red: RGBA.fromHex("#f08898"),
   brightRed: RGBA.fromHex("#f29ca9"),
   magenta: RGBA.fromHex("#b29ae8"),

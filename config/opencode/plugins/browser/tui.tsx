@@ -63,7 +63,7 @@ export default Plugin.define({
     watch();
 
     context.ui.slot({
-      append: "sidebar.content",
+      after: "sidebar.content",
       render: () => {
         const theme = context.theme;
         return (

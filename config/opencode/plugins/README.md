@@ -3,6 +3,7 @@
 This guide covers the local plugins for OpenCode 2.0.27.
 OpenCode discovers immediate plugin directories and loads their server and TUI entrypoints from source.
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
+The sidebar shows usage, Markdown Context, lanes, then browser; claims that share a placement render in plugin directory-name order.
 Run `npm run check` from `config/opencode` for type, lint, and format checks.
 
 ## Lanes
@@ -38,7 +39,7 @@ Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~
 
 `usage/server.ts` polls provider usage once per minute, subject to adapter intervals and backoff.
 `usage_status` only reads the local cache and reports capacity, freshness, and reset timing.
-`usage/tui.tsx` appends root-session usage rows to `sidebar.content`; click a provider heading to refresh it.
+`usage/tui.tsx` prepends root-session usage rows to `sidebar.content`; click a provider heading to refresh it.
 OpenAI and OpenCode Go use V2 integration credentials, Anthropic uses the fixed Claude directories, and xAI uses Grok CLI auth.
 The Cursor adapter currently returns `no auth` without fetching usage.
 Caches are `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/<provider>.json`.
@@ -109,7 +110,7 @@ There is no key, TUI slot, or separate state file.
 It opens headless at 1920×1080 under an armed drive root and closes the MCP process when the session is idle or deleted.
 URL-bearing calls accept HTTP(S) or `about:blank`; MCP launch patterns restrict network schemes.
 The tool catalog lives in plugin KV `catalog/1.7.0`.
-`browser/tui.tsx` appends browser workspaces to `sidebar.content`, subscribes through `hyprd`, and focuses a workspace when clicked.
+`browser/tui.tsx` places browser workspaces after `sidebar.content`, subscribes through `hyprd`, and focuses a workspace when clicked.
 It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; there is no key or separate plugin state file.
 
 ## Statusline
