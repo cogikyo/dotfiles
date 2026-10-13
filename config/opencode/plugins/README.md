@@ -13,9 +13,15 @@ Explicit models use `provider/model#variant`; frontmatter routes keep `provider/
 The `claude` pool picks an Anthropic account from usage caches, keeps an open account on resume, and reports stale-cache or fallback notes in results.
 Background children return immediately and send completion, cancellation, or error to the parent's inbox.
 
-The `lanes` tool lists children; `subagent` reuses a lane name to steer or resume one.
+The `lanes` tool lists children, including closed ones; `subagent` reuses a lane name to steer or resume one.
+`lanes_close` takes `{ lanes }` and returns `closed <name>` or `skipped <name>: <reason>` per name; it never closes a running child.
+Closing moves the name from `lane` to `closed: { lane, by, at }` in child metadata and appends a session rule that denies every permission.
+`subagent` refuses the `sessionID` of a closed child; naming the old lane starts a fresh child.
+
 `lanes/tui.tsx` appends to `sidebar.content` and adds `/lanes` with Steer, Interrupt, Continue, and Open actions.
 Continue sends `Continue.` directly without a parent completion notice.
+The ⊗ on an idle row and `/lanes-close` close lanes through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
+The sidebar hides closed children.
 Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
 Only Collab delegates, with one level of children.
 

@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { claudeAccounts } from "../anthropic/accounts.ts";
+import { api, type Outcome } from "./rpc.ts";
 
 type Ref = { providerID: string; id: string; variant?: string };
 type Status = "running" | "idle" | "error" | "interrupted";
@@ -139,8 +140,14 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
   return { ref: { ...route, providerID: account.id }, note: notes.join("\n") || undefined };
 }
 
+const Closed = Schema.Struct({ lane: Schema.String, by: Schema.Literals(["operator", "agent"]), at: Schema.Number });
+type Closed = typeof Closed.Type;
+
 const laneOf = (session: Session.Info) =>
   typeof session.metadata?.lane === "string" ? session.metadata.lane : undefined;
+
+const closedOf = (session: Session.Info) =>
+  Option.getOrUndefined(Schema.decodeUnknownOption(Closed)(session.metadata?.closed));
 
 const same = (a: Ref | undefined, b: Ref) =>
   a?.providerID === b.providerID && a.id === b.id && (a.variant ?? "default") === (b.variant ?? "default");
@@ -209,6 +216,46 @@ export default Plugin.define({
           .pipe(Effect.tapCause(Effect.logError), Effect.ignore);
       });
 
+      const close = Effect.fn("lanes.close")(function* (parentID: string, names: readonly string[], by: Closed["by"]) {
+        const list = yield* children(parentID);
+        const outcomes: Outcome[] = [];
+        for (const lane of new Set(names.map((name) => name.trim()).filter(Boolean))) {
+          const child = list.find((session) => laneOf(session) === lane);
+          if (!child) {
+            const closed = list.some((session) => closedOf(session)?.lane === lane);
+            outcomes.push({ lane, skipped: closed ? "already closed" : "missing" });
+            continue;
+          }
+          if (status(child) === "running" || creating.has(`${parentID}/${lane}`)) {
+            outcomes.push({ lane, skipped: "running" });
+            continue;
+          }
+          const { lane: _, ...metadata } = child.metadata ?? {};
+          yield* ctx.session
+            .update({
+              sessionID: child.id,
+              metadata: { ...metadata, closed: { lane, by, at: Date.now() } },
+              permissions: [...(child.permissions ?? []), { action: "*", resource: "*", effect: "deny" }],
+            })
+            .pipe(
+              Effect.mapError(
+                (error) =>
+                  new Tool.Error({
+                    message: `Closing lane "${lane}" failed: ${error instanceof Error ? error.message : String(error)}`,
+                  }),
+              ),
+            );
+          outcomes.push({ lane });
+        }
+        return outcomes;
+      });
+
+      yield* ctx.rpc
+        .register(api, {
+          close: ({ sessionID, lanes }) => close(sessionID, lanes, "operator").pipe(Effect.orDie),
+        })
+        .pipe(Effect.orDie);
+
       const resolve = Effect.fn("lanes.resolve")(function* (input: Input, existing: Session.Info | undefined) {
         const explicit = input.model ? parseRef(input.model) : undefined;
         if (explicit && explicit.providerID !== pool) return { model: input.model, note: undefined };
@@ -246,6 +293,11 @@ export default Plugin.define({
             });
           const sessionID = input.sessionID ?? found?.id;
           const existing = found ?? (sessionID ? yield* get(sessionID) : undefined);
+          const closed = existing && closedOf(existing);
+          if (closed)
+            return yield* new Tool.Error({
+              message: `Session ${existing.id} is closed lane "${closed.lane}" and cannot resume; start a fresh lane by name instead.`,
+            });
           const { model, note } = yield* resolve(input, existing);
           const { model: _, ...rest } = input;
           const call = { ...rest, ...(sessionID ? { sessionID } : {}), ...(model ? { model } : {}) };
@@ -321,16 +373,35 @@ export default Plugin.define({
               if (!list.length) return { content: "No subagent children." };
               const rows = list.map((child) =>
                 [
-                  laneOf(child) ?? "-",
+                  laneOf(child) ?? closedOf(child)?.lane ?? "-",
                   String(child.agent ?? "-"),
                   child.model ? format(child.model) : "-",
-                  status(child),
+                  closedOf(child) ? "closed" : status(child),
                   ago(child.time.updated),
                   child.id,
                 ].join(" | "),
               );
               return { content: ["lane | agent | model | status | last | sessionID", ...rows].join("\n") };
             }),
+        });
+
+        editor.add({
+          name: "lanes_close",
+          description:
+            "Close named lanes under this session so they cannot resume; running lanes are skipped. Naming a closed lane again starts a fresh child.",
+          input: Schema.Struct({
+            lanes: Schema.Array(Schema.String).annotate({ description: "Lane names to close." }),
+          }),
+          options: { codemode: false },
+          execute: (input, context) =>
+            close(context.sessionID, input.lanes, "agent").pipe(
+              Effect.map((outcomes) => ({
+                content:
+                  outcomes
+                    .map(({ lane, skipped }) => (skipped ? `skipped ${lane}: ${skipped}` : `closed ${lane}`))
+                    .join("\n") || "No lane names given.",
+              })),
+            ),
         });
       });
     }),
