@@ -244,13 +244,13 @@ func (l *Lock) hold(adopted bool) {
 			return
 		}
 		fmt.Fprintf(os.Stderr, "hyprd lock: %v; relaunching\n", err)
-		if !alerted {
-			alerted = true
-			l.alert(err.Error() + "; relaunching")
-		}
 		if acquired && time.Since(started) >= quickExit {
 			strikes = 0
 			continue
+		}
+		if !alerted {
+			alerted = true
+			l.alert(err.Error() + "; relaunching")
 		}
 		strikes++
 		if strikes < quickExits {
