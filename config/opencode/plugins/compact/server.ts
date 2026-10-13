@@ -28,13 +28,13 @@ const Input = Schema.Struct({
   reason: Schema.String.annotate({ description: "Why now is a good time to compact." }),
 });
 
-const Pending = Schema.Struct({ brief: Schema.String, inbox: Schema.String });
+const Pending = Schema.Struct({ brief: Schema.String, halted: Schema.optional(Schema.Boolean) });
 
 const description =
   "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends; the session then waits for the user, or continues from the brief in an armed drive run. Call it only after the user approves compacting in this conversation, or in an armed drive run at a completed-work boundary.";
 
-function key(sessionID: string) {
-  return `pending/${sessionID}`;
+function key(sessionID: string, inbox = "") {
+  return `pending/${sessionID}/${inbox}`;
 }
 
 function tierFor(tokens: number) {
@@ -66,9 +66,9 @@ export default Plugin.define({
     const log = Effect.runForkWith(fiber.context);
     const fail = (what: string, error: unknown) =>
       log(Effect.logError(`compact: ${what} failed`, { error: explain(error) }));
+    const guard = (what: string, work: Promise<unknown>) => work.catch((error: unknown) => fail(what, error));
 
     const tokens = new Map<string, number>();
-    const running = new Map<string, string>();
     const primaries = new Map<string, Promise<boolean>>();
     const windows = new Map<string, Promise<number>>();
 
@@ -97,22 +97,67 @@ export default Plugin.define({
       return known;
     };
 
-    const pending = async (sessionID: string) => {
-      const value = await ctx.storage.get(key(sessionID));
-      return Schema.is(Pending)(value) ? value : undefined;
+    const scan = async (prefix: string, after?: string): Promise<{ key: string; value: unknown }[]> => {
+      const page = await ctx.storage.scan({ prefix, after, limit: 1000 });
+      return page.next ? [...page.entries, ...(await scan(prefix, page.next))] : [...page.entries];
     };
 
-    const settle = async (sessionID: string, inbox?: string) => {
-      const value = await pending(sessionID);
-      if (!value || (inbox !== undefined && value.inbox !== inbox)) return false;
-      await ctx.storage.remove(key(sessionID));
-      return true;
+    const stored = async (sessionID: string) =>
+      (await scan(key(sessionID))).flatMap((entry) =>
+        Schema.is(Pending)(entry.value)
+          ? [{ key: entry.key, inbox: entry.key.slice(key(sessionID).length), value: entry.value }]
+          : [],
+      );
+
+    const forget = (keys: readonly string[]) => Promise.all(keys.map((entry) => ctx.storage.remove(entry)));
+
+    const sweep = async (sessionID: string) => {
+      const entries = await stored(sessionID);
+      if (entries.length === 0) return [];
+      const compactions = (await ctx.session.context({ sessionID })).filter((message) => message.type === "compaction");
+      const done = entries.flatMap((entry) => {
+        const own = compactions.find((message) => message.id === entry.inbox);
+        const later = compactions.some(
+          (message) => message.reason === "manual" && message.status === "completed" && message.id > entry.inbox,
+        );
+        if (!later && (!own || own.status === "running")) return [];
+        return [{ ...entry, completed: own?.status === "completed" }];
+      });
+      await forget(done.map((entry) => entry.key));
+      return done;
     };
 
-    const finish = async (sessionID: string, inbox?: string) => {
-      if (!(await settle(sessionID, inbox))) return;
+    const halt = async (sessionID: string) =>
+      Promise.all(
+        (await stored(sessionID)).map((entry) => ctx.storage.set(entry.key, { ...entry.value, halted: true })),
+      );
+
+    const resume = async (sessionID: string, since: number) => {
+      await ctx.session.wait({ sessionID });
+      const session = await ctx.session.get({ sessionID });
+      if (session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
       if (!(await ctx.rpc(drive).state({ sessionID })).armed) return;
       await ctx.session.synthetic({ sessionID, text: CONTINUE, delivery: "queue" });
+    };
+
+    const reconcile = async () => {
+      const entries = await scan("pending/");
+      const sessions = new Set<string>();
+      const malformed = entries.filter((entry) => {
+        const [sessionID, inbox] = entry.key.slice("pending/".length).split("/");
+        if (!sessionID || !inbox || !Schema.is(Pending)(entry.value)) return true;
+        sessions.add(sessionID);
+        return false;
+      });
+      await forget(malformed.map((entry) => entry.key));
+      await Promise.all(
+        [...sessions].map((sessionID) =>
+          ctx.session.get({ sessionID }).then(
+            () => sweep(sessionID),
+            async () => forget((await stored(sessionID)).map((entry) => entry.key)),
+          ),
+        ),
+      );
     };
 
     await ctx.tool.transform((editor) =>
@@ -123,7 +168,7 @@ export default Plugin.define({
         options: { codemode: false },
         execute: async (input, context) => {
           const admitted = await ctx.session.compact({ sessionID: context.sessionID, delivery: "queue" });
-          await ctx.storage.set(key(context.sessionID), { brief: input.brief, inbox: admitted.id });
+          await ctx.storage.set(key(context.sessionID, admitted.id), { brief: input.brief });
           return {
             content: "Compaction queued. It runs when this turn ends; finish the turn without starting new work.",
             metadata: { reason: input.reason, tokens: tokens.get(context.sessionID) ?? 0 },
@@ -136,7 +181,7 @@ export default Plugin.define({
       try {
         const tier = tierFor(tokens.get(event.sessionID) ?? 0);
         if (tier < 0 || !(await primary(event.sessionID))) return;
-        if (await pending(event.sessionID)) return;
+        if ((await stored(event.sessionID)).length > 0) return;
         const limit =
           tier + 1 < tiers.length
             ? 0
@@ -154,7 +199,7 @@ export default Plugin.define({
       try {
         const child = !(await primary(event.sessionID));
         event.system.push({ type: "text", text: child ? `${SUMMARY}\n${CHILD}` : SUMMARY });
-        const brief = (await pending(event.sessionID))?.brief;
+        const brief = (await stored(event.sessionID)).at(-1)?.value.brief;
         if (brief === undefined) return;
         event.system.push({
           type: "text",
@@ -165,8 +210,6 @@ export default Plugin.define({
       }
     });
 
-    const guard = (what: string, work: Promise<unknown>) => work.catch((error: unknown) => fail(what, error));
-
     const controller = new AbortController();
     const watch = async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
@@ -174,32 +217,40 @@ export default Plugin.define({
           const { input, output, reasoning, cache } = event.data.tokens;
           tokens.set(event.data.sessionID, input + output + reasoning + cache.read + cache.write);
         }
-        if (event.type === "session.compaction.started" && event.data.inputID)
-          running.set(event.data.sessionID, event.data.inputID);
+        if (
+          event.type === "session.execution.failed" ||
+          (event.type === "session.execution.interrupted" && event.data.reason !== "shutdown")
+        )
+          await guard("halt continuation", halt(event.data.sessionID));
         if (event.type === "session.compaction.ended") {
-          const inbox = running.get(event.data.sessionID);
-          running.delete(event.data.sessionID);
-          tokens.delete(event.data.sessionID);
-          if (event.data.reason === "manual")
-            await guard("continue after compaction", finish(event.data.sessionID, inbox));
+          const { sessionID } = event.data;
+          tokens.delete(sessionID);
+          if (event.data.reason !== "manual") continue;
+          const done = await sweep(sessionID).catch((error: unknown) => {
+            fail("clear brief", error);
+            return [];
+          });
+          if (done.some((entry) => entry.completed && !entry.value.halted))
+            void guard("continue after compaction", resume(sessionID, event.created));
         }
-        if (event.type === "session.compaction.failed" && event.data.inputID) {
-          running.delete(event.data.sessionID);
-          await guard("clear brief", settle(event.data.sessionID, event.data.inputID));
-        }
+        if (event.type === "session.compaction.failed" && event.data.inputID)
+          await guard("clear brief", ctx.storage.remove(key(event.data.sessionID, event.data.inputID)));
         if (event.type === "session.inbox.cancelled")
-          await guard("clear brief", settle(event.data.sessionID, event.data.inboxID));
+          await guard("clear brief", ctx.storage.remove(key(event.data.sessionID, event.data.inboxID)));
         if (event.type === "session.deleted") {
           tokens.delete(event.data.sessionID);
-          running.delete(event.data.sessionID);
           primaries.delete(event.data.sessionID);
-          await guard("clear brief", settle(event.data.sessionID));
+          await guard(
+            "clear brief",
+            stored(event.data.sessionID).then((entries) => forget(entries.map((entry) => entry.key))),
+          );
         }
       }
     };
     watch().catch((error: unknown) => {
       if (!controller.signal.aborted) fail("event stream", error);
     });
+    void guard("reconcile briefs", reconcile());
 
     return () => controller.abort();
   },
