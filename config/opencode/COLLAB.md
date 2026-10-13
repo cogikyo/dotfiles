@@ -110,6 +110,7 @@ Use `sessionID` to resume a direct child without a lane name.
   - The Lanes sidebar and `/lanes` let the user steer, interrupt, continue, or open a child.
   - Sidebar Continue sends `Continue.` directly and does not notify the parent when that turn ends.
 - Send **repairs** back to the lane that built the change.
+- **Close finished lanes** with `lanes_close`, or run `clear-lanes`; a closed lane can't be resumed.
 - Use a **new lane name** or an unnamed child when the scope needs a different owner or independence from earlier rounds.
 - **Parallel lanes** can share one worktree when their writes are mostly disjoint.
   - A failed patch means re-read and adjust.
