@@ -4,6 +4,7 @@ import { createEffect, createMemo, createResource, createRoot, createSignal, For
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toast.tsx";
+import { Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -71,6 +72,10 @@ export default Plugin.define({
         render: (input) => (
           <Usage context={context} sessionID={input.sessionID} mode={input.mode} details={input.showDetails} />
         ),
+      });
+      context.ui.slot({
+        append: "prompt.footer",
+        render: (input) => <Working context={context} sessionID={input.sessionID} />,
       });
       const Mirror = mirror(context);
       context.ui.slot({

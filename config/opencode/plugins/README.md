@@ -140,6 +140,8 @@ V2 has no slot on the prompt's model row, so the bar is absolutely positioned tw
 It replaces the built-in prompt footer, disabled in `cli.json`, with running subagent and shell counts and context size, without session cost.
 It replaces the built-in sidebar footer, also disabled, with the OpenCode version line.
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
+`statusline/working.tsx` animates the prompt's left border in a brightened agent color while the session runs, and stays static when core animations are off.
+While the session runs, it also draws the `prompt.queue` shortcut in the input's top-right corner, unless typed text or the placeholder reaches it.
 `statusline/toast.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
 It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
 Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.
