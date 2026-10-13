@@ -1,2 +1,5 @@
 # Bootstrap: load POSIX env vars shared across shells.
 [ -f "$HOME/.config/shell/env.sh" ] && source "$HOME/.config/shell/env.sh"
+
+# Agent shells: pass unmatched globs through literally, as bash does.
+[[ -n $OPENCODE ]] && setopt NO_NOMATCH
