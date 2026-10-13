@@ -8,6 +8,7 @@ const MESSAGES = 6;
 const MESSAGE_CHARS = 600;
 const TOTAL_CHARS = 3_000;
 const MAX_CHARS = 36;
+const CLOSED = "[CLOSED] ";
 const MINOR = new Set([
   "a",
   "an",
@@ -115,13 +116,19 @@ export default Plugin.define({
       current.running = true;
       try {
         const session = await ctx.session.get({ sessionID });
-        if (session.parentID || !session.title || pinned(session.title)) return;
+        if (session.parentID || !session.title || pinned(session.title) || session.title.startsWith(CLOSED)) return;
         const recent = current.recent.slice();
         current.count = 0;
         const title = await generate(session.title, recent, false);
         if (!title) return;
         const latest = await ctx.session.get({ sessionID });
-        if (!latest.title || pinned(latest.title) || latest.title.toLowerCase() === title.toLowerCase()) return;
+        if (
+          !latest.title ||
+          pinned(latest.title) ||
+          latest.title.startsWith(CLOSED) ||
+          latest.title.toLowerCase() === title.toLowerCase()
+        )
+          return;
         await write(sessionID, title);
       } finally {
         current.running = false;

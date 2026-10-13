@@ -85,6 +85,7 @@ There is no persistent plugin state, tool, key, or TUI slot.
 ## Retitle
 
 `retitle/server.ts` renames a titled root after two new user messages and a successful turn, at most once per five minutes.
+Auto-retitle skips titles that start with `[CLOSED] `, which `/done` sets.
 It generates a two-to-four-word title with the configured `title` agent's model, without a temporary child session.
 A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session.

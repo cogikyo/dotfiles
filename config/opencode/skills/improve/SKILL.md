@@ -46,6 +46,7 @@ When evidence is spread thin across many sessions, such as one small correction 
 
 ### Fan out
 
+Sessions whose title starts with `[CLOSED] ` stay in triage but never get a retro leaf because `/done` already judged or ran their retro.
 Run one background `scout/session` leaf per selected session, in parallel.
 Tell each leaf to load `retro` in past mode for its session and children, supplying the ID, focus, triage evidence, and papercuts diagnosis.
 Require read-only findings marked unconfirmed, each with a question the user would need to answer.
