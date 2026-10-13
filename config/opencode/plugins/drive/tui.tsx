@@ -54,9 +54,7 @@ export default Plugin.define({
       setArmed(state.root, state.armed);
       mark();
       context.ui.toast.show(
-        state.armed
-          ? { message: "Drive mode on", variant: "warning" }
-          : { message: "Drive mode off", variant: "info" },
+        state.armed ? { message: "Drive mode on", variant: "warning" } : { message: "Drive mode off", variant: "info" },
       );
       if (!state.armed) return;
       const request = options(state.root);
