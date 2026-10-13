@@ -63,6 +63,7 @@
     "-opencode.prompt.footer"
   ],
   "session": {
-    "verbosity": "low"
+    "verbosity": "low",
+    "thinking": "show"
   }
 }
