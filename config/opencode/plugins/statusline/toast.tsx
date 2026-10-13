@@ -161,7 +161,7 @@ function textual(node: Renderable): node is Text {
   return "textNode" in node;
 }
 
-export function read(node: Renderable | undefined) {
+function read(node: Renderable | undefined) {
   if (!node || !textual(node)) return;
   return flatten(node.textNode);
 }

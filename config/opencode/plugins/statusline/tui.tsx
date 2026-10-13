@@ -1,10 +1,10 @@
 import { Plugin } from "@opencode/plugin/tui";
 import type { RGBA } from "@opentui/core";
-import { createEffect, createMemo, createResource, createRoot, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createResource, createRoot, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toast.tsx";
-import { Working } from "./working.tsx";
+import { heat, motion, period, tail, tick, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -50,18 +50,9 @@ export default Plugin.define({
   id: "statusline",
   setup(context) {
     return createRoot((dispose) => {
-      const idle = createMemo(() => {
-        const route = context.ui.router.current();
-        return route.type !== "session" || context.data.session.status(route.sessionID) === "idle";
-      });
-      createEffect(() => {
-        if (!idle()) return;
-        onCleanup(
-          context.ui.slot({
-            replace: "prompt.footer.status",
-            render: (input) => <Location context={context} sessionID={input.sessionID} />,
-          }),
-        );
+      context.ui.slot({
+        replace: "prompt.footer.status",
+        render: (input) => <Location context={context} sessionID={input.sessionID} />,
       });
       context.ui.slot({
         append: "prompt.footer",
@@ -175,18 +166,59 @@ function Bar(props: { context: Context; sessionID?: string }) {
     if (!props.sessionID || buffer.state !== "ready") return;
     return usage(props.context, props.sessionID, buffer());
   });
+  const level = createMemo(() => {
+    const value = percent();
+    return value === undefined ? undefined : tier(value);
+  });
+  const running = () =>
+    props.sessionID !== undefined && props.context.data.session.status(props.sessionID) === "running";
+  const [now, setNow] = createSignal(0);
+  let lit = 0;
+
+  createEffect(() => {
+    if (!running()) return setNow(0);
+    const timer = setInterval(() => setNow(motion() ? performance.now() : 0), tick);
+    onCleanup(() => clearInterval(timer));
+  });
+  createEffect(
+    on(level, (next, previous) => {
+      if (next !== undefined && previous !== undefined && next > previous) lit = performance.now();
+    }),
+  );
+  const dots = createMemo(() => {
+    const value = percent();
+    return value === undefined ? [] : gauge(value, now(), lit);
+  });
 
   return (
     <Show when={percent()}>
-      {(value) => (
-        <box position="absolute" top={-2} right={2}>
-          <text fg={pressure(value())} wrapMode="none">
-            {glyph.context + glyph.filled.repeat(tier(value()) + 1) + glyph.empty.repeat(8 - tier(value()))}
-          </text>
-        </box>
-      )}
+      <box position="absolute" top={-2} right={2}>
+        <text wrapMode="none">
+          <For each={dots().map((_, index) => index)}>
+            {(index) => <span style={{ fg: dots()[index]?.fg }}>{dots()[index]?.char}</span>}
+          </For>
+        </text>
+      </box>
     </Show>
   );
+}
+
+function gauge(value: number, now: number, lit: number) {
+  const level = tier(value);
+  const color = pressure(value);
+  const chars = [
+    glyph.context,
+    ...Array<string>(level + 1).fill(glyph.filled),
+    ...Array<string>(8 - level).fill(glyph.empty),
+  ];
+  const reach = level + 3;
+  const head = Math.floor(((now % period) / period) * (reach + tail));
+  return chars.map((char, index) => {
+    const step = head - index;
+    const wave = now && index < reach && step >= 0 && step <= tail ? 1 - step / (tail + 1) : 0;
+    const flash = now && index === level + 1 ? Math.max(0, 1 - (now - lit) / 600) : 0;
+    return { char, fg: heat(color, Math.max(wave, flash)) };
+  });
 }
 
 function configured(context: Context, directory: string) {

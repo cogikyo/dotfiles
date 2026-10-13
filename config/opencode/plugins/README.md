@@ -134,14 +134,16 @@ V2 has no sidebar-side setting, so it polls every 250 ms for the renderer node w
 That id and width are upstream internals in `session-frame.tsx` and `ui/layout.ts`; when they change, the toggle silently stops moving the sidebar.
 `<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
 
-`statusline/tui.tsx` replaces `prompt.footer.status` only while idle with directory and Git status, leaving native running controls intact.
+`statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
 It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
+While the session runs, a wave sweeps from the fire glyph through the filled dots in step with the border pulse, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
 It replaces the built-in prompt footer, disabled in `cli.json`, with running subagent and shell counts and context size, without session cost.
 It replaces the built-in sidebar footer, also disabled, with the OpenCode version line.
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
-`statusline/working.tsx` animates the prompt's left border in a brightened agent color while the session runs, and stays static when core animations are off.
-While the session runs, it also draws the `prompt.queue` shortcut in the input's top-right corner, unless typed text or the placeholder reaches it.
+While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
+The pulse and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
+It also draws the `prompt.queue` shortcut as Mac-style glyphs, such as `󰘳 󰌑`, in the input's top-right corner, unless typed text or the placeholder reaches it.
 `statusline/toast.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
 It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
 Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.

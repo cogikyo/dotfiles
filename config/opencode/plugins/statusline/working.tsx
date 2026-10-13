@@ -1,19 +1,40 @@
 import type { Plugin } from "@opencode/plugin/tui";
 import { RGBA, type OptimizedBuffer, type Renderable } from "@opentui/core";
+import os from "node:os";
+import path from "node:path";
 import { createEffect, onCleanup } from "solid-js";
-import { read } from "./toast.tsx";
 
 type Context = Plugin.Context;
 type Frame = Renderable & { readonly border: unknown; readonly borderColor: RGBA };
-type Prompt = { readonly frame: Frame; readonly editor: Renderable; readonly row: Renderable };
+type Prompt = {
+  readonly frame: Frame;
+  readonly cap: Renderable;
+  readonly editor: Renderable;
+  readonly row: Renderable;
+};
 type Draw = (this: Renderable, buffer: OptimizedBuffer, deltaTime: number) => void;
 
-const period = 1_000;
-const tail = 3;
-const tick = 40;
+export const period = 1_000;
+export const tail = 3;
+export const tick = 40;
 const gap = 2;
-const still = "[⋯]";
 const white = RGBA.fromInts(255, 255, 255);
+const keys: Readonly<Record<string, string>> = {
+  ctrl: "\u{f0633}",
+  alt: "\u{2325}",
+  shift: "\u{21e7}",
+  super: "\u{2318}",
+  return: "\u{f0311}",
+  enter: "\u{f0311}",
+};
+
+let moving = true;
+
+export const motion = () => moving;
+
+export function heat(base: RGBA, amount: number) {
+  return mix(base, white, 0.55 * amount);
+}
 
 export function Working(props: { context: Context; sessionID?: string }) {
   let host: Renderable | undefined;
@@ -22,6 +43,7 @@ export function Working(props: { context: Context; sessionID?: string }) {
 
   createEffect(() => {
     if (!working() || !host) return;
+    void animations().then((value) => (moving = value));
     const prompt = locate(host);
     if (prompt) onCleanup(start(props.context, prompt));
   });
@@ -30,19 +52,15 @@ export function Working(props: { context: Context; sessionID?: string }) {
 }
 
 function start(context: Context, prompt: Prompt) {
-  let animate = true;
-  const border = hook(prompt.frame, (buffer) => {
-    animate = !prompt.row.getChildren().some((child) => stilled(child, 4));
-    if (animate) pulse(buffer, prompt.frame);
-  });
+  const column = hook(prompt.cap, (buffer) => bar(buffer, prompt));
   const tip = hook(prompt.row, (buffer) => queue(context, buffer, prompt.editor));
   const timer = setInterval(() => {
-    if (animate) context.renderer.requestRender();
+    if (moving) context.renderer.requestRender();
   }, tick);
   context.renderer.requestRender();
   return () => {
     clearInterval(timer);
-    border();
+    column();
     tip();
     context.renderer.requestRender();
   };
@@ -60,33 +78,52 @@ function hook(node: Renderable, draw: (buffer: OptimizedBuffer) => void) {
   };
 }
 
-function pulse(buffer: OptimizedBuffer, frame: Frame) {
-  const height = Math.round(frame.height);
-  const head = Math.floor(((performance.now() % period) / period) * (height + tail));
-  const base = frame.borderColor;
-  const bright = mix(base, white, 0.55);
-  for (let step = 0; step <= tail; step++) {
-    const row = head - step;
-    if (row < 0 || row >= height) continue;
-    const x = frame.screenX;
-    const y = frame.screenY + row;
-    const glyph = cell(buffer, x, y);
-    if (glyph) buffer.drawText(glyph, x, y, mix(base, bright, 1 - step / (tail + 1)));
+function bar(buffer: OptimizedBuffer, prompt: Prompt) {
+  const height = Math.round(prompt.frame.height);
+  const head = Math.floor(((performance.now() % period) / period) * (height + 1 + tail));
+  const base = prompt.frame.borderColor;
+  const x = prompt.frame.screenX;
+  for (let row = 0; row <= height; row++) {
+    const step = head - row;
+    const glow = moving && step >= 0 && step <= tail ? 1 - step / (tail + 1) : 0;
+    const y = row < height ? prompt.frame.screenY + row : prompt.cap.screenY;
+    buffer.drawText(row < height ? "\u{2590}" : "\u{259d}", x, y, heat(base, glow));
   }
 }
 
 function queue(context: Context, buffer: OptimizedBuffer, editor: Renderable) {
-  const key = context.keymap.shortcuts("prompt.queue")[0]?.replace(/\breturn\b/g, "enter");
-  if (!key) return;
-  const label = " queue";
-  const width = Bun.stringWidth(key + label);
+  const shortcut = context.keymap.shortcuts("prompt.queue")[0];
+  if (!shortcut) return;
+  const hint = shortcut
+    .split("+")
+    .map((key) => keys[key] ?? key.toUpperCase())
+    .join(" ");
+  const width = Bun.stringWidth(hint);
   const x = editor.screenX + editor.width - width;
   const y = editor.screenY;
   if (x - gap < editor.screenX) return;
   for (let column = x - gap; column < x + width; column++) if (cell(buffer, column, y) !== undefined) return;
-  const theme = context.theme.text;
-  buffer.drawText(key, x, y, theme.base);
-  buffer.drawText(label, x + Bun.stringWidth(key), y, theme.muted);
+  buffer.drawText(hint, x, y, context.theme.text.muted);
+}
+
+async function animations() {
+  const home = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+  const file = await Bun.file(path.join(home, "opencode", "cli.json"))
+    .text()
+    .catch(() => undefined);
+  const flags = [file, process.env.OPENCODE_CLI_CONFIG_CONTENT].map(flag);
+  return flags.findLast((value) => value !== undefined) ?? true;
+}
+
+function flag(text: string | undefined) {
+  if (!text) return undefined;
+  try {
+    const config: unknown = Bun.JSONC.parse(text);
+    if (typeof config !== "object" || config === null || !("animations" in config)) return undefined;
+    return typeof config.animations === "boolean" ? config.animations : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function cell(buffer: OptimizedBuffer, x: number, y: number) {
@@ -107,10 +144,10 @@ function mix(from: RGBA, to: RGBA, amount: number) {
 
 function locate(host: Renderable): Prompt | undefined {
   const row = host.parent;
-  const [frame] = row?.parent?.getChildren() ?? [];
-  if (!row || !frame || frame === row || !framed(frame)) return;
+  const [frame, cap] = row?.parent?.getChildren() ?? [];
+  if (!row || !frame || !cap || cap === row || !framed(frame)) return;
   const editor = frame.getChildren()[0]?.getChildren().find(editable);
-  return editor && { frame, editor, row };
+  return editor && { frame, cap, editor, row };
 }
 
 function framed(node: Renderable): node is Frame {
@@ -119,9 +156,4 @@ function framed(node: Renderable): node is Frame {
 
 function editable(node: Renderable) {
   return "plainText" in node && "cursorOffset" in node && "extmarks" in node;
-}
-
-function stilled(node: Renderable, depth: number): boolean {
-  if (read(node) === still) return true;
-  return depth > 0 && node.getChildren().some((child) => stilled(child, depth - 1));
 }
