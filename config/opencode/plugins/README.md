@@ -126,6 +126,9 @@ It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; 
 
 ## Statusline
 
+`queue/tui.tsx` replaces the queued-prompt dock above the prompt with one row per queued prompt, at most three and then `+N more`, and a count on the right; a click opens the queued prompts dialog.
+It hides the native dock only after it matches the dock's shape and `N queued` label; when that match fails, both docks show.
+
 `sidebar/tui.tsx` adds `<leader>a` and `/sidebar`, which move the session sidebar to the left and back; the choice persists in plugin storage.
 V2 has no sidebar-side setting, so it polls every 250 ms for the renderer node with id `session-pane` and reverses its parent row while the 42-cell sidebar is the sibling.
 That id and width are upstream internals in `session-frame.tsx` and `ui/layout.ts`; when they change, the toggle silently stops moving the sidebar.
