@@ -3,7 +3,7 @@
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 windows:
   split:
-    normal: { narrow: "0.3707", default: "0.4749", wide: "0.7683" }
+    normal: { narrow: "0.4131", default: "0.4749", wide: "0.7683" }
     share: { narrow: "0.3713", default: "0.5000", wide: "0.7683" }
   gaps_out:
     normal: [85, 90, 27, 124]
