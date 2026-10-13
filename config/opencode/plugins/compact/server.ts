@@ -2,7 +2,7 @@ import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 
-const tiers = [100_000, 250_000] as const;
+const tiers = [150_000, 250_000] as const;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -31,7 +31,7 @@ const Input = Schema.Struct({
 const Pending = Schema.Struct({ brief: Schema.String, halted: Schema.optional(Schema.Boolean) });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends; the session then waits for the user, or continues from the brief in an armed drive run. Call it only after the user approves compacting in this conversation, or in an armed drive run at a completed-work boundary.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends; the session then waits for the user, or continues from the brief in an armed drive run. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or in an armed drive run at a completed-work boundary.";
 
 function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
@@ -45,13 +45,19 @@ function label(tokens: number) {
   return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1_000)}K`;
 }
 
+const BOUNDARY = [
+  "Offer compaction only at a completed-work boundary: right after a commit lands, or after the task is done and the user deferred the commit.",
+  "Hold it mid-task: before approved work is built, while edits, lanes, or repairs are in flight, and when this turn delivers findings, a proposal, or open choices.",
+  "At a boundary, ask with the question tool instead of the reply text, and call compact once the user approves.",
+  "In an armed drive run, commit finished work, then call compact without asking; the run continues from the brief after compaction.",
+  "If the user already declined compaction at this nudge, do not ask again.",
+].join(" ");
+
 function nudge(tier: number, window: number) {
   const head = `Context passed ${label(tiers[tier])} tokens (compaction nudge ${tier + 1}/${tiers.length}).`;
-  const declined = "If the user already declined compaction at this nudge, do not ask again.";
-  if (tier + 1 < tiers.length)
-    return `${head} At the end of this turn, judge whether now is a good time to compact; if so, ask the user and call compact once they approve. ${declined}`;
+  if (tier + 1 < tiers.length) return `${head} ${BOUNDARY}`;
   const limit = window > 0 ? `this model's ${label(window)}-token window` : "the model's context window";
-  return `${head} Native auto-compaction fires as the context nears ${limit}, continues the turn, and gets no handoff brief. At the end of this turn, at a completed-work boundary, ask the user to compact and call compact once they approve; good times are right after a commit lands or after the user deferred the commit. In an armed drive run, commit finished work, then call compact without asking; the run continues from the brief after compaction. Hold it while edits, lanes, or repairs are in flight, or when this turn delivers findings, a proposal, or open choices. ${declined}`;
+  return `${head} Native auto-compaction fires as the context nears ${limit}, continues the turn, and gets no handoff brief. ${BOUNDARY}`;
 }
 
 function explain(error: unknown) {

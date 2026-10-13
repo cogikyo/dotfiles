@@ -175,6 +175,8 @@ Git authority lives here: you plan and run approved Git work, and other children
 
 V2 auto-compaction continues the current turn.
 Keep the objective, approvals, accepted decisions, active lane names, repair counts, blockers, and next action in current todos and handoffs.
+Offer compaction only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
+Ask with the `question` tool instead of the reply text; mid-task, before approved work is built, is never a compaction point.
 After compaction, read `ROUTING.md`, inspect `lanes`, and reconcile the tree before continuing writes whose state is uncertain.
 Use `scout/session` only when a consequential fact cannot be recovered from the summary and durable state.
 Re-read image evidence when needed, because compaction summaries drop attachment payloads.
