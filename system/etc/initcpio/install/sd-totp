@@ -9,33 +9,49 @@ build() {
     fi
 
     add_checked_modules '/drivers/char/tpm/'
-    map add_binary tpm2-totp "$tcti" bash sleep
+    map add_binary tpm2-totp "$tcti" bash sleep timeout
+    add_systemd_unit cryptsetup-pre.target
     if [[ -e /etc/dctl/boot-totp ]]; then
         add_file /etc/dctl/boot-totp
     fi
 
     printf '%s\n' \
         '#!/usr/bin/bash' \
-        'for _ in {1..50}; do [[ -e /dev/tpmrm0 ]] && break; sleep 0.1; done' \
-        'shown=' \
-        'until systemctl --quiet is-active cryptsetup.target; do' \
-        '    step=$((EPOCHSECONDS / 30))' \
-        '    if [[ $step != "$shown" ]]; then' \
-        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show 2>/run/boot-totp.err) || [[ ! -e /etc/dctl/boot-totp ]]; then' \
-        '            err=$(</run/boot-totp.err)' \
-        '            [[ -n $err ]] && printf "%s\n" "$err" >&2' \
-        '            if [[ ! -e /etc/dctl/boot-totp && $err != *"The system state has changed"* ]]; then' \
-        '                printf "\nBoot TOTP not set up yet · run dctl setup after login\n\n"' \
-        '            else' \
-        '                printf "\n!!! NO BOOT TOTP: do not unlock; investigate the TPM and boot state before resealing !!!\n\n"' \
-        '            fi' \
-        '            exit 0' \
+        'say() { printf "\n%s\n\n" "$1"; printf "%s\n" "$1" >&2; : >/run/boot-totp.shown; }' \
+        'show() {' \
+        '    : >/run/boot-totp.rc' \
+        '    { timeout -k 1 3 tpm2-totp -T device:/dev/tpmrm0 show >/run/boot-totp.code 2>/run/boot-totp.err; echo $? >/run/boot-totp.rc; } 2>/dev/null &' \
+        '    for _ in {1..45}; do [[ -s /run/boot-totp.rc ]] && break; sleep 0.1; done' \
+        '    rc=$(</run/boot-totp.rc)' \
+        '    rc=${rc:-124}' \
+        '    code=$(</run/boot-totp.code)' \
+        '    if (( rc != 0 )) || [[ ! -e /etc/dctl/boot-totp ]]; then' \
+        '        err=$(</run/boot-totp.err)' \
+        '        (( rc == 124 || rc == 137 )) && err="tpm2-totp show timed out after 3s${err:+: $err}"' \
+        '        [[ -n $err ]] && printf "%s\n" "$err" >&2' \
+        '        if [[ ! -e /etc/dctl/boot-totp && $err != *"The system state has changed"* ]]; then' \
+        '            say "Boot TOTP not set up yet · run dctl setup after login"' \
+        '        else' \
+        '            say "!!! NO BOOT TOTP: do not unlock; investigate the TPM and boot state before resealing !!!"' \
         '        fi' \
-        '        printf "\nBoot TOTP %s (%ss left)\n" "$code" "$((30 - EPOCHSECONDS % 30))"' \
-        '        shown=$step' \
+        '        return 1' \
         '    fi' \
-        '    sleep 1' \
-        'done' |
+        '    say "Boot TOTP $code ($((30 - EPOCHSECONDS % 30))s left)"' \
+        '}' \
+        '{' \
+        '    for _ in {1..50}; do [[ -e /dev/tpmrm0 ]] && break; sleep 0.1; done' \
+        '    shown=$((EPOCHSECONDS / 30))' \
+        '    show || exit 0' \
+        '    until systemctl --quiet is-active cryptsetup.target; do' \
+        '        sleep 1' \
+        '        step=$((EPOCHSECONDS / 30))' \
+        '        if [[ $step != "$shown" ]]; then' \
+        '            show || exit 0' \
+        '            shown=$step' \
+        '        fi' \
+        '    done' \
+        '} &' \
+        'for _ in {1..80}; do [[ -e /run/boot-totp.shown ]] && break; sleep 0.1; done' |
         add_file - /usr/bin/boot-totp 755
 
     printf '%s\n' \
@@ -43,13 +59,18 @@ build() {
         'Description=Show the boot TOTP' \
         'DefaultDependencies=no' \
         'ConditionPathExists=/etc/initrd-release' \
+        'Wants=cryptsetup-pre.target' \
         'After=systemd-udev-trigger.service systemd-vconsole-setup.service systemd-pcrosseparator.service' \
         'Conflicts=initrd-switch-root.target shutdown.target' \
-        'Before=initrd-switch-root.target shutdown.target' \
+        'Before=cryptsetup-pre.target initrd-switch-root.target shutdown.target' \
         '' \
         '[Service]' \
+        'Type=forking' \
         'ExecStart=/usr/bin/boot-totp' \
-        'StandardOutput=journal+console' \
+        'TimeoutStartSec=12s' \
+        'TimeoutStopSec=2s' \
+        'StandardOutput=tty' \
+        'TTYPath=/dev/console' \
         'StandardError=journal' |
         add_file - /usr/lib/systemd/system/boot-totp.service 644
 
@@ -58,10 +79,10 @@ build() {
 
 help() {
     cat <<HELPEOF
-Shows the TPM-sealed boot TOTP while the initramfs waits for root unlock.
-Refreshes every 30 seconds.
+Shows the TPM-sealed boot TOTP on the console before the root unlock prompt.
+Refreshes every 30 seconds until unlock.
 Shows "not set up yet" when dctl has not sealed a secret (no /etc/dctl/boot-totp); otherwise, an unsealing failure shows NO BOOT TOTP.
-Never blocks boot.
+Never blocks boot; the unlock prompt waits at most about 8 seconds for the first code.
 After enabling Secure Boot and rebooting, run dctl setup to seal the secret.
 Compare the boot TOTP with your authenticator before unlocking.
 HELPEOF
