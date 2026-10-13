@@ -336,12 +336,15 @@
       },
       "models": {
         "claude-opus-5-5": {
+          "name": "Opus 5.5",
           "limit": { "input": 325000 }
         },
         "claude-sonnet-5-5": {
+          "name": "Sonnet 5.5",
           "limit": { "input": 325000 }
         },
         "claude-fable-5-1": {
+          "name": "Fable 5.1",
           "limit": { "input": 325000 }
         }
       }
@@ -354,12 +357,15 @@
       },
       "models": {
         "claude-opus-5-5": {
+          "name": "Opus 5.5",
           "limit": { "input": 325000 }
         },
         "claude-sonnet-5-5": {
+          "name": "Sonnet 5.5",
           "limit": { "input": 325000 }
         },
         "claude-fable-5-1": {
+          "name": "Fable 5.1",
           "settings": {
             "thinking": {
               "type": "adaptive",
@@ -383,7 +389,7 @@
           "name": "Grok 4.6 Fast"
         },
         "claude-opus-5-5-fast": {
-          "name": "Claude Opus 5.5 Fast"
+          "name": "Opus 5.5 Fast"
         }
       }
     },
