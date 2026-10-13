@@ -1,3 +1,0 @@
-{
-  "providers": { "anthropic": {}, "anthropic-personal": {}, "openai": {}, "xai": {}, "opencode-go": {}, "cursor": {} }
-}
