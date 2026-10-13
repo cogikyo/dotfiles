@@ -3,13 +3,29 @@
   "theme": {
     "name": "vagari"
   },
-  // TODO: keybind review with the user; `keys` lists clashes such as <leader>q on app.exit and session.queued_prompts.
+  "tabs": {
+    "mode": "off"
+  },
   "keybinds": {
     "leader": "ctrl+h",
+    "app.exit": "ctrl+c",
     "command.palette.show": "<leader>l",
     "theme.switch": "<leader>_",
     "opencode.status": "<leader>s",
     "session.list": "<leader>r",
+    "session.redo": "none",
+    "session.verbosity.cycle": "ctrl+d",
+    "session.background": "ctrl+b",
+    "session.aside": "ctrl+q",
+    "session.toggle.thinking": "ctrl+t",
+    "session.timeline": "<leader>g",
+    "terminal.toggle": "none",
+    "terminal.select": "none",
+    "terminal.close": "none",
+    "diff.open": "<leader>v",
+    "session.move": "<leader>o",
+    "session.messages_last_user": "none",
+    "session.tab.history.forward": "none",
     "session.share": "none",
     "session.unshare": "none",
     "session.parent": "up,ctrl+alt+up",
@@ -21,8 +37,10 @@
     "session.last": "ctrl+alt+g",
     "input.line.home": "home,ctrl+a",
     "input.line.end": "end,ctrl+e",
-    "input.select.line.home": "shift+home,ctrl+shift+a",
-    "input.select.line.end": "shift+end,ctrl+shift+e",
+    "input.move.left": "left",
+    "input.delete": "delete,shift+delete",
+    "input.select.line.home": "shift+home",
+    "input.select.line.end": "shift+end",
     "input.buffer.home": "alt+home",
     "input.buffer.end": "alt+end",
     "input.select.buffer.home": "alt+shift+home",
@@ -41,5 +59,8 @@
     "-opencode.sidebar.context",
     "-opencode.sidebar.footer",
     "-opencode.prompt.footer"
-  ]
+  ],
+  "session": {
+    "verbosity": "low"
+  }
 }
