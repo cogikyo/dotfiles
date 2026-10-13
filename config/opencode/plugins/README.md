@@ -45,11 +45,14 @@ Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~
 
 `compact/server.ts` exposes `compact` with `brief` and `reason`; `delivery: "queue"` runs compaction after the current turn, then the session waits for the user.
 V2 gives plugins no permission-ask path, so the agent must get the user's approval in chat; in an armed drive run, commit finished work, then compact without asking.
+When a compaction this tool queued completes and the `drive` RPC reports the tree armed, the plugin queues a synthetic "Continue the armed drive run from the handoff brief." so the run does not stall; a failed or cancelled compaction does not continue.
 The `context` hook nudges root sessions at 100K and 250K tokens; hold compaction while edits, lanes, or repairs are in flight.
+Tokens are the last step's `input + output + reasoning + cache.read + cache.write`, the measure native compaction and the statusline use; V2 reports `input` without cached tokens.
+The final nudge names the model's input window, or its context window when no input limit is set; server plugins cannot read `compaction.buffer`, so the text gives no exact trigger.
 
 The `compaction` hook adds summary rules for user wording, approvals, remaining work, and path ownership, plus the stored handoff brief.
 Child summaries also preserve the delegate brief's objective, scope, limits, and checks.
-The brief lives in plugin storage at `pending/<sessionID>` until compaction ends, fails, or is cancelled, or the session is deleted.
+The brief lives in plugin storage at `pending/<sessionID>` until its own compaction ends, fails, or is cancelled, or the session is deleted; automatic compactions leave it in place.
 
 ## Usage
 

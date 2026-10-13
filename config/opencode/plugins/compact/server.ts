@@ -1,8 +1,8 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
+import { api as drive } from "../drive/rpc.ts";
 
 const tiers = [100_000, 250_000] as const;
-const limit = 300_000;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -18,6 +18,8 @@ const SUMMARY = [
 const CHILD =
   "- This is a delegate child session. Keep its brief's objective, write scope, exclusions, rules, and acceptance checks, as updated by later prompts.";
 
+const CONTINUE = "Continue the armed drive run from the handoff brief.";
+
 const Input = Schema.Struct({
   brief: Schema.String.annotate({
     description:
@@ -29,7 +31,7 @@ const Input = Schema.Struct({
 const Pending = Schema.Struct({ brief: Schema.String, inbox: Schema.String });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and the session then waits for the user. Call it only after the user approves compacting in this conversation, or in an armed drive run at a completed-work boundary.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends; the session then waits for the user, or continues from the brief in an armed drive run. Call it only after the user approves compacting in this conversation, or in an armed drive run at a completed-work boundary.";
 
 function key(sessionID: string) {
   return `pending/${sessionID}`;
@@ -40,15 +42,16 @@ function tierFor(tokens: number) {
 }
 
 function label(tokens: number) {
-  return `${tokens / 1_000}K`;
+  return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1_000)}K`;
 }
 
-function nudge(tier: number) {
+function nudge(tier: number, window: number) {
   const head = `Context passed ${label(tiers[tier])} tokens (compaction nudge ${tier + 1}/${tiers.length}).`;
   const declined = "If the user already declined compaction at this nudge, do not ask again.";
   if (tier + 1 < tiers.length)
     return `${head} At the end of this turn, judge whether now is a good time to compact; if so, ask the user and call compact once they approve. ${declined}`;
-  return `${head} Native auto-compaction fires near ${label(limit)}, continues the turn, and gets no handoff brief. At the end of this turn, at a completed-work boundary, ask the user to compact and call compact once they approve; good times are right after a commit lands or after the user deferred the commit. In an armed drive run, commit finished work, then call compact without asking. Hold it while edits, lanes, or repairs are in flight, or when this turn delivers findings, a proposal, or open choices. ${declined}`;
+  const limit = window > 0 ? `this model's ${label(window)}-token window` : "the model's context window";
+  return `${head} Native auto-compaction fires as the context nears ${limit}, continues the turn, and gets no handoff brief. At the end of this turn, at a completed-work boundary, ask the user to compact and call compact once they approve; good times are right after a commit lands or after the user deferred the commit. In an armed drive run, commit finished work, then call compact without asking; the run continues from the brief after compaction. Hold it while edits, lanes, or repairs are in flight, or when this turn delivers findings, a proposal, or open choices. ${declined}`;
 }
 
 function explain(error: unknown) {
@@ -65,7 +68,9 @@ export default Plugin.define({
       log(Effect.logError(`compact: ${what} failed`, { error: explain(error) }));
 
     const tokens = new Map<string, number>();
+    const running = new Map<string, string>();
     const primaries = new Map<string, Promise<boolean>>();
+    const windows = new Map<string, Promise<number>>();
 
     const primary = (sessionID: string) => {
       let known = primaries.get(sessionID);
@@ -77,15 +82,38 @@ export default Plugin.define({
       return known;
     };
 
+    const window = (model: { providerID: string; id: string }) => {
+      const id = `${model.providerID}/${model.id}`;
+      let known = windows.get(id);
+      if (!known) {
+        known = ctx.model.list().then(({ data }) => {
+          const limit = data.find((entry) => entry.providerID === model.providerID && entry.id === model.id)?.limit;
+          if (!limit) windows.delete(id);
+          return limit ? limit.input || limit.context : 0;
+        });
+        known.catch(() => windows.delete(id));
+        windows.set(id, known);
+      }
+      return known;
+    };
+
     const pending = async (sessionID: string) => {
       const value = await ctx.storage.get(key(sessionID));
       return Schema.is(Pending)(value) ? value : undefined;
     };
-    const settle = (sessionID: string, inbox?: string) =>
-      (async () => {
-        if (inbox !== undefined && (await pending(sessionID))?.inbox !== inbox) return;
-        await ctx.storage.remove(key(sessionID));
-      })().catch((error: unknown) => fail("clear brief", error));
+
+    const settle = async (sessionID: string, inbox?: string) => {
+      const value = await pending(sessionID);
+      if (!value || (inbox !== undefined && value.inbox !== inbox)) return false;
+      await ctx.storage.remove(key(sessionID));
+      return true;
+    };
+
+    const finish = async (sessionID: string, inbox?: string) => {
+      if (!(await settle(sessionID, inbox))) return;
+      if (!(await ctx.rpc(drive).state({ sessionID })).armed) return;
+      await ctx.session.synthetic({ sessionID, text: CONTINUE, delivery: "queue" });
+    };
 
     await ctx.tool.transform((editor) =>
       editor.add({
@@ -109,7 +137,14 @@ export default Plugin.define({
         const tier = tierFor(tokens.get(event.sessionID) ?? 0);
         if (tier < 0 || !(await primary(event.sessionID))) return;
         if (await pending(event.sessionID)) return;
-        event.system.push({ type: "text", text: nudge(tier) });
+        const limit =
+          tier + 1 < tiers.length
+            ? 0
+            : await window(event.model).catch((error: unknown) => {
+                fail("model window", error);
+                return 0;
+              });
+        event.system.push({ type: "text", text: nudge(tier, limit) });
       } catch (error) {
         fail("nudge", error);
       }
@@ -130,6 +165,8 @@ export default Plugin.define({
       }
     });
 
+    const guard = (what: string, work: Promise<unknown>) => work.catch((error: unknown) => fail(what, error));
+
     const controller = new AbortController();
     const watch = async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
@@ -137,17 +174,26 @@ export default Plugin.define({
           const { input, output, reasoning, cache } = event.data.tokens;
           tokens.set(event.data.sessionID, input + output + reasoning + cache.read + cache.write);
         }
+        if (event.type === "session.compaction.started" && event.data.inputID)
+          running.set(event.data.sessionID, event.data.inputID);
         if (event.type === "session.compaction.ended") {
+          const inbox = running.get(event.data.sessionID);
+          running.delete(event.data.sessionID);
           tokens.delete(event.data.sessionID);
-          await settle(event.data.sessionID);
+          if (event.data.reason === "manual")
+            await guard("continue after compaction", finish(event.data.sessionID, inbox));
         }
-        if (event.type === "session.compaction.failed" && event.data.inputID)
-          await settle(event.data.sessionID, event.data.inputID);
-        if (event.type === "session.inbox.cancelled") await settle(event.data.sessionID, event.data.inboxID);
+        if (event.type === "session.compaction.failed" && event.data.inputID) {
+          running.delete(event.data.sessionID);
+          await guard("clear brief", settle(event.data.sessionID, event.data.inputID));
+        }
+        if (event.type === "session.inbox.cancelled")
+          await guard("clear brief", settle(event.data.sessionID, event.data.inboxID));
         if (event.type === "session.deleted") {
           tokens.delete(event.data.sessionID);
+          running.delete(event.data.sessionID);
           primaries.delete(event.data.sessionID);
-          await settle(event.data.sessionID);
+          await guard("clear brief", settle(event.data.sessionID));
         }
       }
     };
