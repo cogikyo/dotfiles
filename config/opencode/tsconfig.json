@@ -13,5 +13,5 @@
     "allowImportingTsExtensions": true
   },
   "include": ["plugins/**/*.ts", "plugins/**/*.tsx"],
-  "exclude": ["node_modules", "plugins-v1"]
+  "exclude": ["node_modules"]
 }
