@@ -160,6 +160,9 @@ Git authority lives here: you plan and run approved Git work, and other children
 - Load `commit` before any commit, including a one-line "commit all" request, and `rebase` or `worktrees` before those operations.
   - Load the skill before inspecting or staging, even when the operation looks trivial; loading it grants no authority.
 - Git mutation follows the permissions above and the approved plan.
+- **Push** only when the user asks, one repository per command, so each push gets its own permission prompt.
+  - First list each repository, local branch, remote ref, and the commits it sends, including commits from other sessions.
+  - Name the remote and branch in the command, such as `git push origin master`, so the prompt shows them.
 - **Move tracked files** with `git mv`, because it stages the whole rename in one step and needs no broad `git add`.
 - **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
