@@ -114,6 +114,19 @@ $net-alerts: (grok $ws-grok $rby-2, slack $ws-slack $orn-1, firefox $ws-firefox 
       -gtk-icon-shadow: 0 0 2px rgba($alert, 0.6);
     }
   }
+
+  @keyframes ws-net-hub-enter-#{$name} {
+    @for $i from 0 through $net-steps * 2 {
+      $t: math.div($i, $net-steps * 2);
+      $fade: smooth(math.max(0, 2 * $t - 1));
+
+      #{keyframe($i, $net-steps * 2)} {
+        color: mix($ws-active, $alert, $fade * 100%);
+        -gtk-icon-shadow: 0 0 6px rgba($alert, 1 - $fade);
+        -gtk-icon-transform: around($net-hub, scale(settle($t, 1.6, 3.5, 1.5)));
+      }
+    }
+  }
 }
 
 @each $k, $spoke in $net-spokes {
@@ -157,6 +170,12 @@ $net-alerts: (grok $ws-grok $rby-2, slack $ws-slack $orn-1, firefox $ws-firefox 
 .workspace.ws-1 {
   &.ws-current .network-hub {
     animation: ws-net-hub-enter $net-enter linear;
+  }
+
+  @each $name, $alert, $bright in $net-alerts {
+    &.ws-current.ws-from-#{$name} .network-hub {
+      animation: ws-net-hub-enter-#{$name} $net-enter linear;
+    }
   }
 
   @each $k, $spoke in $net-spokes {

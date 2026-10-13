@@ -695,6 +695,7 @@ func workspacePayload(s *state.State) map[string]any {
 		"occupied_str":  joinWorkspaceIDs(occupied),
 		"attention":     attention,
 		"attention_str": strings.Join(attention, " "),
+		"arrival":       s.GetArrival(),
 		"browser_qa":    s.GetBrowserQA(),
 	}
 }

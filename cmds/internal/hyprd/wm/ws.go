@@ -3,7 +3,9 @@ package wm
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
@@ -39,10 +41,47 @@ func (w *WS) Execute(wsArg string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid workspace: %s", wsArg)
 	}
+	if ws == chatWorkspace {
+		return w.enterChat()
+	}
 	if err := w.hypr.FocusWorkspace(ws); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("ws %d", ws), nil
+}
+
+// chatUrgency orders the chat bodies whose unseen notifications a switch to the chat workspace focuses.
+var chatUrgency = []string{"editor", "agents", "browser"}
+
+// enterChat switches to the chat workspace and focuses the most urgent body with unseen notifications.
+//
+// The arrival is recorded before any focus so the workspace event that follows publishes it.
+// Focusing the body switches workspace in one step, so no other chat window takes focus first and clears its attention.
+func (w *WS) enterChat() (string, error) {
+	prev := w.state.GetArrival()
+	attention := w.state.GetAttention()
+	tb := NewThreeBody(w.hypr, w.state)
+	for _, name := range chatUrgency {
+		spec, _ := bodySpec(name, chatWorkspace)
+		if !slices.Contains(attention, strings.ToLower(spec.Class)) {
+			continue
+		}
+		w.state.SetArrival(chatWorkspace, spec.Class)
+		if _, err := tb.Focus(chatWorkspace, name, spec.Class, spec.Title, ""); err != nil {
+			w.state.SetArrival(chatWorkspace, prev)
+			return "", err
+		}
+		if active, err := w.hypr.ActiveWindow(); err == nil && active != nil &&
+			active.Workspace.ID == chatWorkspace && strings.EqualFold(active.Class, spec.Class) {
+			return fmt.Sprintf("ws %d: %s", chatWorkspace, active.Class), nil
+		}
+	}
+
+	w.state.SetArrival(chatWorkspace, prev)
+	if err := w.hypr.FocusWorkspace(chatWorkspace); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("ws %d", chatWorkspace), nil
 }
 
 func (w *WS) moveActiveWindow(delta int) (string, error) {

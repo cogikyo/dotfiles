@@ -12,7 +12,7 @@
 (defvar ws-h6 false)
 
 (deflisten workspace-info
-  :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5","attention":[],"attention_str":""}'
+  :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5","attention":[],"attention_str":"","arrival":""}'
   'hyprd subscribe workspace | jq --unbuffered -c ".data"'
 )
 
@@ -52,7 +52,10 @@
       (workspace :num "1" :hover ws-h1 :desc "󰭹 chat"
         :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
                  matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
-                 matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""}"
+                 matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""} ${
+                 matches(workspace-info.arrival ?: "", "grok-bot") ? "ws-from-grok" :
+                 matches(workspace-info.arrival ?: "", "slack") ? "ws-from-slack" :
+                 matches(workspace-info.arrival ?: "", "firefox") ? "ws-from-firefox" : ""}"
         (overlay
           (ws-icon :name "network-edge-1")
           (ws-icon :name "network-edge-2")

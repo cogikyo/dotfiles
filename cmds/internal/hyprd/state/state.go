@@ -31,6 +31,8 @@ type State struct {
 	pendingLaunches    map[string]time.Time    `json:"-"`
 	arranging          map[int]bool            `json:"-"`
 	attention          map[string]bool         `json:"-"`
+	arrival            string                  `json:"-"`
+	arrivalWS          int                     `json:"-"`
 	config             *config.HyprConfig
 }
 
@@ -64,6 +66,9 @@ func (s *State) SetWorkspace(ws int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.Workspace = ws
+	if ws != s.arrivalWS {
+		s.arrival = ""
+	}
 }
 
 func (s *State) GetWorkspace() int {
