@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -20,15 +21,16 @@ const leaderText = `"Leader key for keybind combinations"`
 var (
 	defaultEntry = regexp.MustCompile(`^(\w+|"[^"\\]*"):[\w$]+\(("(?:[^"\\]|\\.)*"|!1|[\w$]+|\{[^{}]*\}),("(?:[^"\\]|\\.)*")\),?`)
 	objectKey    = regexp.MustCompile(`key:("(?:[^"\\]|\\.)*")`)
+	pluginField  = regexp.MustCompile(`^([A-Za-z_$][\w$]*)\s*:\s*("(?:[^"\\\n]|\\.)*")\s*[,}]`)
 )
 
 type keybind struct {
 	action, description string
 	value               any
-	user                bool
+	user, plugin        bool
 }
 
-func opencode(binary, config string) App {
+func opencode(binary, config, plugins string) App {
 	app := App{ID: "opencode", Name: "OpenCode", Binds: []Bind{}}
 	data, err := os.ReadFile(binary)
 	var defaults []keybind
@@ -66,6 +68,18 @@ func opencode(binary, config string) App {
 	}
 
 	binds := defaults
+	commands, err := opencodePlugins(plugins)
+	if err != nil {
+		app.Error = "opencode plugins: " + err.Error()
+	}
+	for _, c := range commands {
+		i := slices.IndexFunc(binds, func(k keybind) bool { return k.action == c.action })
+		if i < 0 {
+			binds = append(binds, c)
+			continue
+		}
+		binds[i] = c
+	}
 	for _, action := range slices.Sorted(maps.Keys(cli.Keybinds)) {
 		i := slices.IndexFunc(binds, func(k keybind) bool { return k.action == action })
 		if i < 0 {
@@ -96,7 +110,7 @@ func opencode(binary, config string) App {
 		for _, seq := range opencodeSequences(k.value, leader) {
 			last := len(seq) - 1
 			app.Binds = append(app.Binds, Bind{Prefix: seq[:last], Chord: seq[last], Label: label, Detail: k.action, Builtin: !k.user, Scope: layer})
-			if !sited {
+			if !sited && !k.plugin {
 				unsited++
 			}
 		}
@@ -105,6 +119,87 @@ func opencode(binary, config string) App {
 		app.Note = strings.TrimSpace(app.Note + fmt.Sprintf(" %d binds have no keybinding site in the opencode bundle and are shown as global.", unsited))
 	}
 	return app
+}
+
+func opencodePlugins(dir string) ([]keybind, error) {
+	var binds []keybind
+	for _, path := range tree(dir) {
+		if ext := filepath.Ext(path); (ext != ".ts" && ext != ".tsx") || strings.Contains(path, "/node_modules/") {
+			continue
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return binds, err
+		}
+		binds = append(binds, pluginCommands(string(src))...)
+	}
+	return binds, nil
+}
+
+func pluginCommands(src string) []keybind {
+	var binds []keybind
+	objects := []map[string]string{{}}
+	prev := byte('{')
+	for i := 0; i < len(src); i++ {
+		c := src[i]
+		switch {
+		case strings.HasPrefix(src[i:], "//"):
+			end := strings.IndexByte(src[i:], '\n')
+			if end < 0 {
+				return binds
+			}
+			i += end
+			continue
+		case strings.HasPrefix(src[i:], "/*"):
+			end := strings.Index(src[i+2:], "*/")
+			if end < 0 {
+				return binds
+			}
+			i += end + 3
+			continue
+		case c == '"' || c == '\'' || c == '`':
+			i = stringEnd(src, i)
+		case c == '{':
+			objects = append(objects, map[string]string{})
+		case c == '}' && len(objects) > 1:
+			top := objects[len(objects)-1]
+			objects = objects[:len(objects)-1]
+			if top["id"] != "" && top["bind"] != "" {
+				binds = append(binds, keybind{action: top["id"], description: top["title"], value: top["bind"], user: true, plugin: true})
+			}
+		case prev == '{' || prev == ',':
+			m := pluginField.FindStringSubmatchIndex(src[i:])
+			if m == nil {
+				break
+			}
+			if value, err := strconv.Unquote(src[i+m[4] : i+m[5]]); err == nil {
+				objects[len(objects)-1][src[i+m[2]:i+m[3]]] = value
+			}
+			i += m[5] - 1
+			c = '"'
+		}
+		if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+			prev = c
+		}
+	}
+	return binds
+}
+
+func stringEnd(src string, i int) int {
+	quote := src[i]
+	for i++; i < len(src); i++ {
+		switch src[i] {
+		case '\\':
+			i++
+		case quote:
+			return i
+		case '\n':
+			if quote != '`' {
+				return i
+			}
+		}
+	}
+	return len(src)
 }
 
 func opencodeDefaults(data []byte) ([]keybind, error) {

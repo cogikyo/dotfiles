@@ -50,6 +50,7 @@ func main() {
 	}
 	nvimConfig := filepath.Join(configDir, "nvim")
 	cli := filepath.Join(configDir, "opencode", "cli.json")
+	plugins := filepath.Join(filepath.Dir(cli), "plugins")
 	kittyBin, nvimBin, opencodeBin := binary("kitty"), binary("nvim"), binary("opencode")
 
 	s := server{
@@ -66,8 +67,8 @@ func main() {
 				extract: nvim,
 			},
 			{
-				inputs:  func() []string { return []string{cli, opencodeBin} },
-				extract: func() (App, []string) { return opencode(opencodeBin, cli), nil },
+				inputs:  func() []string { return append(tree(plugins), cli, opencodeBin) },
+				extract: func() (App, []string) { return opencode(opencodeBin, cli, plugins), nil },
 			},
 		},
 	}
