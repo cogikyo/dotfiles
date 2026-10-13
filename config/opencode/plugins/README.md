@@ -123,6 +123,11 @@ It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; 
 
 ## Statusline
 
+`sidebar/tui.tsx` adds `<leader>a` and `/sidebar`, which move the session sidebar to the left and back; the choice persists in plugin storage.
+V2 has no sidebar-side setting, so it polls every 250 ms for the renderer node with id `session-pane` and reverses its parent row while the 42-cell sidebar is the sibling.
+That id and width are upstream internals in `session-frame.tsx` and `ui/layout.ts`; when they change, the toggle silently stops moving the sidebar.
+`<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
+
 `statusline/tui.tsx` replaces `prompt.footer.status` only while idle with directory and Git status, leaving native running controls intact.
 It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.

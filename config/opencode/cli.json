@@ -31,7 +31,7 @@
     "session.parent": "up,ctrl+alt+up",
     "model.list": "<leader>m",
     "model.cycle_favorite": "ctrl+m",
-    "agent.list": "<leader>a",
+    "agent.list": "none",
     "variant.cycle": "ctrl+i",
     "session.first": "ctrl+g",
     "session.last": "ctrl+alt+g",
