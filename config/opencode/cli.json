@@ -40,7 +40,7 @@
     "input.move.left": "left",
     "input.delete": "delete,shift+delete",
     "input.newline": "shift+return,alt+return,ctrl+j",
-    "prompt.queue": "ctrl+return",
+    "prompt.queue": "none",
     "input.select.line.home": "shift+home",
     "input.select.line.end": "shift+end",
     "input.buffer.home": "alt+home",

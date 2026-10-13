@@ -174,14 +174,22 @@ It replaces the built-in sidebar footer, also disabled, with the OpenCode versio
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
 The pulse and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
-It also draws the `prompt.queue` shortcut as Mac-style glyphs, such as `󰘳 󰌑`, in the input's top-right corner, unless typed text or the placeholder reaches it.
+
+`statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
+In queue mode, Enter dispatches `prompt.queue` only while the session runs, the prompt is in normal mode, and the prompt has text.
+Otherwise Enter behaves natively, including empty Enter promoting the next queued prompt to steer.
+The binding targets the prompt textarea in base mode, so autocomplete, composer pickers, dialogs, and permission prompts keep Enter.
+Typed TUI slash commands that accept arguments show the native "This prompt cannot be queued" toast in queue mode while running.
+The mode is shared across all sessions in one TUI and resets to steer on restart.
+While a session is open, the input's top-right corner shows 󰒊 (`nf-md-send`, U+F048A) in muted text for steer or 󱅣 (`nf-md-send_clock`, U+F1163) in yellow for queue, unless typed text or the placeholder reaches it.
+
 `statusline/toasts.tsx` hides the core top-right toast while the sidebar footer is on screen and shows it in that footer instead; clicking the card runs the toast action or dismisses it.
 The card matches the native border color to theme feedback colors to choose a variant icon.
 It has at least three rows, centers single-row content, and truncates title and message lines at the end with `…` instead of wrapping.
 A footer row shows `+N more` and the action when present.
 The countdown bar assumes the native 5000 ms default and hides if the toast lasts longer; hover is forwarded to pause the native timer and the bar.
 It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
-Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.
+Git polling and configuration caches live in memory; this plugin has no tool or state file.
 Drive owns its own toggle and badge.
 
 ## Byline
