@@ -1,19 +1,30 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { RGBA } from "@opentui/core";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { Schema } from "effect";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { hover, Section } from "./section.tsx";
-import { configRoot, identity, isConfigAgents, isGlobal, isMarkdown, isSubagent, kindOf, label } from "./source.ts";
+import {
+  configRoot,
+  identity,
+  isBuiltin,
+  isConfigAgents,
+  isGlobal,
+  isMarkdown,
+  isSubagent,
+  kindOf,
+  label,
+} from "./source.ts";
 
 type Context = Plugin.Context;
 type Session = NonNullable<ReturnType<Context["data"]["session"]["get"]>>;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
+type Skill = NonNullable<ReturnType<Context["data"]["location"]["skill"]["list"]>>[number];
 type Prompts = Record<string, string[]>;
-type Load = { path: string; time: number };
+type Load = { path: string; time: number; builtin?: Skill };
 
 type Item = {
   path: string;
@@ -22,7 +33,10 @@ type Item = {
   color: RGBA;
   time: number;
   compacted: boolean;
+  builtin?: Skill;
 };
+
+const snapshots = "/tmp/opencode/skills";
 
 const Config = Schema.Struct({
   agents: Schema.optional(Schema.Record(Schema.String, Schema.Struct({ system: Schema.optional(Schema.Unknown) }))),
@@ -99,7 +113,7 @@ function Row(props: { context: Context; entry: Item }) {
   return (
     <box
       flexDirection="row"
-      onMouseDown={() => edit(props.context, props.entry.path)}
+      onMouseDown={() => open(props.context, props.entry)}
       onMouseOver={() => setHovered(true)}
       onMouseOut={() => setHovered(false)}
     >
@@ -120,13 +134,13 @@ function items(context: Context, session: Session, prompts: Prompts) {
   const pinned = new Map<string, Item>();
   for (const file of pinnedFiles(context, session, prompts)) {
     const key = identity(file);
-    if (!pinned.has(key) && existsSync(file)) pinned.set(key, item(roots, file, 0, false));
+    if (!pinned.has(key) && existsSync(file)) pinned.set(key, item(roots, { path: file, time: 0 }, false));
   }
 
   const messages = context.data.session.message.list(session.id);
   const boundary = messages.findLastIndex((message) => message.type === "compaction" && message.status === "completed");
   const skills = context.data.location.skill.list(session.location);
-  const skill = (id: string) => skills?.find((entry) => entry.id === id)?.path;
+  const skill = (id: string) => skills?.find((entry) => entry.id === id);
   const reads = new Map<string, Item>();
   messages.forEach((message, index) => {
     for (const load of loads(message, session.location.directory, skill)) {
@@ -135,11 +149,10 @@ function items(context: Context, session: Session, prompts: Prompts) {
       const compacted = index < boundary;
       const existing = reads.get(key);
       if (!existing) {
-        reads.set(key, item(roots, load.path, load.time, compacted));
+        reads.set(key, item(roots, load, compacted));
         continue;
       }
-      if (load.time >= existing.time)
-        reads.set(key, item(roots, load.path, load.time, existing.compacted && compacted));
+      if (load.time >= existing.time) reads.set(key, item(roots, load, existing.compacted && compacted));
       else existing.compacted &&= compacted;
     }
   });
@@ -161,10 +174,10 @@ function pinnedFiles(context: Context, session: Session, prompts: Prompts) {
   return files;
 }
 
-function loads(message: Message, directory: string, skill: (id: string) => string | undefined): Load[] {
+function loads(message: Message, directory: string, skill: (id: string) => Skill | undefined): Load[] {
   if (message.type === "skill") {
-    const file = skill(message.skill);
-    return file ? [{ path: file, time: message.time.created }] : [];
+    const entry = skill(message.skill);
+    return entry ? [skillLoad(entry, message.time.created)] : [];
   }
   if (message.type === "synthetic") {
     const instruction = message.metadata?.instruction;
@@ -181,19 +194,28 @@ function loads(message: Message, directory: string, skill: (id: string) => strin
     if (part.name === "read" && typeof input.path === "string" && isMarkdown(input.path))
       return [{ path: path.resolve(directory, expand(input.path)), time }];
     if (part.name !== "skill" || typeof input.id !== "string") return [];
+    const entry = skill(input.id);
+    if (entry) return [skillLoad(entry, time)];
     const dir = part.state.metadata?.directory;
-    const file = skill(input.id) ?? (typeof dir === "string" ? path.join(dir, "SKILL.md") : undefined);
-    return file ? [{ path: file, time }] : [];
+    if (typeof dir !== "string") return [];
+    const file = path.join(dir, "SKILL.md");
+    return isBuiltin(file) ? [] : [{ path: file, time }];
   });
 }
 
-function item(roots: readonly string[], file: string, time: number, compacted: boolean): Item {
+function skillLoad(entry: Skill, time: number): Load {
+  return isBuiltin(entry.path) ? { path: entry.path, time, builtin: entry } : { path: entry.path, time };
+}
+
+function item(roots: readonly string[], load: Load, compacted: boolean): Item {
+  const { path: file, time, builtin } = load;
   const kind = kindOf(file);
   return {
     path: file,
     label: label(roots, file, kind),
     time,
     compacted,
+    builtin,
     ...(compacted ? { icon: glyph.compacted, color: colors.red } : appearance(roots, file, kind)),
   };
 }
@@ -263,17 +285,31 @@ function agentPrompts(): Prompts {
   );
 }
 
+function open(context: Context, entry: Item) {
+  if (!entry.builtin) return edit(context, entry.path);
+  const file = path.join(snapshots, `${entry.builtin.id}.md`);
+  try {
+    mkdirSync(snapshots, { recursive: true });
+    writeFileSync(file, entry.builtin.content);
+  } catch (error) {
+    return fail(context, error instanceof Error ? error.message : `cannot write ${file}`);
+  }
+  edit(context, file);
+}
+
 function edit(context: Context, file: string) {
   const child = spawn("hyprd", ["edit", file], { detached: true, stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
   child.stderr.on("data", (chunk) => {
     stderr += String(chunk);
   });
-  const fail = (message: string) =>
-    context.ui.toast.show({ title: "Markdown open failed", message, variant: "warning" });
-  child.once("error", (error) => fail(error.message || file));
+  child.once("error", (error) => fail(context, error.message || file));
   child.once("close", (code) => {
-    if (code !== 0) fail(stderr.trim() || `hyprd exited ${code ?? "without a status"}: ${file}`);
+    if (code !== 0) fail(context, stderr.trim() || `hyprd exited ${code ?? "without a status"}: ${file}`);
   });
   child.unref();
+}
+
+function fail(context: Context, message: string) {
+  context.ui.toast.show({ title: "Markdown open failed", message, variant: "warning" });
 }

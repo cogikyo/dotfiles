@@ -47,6 +47,10 @@ export function isGlobal(filePath: string) {
   return file === root || file.startsWith(root + path.sep);
 }
 
+export function isBuiltin(filePath: string) {
+  return path.dirname(path.normalize(filePath)) === "/builtin";
+}
+
 export function isConfigAgents(filePath: string) {
   if (isRootFile(filePath)) return true;
   return path.basename(filePath).toLowerCase() === "agents.md" && isGlobal(filePath);
