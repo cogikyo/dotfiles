@@ -70,7 +70,6 @@ func (s *session) text(label, initial string, valid func(string) error) (string,
 		}
 		if err := valid(v); err != nil {
 			s.u.Warn("%s: %v", label, err)
-			initial = v
 			continue
 		}
 		return v, nil

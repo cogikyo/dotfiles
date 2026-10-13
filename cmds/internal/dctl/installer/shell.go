@@ -15,7 +15,7 @@ type shell interface {
 type host struct{ u *ui.UI }
 
 func (h host) run(ctx context.Context, stdin []byte, c cmd) error {
-	r := execx.OSRunner{Group: true, Stdin: stdin, Reason: c.Why}
+	r := execx.OSRunner{Group: true, Stdin: stdin}
 	if !c.Quiet {
 		r.UI = h.u
 	}

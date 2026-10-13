@@ -34,6 +34,7 @@ func (d disk) String() string {
 type refusal struct {
 	Disk   disk
 	Reason string
+	Quiet  bool
 }
 
 type survey struct {
@@ -160,7 +161,7 @@ func scan(lsblk []byte, boot string) (survey, error) {
 			Sector: b.Sector,
 		}
 		if reason := b.refusal(medium); reason != "" {
-			s.Refused = append(s.Refused, refusal{d, reason})
+			s.Refused = append(s.Refused, refusal{d, reason, b.Type != "disk" && b.Path != medium})
 			continue
 		}
 		s.Candidates = append(s.Candidates, d)

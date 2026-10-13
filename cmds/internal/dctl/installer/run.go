@@ -14,16 +14,18 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/binaries"
+	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/ui"
 )
 
 const (
-	hooks   = "/etc/pacman.d/hooks"
-	staged  = "/var/tmp/dotfiles.bundle"
-	origin  = "git@github.com:cogikyo/dotfiles.git"
-	mirror  = "Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch\n"
-	console = "/dev/ttyS0"
+	hooks      = "/etc/pacman.d/hooks"
+	staged     = "/var/tmp/dotfiles.bundle"
+	origin     = "git@github.com:cogikyo/dotfiles.git"
+	mirror     = "Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch\n"
+	console    = "/dev/ttyS0"
+	installLog = "/var/log/dctl-install.log"
 )
 
 var (
@@ -40,6 +42,7 @@ type session struct {
 	bundle      string
 	testMounted bool
 	lock        *os.File
+	log         *os.File
 	opened      bool
 	mounted     bool
 	ask         func(context.Context) (iso.Answers, error)
@@ -139,6 +142,12 @@ func (s *session) main(ctx context.Context) (err error) {
 	s.u.OK("disk unchanged since the survey; nothing mounted at %s, /dev/mapper/%s not open", target, mapper)
 	s.u.End(ui.OK, "")
 
+	log, err := os.Create(s.path(installLog))
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+	s.log = log
 	start := time.Now()
 	if err := s.install(ctx, p, a, prep.targets); err != nil {
 		return errors.Join(err, errModified)
@@ -152,6 +161,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	s.u.Info("reboot")
 	s.u.Info("unlock with the disk passphrase; the boot TOTP shows `not set up yet` until dctl setup seals it")
 	s.u.Info("log in as %s and run `dctl setup`", login)
+	s.u.Info("install log: %s", installLog)
 	if test == nil {
 		ok, err := s.u.Confirm("Reboot now?")
 		if err != nil {
@@ -178,10 +188,13 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 		return found.Candidates[i], nil
 	}
 	for _, r := range found.Refused {
-		u.Info("skipping %s: %s", r.Disk.Path, r.Reason)
+		if !r.Quiet {
+			u.Info("skipping %s: %s", r.Disk.Path, r.Reason)
+		}
 	}
 	for _, c := range found.Candidates {
-		u.Info("installable %s: %s, %.0f GB, %s", c.Path, c.Model, float64(c.Size)/1e9, c.Tran)
+		facts := slices.DeleteFunc([]string{c.Model, gb(c.Size), c.Tran}, func(f string) bool { return f == "" })
+		u.Info("installable %s: %s", c.Path, strings.Join(facts, ", "))
 	}
 	d, err := found.pick("")
 	if err == nil {
@@ -190,16 +203,17 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 	return d, err
 }
 
+func gb(size int64) string { return fmt.Sprintf("%.0f GB", float64(size)/1e9) }
+
 func (s *session) consent(d disk) error {
 	if s.u.Yes() {
 		return errors.New("--yes cannot consent to erasing a disk; run dctl install without it")
 	}
 	s.u.Warn("will erase all partitions and data on %s", d.Path)
-	s.u.KV("model", d.Model)
-	s.u.KV("size", fmt.Sprintf("%.0f GB", float64(d.Size)/1e9))
-	s.u.KV("serial", d.Serial)
-	if d.WWN != "" {
-		s.u.KV("WWN", d.WWN)
+	for _, kv := range [][2]string{{"model", d.Model}, {"size", gb(d.Size)}, {"serial", d.Serial}, {"WWN", d.WWN}} {
+		if kv[1] != "" {
+			s.u.KV(kv[0], kv[1])
+		}
 	}
 	ok, err := s.u.Confirm(fmt.Sprintf("Erase %s and install?", d.Path))
 	if err != nil {
@@ -299,23 +313,23 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		}
 	}
 	steps := []step{
-		{"partition", p.Disk.Path, cmds(p.partition())},
-		{"format", "LUKS2 + btrfs root; FAT32 EFI", cmds(p.format())},
-		{"subvolumes", "", cmds(p.subvolumes())},
-		{"mount", target, cmds(p.mount())},
-		{"packages", fmt.Sprintf("%d from the ISO payload", len(pkgs)), func(ctx context.Context) error { return s.pacstrap(ctx, pkgs) }},
+		{"partition", p.Disk.Path, s.logged("wipefs and sgdisk", cmds(p.partition()))},
+		{"format", "LUKS2 + btrfs root; FAT32 EFI", s.logged("cryptsetup, mkfs.fat, mkfs.btrfs", cmds(p.format()))},
+		{"subvolumes", "", s.logged("btrfs subvolume create", cmds(p.subvolumes()))},
+		{"mount", target, s.logged("mount subvolumes and EFI partition", cmds(p.mount()))},
+		{"packages", fmt.Sprintf("%d from the ISO payload", len(pkgs)), s.logged("pacstrap", func(ctx context.Context) error { return s.pacstrap(ctx, pkgs) })},
 		{"files", "", func(context.Context) error { return s.write(p) }},
-		{"identity", machine + ", " + p.Zone, cmds(p.firstboot())},
-		{"accounts", login, func(ctx context.Context) error { return s.accounts(ctx, a) }},
-		{"keyring", "", cmds([]cmd{
+		{"identity", machine + ", " + p.Zone, s.logged("systemd-firstboot", cmds(p.firstboot()))},
+		{"accounts", login, s.logged("locale-gen, useradd, chpasswd, root lock", func(ctx context.Context) error { return s.accounts(ctx, a) })},
+		{"keyring", "", s.logged("pacman-key --init and --populate archlinux", cmds([]cmd{
 			run(chroot("pacman-key", "--init")...),
 			run(chroot("pacman-key", "--populate", "archlinux")...),
-		})},
-		{"dotfiles", "", func(ctx context.Context) error { return s.dotfiles(ctx) }},
+		}))},
+		{"dotfiles", "", s.logged("git checkout from the ISO bundle", func(ctx context.Context) error { return s.dotfiles(ctx) })},
 		{"setup", "", func(ctx context.Context) error { return s.setup(ctx) }},
-		{"snapshots", "", cmds(p.snapshots())},
-		{"bootloader", "", cmds([]cmd{run(chroot("limine-install")...).because("install Limine to the EFI partition")})},
-		{"kernel", "", cmds([]cmd{run(chroot("limine-update")...).because("build the unified kernel image and boot entries")})},
+		{"snapshots", "", s.logged("snapper root config", cmds(p.snapshots()))},
+		{"bootloader", "Limine on the EFI partition", s.logged("limine-install", cmds([]cmd{run(chroot("limine-install")...)}))},
+		{"kernel", "unified kernel image and boot entries", s.logged("limine-update", cmds([]cmd{run(chroot("limine-update")...)}))},
 		{"verify", "", func(ctx context.Context) error { return s.validate(ctx, p) }},
 	}
 	if s.testMounted {
@@ -332,7 +346,28 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		}
 		s.u.End(ui.OK, "")
 	}
+	if err := copyFile(s.log.Name(), s.path(target, installLog), 0o644); err != nil {
+		return fmt.Errorf("keep install log: %w", err)
+	}
 	return nil
+}
+
+func (s *session) logged(label string, do func(context.Context) error) func(context.Context) error {
+	return func(ctx context.Context) error {
+		fmt.Fprintf(s.log, "==> %s\n", label)
+		err := s.u.Spin(ctx, label, func(ctx context.Context) error { return do(execx.Logged(ctx, s.log)) })
+		if err == nil {
+			return nil
+		}
+		data, rerr := os.ReadFile(s.log.Name())
+		if rerr != nil {
+			return errors.Join(err, rerr)
+		}
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		s.u.Info("last lines of %s", installLog)
+		s.u.Detail("%s", strings.Join(lines[max(0, len(lines)-20):], "\n"))
+		return err
+	}
 }
 
 const testUnit = "dctltest-setup.service"
@@ -401,7 +436,7 @@ func (s *session) pacstrap(ctx context.Context, pkgs []string) (err error) {
 	}
 	defer func() { err = errors.Join(err, restore()) }()
 	cache := filepath.Join(target, "var", "cache", "pacman", "pkg")
-	if err := s.sh.run(ctx, nil, run("mount", "--bind", iso.Payload, cache).because("use ISO packages as the pacman cache")); err != nil {
+	if err := s.sh.run(ctx, nil, run("mount", "--bind", iso.Payload, cache)); err != nil {
 		return err
 	}
 	err = s.sh.run(ctx, nil, run(append([]string{"pacstrap", "-G", "-M", target}, pkgs...)...))
@@ -439,8 +474,8 @@ func (s *session) accounts(ctx context.Context, a iso.Answers) error {
 	}{
 		{cmd: run(chroot("locale-gen")...)},
 		{cmd: run(chroot("useradd", "-m", "-G", "wheel", "-s", "/usr/bin/zsh", login)...)},
-		{cmd: run(chroot("chpasswd")...).because("set the login password"), stdin: login + ":" + a.Password + "\n"},
-		{cmd: run(chroot("passwd", "-l", "root")...).because("disable root password login; use sudo")},
+		{cmd: run(chroot("chpasswd")...), stdin: login + ":" + a.Password + "\n"},
+		{cmd: run(chroot("passwd", "-l", "root")...)},
 	} {
 		var stdin []byte
 		if c.stdin != "" {

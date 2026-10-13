@@ -195,7 +195,7 @@ func rig(t *testing.T) (*session, *fake) {
 	}
 	put(t, filepath.Join(root, "proc", "cmdline"), []byte("archisobasedir=arch archisosearchuuid=2026-10-01-12-00-00-00 copytoram\n"), 0o444)
 	put(t, filepath.Join(root, "usr", "share", "zoneinfo", "America", "Denver"), []byte("TZif"), 0o644)
-	for _, dir := range []string{filepath.Join(root, "sys", "firmware", "efi"), filepath.Join(root, "mnt", "var", "tmp")} {
+	for _, dir := range []string{filepath.Join(root, "sys", "firmware", "efi"), filepath.Join(root, "mnt", "var", "tmp"), filepath.Join(root, "mnt", "var", "log"), filepath.Join(root, "var", "log")} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
