@@ -76,7 +76,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 		return err
 	}
 	u.Section("sign", filepath.Base(sums)+" with "+filepath.Base(key)+"; enter the FIDO2 PIN, then touch the key")
-	if err := execx.Interactive(run).Run(ctx, "", "env", "-u", "SSH_AUTH_SOCK", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
+	if err := execx.Interactive(run).Run(ctx, "", "env", "-u", "SSH_AUTH_SOCK", "ssh-keygen", "-q", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
 	signed, err := signedSum(ctx, root.Share("allowed_signers"), iso)
@@ -93,7 +93,6 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb --iso %s /dev/sdX`.", rev[:12], filepath.Base(iso)),
 		iso, sums, sums + ".sig"}
 	u.Section("publish", tag)
-	u.Detail("`gh %s`", strings.Join(argv, " "))
 	ok, err := u.Confirm("Publish " + tag + " as a public release?")
 	if err != nil {
 		return err
