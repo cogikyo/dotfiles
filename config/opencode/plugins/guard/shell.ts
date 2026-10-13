@@ -7,8 +7,8 @@ type Option = { flag: string; value?: string };
 
 const maxDepth = 8;
 const assignment = /^[A-Za-z_]\w*=/u;
-const redirect = /^\d*(?:[<>]|&>)/u;
-const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
+export const redirect = /^\d*(?:[<>]|&>)/u;
+export const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
 const heredoc = /(<<-?\s*)(['"]?)(\w+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const keywords = new Set(["!", "{", "}", "if", "then", "else", "elif", "do", "while", "until"]);
 const shells = new Set(["bash", "dash", "sh", "zsh"]);

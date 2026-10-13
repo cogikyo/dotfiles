@@ -1,4 +1,11 @@
-import { type Command, launches } from "./shell.ts";
+import os from "node:os";
+import { bareRedirect, type Command, launches, redirect } from "./shell.ts";
+
+const home = os.homedir();
+const scratch = `${home}/.local/state/opencode/scratch/`;
+const homePrefix = /^(?:~|\$HOME|\$\{HOME\})\//u;
+const sessionVar = /\$(?:OPENCODE_SESSION_ID\b|\{OPENCODE_SESSION_ID\})/gu;
+const scratchHint = "write scratch files under ~/.local/state/opencode/scratch/$OPENCODE_SESSION_ID/ instead";
 
 const fileMutators = new Set([
   "cp",
@@ -96,21 +103,102 @@ export function denial(resource: string, agent: string | undefined) {
   }
   if (!readOnly(agent)) return undefined;
   const reason = mutation(resource, commands);
-  return reason && `read-only agents cannot mutate; ${reason}`;
+  return reason && `read-only agents cannot mutate; ${reason}; ${scratchHint}`;
 }
 
 function mutation(resource: string, commands: Command[]) {
-  if (redirects(resource)) return "shell output redirection is disabled";
+  const source = resource.replace(heredoc, (body) => body.slice(0, body.indexOf("\n")));
+  const literalRoot = /["'\\]~|~["'\\]|['\\]\$\{?H|\$\{?(?:H(?:OM?)?)?["'\\]/u.test(source);
+  const scratched = (target: string) => inScratch(target) && !(literalRoot && homePrefix.test(target));
+  if (!redirects(source).every(scratched)) return "shell output redirection is disabled";
+  const fed = commands.some(([name]) => name === "xargs");
+  const safe = (targets: string[]) => !fed && targets.length > 0 && targets.every(scratched);
   for (const [name, ...args] of commands) {
-    if (fileMutators.has(name)) return `filesystem mutation command \`${name}\` is disabled`;
+    if (fileMutators.has(name) && !safe(writes(name, args)))
+      return `filesystem mutation command \`${name}\` is disabled`;
     if (name === "gio" && args[0] === "trash") return "filesystem mutation command `gio trash` is disabled";
-    if (name === "curl" && args.some((arg) => /^(?:-o|-O|--output|--output-dir|--remote-name)(?:=|$)/u.test(arg))) {
-      return "file-writing `curl` options are disabled";
+    if (name === "curl") {
+      const targets = curlTargets(args);
+      if (targets.length > 0 && !safe(targets)) return "file-writing `curl` options are disabled";
     }
     if ((name === "sed" || name === "perl") && args.some(inPlace)) return "in-place text editing is disabled";
     if (name === "git" && gitMutation(args)) return "Git mutation commands are disabled";
   }
   return undefined;
+}
+
+function inScratch(target: string) {
+  const resolved = target.replace(homePrefix, `${home}/`).replace(sessionVar, "session");
+  if (!resolved.startsWith(scratch) || resolved.length === scratch.length) return false;
+  return !/[$`*?[{]/u.test(resolved) && !resolved.split("/").includes("..");
+}
+
+function writes(name: string, args: string[]) {
+  const { paths, redirected } = operands(args);
+  if (name === "cp") return paths.length > 1 && plainCopy(args) ? [...redirected, ...paths.slice(-1)] : [];
+  return ["mkdir", "tee", "touch", "trash"].includes(name) ? [...paths, ...redirected] : [];
+}
+
+function operands(args: string[]) {
+  const paths: string[] = [];
+  const redirected: string[] = [];
+  let flags = true;
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (redirect.test(arg)) {
+      const target = bareRedirect.test(arg) ? (args[++index] ?? "") : arg.replace(/^\d*[<>&|]+/u, "");
+      const duplicate = /^\d*[<>]&/u.test(arg) && /^(?:\d+|-)$/u.test(target);
+      if (!duplicate && target !== "/dev/null") redirected.push(target);
+    } else if (flags && arg === "--") flags = false;
+    else if (!flags || !arg.startsWith("-")) paths.push(arg);
+  }
+  return { paths, redirected };
+}
+
+const copyLong: [RegExp, string][] = [
+  [/^--(?:l|sy|t)/u, "l"],
+  [/^--rec/u, "r"],
+  [/^--ar/u, "a"],
+  [/^--no-d/u, "P"],
+  [/^--der/u, "L"],
+];
+
+function plainCopy(args: string[]) {
+  let recursive = false;
+  let deref = "";
+  for (const arg of args) {
+    if (arg === "--") break;
+    if (!arg.startsWith("-")) continue;
+    const flags = arg.startsWith("--") ? (copyLong.find(([long]) => long.test(arg))?.[1] ?? "") : arg.slice(1);
+    for (const flag of flags) {
+      if ("lst".includes(flag)) return false;
+      recursive ||= "rRa".includes(flag);
+      if ("aPdH".includes(flag)) deref = "P";
+      if (flag === "L") deref = "L";
+    }
+  }
+  return deref === "L" || (!deref && !recursive);
+}
+
+function curlTargets(args: string[]) {
+  const targets: string[] = [];
+  let remote = false;
+  let dir = false;
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    const long = /^--(output|output-dir|remote-name|remote-name-all)(?:=(.*))?$/u.exec(arg);
+    if (long?.[1].startsWith("remote")) remote = true;
+    else if (long) {
+      targets.push(long[2] ?? args[++index] ?? "");
+      dir ||= long[1] === "output-dir";
+    } else if (/^-[^-]/u.test(arg)) {
+      remote ||= /^-[^o]*O/u.test(arg);
+      const output = /^-[^o]*o(.*)$/u.exec(arg);
+      if (output) targets.push(output[1] || (args[++index] ?? ""));
+    }
+  }
+  if (remote && !dir) targets.push(".");
+  return targets;
 }
 
 function inPlace(arg: string) {
@@ -127,8 +215,10 @@ function inPlace(arg: string) {
 const harmlessRedirect = /^(?:\d?>>?|&>>?)\s*\/dev\/null\b|^\d?>&\d/u;
 const heredoc = /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2[ \t]*(?=\n|$)/gu;
 
-function redirects(source: string) {
-  const command = source.replace(heredoc, (body) => body.slice(0, body.indexOf("\n")));
+const redirectOp = /^(?:&>>?|\d?>[>|&]?)[ \t]*/u;
+
+function redirects(command: string) {
+  const targets: string[] = [];
   let quote = "";
   let escaped = false;
   for (let index = 0; index < command.length; index++) {
@@ -151,11 +241,34 @@ function redirects(source: string) {
     }
     if (char !== ">") continue;
     const start = /[\d&]/u.test(command[index - 1] ?? "") ? index - 1 : index;
-    const harmless = command.slice(start).match(harmlessRedirect);
-    if (!harmless) return true;
-    index = start + harmless[0].length - 1;
+    const rest = command.slice(start);
+    const harmless = rest.match(harmlessRedirect);
+    if (harmless) {
+      index = start + harmless[0].length - 1;
+      continue;
+    }
+    const target = word(command, start + (redirectOp.exec(rest)?.[0].length ?? rest.length));
+    targets.push(target.text);
+    index = target.end - 1;
   }
-  return false;
+  return targets;
+}
+
+function word(source: string, start: number) {
+  let text = "";
+  let quote = "";
+  let index = start;
+  for (; index < source.length; index++) {
+    const char = source[index];
+    if (char === "\\" && quote !== "'") text += source[++index] ?? "";
+    else if (quote) {
+      if (char === quote) quote = "";
+      else text += char;
+    } else if (char === "'" || char === '"') quote = char;
+    else if (/[\s;&|()<>]/u.test(char)) break;
+    else text += char;
+  }
+  return { text, end: index };
 }
 
 function gitMutation(args: string[]) {
