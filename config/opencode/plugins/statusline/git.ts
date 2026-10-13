@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -26,6 +27,24 @@ export async function gitStatus(dir: string): Promise<GitStatus | undefined> {
     return parse(stdout);
   } catch {
     return undefined;
+  }
+}
+
+export type Place = { path: string; worktree: boolean };
+
+export async function place(dir: string): Promise<Place> {
+  try {
+    const { stdout } = await run(
+      "git",
+      ["-C", dir, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
+      { timeout: 1000 },
+    );
+    const [top, own, common] = stdout.trim().split("\n");
+    if (!top || !own || !common || own === common) return { path: dir, worktree: false };
+    const repo = path.basename(common) === ".git" ? path.dirname(common) : top;
+    return { path: path.join(repo, path.relative(top, dir)), worktree: true };
+  } catch {
+    return { path: dir, worktree: false };
   }
 }
 

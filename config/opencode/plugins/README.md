@@ -125,6 +125,10 @@ It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; 
 
 `statusline/tui.tsx` replaces `prompt.footer.status` only while idle with directory and Git status, leaving native running controls intact.
 It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
+V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
+It replaces the built-in prompt footer, disabled in `cli.json`, with running subagent and shell counts and context size, without session cost.
+It replaces the built-in sidebar footer, also disabled, with the same location line plus the OpenCode version; clicking the location runs `session.move`.
+A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 Git polling and configuration caches live in memory; this plugin has no tool, key, or state file.
 Drive owns its own toggle and badge.
 

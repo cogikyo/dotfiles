@@ -1,7 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui";
 import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createResource, createRoot, createSignal, For, onCleanup, Show } from "solid-js";
-import { gitStatus, type GitStatus } from "./git.ts";
+import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 
 type Context = Plugin.Context;
@@ -17,6 +17,8 @@ const glyph = {
   filled: "\u{25c9}",
   empty: "\u{25cb}",
   branch: "\u{e725} ",
+  worktree: "\u{ec7e} ",
+  bullet: "\u{2022}",
   ahead: "\u{2bad}",
   behind: "\u{2baf}",
   modified: "\u{f417} ",
@@ -63,6 +65,16 @@ export default Plugin.define({
         append: "prompt.footer",
         render: (input) => <Bar context={context} sessionID={input.sessionID} />,
       });
+      context.ui.slot({
+        append: "prompt.footer",
+        render: (input) => (
+          <Usage context={context} sessionID={input.sessionID} mode={input.mode} details={input.showDetails} />
+        ),
+      });
+      context.ui.slot({
+        append: "sidebar.footer",
+        render: (input) => <Footer context={context} sessionID={input.sessionID} />,
+      });
       return dispose;
     });
   },
@@ -75,13 +87,16 @@ function Location(props: { context: Context; sessionID?: string }) {
   });
   const [git, setGit] = createSignal<GitStatus>();
   createEffect(() => onCleanup(watch(directory(), setGit)));
+  const [where] = createResource(directory, place);
 
   return (
     <box flexDirection="row" flexGrow={1} flexShrink={1} minWidth={0}>
       <text fg={colors.brightBlue} wrapMode="none" flexShrink={0}>
-        <b>{props.context.ui.format.path(directory())}</b>
+        <b>{props.context.ui.format.path(where()?.path ?? directory())}</b>
       </text>
-      <Show when={git()?.branch ? git() : undefined}>{(status) => <Git status={status()} />}</Show>
+      <Show when={git()?.branch ? git() : undefined}>
+        {(status) => <Git status={status()} worktree={where()?.worktree ?? false} />}
+      </Show>
     </box>
   );
 }
@@ -100,10 +115,11 @@ function watch(dir: string, set: (status: GitStatus | undefined) => void) {
   };
 }
 
-function Git(props: { status: GitStatus }) {
+function Git(props: { status: GitStatus; worktree: boolean }) {
+  const icon = () => (props.worktree ? glyph.worktree : glyph.branch);
   return (
     <text wrapMode="none" truncate flexShrink={1}>
-      <span style={{ fg: branchColor(props.status) }}>{` ${glyph.branch}${props.status.branch}`}</span>
+      <span style={{ fg: branchColor(props.status) }}>{` ${icon()}${props.status.branch}`}</span>
       <For each={counts}>
         {([name, fg]) => (
           <Show when={props.status[name] > 0}>
@@ -112,6 +128,25 @@ function Git(props: { status: GitStatus }) {
         )}
       </For>
     </text>
+  );
+}
+
+function Footer(props: { context: Context; sessionID: string }) {
+  const theme = () => props.context.theme.text;
+
+  return (
+    <box flexDirection="column">
+      <box flexDirection="row" onMouseUp={() => props.context.keymap.dispatch("session.move")}>
+        <Location context={props.context} sessionID={props.sessionID} />
+      </box>
+      <text fg={theme().muted} wrapMode="none">
+        <span style={{ fg: colors.green }}>{glyph.bullet}</span>
+        <span style={{ fg: theme().base }}>
+          <b>{" OpenCode"}</b>
+        </span>
+        {` ${props.context.app.version}`}
+      </text>
+    </box>
   );
 }
 
@@ -138,9 +173,11 @@ function Bar(props: { context: Context; sessionID?: string }) {
   return (
     <Show when={percent()}>
       {(value) => (
-        <text fg={pressure(value())} wrapMode="none" flexShrink={0}>
-          {glyph.context + glyph.filled.repeat(tier(value()) + 1) + glyph.empty.repeat(8 - tier(value()))}
-        </text>
+        <box position="absolute" top={-2} right={2}>
+          <text fg={pressure(value())} wrapMode="none">
+            {glyph.context + glyph.filled.repeat(tier(value()) + 1) + glyph.empty.repeat(8 - tier(value()))}
+          </text>
+        </box>
       )}
     </Show>
   );
@@ -168,7 +205,65 @@ function configured(context: Context, directory: string) {
   return pending;
 }
 
-function usage(context: Context, sessionID: string, buffer: number | undefined) {
+function Usage(props: { context: Context; sessionID?: string; mode: "normal" | "shell"; details: boolean }) {
+  const [hovered, setHovered] = createSignal(false);
+  const theme = () => props.context.theme.text;
+  const live = createMemo(() => {
+    const id = props.sessionID;
+    if (!id) return "";
+    const data = props.context.data;
+    const agents = data.session.family(id).filter((child) => child !== id && data.session.status(child) === "running");
+    const shells = data.shell.list(props.context.location).filter((shell) => shell.metadata.sessionID === id);
+    return [plural(agents.length, "subagent"), plural(shells.length, "shell")].filter(Boolean).join(" · ");
+  });
+  const size = createMemo(() => {
+    const current = props.sessionID ? load(props.context, props.sessionID) : undefined;
+    if (!current) return "";
+    const limit = current.model?.limit.context;
+    const value = count(current.tokens);
+    return limit ? `${value} (${Math.round((current.tokens / limit) * 100)}%)` : value;
+  });
+
+  return (
+    <Show
+      when={props.mode === "normal"}
+      fallback={
+        <text fg={theme().base} wrapMode="none" flexShrink={0}>
+          esc <span style={{ fg: theme().muted }}>exit shell mode</span>
+        </text>
+      }
+    >
+      <box flexDirection="row" flexShrink={0}>
+        <Show when={live()}>
+          <text
+            fg={hovered() ? theme().base : theme().muted}
+            wrapMode="none"
+            onMouseOver={() => setHovered(true)}
+            onMouseOut={() => setHovered(false)}
+            onMouseUp={() => props.context.keymap.dispatch("session.child.first")}
+          >
+            {`${props.context.keymap.shortcuts("session.child.first")[0] ?? ""} ${live()}`.trim()}
+          </text>
+        </Show>
+        <text fg={theme().muted} wrapMode="none">
+          <Show when={live() && props.details && size()}>{" · "}</Show>
+          <Show when={props.details}>{size()}</Show>
+        </text>
+      </box>
+    </Show>
+  );
+}
+
+function plural(value: number, noun: string) {
+  return value ? `${value} ${noun}${value === 1 ? "" : "s"}` : "";
+}
+
+function count(tokens: number) {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  return tokens >= 1_000 ? `${(tokens / 1_000).toFixed(1)}K` : String(tokens);
+}
+
+function load(context: Context, sessionID: string) {
   const session = context.data.session.get(sessionID);
   if (!session) return;
   const last = measured(context.data.session.message.list(sessionID), session.revert?.messageID);
@@ -179,11 +274,17 @@ function usage(context: Context, sessionID: string, buffer: number | undefined) 
   const model = context.data.location.model
     .list(session.location)
     ?.find((entry) => entry.providerID === last.model.providerID && entry.id === last.model.id);
-  const window = model ? model.limit.input || model.limit.context : 0;
+  return { tokens, model };
+}
+
+function usage(context: Context, sessionID: string, buffer: number | undefined) {
+  const current = load(context, sessionID);
+  if (!current?.model) return;
+  const window = current.model.limit.input || current.model.limit.context;
   if (window <= 0) return;
   const threshold = window - (buffer ?? Math.max(Math.floor(window * 0.1), window >= 2 * reserve ? reserve : 0));
   if (threshold <= 0) return;
-  return (tokens / threshold) * 100;
+  return (current.tokens / threshold) * 100;
 }
 
 function measured(messages: readonly Message[], boundary?: string) {

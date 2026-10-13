@@ -35,5 +35,11 @@
   },
   "diffs": {},
   "mouse": true,
-  "plugins": ["-opencode.notifications", "-opencode.sidebar.mcp", "-opencode.sidebar.context"]
+  "plugins": [
+    "-opencode.notifications",
+    "-opencode.sidebar.mcp",
+    "-opencode.sidebar.context",
+    "-opencode.sidebar.footer",
+    "-opencode.prompt.footer"
+  ]
 }
