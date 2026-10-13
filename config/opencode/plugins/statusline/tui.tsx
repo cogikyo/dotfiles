@@ -3,7 +3,7 @@ import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createResource, createRoot, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
-import { mirror } from "./toast.tsx";
+import { mirror } from "./toasts.tsx";
 import { heat, motion, period, tail, tick, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
