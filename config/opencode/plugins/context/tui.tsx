@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { Schema } from "effect";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { hover, Section } from "./section.tsx";
 import { configRoot, identity, isConfigAgents, isGlobal, isMarkdown, isSubagent, kindOf, label } from "./source.ts";
 
 type Context = Plugin.Context;
@@ -57,6 +58,7 @@ const glyph = {
   compacted: "\u{ef2d}",
   readme: "\u{ef0d}",
   spec: "\u{f1345}",
+  nvim: "\u{e6ae}",
 };
 
 export default Plugin.define({
@@ -71,7 +73,6 @@ export default Plugin.define({
 });
 
 function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts }) {
-  const [open, setOpen] = createSignal(true);
   const session = () => props.context.data.session.get(props.sessionID);
   createEffect(() => {
     const location = session()?.location;
@@ -85,30 +86,30 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
 
   return (
     <Show when={list().length > 0}>
-      <box flexDirection="column">
-        <box flexDirection="row" onMouseDown={() => setOpen((value) => !value)}>
-          <text fg={props.context.theme.text.base} wrapMode="none">
-            {open() ? "▼ " : "▶ "}
-          </text>
-          <text fg={props.context.theme.text.base} wrapMode="none">
-            <b>Markdown Context</b>
-          </text>
-          <text fg={props.context.theme.text.muted} wrapMode="none">{` ${list().length} read`}</text>
-        </box>
-        <Show when={open()}>
-          <For each={list()}>
-            {(entry) => (
-              <box flexDirection="row" onMouseDown={() => edit(props.context, entry.path)}>
-                <text fg={entry.color} wrapMode="none" flexShrink={0}>{`${entry.icon} `}</text>
-                <text fg={props.context.theme.text.muted} wrapMode="none" flexShrink={1}>
-                  {entry.label}
-                </text>
-              </box>
-            )}
-          </For>
-        </Show>
-      </box>
+      <Section context={props.context} title="Markdown Context" detail={`${list().length} read`}>
+        <For each={list()}>{(entry) => <Row context={props.context} entry={entry} />}</For>
+      </Section>
     </Show>
+  );
+}
+
+function Row(props: { context: Context; entry: Item }) {
+  const [hovered, setHovered] = createSignal(false);
+
+  return (
+    <box
+      flexDirection="row"
+      onMouseDown={() => edit(props.context, props.entry.path)}
+      onMouseOver={() => setHovered(true)}
+      onMouseOut={() => setHovered(false)}
+    >
+      <text fg={hovered() ? hover : props.entry.color} wrapMode="none" flexShrink={0}>
+        {`${hovered() ? glyph.nvim : props.entry.icon} `}
+      </text>
+      <text fg={hovered() ? hover : props.context.theme.text.muted} wrapMode="none" flexShrink={1}>
+        {props.entry.label}
+      </text>
+    </box>
   );
 }
 
