@@ -92,7 +92,7 @@ function Location(props: { context: Context; sessionID?: string }) {
   const [where] = createResource(directory, place);
 
   return (
-    <box flexDirection="row" flexGrow={1} flexShrink={1} minWidth={0}>
+    <box flexDirection="row" flexGrow={1} flexShrink={1} minWidth={0} marginLeft={1}>
       <text fg={colors.brightBlue} wrapMode="none" flexShrink={0}>
         <b>{props.context.ui.format.path(where()?.path ?? directory())}</b>
       </text>
