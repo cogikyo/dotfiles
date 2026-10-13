@@ -44,7 +44,7 @@ Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~
 `usage_status` only reads the local cache and reports capacity, freshness, and reset timing.
 `usage/tui.tsx` prepends root-session usage rows to `sidebar.content`; click a provider heading to refresh it.
 OpenAI and OpenCode Go use V2 integration credentials, Anthropic uses the fixed Claude directories, and xAI uses Grok CLI auth.
-The Cursor adapter currently returns `no auth` without fetching usage.
+Cursor exchanges the bridge's API key at `~/.local/share/dotfiles/cursor-api-key` for a dashboard token and shows `no auth` only when that file is missing.
 Caches are `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/<provider>.json`.
 Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/opencode-<uid>/usage-sidebar-<provider>.lock` without that variable.
 

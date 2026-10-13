@@ -168,7 +168,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - `cursor/*`: C and O are separate pools; O is named-model API usage and is small.
   - About **1,200 Opus fast steps** used up a month.
-  - Cursor usage is unavailable in the V2 adapter, so do not infer headroom from its `no auth` row; use it for **short, bounded jobs**.
+  - Use it for **short, bounded jobs**.
   - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
 - `opencode-go/*`: currently `grok-4.7`; the best model there changes often, and it is the fallback when both Anthropic accounts are capped.
