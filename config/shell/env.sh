@@ -11,6 +11,7 @@ export MANPAGER='nvim +Man!'
 export EDITOR=nvim
 export VISUAL=nvim
 export DOTS="$HOME/dotfiles"
+export OPENCODE_CONFIG_DIR="$DOTS/config/opencode"
 
 export FZF_DEFAULT_OPTS="\
 --color=bg+:#222536,bg:#222536,spinner:#b29ae8,hl:#f8b486 \
