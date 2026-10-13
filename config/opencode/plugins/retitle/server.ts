@@ -7,7 +7,7 @@ const COOLDOWN_MS = 5 * 60_000;
 const MESSAGES = 6;
 const MESSAGE_CHARS = 600;
 const TOTAL_CHARS = 3_000;
-const MAX_CHARS = 40;
+const MAX_CHARS = 36;
 const MINOR = new Set([
   "a",
   "an",

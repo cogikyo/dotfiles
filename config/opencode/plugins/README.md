@@ -67,11 +67,11 @@ It generates a two-to-four-word title with the configured `title` agent's model,
 A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session.
 
-Generated titles are Title Case; words that already contain a capital keep their casing.
+Generated titles are Title Case and at most 36 characters, so they fit on one sidebar line; words that already contain a capital keep their casing.
 
-`retitle/tui.tsx` adds `<leader>k` (`/retitle`) to retitle the root now from its last six user messages; a pinned title gets the new name in caps.
-`<leader>p` (`/caps`) pins the title by writing it in caps, or unpins it with a fresh Title Case title.
-The sidebar title is right-aligned; left-click retitles the shown session and right-click toggles caps.
+`retitle/tui.tsx` adds `<leader>t` (`/retitle`) to retitle the root now from its last six user messages; a pinned title gets the new name in caps.
+`<leader>shift+t` (`/caps`) pins the title by writing it in caps, or unpins it with a fresh Title Case title.
+The sidebar title is centered; left-click retitles the shown session and right-click toggles caps.
 V2 publishes no slot for the sidebar title, so a zero-size anchor in `sidebar.content` finds the native title node by its `_rename` and `pendingTitle` fields.
 If a V2 update breaks that lookup, the plugin shows one warning toast and the keybinds still work.
 

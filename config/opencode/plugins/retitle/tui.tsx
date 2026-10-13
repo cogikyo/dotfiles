@@ -1,16 +1,16 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { MouseButton, type BaseRenderable, type Renderable } from "@opentui/core";
+import { MouseButton, type BaseRenderable, type TextRenderable } from "@opentui/core";
 import { api, pinned } from "./rpc.ts";
 
 const MESSAGES = 6;
 const MESSAGE_CHARS = 600;
 const REACH = 8;
 
-function isTitle(node: BaseRenderable): node is Renderable {
-  return "_rename" in node && "pendingTitle" in node;
+function isTitle(node: BaseRenderable): node is TextRenderable {
+  return "textAlign" in node && "_rename" in node && "pendingTitle" in node;
 }
 
-function descendant(node: BaseRenderable, depth: number): Renderable | undefined {
+function descendant(node: BaseRenderable, depth: number): TextRenderable | undefined {
   if (isTitle(node)) return node;
   if (depth === 0) return undefined;
   for (const child of node.getChildren()) {
@@ -73,7 +73,7 @@ export default Plugin.define({
         if (!warned)
           context.ui.toast.show({
             title: "Retitle",
-            message: "Sidebar title not found; V2 may have changed its layout. Use <leader>k and <leader>p.",
+            message: "Sidebar title not found; V2 may have changed its layout. Use <leader>t and <leader>shift+t.",
             variant: "warning",
           });
         warned = true;
@@ -81,9 +81,10 @@ export default Plugin.define({
       }
       const box = node.parent;
       if (box) {
-        box.alignItems = "flex-end";
+        box.alignItems = "center";
         box.paddingRight = 1;
       }
+      node.textAlign = "center";
       node.onMouseUp = (event) => void run(shown(), event.button === MouseButton.RIGHT);
     };
 
@@ -101,7 +102,7 @@ export default Plugin.define({
           title: "Retitle session",
           description: "Generate a new title now; pinned ALL CAPS titles stay in caps",
           group: "Session",
-          bind: "<leader>k",
+          bind: "<leader>t",
           palette: true,
           slash: { name: "retitle" },
           run: () => run(root(), false),
@@ -111,7 +112,7 @@ export default Plugin.define({
           title: "Toggle ALL CAPS title",
           description: "Pin a long-running session's title in caps so automatic retitles skip it",
           group: "Session",
-          bind: "<leader>p",
+          bind: "<leader>shift+t",
           palette: true,
           slash: { name: "caps" },
           run: () => run(root(), true),
