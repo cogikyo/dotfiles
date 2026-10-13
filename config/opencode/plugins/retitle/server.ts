@@ -9,6 +9,8 @@ const MESSAGE_CHARS = 600;
 const TOTAL_CHARS = 3_000;
 const MAX_CHARS = 36;
 const CLOSED = "[CLOSED] ";
+const ORCHESTRATOR =
+  "Orchestrator mode: the user gave this session an all-caps title. Keep decisions, synthesis, Git, and the user conversation here; send every edit, investigation, data pull, and check to children.";
 const MINOR = new Set([
   "a",
   "an",
@@ -154,6 +156,15 @@ export default Plugin.define({
         if (!title) throw new Error("retitle: the session has no title to pin");
         return write(sessionID, title.toUpperCase());
       },
+    });
+
+    await ctx.session.hook("context", async (event) => {
+      try {
+        const session = await ctx.session.get({ sessionID: event.sessionID });
+        if (!session.parentID && pinned(session.title)) event.system.push({ type: "text", text: ORCHESTRATOR });
+      } catch (error) {
+        log(Effect.logError("retitle: orchestrator mode failed", { sessionID: event.sessionID, error: String(error) }));
+      }
     });
 
     const watch = async () => {
