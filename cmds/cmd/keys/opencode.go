@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,22 +139,24 @@ func opencodePlugins(dir string) ([]keybind, error) {
 
 func pluginCommands(src string) []keybind {
 	var binds []keybind
+	ids := map[string]string{}
 	objects := []map[string]string{{}}
 	prev := byte('{')
+scan:
 	for i := 0; i < len(src); i++ {
 		c := src[i]
 		switch {
 		case strings.HasPrefix(src[i:], "//"):
 			end := strings.IndexByte(src[i:], '\n')
 			if end < 0 {
-				return binds
+				break scan
 			}
 			i += end
 			continue
 		case strings.HasPrefix(src[i:], "/*"):
 			end := strings.Index(src[i+2:], "*/")
 			if end < 0 {
-				return binds
+				break scan
 			}
 			i += end + 3
 			continue
@@ -164,7 +167,10 @@ func pluginCommands(src string) []keybind {
 		case c == '}' && len(objects) > 1:
 			top := objects[len(objects)-1]
 			objects = objects[:len(objects)-1]
-			if top["id"] != "" && top["bind"] != "" {
+			if top["id"] != "" && top["title"] != "" {
+				ids[top["title"]] = top["id"]
+			}
+			if top["bind"] != "" && (top["id"] != "" || top["title"] != "") {
 				binds = append(binds, keybind{action: top["id"], description: top["title"], value: top["bind"], user: true, plugin: true})
 			}
 		case prev == '{' || prev == ',':
@@ -180,6 +186,11 @@ func pluginCommands(src string) []keybind {
 		}
 		if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
 			prev = c
+		}
+	}
+	for i, k := range binds {
+		if k.action == "" {
+			binds[i].action = cmp.Or(ids[k.description], k.description)
 		}
 	}
 	return binds
