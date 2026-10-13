@@ -61,7 +61,7 @@ ICON_WORKTREE = " \uec7e "  # cwd is inside a .worktrees checkout
 WORKTREES_DIR = ".worktrees"
 
 # Layout
-MAX_CWD_DEPTH = 6  # max directory levels to show in right status
+MAX_CWD_DEPTH = 3
 
 HYPRD_SOCKET_PATH = "/tmp/hyprd.sock"
 HYPRD_SOCKET_TIMEOUT_SECONDS = 0.02
@@ -132,7 +132,7 @@ _right_status_length = 0
 _current_icon_width = 0
 
 # per-cycle cache — invalidated each time the first tab (index=1) is drawn
-_git_repo_cache: bool | None = None
+_git_depth_cache: int | None = None
 _cwd_right_cache: str | None = None
 _active_agent_cache: str | None = None
 _active_ssh_cache: tuple[str, str] | None = None
@@ -181,19 +181,21 @@ def _push_hyprd_accent(accent_hex: str) -> None:
     _last_hyprd_accent_sent_at = now
 
 
-def _is_git_repo(path: str) -> bool:
-    """Check if path is inside a git repository (cached per draw cycle)."""
-    global _git_repo_cache
-    if _git_repo_cache is not None:
-        return _git_repo_cache
+def _git_depth(path: str) -> int:
+    """Return checkout depth including its root and both parents under .worktrees, or 0 (cached per draw cycle)."""
+    global _git_depth_cache
+    if _git_depth_cache is not None:
+        return _git_depth_cache
     p = Path(path)
-    result = False
+    depth = 0
+    result = 0
     while p != p.parent:
+        depth += 1
         if (p / ".git").exists():
-            result = True
+            result = depth + 2 if p.parent.name == WORKTREES_DIR else depth
             break
         p = p.parent
-    _git_repo_cache = result
+    _git_depth_cache = result
     return result
 
 
@@ -241,8 +243,8 @@ def _compute_cwd_right() -> str:
             if managed_host == LOCAL_HOST
             else str(Path.home().joinpath(*dir_parts))
         )
-        is_git = bool(git_path and _is_git_repo(git_path))
-        return _home_cwd_right(dir_parts, is_git)
+        git_depth = _git_depth(git_path) if git_path else 0
+        return _format_cwd(dir_parts, git_depth, ICON_HOME_DIR)
 
     if _ssh_from_window(window)[1]:
         return ""
@@ -256,41 +258,24 @@ def _compute_cwd_right() -> str:
     if not parts:
         return "/"
 
-    is_git = _is_git_repo(cwd)
-
-    # Determine root icon and extract directory parts
+    git_depth = _git_depth(cwd)
     if len(parts) > 1 and parts[1] in ("home", "Users"):
-        dir_parts = parts[3:]  # skip /, home, username
-        return _home_cwd_right(dir_parts, is_git)
-    else:
-        dir_parts = parts[1:]
-        if WORKTREES_DIR in dir_parts:
-            dir_parts = [p for p in dir_parts if p != WORKTREES_DIR]
-            root = ICON_WORKTREE
-        elif is_git:
-            root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
-        else:
-            root = ICON_ROOT_BASE if len(parts) == 1 else ICON_ROOT_DESCENDED
-
-    if not dir_parts:
-        return root
-
-    # Limit depth, then reverse: child/parent/root
-    if len(dir_parts) > MAX_CWD_DEPTH:
-        dir_parts = dir_parts[-MAX_CWD_DEPTH:]
-        return "/".join(reversed(dir_parts)) + ICON_USER_TRUNCATED
-
-    return "/".join(reversed(dir_parts)) + root
+        return _format_cwd(parts[3:], git_depth, ICON_HOME_DIR)
+    base = ICON_ROOT_BASE if len(parts) == 1 else ICON_ROOT_DESCENDED
+    return _format_cwd(parts[1:], git_depth, base)
 
 
-def _home_cwd_right(dir_parts: list[str], is_git: bool) -> str:
+def _format_cwd(dir_parts: list[str], git_depth: int, base: str) -> str:
+    """Format CWD child→root, bounded by git_depth when nonzero, then truncated."""
+    if git_depth:
+        dir_parts = dir_parts[-git_depth:]
     if WORKTREES_DIR in dir_parts:
         dir_parts = [p for p in dir_parts if p != WORKTREES_DIR]
         root = ICON_WORKTREE
-    elif is_git:
+    elif git_depth:
         root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
     else:
-        root = ICON_HOME_DIR
+        root = base
     if not dir_parts:
         return root
     if len(dir_parts) > MAX_CWD_DEPTH:
@@ -604,12 +589,12 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     """Kitty draw_tab callback — entry point for rendering each tab."""
-    global _right_status_length, _git_repo_cache, _cwd_right_cache
+    global _right_status_length, _git_depth_cache, _cwd_right_cache
     global _active_agent_cache, _active_ssh_cache
 
     # Invalidate per-cycle cache on first tab
     if index == 1:
-        _git_repo_cache = None
+        _git_depth_cache = None
         _cwd_right_cache = None
         _active_agent_cache = None
         _active_ssh_cache = None
