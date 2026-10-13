@@ -34,15 +34,15 @@ For each cluster, pick one verdict:
 | Verdict     | Meaning                                                                                |
 | ----------- | -------------------------------------------------------------------------------------- |
 | Recovered   | Denied, then the allowed form ran and work continued. Keep the rule.                   |
-| Agent miss  | A legal equivalent already exists. One-shot or short retry. Hygiene, not a config bug. |
-| Hole        | Same denied form repeats with no recovery. The allow list is too narrow.               |
+| Agent miss  | A legal equivalent already exists. Hygiene, not a config bug.                          |
+| Hole        | Denied form repeats; no recovery or legal equivalent exists. The allow list is narrow. |
 | Proper deny | Destructive or out-of-contract. The agent moved on or should have. Keep deny.          |
 
 `ask` is only a candidate when Collab, attended, sometimes needs the command and discard or history rewrite is not the default.
 
 `git add` without `--` is Recovered when `git add --` follows.
 Worktree `git checkout --` and `git restore --` are Proper deny unless the user later needed that discard.
-`git -C` on an already-allowed read is a Hole when the agent never switches to `workdir=`.
+`git -C` on an already-allowed read is an Agent miss when the agent never switches to `workdir=`.
 
 ## Report
 
