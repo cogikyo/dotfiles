@@ -5,6 +5,7 @@ $ws-occupied: #7aa2f7;
 $ws-empty: #3f4e74;
 $ws-grok: $rby-0;
 $ws-slack: $orn-0;
+$ws-firefox: $emr-2;
 $ws-confirmed: $emr-2;
 
 @function around($pivot, $transform) {
@@ -68,11 +69,12 @@ $net-pulse: 1.6s ease-in-out infinite;
 $net-steps: 12;
 $net-spokes: (
   1: (angle: 270deg, length: 13.964px, period: 2.6s, phase: 1, attention: grok),
-  2: (angle: 315deg, length: 13.165px, period: 3.4s, phase: -1, attention: slack),
-  3: (angle: 43.53deg, length: 16.05px, period: 3s, phase: 1, attention: grok),
-  4: (angle: 135deg, length: 13.165px, period: 3.8s, phase: 1, attention: slack),
-  5: (angle: 223.73deg, length: 18.518px, period: 3.2s, phase: -1, attention: grok),
+  2: (angle: 315deg, length: 13.165px, period: 3.4s, phase: -1),
+  3: (angle: 43.53deg, length: 16.05px, period: 3s, phase: 1, attention: slack),
+  4: (angle: 135deg, length: 13.165px, period: 3.8s, phase: 1),
+  5: (angle: 223.73deg, length: 18.518px, period: 3.2s, phase: -1, attention: firefox),
 );
+$net-alerts: (grok $ws-grok $rby-2, slack $ws-slack $orn-1, firefox $ws-firefox $emr-4);
 
 @function net-edge($angle, $scale) {
   @return around($net-hub, rotate($angle) scaleX($scale) rotate(-$angle));
@@ -95,7 +97,7 @@ $net-spokes: (
   }
 }
 
-@each $name, $alert, $bright in (grok $ws-grok $rby-2, slack $ws-slack $orn-1) {
+@each $name, $alert, $bright in $net-alerts {
   @keyframes ws-net-#{$name} {
     0% {
       color: $alert;
@@ -162,7 +164,6 @@ $net-spokes: (
     $attention: map-get($spoke, attention);
     $edge: ws-net-edge-#{$k}-enter $net-enter linear, ws-net-edge-#{$k}-loop $period linear $net-enter infinite;
     $node: ws-net-node-#{$k}-enter $net-enter linear, ws-net-node-#{$k}-loop $period linear $net-enter infinite;
-    $pulse: ws-net-#{$attention} $net-pulse;
 
     &.ws-current .network-edge-#{$k} {
       animation: $edge;
@@ -172,12 +173,16 @@ $net-spokes: (
       animation: $node;
     }
 
-    &.ws-#{$attention} .network-node-#{$k} {
-      animation: $pulse;
-    }
+    @if $attention {
+      $pulse: ws-net-#{$attention} $net-pulse;
 
-    &.ws-current.ws-#{$attention} .network-node-#{$k} {
-      animation: $node, $pulse;
+      &.ws-#{$attention} .network-node-#{$k} {
+        animation: $pulse;
+      }
+
+      &.ws-current.ws-#{$attention} .network-node-#{$k} {
+        animation: $node, $pulse;
+      }
     }
   }
 }

@@ -51,7 +51,8 @@
       :orientation "vertical"
       (workspace :num "1" :hover ws-h1 :desc "󰭹 chat"
         :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
-                 matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""}"
+                 matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
+                 matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""}"
         (overlay
           (ws-icon :name "network-edge-1")
           (ws-icon :name "network-edge-2")
