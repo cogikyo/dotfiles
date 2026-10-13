@@ -5,7 +5,7 @@ import { Delivery } from "./delivery.tsx";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toasts.tsx";
-import { heat, motion, period, tail, tick, Working } from "./working.tsx";
+import { heat, mix, motion, period, tail, tick, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -16,7 +16,8 @@ const poll = 2_000;
 const reserve = 16_000;
 
 const glyph = {
-  context: "\u{328b}",
+  fire: "\u{328b}",
+  water: "\u{328c}",
   filled: "\u{25c9}",
   empty: "\u{25cb}",
   branch: "\u{e725} ",
@@ -192,7 +193,7 @@ function Bar(props: { context: Context; sessionID?: string }) {
   );
   const dots = createMemo(() => {
     const value = percent();
-    return value === undefined ? [] : gauge(value, now(), lit);
+    return value === undefined ? [] : gauge(value, now(), lit, running());
   });
 
   return (
@@ -208,22 +209,23 @@ function Bar(props: { context: Context; sessionID?: string }) {
   );
 }
 
-function gauge(value: number, now: number, lit: number) {
+function gauge(value: number, now: number, lit: number, running: boolean) {
   const level = tier(value);
   const color = pressure(value);
-  const chars = [
-    glyph.context,
-    ...Array<string>(level + 1).fill(glyph.filled),
-    ...Array<string>(8 - level).fill(glyph.empty),
-  ];
-  const reach = level + 3;
+  const dots = [...Array<string>(level + 1).fill(glyph.filled), ...Array<string>(8 - level).fill(glyph.empty)];
+  const reach = level + 2;
   const head = Math.floor(((now % period) / period) * (reach + tail));
-  return chars.map((char, index) => {
-    const step = head - index;
-    const wave = now && index < reach && step >= 0 && step <= tail ? 1 - step / (tail + 1) : 0;
-    const flash = now && index === level + 1 ? Math.max(0, 1 - (now - lit) / 600) : 0;
-    return { char, fg: heat(color, Math.max(wave, flash)) };
-  });
+  const pulse = now ? (0.35 * (1 - Math.cos((Math.PI * now) / period))) / 2 : 0;
+  const icon = { char: running ? glyph.fire : glyph.water, fg: mix(color, colors.red, pulse) };
+  return [
+    icon,
+    ...dots.map((char, index) => {
+      const step = head - index;
+      const wave = now && index < reach && step >= 0 && step <= tail ? 1 - step / (tail + 1) : 0;
+      const flash = now && index === level ? Math.max(0, 1 - (now - lit) / 600) : 0;
+      return { char, fg: heat(color, Math.max(wave, flash)) };
+    }),
+  ];
 }
 
 function configured(context: Context, directory: string) {

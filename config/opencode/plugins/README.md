@@ -167,13 +167,14 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 
 `statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
 It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
-While the session runs, a wave sweeps from the fire glyph through the filled dots in step with the border pulse, and a newly filled dot flashes.
+The gauge starts with ㊌ (water) while idle and ㊋ (fire) while the session runs.
+While running, the fire glyph fades between the gauge color and up to 35% red over a two-second cycle; a wave sweeps only the dots, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
 It replaces the built-in prompt footer, disabled in `cli.json`, with running subagent and shell counts and context size, without session cost.
 It replaces the built-in sidebar footer, also disabled, with the OpenCode version line.
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
-The pulse and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
+The border pulse, fire fade, and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
 
 `statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
 In queue mode, Enter dispatches `prompt.queue` only while the session runs, the prompt is in normal mode, and the prompt has text.
