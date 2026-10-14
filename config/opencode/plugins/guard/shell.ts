@@ -9,7 +9,8 @@ const maxDepth = 8;
 const assignment = /^[A-Za-z_]\w*=/u;
 export const redirect = /^\d*(?:[<>]|&>)/u;
 export const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
-const heredoc = /(<<-?\s*)(['"]?)(\w+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
+const heredoc =
+  /(<<-?\s*)(['"]?)((?<=')[^'\n]+|(?<=")[^"\n]+|(?<!['"])[^\s;&|()<>'"\\]+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const keywords = new Set(["!", "{", "}", "if", "then", "else", "elif", "do", "while", "until"]);
 const shells = new Set(["bash", "dash", "sh", "zsh"]);
 const plain: Spec = { short: "", long: [] };
@@ -42,7 +43,7 @@ export function launches(source: string, depth = 0): Command[] {
 function unheredoc(source: string) {
   return source.replace(heredoc, (...parts: string[]) => {
     const [, op, quote, tag, rest, body] = parts;
-    return `${op}${tag}${rest} ${quote ? "" : `"${body.replaceAll('"', '\\"')}"`}`;
+    return `${op}${quote}${tag}${quote}${rest} ${quote ? "" : `"${body.replaceAll('"', '\\"')}"`}`;
   });
 }
 
@@ -150,6 +151,7 @@ class Lexer {
       return this.quoted();
     }
     if (this.substitution()) return;
+    if (this.comment()) return;
     this.at++;
     if (char === "&" && /[<>]/u.test(this.source[this.at - 2] ?? "")) return this.take(char);
     if (char === "&" && this.source[this.at] === ">") return this.take(char);
@@ -163,8 +165,9 @@ class Lexer {
   }
 
   private escape() {
-    this.take(this.source[this.at + 1] ?? "");
+    const next = this.source[this.at + 1] ?? "";
     this.at += 2;
+    if (next !== "\n") this.take(next);
   }
 
   private quoted() {
@@ -198,6 +201,12 @@ class Lexer {
     }
     this.take("$()");
     this.at = end + 1;
+    return true;
+  }
+
+  private comment() {
+    if (this.open || this.source[this.at] !== "#") return false;
+    this.at = until(this.source.indexOf("\n", this.at), this.source);
     return true;
   }
 
