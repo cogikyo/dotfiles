@@ -63,7 +63,7 @@ export default Plugin.define({
         if (!warned)
           context.ui.toast.show({
             title: "Retitle",
-            message: "Sidebar title not found; V2 may have changed its layout. Use <leader>r and <leader>shift+r.",
+            message: "Sidebar title not found; V2 may have changed its layout. Use <leader>s and <leader>shift+r.",
             variant: "warning",
           });
         warned = true;
@@ -110,7 +110,7 @@ export default Plugin.define({
     }));
     context.keymap.layer(() => ({
       commands: [
-        { bind: "<leader>r", title: "Retitle session", group: "Session", run: () => run(root(), false) },
+        { bind: "<leader>s", title: "Retitle session", group: "Session", run: () => run(root(), false) },
         { bind: "<leader>shift+r", title: "Toggle ALL CAPS title", group: "Session", run: () => run(root(), true) },
       ],
     }));

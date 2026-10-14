@@ -103,7 +103,7 @@ The trigger and message context skip non-user items and messages under three wor
 
 Generated titles are Title Case and at most 36 characters, so they fit on one sidebar line; words that already contain a capital keep their casing.
 
-`retitle/tui.tsx` adds `<leader>r` (`/retitle`) to retitle the root now with the same stored context, omitting the current title from the prompt.
+`retitle/tui.tsx` adds `<leader>s` (`/retitle`) to retitle the root now with the same stored context, omitting the current title from the prompt.
 A pinned title gets the new name in caps.
 `<leader>shift+r` (`/caps`) pins the title by writing it in caps, or unpins it with a fresh Title Case title.
 The sidebar title is centered; left-click retitles the shown session and right-click toggles caps.
@@ -138,7 +138,7 @@ Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-a
 Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
 Message reads must use an indexed `session_id` bound.
 
-`sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>s` to Sessions.
+`sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>r` to Sessions.
 `cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 

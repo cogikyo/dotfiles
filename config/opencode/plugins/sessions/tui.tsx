@@ -41,7 +41,7 @@ export default Plugin.define({
           },
         },
         {
-          bind: "<leader>s",
+          bind: "<leader>r",
           title: "Switch session",
           group: "Session",
           run: () => {
