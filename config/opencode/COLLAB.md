@@ -169,69 +169,25 @@ Re-read image evidence when needed, because compaction summaries drop attachment
 
 ## Output
 
-Format replies for the OpenCode TUI, where `##` headings render orange and every heading level looks the same.
+The OpenCode TUI renders every heading level alike in orange, so replies use `##` as their only heading level.
 
 - Open with one plain sentence: the result, or where the work stands.
-- Split longer replies into `##` sections.
-  - Inside a section, a bold line on its own acts as the sub-heading; follow it with a paragraph or a list.
-  - Use bold only for those lines, because bold already pulls attention.
+- Keep a reply on one topic short, with no headings: the opening sentence plus a short paragraph or list.
+- Split a reply with more than one topic into `##` sections named for their content.
+  - Inside a section, a bold line on its own is the sub-heading, followed by a paragraph or a list.
+  - Use bold for nothing else.
 - Use a paragraph for reasoning, bullets for peers, and a numbered list for order.
-  - Keep each bullet to one short claim; nested bullets are fragments.
-- End long replies with `## TL;DR`: one or two sentences, then the open questions under a bold line named for their topic.
-  - Number the questions; when choices matter, recommend one and name the condition that favors an alternative.
-- Short replies skip sections: a sentence or two, then numbered questions if any.
-- Put each lane report between two `---` rules, and name the lane and its task in words instead of a bare step number.
+  - Aim for list lines under about 80 characters so they rarely wrap.
+  - Move extra detail into a nested fragment instead of lengthening the line.
+- End a sectioned reply with `## TL;DR`, one or two sentences long.
+- Put questions for the user last, numbered under a bold line that names their topic.
+  - Keep each question to one short line, with its context in a nested bullet.
+  - When choices matter, recommend one in that context and name when another wins.
+- Report a returning lane between two `---` rules, each with a blank line above it.
+  - Name the lane and its task in words, then give its result and what that changes for the plan.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
 - When the user says "detailed" or "deep", give full depth in the same shape.
 - When the user says "adhd me", "too much", or "simpler", rewrite the last reply at about a third of its length, keeping the lead, warnings, and questions.
-
-A long reply looks like this:
-
-```markdown
-Nothing on the billing ledger is built yet. The plan is approved and waits on your continue.
-
-## What we're building
-
-A read-only balance ledger for accounting, from the 19226 (−$7,527) investigation.
-
-**Backend in billing**
-
-- `ledger/getList`: balance by day, week, or month, with a running total
-- `ledger/reconcile`: one row per payout, with cumulative drift
-- Both routes live in a new `s.api.ledger.go`
-
-**Frontend**
-
-A new Accounting → Balances page, built in parallel on a fixture of real 19226 data.
-
-## Decided since approval
-
-- No spec doc: step 1 writes the Go types, and both lanes build on them
-- One view with user and org filters, where an org includes anyone on its invoices
-- Ship, then measure: I time both routes on prod for 8873
-
-## Next on continue
-
-1. Close `sbf-balance`, create the `ledger` branch, and write the contract types
-2. Launch `ledger-api` and `ledger-ui` in parallel
-3. Run a fresh Sol review of `ledger-api`, then commit billing on your yes
-
-## Changed rule
-
-The workspace AGENTS.md now says to ask before switching a backend main checkout, and step 1 switches billing from `master` to `ledger`.
-You approved that branch earlier and nothing is running, so I'll take continue as the yes.
-Your own `pier run` will build `ledger` until we switch back.
-
-## TL;DR
-
-The plan is approved and nothing is built yet. Continue starts with the `ledger` branch.
-
-**Questions about the ledger build**
-
-1. Is it OK to switch the billing checkout to `ledger` on continue?
-2. Should I time the routes only for 8873, or for a second large org too?
-3. Should Balances be visible to all admins, or only to you?
-```
 
 ### OpenCode Output
 
