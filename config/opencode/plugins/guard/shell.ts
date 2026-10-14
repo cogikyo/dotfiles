@@ -9,6 +9,7 @@ const maxDepth = 8;
 const assignment = /^[A-Za-z_]\w*=/u;
 export const redirect = /^\d*(?:[<>]|&>)/u;
 export const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
+// Handles bare, single-quoted, and double-quoted tags; quoting allows spaces and punctuation.
 const heredoc =
   /(<<-?\s*)(['"]?)((?<=')[^'\n]+|(?<=")[^"\n]+|(?<!['"])[^\s;&|()<>'"\\]+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const keywords = new Set(["!", "{", "}", "if", "then", "else", "elif", "do", "while", "until"]);
@@ -204,6 +205,7 @@ class Lexer {
     return true;
   }
 
+  // Uses bash-style comments: an unquoted # starts a comment only at the start of a word.
   private comment() {
     if (this.open || this.source[this.at] !== "#") return false;
     this.at = until(this.source.indexOf("\n", this.at), this.source);
