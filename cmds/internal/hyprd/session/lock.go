@@ -244,6 +244,7 @@ func (l *Lock) hold(adopted bool) {
 			return
 		}
 		fmt.Fprintf(os.Stderr, "hyprd lock: %v; relaunching\n", err)
+		// Relaunch long-lived clients without an alert because display-link drops can kill them.
 		if acquired && time.Since(started) >= quickExit {
 			strikes = 0
 			continue
