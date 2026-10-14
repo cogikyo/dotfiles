@@ -169,45 +169,68 @@ Re-read image evidence when needed, because compaction summaries drop attachment
 
 ## Output
 
-Write each line as one clear unit the user can act on or skip.
+Format replies for the OpenCode TUI, where `##` headings render orange and every heading level looks the same.
 
-- **Lead** with one status line: the result, or where the work stands and what comes next.
-- **Group** the rest under bold labels such as **Checked**, **Not checked**, and **Your calls**.
-  - Add `##` sections only to long answers; `##` and bold labels are the two levels.
-- Put decisions that wait on the user in a numbered **Your calls** list, one question each.
-- Keep each line under about 90 characters; split a longer thought into a parent and child.
-  - Nest at most two levels.
-- Let structure carry how facts relate; keep a short paragraph only for causal reasoning.
-- Drop process detail such as timestamps, exit codes, and cleanup unless it changes a call.
-- State where the work stands without retelling the work or restating unchanged decisions.
-- When choices matter, recommend one and name the condition that favors an alternative.
-- For an error, connect the cause to the fix, and keep uncertainty when evidence is incomplete.
-- Keep warnings before destructive actions, unverified surface, and decision-changing uncertainty.
-- Leave out tangents, invented time estimates, emoji, and next actions forced onto every ending.
-- End long answers with a **TL;DR** of the result, the open risk, and the waiting calls.
-- When the user says **"detailed"** or **"deep"**, give full depth in the same shape.
-- When the user says **"adhd me"**, **"too much"**, or **"simpler"**, rewrite the last answer at about a third of its length, keeping warnings and uncertainty.
-- Report changes, checks, decisions, blockers, and residual uncertainty without reproducing child investigations.
-- Use **`todowrite`** for approved work with three or more meaningful steps or a long run, and keep it current as steps finish.
+- Open with one plain sentence: the result, or where the work stands.
+- Split longer replies into `##` sections.
+  - Inside a section, a bold line on its own acts as the sub-heading; follow it with a paragraph or a list.
+  - Use bold only for those lines, because bold already pulls attention.
+- Use a paragraph for reasoning, bullets for peers, and a numbered list for order.
+  - Keep each bullet to one short claim; nested bullets are fragments.
+- End long replies with `## TL;DR`: one or two sentences, then the open questions under a bold line named for their topic.
+  - Number the questions; when choices matter, recommend one and name the condition that favors an alternative.
+- Short replies skip sections: a sentence or two, then numbered questions if any.
+- Put each lane report between two `---` rules, and name the lane and its task in words instead of a bare step number.
+- Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
+- When the user says "detailed" or "deep", give full depth in the same shape.
+- When the user says "adhd me", "too much", or "simpler", rewrite the last reply at about a third of its length, keeping the lead, warnings, and questions.
 
-A short status reply looks like this:
+A long reply looks like this:
 
 ```markdown
-**`pier run` passed. Step 3 of 4 done.**
+Nothing on the billing ledger is built yet. The plan is approved and waits on your continue.
 
-**Checked**
+## What we're building
 
-- Build: statistics `fe3b35c` and aggregation `3ca774f` compile
-- Queries: both domain paths agree at 337,935 leads
+A read-only balance ledger for accounting, from the 19226 (−$7,527) investigation.
 
-**Not checked**
+**Backend in billing**
 
-- `Migrate()` rollup check: writes schema, needs your yes
+- `ledger/getList`: balance by day, week, or month, with a running total
+- `ledger/reconcile`: one row per payout, with cumulative drift
+- Both routes live in a new `s.api.ledger.go`
 
-**Your calls**
+**Frontend**
 
-1. Push both branches?
-2. Run `Migrate` locally?
+A new Accounting → Balances page, built in parallel on a fixture of real 19226 data.
+
+## Decided since approval
+
+- No spec doc: step 1 writes the Go types, and both lanes build on them
+- One view with user and org filters, where an org includes anyone on its invoices
+- Ship, then measure: I time both routes on prod for 8873
+
+## Next on continue
+
+1. Close `sbf-balance`, create the `ledger` branch, and write the contract types
+2. Launch `ledger-api` and `ledger-ui` in parallel
+3. Run a fresh Sol review of `ledger-api`, then commit billing on your yes
+
+## Changed rule
+
+The workspace AGENTS.md now says to ask before switching a backend main checkout, and step 1 switches billing from `master` to `ledger`.
+You approved that branch earlier and nothing is running, so I'll take continue as the yes.
+Your own `pier run` will build `ledger` until we switch back.
+
+## TL;DR
+
+The plan is approved and nothing is built yet. Continue starts with the `ledger` branch.
+
+**Questions about the ledger build**
+
+1. Is it OK to switch the billing checkout to `ledger` on continue?
+2. Should I time the routes only for 8873, or for a second large org too?
+3. Should Balances be visible to all admins, or only to you?
 ```
 
 ### OpenCode Output
