@@ -17,7 +17,7 @@ Start from the terminal outcome and work backward through real contract, impleme
 
 1. Split the work into coherent scopes that deserve their own lane or leaf.
 2. Freeze the interfaces that let scopes run in parallel, and put shared changes in an earlier foundation step or a later integration step.
-3. Name the agent and lane for each delegated step, and a `provider/model#variant` only where it departs from the route.
+3. Name the agent, lane or `one-shot`, `provider/model#variant`, and a short reason for the pick for every delegated step.
 4. Name each step's write scope, checks, and repair limit.
 5. Present the workflow as plain numbered steps.
 

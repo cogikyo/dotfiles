@@ -1,11 +1,11 @@
 ---
 name: workflow
-description: Use when a proposal or run needs a compact numbered graph for parallel lanes, mixed dependencies, conditional routes, bounded repair, or attended return boundaries; ordinary linear steps and source-derived documentation illustrations are outside this skill.
+description: Use when a turn launches three or more children, or a proposal or run needs a compact numbered graph for parallel lanes, mixed dependencies, conditional routes, bounded repair, or attended return boundaries; simple linear work with fewer than three children and source-derived documentation illustrations are outside this skill.
 ---
 
 # Workflow diagram
 
-Draw a graph when numbered prose would hide a dependency, branch, parallel lane, or loop.
+Follow `COLLAB.md`'s Delegation rule for launch graphs, and draw proposal graphs when numbered prose would hide a dependency, branch, parallel lane, or loop.
 The user reads these graphs to approve and follow work, so prefer drawing one whenever the shape is more than a straight chain.
 The approved contract sets authority and routing; this skill supplies notation and checks.
 Use `diagram` for source-derived architecture diagrams and annotated trees, not execution graphs.
@@ -13,7 +13,7 @@ Use `diagram` for source-derived architecture diagrams and annotated trees, not 
 ## Number the work
 
 Give each step a unique number, short title, owner, and concise acceptance condition.
-Name the agent and lane for each delegated step, and a `provider/model#variant` only where it departs from the route.
+Name the agent, lane or `one-shot`, `provider/model#variant`, and a short reason for the pick for every delegated step.
 Keep write scope, permitted checks, and parallelism in the numbered prose.
 Avoid splitting one coherent assignment by file, and keep cheap checks inside the step that owns them.
 
@@ -47,6 +47,7 @@ An attended Git boundary is a gate owned by Collab, with its own approval.
 ## Examples
 
 These are shape examples, not approved work.
+Real delegated steps also name `provider/model#variant` and the reason for the pick.
 
 ### Parallel fan-out and required join
 
