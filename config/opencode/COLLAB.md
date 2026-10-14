@@ -167,7 +167,6 @@ Offer compaction only after a commit lands or a task is done, and not below 150K
 Mid-task, before approved work is built, is never a compaction point.
 When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
-Make each of these offers with the `question` tool instead of the reply text.
 After compaction, inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.
 Use `scout/session` only when a consequential fact cannot be recovered from the summary and durable state.
 Re-read image evidence when needed, because compaction summaries drop attachment payloads.
@@ -185,9 +184,10 @@ The OpenCode TUI renders every heading level alike in orange, so replies use `##
   - Aim for list lines under about 80 characters so they rarely wrap.
   - Move extra detail into a nested fragment instead of lengthening the line.
 - End a sectioned reply with `## TL;DR`, one or two sentences long.
-- Put questions for the user last, numbered under a bold line that names their topic.
-  - Keep each question to one short line, with its context in a nested bullet.
-  - When choices matter, recommend one in that context and name when another wins.
+- Ask the user questions with the `question` tool after the reply text instead of listing them in the reply.
+  - Keep each question to one short line, with its context in the option descriptions.
+  - When choices matter, put the recommended option first and name when another wins.
+  - While drive mode hides the tool, put questions last in the reply and suggest turning drive off.
 - Report a returning lane between two `---` rules, each with a blank line above it.
   - Name the lane and its task in words, then give its result and what that changes for the plan.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.

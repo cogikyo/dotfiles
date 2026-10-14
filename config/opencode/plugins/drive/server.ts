@@ -37,6 +37,7 @@ const ARMED = [
   "A reviewer model answers permission requests in the user's place.",
   "When it denies a request, the reason comes back to you: adapt and continue instead of retrying the same action.",
   "The question tool is unavailable: decide yourself, record the decision and your reasons, and continue.",
+  "The user may have left it on by accident: when the user is chatting with you or a decision needs them, open your reply with a one-line suggestion to turn drive mode off with <leader>d or /drive, which brings the question tool back.",
   "Load the drive skill before running a workflow.",
 ].join(" ");
 
