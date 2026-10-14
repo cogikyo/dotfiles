@@ -1,4 +1,14 @@
-import { isTextNodeRenderable, type Renderable, type RGBA, type TextNodeRenderable } from "@opentui/core";
+import {
+  isTextNodeRenderable,
+  RGBA,
+  TextRenderable,
+  Yoga,
+  type CliRenderer,
+  type Renderable,
+  type TextNodeRenderable,
+} from "@opentui/core";
+import type { Plugin } from "@opencode/plugin/tui";
+import { roles } from "../statusline/palette.ts";
 
 type Text = Renderable & { readonly textNode: TextNodeRenderable; fg: RGBA };
 type Frame = Renderable & { readonly border: unknown };
@@ -8,15 +18,23 @@ type Names = () => ReadonlySet<string>;
 
 const separator = " · ";
 
+const tones = {
+  rule: RGBA.fromHex("#3f4578"),
+  model: RGBA.fromHex("#5a61aa"),
+  stats: RGBA.fromHex("#585f8d"),
+};
+
+const rules = new WeakMap<Renderable, TextRenderable[]>();
+
 export class Ledger {
-  readonly #entries = new Map<Renderable, Map<object, Undo>>();
+  readonly #entries = new Map<Renderable, Map<unknown, Undo>>();
 
   has(owner: Renderable) {
     return this.#entries.has(owner);
   }
 
-  record(owner: Renderable, key: object, undo: Undo) {
-    const entries = this.#entries.get(owner) ?? new Map<object, Undo>();
+  record(owner: Renderable, key: unknown, undo: Undo) {
+    const entries = this.#entries.get(owner) ?? new Map<unknown, Undo>();
     entries.set(key, undo);
     this.#entries.set(owner, entries);
   }
@@ -61,6 +79,26 @@ export class Ledger {
     });
     return true;
   }
+
+  adjust<T>(owner: Renderable, key: string, value: T, field: { get: () => T; set: (value: T) => void }) {
+    const from = field.get();
+    if (from === value) return false;
+    field.set(value);
+    owner.requestRender();
+    this.record(owner, key, () => {
+      if (field.get() !== value) return;
+      field.set(from);
+      owner.requestRender();
+    });
+    return true;
+  }
+
+  mount(owner: Renderable, child: Renderable, index?: number) {
+    if (child.parent === owner) return false;
+    owner.add(child, index);
+    this.record(owner, child, () => child.destroy());
+    return true;
+  }
 }
 
 export function prompt(anchor: Renderable, names: Names, ledger: Ledger) {
@@ -90,28 +128,79 @@ function metadata(anchor: Renderable) {
   return inner[editor + 1]?.getChildren()[0]?.getChildren();
 }
 
-export function footers(anchor: Renderable, names: Names, ledger: Ledger, width: number) {
-  const scroll = anchor.parent?.parent?.getChildren()[0];
-  if (!scrollable(scroll)) return;
+export function transcript(anchor: Renderable, names: Names, ledger: Ledger, context: Plugin.Context) {
+  const scroll = scroller(anchor.parent?.parent, 2);
+  if (!scroll) return;
   ledger.prune();
-  if (width < 28) return ledger.clear();
+  const renderer = context.renderer;
+  if (renderer.width < 28) return ledger.clear();
   for (const row of scroll.content.getChildren()) {
-    const [text, ...extra] = row.getChildren().at(-1)?.getChildren() ?? [];
-    if (extra.length === 0 && textual(text)) byline(text, names, ledger);
+    const box = row.getChildren().at(-1);
+    if (!box) continue;
+    const [text, ...extra] = box.getChildren().filter((node) => !rules.get(box)?.some((side) => side === node));
+    if (extra.length > 0 || !textual(text)) continue;
+    if (byline(text, names, ledger)) rule(box, scroll.content.width - Bun.stringWidth(read(text)), ledger, renderer);
+    else notice(text, ledger, context.theme.text.feedback.info.base);
   }
 }
 
 function byline(text: Text, names: Names, ledger: Ledger) {
-  const [agent, model] = text.textNode.children;
-  if (!isTextNodeRenderable(agent) || !isTextNodeRenderable(model) || !agent.fg) return;
+  const [agent, model, ...stats] = text.textNode.children;
+  if (!isTextNodeRenderable(agent) || !isTextNodeRenderable(model)) return false;
   const label = flatten(agent);
-  if (label ? !claimed(label, flatten(model), names) : !ledger.has(text)) return;
+  if (label ? !claimed(label, flatten(model), names) : !ledger.has(text)) return false;
   const edits = [
     ...leaves(agent).map(([node, index]) => ledger.write(text, node, index, "")),
     strip(text, model, ledger),
-    ledger.paint(text, model, agent.fg),
+    ledger.paint(text, model, tones.model),
+    ...stats.filter(isTextNodeRenderable).map((node) => ledger.paint(text, node, tones.stats)),
   ];
   if (edits.includes(true)) text.onLifecyclePass?.();
+  return true;
+}
+
+function rule(box: Renderable, room: number, ledger: Ledger, renderer: CliRenderer) {
+  if (room < 4) return ledger.restore(box);
+  const node = box.getLayoutNode();
+  ledger.adjust(box, "direction", Yoga.FlexDirection.Row, {
+    get: () => node.getFlexDirection(),
+    set: (value) => node.setFlexDirection(value),
+  });
+  ledger.adjust(box, "padding", 0, {
+    get: () => node.getPadding(Yoga.Edge.Left).value,
+    set: (value) => node.setPadding(Yoga.Edge.Left, value),
+  });
+  const [left, right] = sides(box, renderer);
+  ledger.mount(box, left, 0);
+  ledger.mount(box, right);
+}
+
+function sides(box: Renderable, renderer: CliRenderer) {
+  const known = rules.get(box);
+  const pair =
+    known && !known.some((side) => side.isDestroyed)
+      ? known
+      : [{ marginRight: 1 }, { marginLeft: 1 }].map(
+          (margin) =>
+            new TextRenderable(renderer, {
+              ...margin,
+              fg: tones.rule,
+              wrapMode: "none",
+              flexGrow: 1,
+              flexBasis: 0,
+              selectable: false,
+            }),
+        );
+  rules.set(box, pair);
+  for (const side of pair) if (side.plainText.length !== renderer.width) side.content = "─".repeat(renderer.width);
+  return pair;
+}
+
+function notice(text: Text, ledger: Ledger, info: RGBA) {
+  const [heading] = text.textNode.children;
+  if (!isTextNodeRenderable(heading) || !heading.fg?.equals(info)) return;
+  const tone = roles[/^↳ ([^/\s]+)\//.exec(flatten(heading))?.[1].toLowerCase() ?? ""];
+  if (tone && ledger.paint(text, heading, tone)) text.onLifecyclePass?.();
 }
 
 function claimed(label: string, rest: string, names: Names) {
@@ -140,6 +229,13 @@ function read(node: Text) {
 
 function textual(node: Renderable | undefined): node is Text {
   return node !== undefined && "textNode" in node;
+}
+
+function scroller(node: Renderable | null | undefined, depth: number): Scroll | undefined {
+  for (const child of node?.getChildren() ?? []) {
+    const found = scrollable(child) ? child : depth > 1 ? scroller(child, depth - 1) : undefined;
+    if (found) return found;
+  }
 }
 
 function scrollable(node: Renderable | undefined): node is Scroll {

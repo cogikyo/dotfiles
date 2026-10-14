@@ -1,7 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui";
 import type { Renderable } from "@opentui/core";
 import { createMemo, createRoot, onCleanup } from "solid-js";
-import { footers, Ledger, prompt } from "./rewrite.ts";
+import { Ledger, prompt, transcript } from "./rewrite.ts";
 
 type Context = Plugin.Context;
 type Pass = (anchor: Renderable, names: () => ReadonlySet<string>, ledger: Ledger) => void;
@@ -10,7 +10,7 @@ export default Plugin.define({
   id: "byline",
   setup(context) {
     const Prompt = anchor(context, prompt);
-    const Transcript = anchor(context, (box, names, ledger) => footers(box, names, ledger, context.renderer.width));
+    const Transcript = anchor(context, (box, names, ledger) => transcript(box, names, ledger, context));
     return createRoot((dispose) => {
       context.ui.slot({
         append: "prompt.footer",
