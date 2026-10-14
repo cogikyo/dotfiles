@@ -54,6 +54,7 @@ export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }
   return <box position="absolute" ref={(box) => (host = box)} />;
 }
 
+/** First column the send icon reserves; anything drawn at or right of it hides the icon. */
 export function edge(editor: Renderable) {
   return editor.screenX + editor.width - Math.max(...Object.values(glyph).map((icon) => Bun.stringWidth(icon))) - gap;
 }
