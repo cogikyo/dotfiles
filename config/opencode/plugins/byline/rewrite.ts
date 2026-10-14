@@ -1,11 +1,12 @@
 import {
   isTextNodeRenderable,
   RGBA,
+  TextAttributes,
+  TextNodeRenderable,
   TextRenderable,
   Yoga,
   type CliRenderer,
   type Renderable,
-  type TextNodeRenderable,
 } from "@opentui/core";
 import type { Plugin } from "@opencode/plugin/tui";
 import { roles } from "../statusline/palette.ts";
@@ -24,6 +25,9 @@ const tones = {
   stats: RGBA.fromHex("#585f8d"),
 };
 
+const italic = { attributes: TextAttributes.ITALIC };
+
+const owned = new WeakSet<object>();
 const rules = new WeakMap<Renderable, TextRenderable[]>();
 
 export class Ledger {
@@ -70,11 +74,11 @@ export class Ledger {
     return true;
   }
 
-  write(owner: Renderable, node: TextNodeRenderable, index: number, value: string) {
+  write(owner: Renderable, node: TextNodeRenderable, index: number, value: string | TextNodeRenderable) {
     const from = node.children[index];
     if (typeof from !== "string" || from === value) return false;
     node.replace(value, index);
-    this.record(owner, node, () => {
+    this.record(owner, typeof value === "string" ? node : value, () => {
       if (node.children[index] === value) node.replace(from, index);
     });
     return true;
@@ -101,22 +105,32 @@ export class Ledger {
   }
 }
 
-export function prompt(anchor: Renderable, names: Names, ledger: Ledger) {
+export function prompt(anchor: Renderable, names: Names, ledger: Ledger, fallback = "") {
   ledger.prune();
   const row = metadata(anchor) ?? [];
-  const [agent] = row;
   const group = row.at(-1);
-  if (!textual(agent) || !group || textual(group)) return;
-  const [dot, model] = group.getChildren();
-  if (!names().has(read(agent))) {
-    for (const node of [agent, ...group.getChildren()]) ledger.restore(node);
+  if (!group || textual(group)) return;
+  const nodes = group.getChildren();
+  const [dot] = nodes;
+  const [agent] = row;
+  const labelled = textual(dot) && read(dot) === "·" && textual(agent);
+  const model = labelled ? nodes[1] : dot;
+  if (!names().has(labelled ? read(agent) : fallback)) {
+    for (const node of [...row, ...nodes]) ledger.restore(node);
     return;
   }
-  if (!textual(dot) || !textual(model) || read(dot) !== "·") return;
+  if (!textual(model)) return;
+  const edits = [...emphasize(model, model.textNode, ledger), labelled && relabel(row, dot, model, ledger)];
+  if (edits.includes(true)) model.onLifecyclePass?.();
+}
+
+function relabel(row: Renderable[], dot: Renderable, model: Text, ledger: Ledger) {
+  const [agent] = row;
+  if (!textual(agent)) return false;
   ledger.hide(agent);
   if (row.some((node) => node !== agent && node.visible && textual(node) && read(node) === "auto")) ledger.restore(dot);
   else ledger.hide(dot);
-  if (ledger.paint(model, model, agent.fg)) model.onLifecyclePass?.();
+  return ledger.paint(model, model, agent.fg);
 }
 
 function metadata(anchor: Renderable) {
@@ -153,6 +167,7 @@ function byline(text: Text, names: Names, ledger: Ledger) {
     ...leaves(agent).map(([node, index]) => ledger.write(text, node, index, "")),
     strip(text, model, ledger),
     ledger.paint(text, model, tones.model),
+    ...emphasize(text, model, ledger),
     ...stats.filter(isTextNodeRenderable).map((node) => ledger.paint(text, node, tones.stats)),
   ];
   if (edits.includes(true)) text.onLifecyclePass?.();
@@ -203,6 +218,18 @@ function notice(text: Text, ledger: Ledger, info: RGBA) {
   if (tone && ledger.paint(text, heading, tone)) text.onLifecyclePass?.();
 }
 
+function emphasize(owner: Renderable, node: TextNodeRenderable, ledger: Ledger) {
+  return leaves(node).map(([parent, index, value]) => {
+    const parts = value.split(/(\bfast\b)/i);
+    if (parts.length === 1) return false;
+    const wrapper = TextNodeRenderable.fromNodes(
+      parts.flatMap((part, at) => (part ? [TextNodeRenderable.fromString(part, at % 2 ? italic : undefined)] : [])),
+    );
+    owned.add(wrapper);
+    return ledger.write(owner, parent, index, wrapper);
+  });
+}
+
 function claimed(label: string, rest: string, names: Names) {
   return names().has(label) && rest.startsWith(separator);
 }
@@ -215,7 +242,7 @@ function strip(text: Text, model: TextNodeRenderable, ledger: Ledger) {
 
 function leaves(node: TextNodeRenderable): [TextNodeRenderable, number, string][] {
   return node.children.flatMap((child, index): [TextNodeRenderable, number, string][] =>
-    typeof child === "string" ? [[node, index, child]] : leaves(child),
+    typeof child === "string" ? [[node, index, child]] : owned.has(child) ? [] : leaves(child),
   );
 }
 
