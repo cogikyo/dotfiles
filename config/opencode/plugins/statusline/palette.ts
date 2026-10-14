@@ -16,6 +16,13 @@ export const colors = {
   muted: RGBA.fromHex("#7b7fb0"),
 } as const;
 
+export const roles: Partial<Record<string, RGBA>> = {
+  build: RGBA.fromHex("#6380ec"),
+  review: colors.red,
+  verify: RGBA.fromHex("#5fc976"),
+  scout: RGBA.fromHex("#90d1f5"),
+};
+
 const steps = [15, 30, 45, 60, 70, 80, 90, 95];
 
 const ramp = [

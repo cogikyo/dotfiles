@@ -1,8 +1,8 @@
-import { MouseButton, RGBA, type MouseEvent } from "@opentui/core";
+import { MouseButton, type MouseEvent } from "@opentui/core";
 import { Plugin } from "@opencode/plugin/tui";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { hover, Section, spinner } from "../context/section.tsx";
-import { colors, pressure } from "../statusline/palette.ts";
+import { colors, pressure, roles } from "../statusline/palette.ts";
 import { api } from "./rpc.ts";
 
 type Context = Plugin.Context;
@@ -29,11 +29,11 @@ const glyph = {
   error: "\u{f015c}",
 };
 
-const roles: Partial<Record<string, { icon: string; tone: RGBA }>> = {
-  build: { icon: "\u{f1887} ", tone: RGBA.fromHex("#6380ec") },
-  review: { icon: "\u{f0208} ", tone: colors.red },
-  verify: { icon: "\u{f0565} ", tone: RGBA.fromHex("#5fc976") },
-  scout: { icon: "\u{f018b} ", tone: RGBA.fromHex("#90d1f5") },
+const icons: Partial<Record<string, string>> = {
+  build: "\u{f1887} ",
+  review: "\u{f0208} ",
+  verify: "\u{f0565} ",
+  scout: "\u{f018b} ",
 };
 
 const scopes: Partial<Record<string, string>> = {
@@ -118,7 +118,7 @@ function family(model: string) {
 
 function label(agent: string) {
   const [role, ...rest] = agent.split("/");
-  const icon = roles[role]?.icon;
+  const icon = icons[role];
   if (!icon || !rest.length) return agent;
   const scope = rest.join("/");
   return `${icon}${scopes[scope] ?? scope}`;
@@ -234,7 +234,7 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
     const max = room();
     return max === undefined || value.length <= max ? value : `${value.slice(0, Math.max(0, max - 1))}…`;
   };
-  const role = () => roles[entry().session.agent?.split("/")[0] ?? ""]?.tone ?? theme().muted;
+  const role = () => roles[entry().session.agent?.split("/")[0] ?? ""] ?? theme().muted;
   const spent = () => (props.width.spent ? ` ${entry().spent.padStart(props.width.spent)}` : "");
   const click = (event: MouseEvent) => {
     if (event.button === MouseButton.RIGHT) return void act(props.context, entry().session);
