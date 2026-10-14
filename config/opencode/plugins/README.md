@@ -148,7 +148,7 @@ Closed titles are muted unless selected or current; rows retain pending-input an
 
 - Open shows up to eight recents plus projects, expanding the list to include all sessions needing input; typing searches the full loaded session list.
 - Right arrow on a Git project opens its worktrees, including a `New worktree…` row; left arrow returns to Open.
-- Sessions offers `ctrl+d` to delete, `ctrl+r` to rename, and `ctrl+a` to switch between all projects and the current directory; the scope persists in plugin storage.
+- Sessions lists only the current directory's sessions and offers `ctrl+d` to delete and `ctrl+r` to rename; Open covers all projects.
 
 The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, the focused `FILTER` input, and a home route carrying `location`.
 If the host stops forwarding the extra row fields, rows degrade to plain titles without muting or status markers.

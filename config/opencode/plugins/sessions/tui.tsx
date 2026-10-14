@@ -7,19 +7,12 @@ import { source } from "./source.ts";
 export default Plugin.define({
   id: "sessions",
   setup(context) {
-    const [prefs, update] = context.storage.store("list", { initial: { allProjects: true } });
     let shown: { kind: Kind } | undefined;
     let generation = 0;
     const route = () => JSON.stringify(context.ui.router.current());
     const picker: Picker = {
       context,
       source: source(context),
-      prefs,
-      toggle: () => {
-        update((draft) => {
-          draft.allProjects = !draft.allProjects;
-        }).catch(() => undefined);
-      },
       claim() {
         const mine = ++generation;
         const at = route();

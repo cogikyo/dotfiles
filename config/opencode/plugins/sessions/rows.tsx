@@ -10,8 +10,6 @@ export type Kind = "open" | "list";
 export type Picker = {
   readonly context: Context;
   readonly source: Source;
-  readonly prefs: { readonly allProjects: boolean };
-  readonly toggle: () => void;
   readonly hold: (kind: Kind) => () => void;
   readonly claim: () => () => boolean;
 };

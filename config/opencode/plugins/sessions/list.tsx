@@ -94,7 +94,6 @@ export async function list(picker: Picker) {
       return location && { directory: location.directory, projectID: location.project?.id };
     });
     const scoped = (session: Session) => {
-      if (picker.prefs.allProjects) return true;
       const scope = here();
       if (!scope || session.location.directory !== scope.directory) return false;
       return !scope.projectID || session.projectID === scope.projectID;
@@ -117,7 +116,7 @@ export async function list(picker: Picker) {
     const selected = context.ui.dialog.select<string>({
       get title() {
         const label = name();
-        return !picker.prefs.allProjects && label ? `Sessions for ${label}` : "Sessions";
+        return label ? `Sessions for ${label}` : "Sessions";
       },
       get options() {
         return options();
@@ -141,13 +140,6 @@ export async function list(picker: Picker) {
               const session = find(sessionID);
               if (session) void rename(picker, session);
             },
-          },
-          {
-            bind: "ctrl+a",
-            title: picker.prefs.allProjects ? "current directory" : "all projects",
-            side: "right" as const,
-            selection: "none" as const,
-            onTrigger: picker.toggle,
           },
         ];
       },
