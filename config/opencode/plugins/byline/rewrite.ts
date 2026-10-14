@@ -15,6 +15,17 @@ import { roles } from "../statusline/palette.ts";
 type Text = Renderable & { readonly textNode: TextNodeRenderable; fg: RGBA };
 type Frame = Renderable & { readonly border: unknown };
 type Scroll = Renderable & { readonly content: Renderable };
+type LayoutNode = {
+  getFlexDirection(): Yoga.FlexDirection;
+  setFlexDirection(value: Yoga.FlexDirection): void;
+  getPadding(edge: Yoga.Edge): Yoga.Value;
+  setPadding(edge: Yoga.Edge, value: number | undefined): void;
+};
+type LayoutBox = Renderable & {
+  getFlexDirection?(): Yoga.FlexDirection;
+  getPadding?(edge: Yoga.Edge): Yoga.Value;
+  getLayoutNode?(): LayoutNode;
+};
 type Undo = () => void;
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string };
@@ -30,6 +41,13 @@ const tones = {
 };
 
 const italic = { attributes: TextAttributes.ITALIC };
+
+const directions = {
+  [Yoga.FlexDirection.Column]: "column",
+  [Yoga.FlexDirection.ColumnReverse]: "column-reverse",
+  [Yoga.FlexDirection.Row]: "row",
+  [Yoga.FlexDirection.RowReverse]: "row-reverse",
+} as const;
 
 // Exclude injected nodes from host-tree matching and repeated italic wrapping.
 const owned = new WeakSet<object>();
@@ -200,16 +218,25 @@ function byline(text: Text, names: Names, ledger: Ledger) {
   return true;
 }
 
-function rule(box: Renderable, room: number, ledger: Ledger, renderer: CliRenderer) {
+function rule(box: LayoutBox, room: number, ledger: Ledger, renderer: CliRenderer) {
   if (room < 4) return ledger.restore(box);
-  const node = box.getLayoutNode();
+  const node = box.getLayoutNode?.();
   ledger.adjust(box, "direction", Yoga.FlexDirection.Row, {
-    get: () => node.getFlexDirection(),
-    set: (value) => node.setFlexDirection(value),
+    get: () => box.getFlexDirection?.() ?? node?.getFlexDirection() ?? Yoga.FlexDirection.Column,
+    set: (value) => {
+      if (typeof box.getFlexDirection === "function") box.flexDirection = directions[value];
+      else node?.setFlexDirection(value);
+    },
   });
-  ledger.adjust(box, "padding", 0, {
-    get: () => node.getPadding(Yoga.Edge.Left).value,
-    set: (value) => node.setPadding(Yoga.Edge.Left, value),
+  ledger.adjust<number | undefined>(box, "padding", 0, {
+    get: () => {
+      const value = (box.getPadding?.(Yoga.Edge.Left) ?? node?.getPadding(Yoga.Edge.Left))?.value;
+      return value === undefined || Number.isNaN(value) ? undefined : value;
+    },
+    set: (value) => {
+      if (typeof box.getPadding === "function") box.paddingLeft = value;
+      else node?.setPadding(Yoga.Edge.Left, value);
+    },
   });
   const [left, right] = sides(box, renderer);
   ledger.mount(box, left, 0);

@@ -2,7 +2,7 @@ import { usePlugin, type Plugin } from "@opencode/plugin/tui";
 import type { OptimizedBuffer, Renderable } from "@opentui/core";
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { colors } from "./palette.ts";
-import { cell, hook, locate, type Prompt } from "./prompt.ts";
+import { hook, locate, type Prompt } from "./prompt.ts";
 
 type Context = Plugin.Context;
 
@@ -54,12 +54,15 @@ export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }
   return <box position="absolute" ref={(box) => (host = box)} />;
 }
 
-function tip(context: Context, buffer: OptimizedBuffer, editor: Renderable) {
+function tip(context: Context, buffer: OptimizedBuffer, editor: Prompt["editor"]) {
   const icon = queued() ? glyph.queue : glyph.steer;
   const width = Bun.stringWidth(icon);
-  const x = editor.screenX + editor.width - width;
-  const y = editor.screenY;
-  if (x - gap < editor.screenX) return;
-  for (let column = x - gap; column < x + width; column++) if (cell(buffer, column, y) !== undefined) return;
-  buffer.drawText(icon, x, y, queued() ? colors.yellow : context.theme.text.muted);
+  const used = editor.editorView.getLineInfo().lineWidthCols[0] ?? 0;
+  if (used > editor.width - width - gap) return;
+  buffer.drawText(
+    icon,
+    editor.screenX + editor.width - width,
+    editor.screenY,
+    queued() ? colors.yellow : context.theme.text.muted,
+  );
 }
