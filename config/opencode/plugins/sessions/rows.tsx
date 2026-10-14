@@ -16,6 +16,7 @@ export type Picker = {
   readonly claim: () => () => boolean;
 };
 
+/** The host spreads fields omitted from plugin types into DialogSelect for search, titles, and status markers. */
 export type Option<Value> = DialogSelectOption<Value> & {
   readonly searchText?: string;
   readonly titleView?: () => JSX.Element;
@@ -180,6 +181,7 @@ export function clip(value: string, max: number) {
   return prefix + kept;
 }
 
+/** DialogSelect focuses a FILTER input after mounting; the plugin API exposes no onFilter hook. */
 export function listen(context: Context, set: (query: string) => void) {
   const seen = new WeakSet<object>();
   const editor = context.renderer.currentFocusedEditor;

@@ -84,15 +84,21 @@ There is no persistent plugin state, tool, key, or TUI slot.
 
 ## Retitle
 
-`retitle/server.ts` renames a titled root after two new user messages and a successful turn, at most once per five minutes.
+`retitle/server.ts` renames a titled root after two new user messages of at least three words and a successful turn, at most once per five minutes.
 Auto-retitle skips titles that start with `[CLOSED] `, which `/done` sets.
-It generates a two-to-four-word title with the configured `title` agent's model, without a temporary child session.
+It asks the configured `title` agent's model for a two-to-four-word title naming the session's main work, keeping the current title when it still fits.
+It generates the title without a temporary child session.
 A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session.
 
+Context comes from stored history through `ctx.session.context`, using the first two qualifying user messages, up to four spread samples, and the latest three.
+After compaction, it includes the completed summary's first nonempty section and samples the user messages since that summary.
+The trigger and message context skip non-user items and messages under three words after removing image markers.
+
 Generated titles are Title Case and at most 36 characters, so they fit on one sidebar line; words that already contain a capital keep their casing.
 
-`retitle/tui.tsx` adds `<leader>r` (`/retitle`) to retitle the root now from its last six user messages; a pinned title gets the new name in caps.
+`retitle/tui.tsx` adds `<leader>r` (`/retitle`) to retitle the root now with the same stored context, omitting the current title from the prompt.
+A pinned title gets the new name in caps.
 `<leader>shift+r` (`/caps`) pins the title by writing it in caps, or unpins it with a fresh Title Case title.
 The sidebar title is centered; left-click retitles the shown session and right-click toggles caps.
 V2 publishes no slot for the sidebar title, so a zero-size anchor in `sidebar.content` finds the native title node by its `_rename` and `pendingTitle` fields.
@@ -119,7 +125,23 @@ Queries return at most 20 rows and 800-character excerpts, with a 30-second subp
 Use `list`, `text`, `reasoning`, `tools`, or `part` before raw `sql`.
 Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-assistant text.
 Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
-Message reads must use an indexed `session_id` bound; there is no key, TUI slot, or separate state file.
+Message reads must use an indexed `session_id` bound.
+
+`sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>s` to Sessions.
+`cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
+The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
+
+Without a search, Open orders sessions needing permission or question input first, then other open sessions, then titles starting with `[CLOSED] `, newest first within each rank.
+Sessions groups by date, newest day first, and applies that order within each group, except closed sessions always come last even when they need input.
+Closed titles are muted unless selected or current; rows retain pending-input and running markers.
+
+- Open shows up to eight recents plus projects, expanding the list to include all sessions needing input; typing searches the full loaded session list.
+- Right arrow on a Git project opens its worktrees, including a `New worktree…` row; left arrow returns to Open.
+- Sessions offers `ctrl+d` to delete, `ctrl+r` to rename, and `ctrl+a` to switch between all projects and the current directory; the scope persists in plugin storage.
+
+The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, the focused `FILTER` input, and a home route carrying `location`.
+If the host stops forwarding the extra row fields, rows degrade to plain titles without muting or status markers.
+The other host assumptions govern search expansion, selection, and navigation and need review after an OpenCode update.
 
 ## Launch
 

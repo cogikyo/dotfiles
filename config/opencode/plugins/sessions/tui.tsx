@@ -23,6 +23,7 @@ export default Plugin.define({
       claim() {
         const mine = ++generation;
         const at = route();
+        // Replacing a dialog also resolves undefined, but keeps the host in modal mode.
         return () => generation === mine && route() === at && context.keymap.mode.current() !== "modal";
       },
       hold(kind) {

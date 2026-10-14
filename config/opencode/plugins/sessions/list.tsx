@@ -122,6 +122,7 @@ export async function list(picker: Picker) {
       get options() {
         return options();
       },
+      // A defined current preserves selection by value as options load, even without a matching row.
       current: current ?? "",
       get actions() {
         return [

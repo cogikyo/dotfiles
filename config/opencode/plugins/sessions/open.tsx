@@ -30,6 +30,7 @@ function go(context: Context, target: Target | { type: "project"; directory: str
   const router = context.ui.router;
   if (target.type === "session") return router.navigate({ type: "session", sessionID: target.sessionID });
   const location = { directory: target.directory };
+  // The host accepts an untyped home location; clear the old object so Home observes the new directory.
   if (router.current().type === "home") router.navigate({ type: "home" });
   router.navigate({ type: "home", location } as { type: "home" });
 }
@@ -105,6 +106,7 @@ export async function open(picker: Picker) {
       get options() {
         return options();
       },
+      // A defined current preserves selection by value as options load, even without a matching row.
       current: { type: "session", sessionID: current ?? "" },
       actions: [
         {
@@ -184,6 +186,7 @@ async function worktrees(picker: Picker, project: { directory: string; projectID
       get options() {
         return options();
       },
+      // A defined current preserves selection by value as options load, even without a matching row.
       current: { type: "directory", directory: "" },
       actions: [{ bind: "left", title: "projects", selection: "none", onTrigger: () => void open(picker) }],
     });
