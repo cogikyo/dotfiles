@@ -109,10 +109,15 @@ If a V2 update breaks that lookup, the plugin shows one warning toast and the ke
 ## Hyprd
 
 `hyprd/tui.ts` loads the notification and pane-context plugins together.
-`hyprd/notify.ts` sends permission, question, completion, idle, error, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
+`hyprd/notify.ts` sends permission, question, complete, idle, error, lane, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
 It needs `KITTY_PID` and `KITTY_WINDOW_ID`, follows child requests to their root, and sends desktop notices for open sessions outside the focused view.
-Idle reminders repeat every ten minutes; child completion does not produce a root completion notice.
+Successful children send a `lane` notice instead of a root completion notice.
 Notification deduplication and timers live in memory.
+
+Every 60 seconds, the plugin checks the displayed root and its lanes for pending requests.
+Permission and question reminders repeat every ten minutes.
+An idle root gets reminders every 15 minutes unless its title starts with `[CLOSED] ` or its tree has running work or pending non-synthetic items.
+Reminder clocks pause while Hyprland reports the screen locked and reset while the TUI is focused on that root.
 
 `hyprd/context.ts` publishes the displayed root session to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json` once per second when the selection changes.
 It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records `session` or `null` with the process `start` time from `/proc/self/stat`, and removes the file on disposal.
