@@ -250,5 +250,6 @@ cullyn...
 
 - uses Arch Linux (Hyprland), and highly customized dotfiles (see $HOME/dotfiles if referenced) that drive a personal development environment.
 - writes and prefers most things in Go.
+- is very open to new Rust projects that agents create and maintain, especially for problems with no off-the-shelf solution; Go still fits when it is the better tool.
 - uses typescript only if project demands it.
 - likes python for one-off datascience, complicated scripts, short lived experiments.
