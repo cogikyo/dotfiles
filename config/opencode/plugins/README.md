@@ -224,6 +224,13 @@ Non-primary agents keep their labels.
 V2 has no slot for these rows, so `byline/rewrite.ts` rewrites native text nodes in a lifecycle pass each frame.
 An upstream layout change can leave the native label visible; assistant footers also keep the native label below 28 terminal columns.
 
+## Bullets
+
+`bullets/tui.ts` uses `•` for depth-0 unordered list markers and `◦` at deeper levels.
+Ordered lists keep their native markers.
+V2's Markdown plugin hook only replaces fenced code-block rendering, so list markers need a patch.
+An opentui upgrade can break this private `getListItemInputs` override; the plugin throws on load if the method disappears.
+
 ## Markdown context
 
 `context/tui.tsx` appends Markdown Context to `sidebar.content` with root and project instructions, the agent prompt, skills, and observed Markdown loads.
