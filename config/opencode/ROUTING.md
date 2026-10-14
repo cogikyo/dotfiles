@@ -8,7 +8,6 @@ routes:
   scout/*: claude/claude-opus-5-5 high
   scout/context: claude/claude-sonnet-5-5 high
   scout/dirty: claude/claude-sonnet-5-5 high
-  scout/session: openai/gpt-6-astra xhigh
   scout/web: opencode-go/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/critic: claude/claude-opus-5-5 high
@@ -88,7 +87,7 @@ Pick a builder by how much the brief settles.
   - Use `verify/*` to settle an open claim, to double-check a claim the answer or design rests on, or as a council seat that guards against shared assumptions.
   - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
 - Pass `openai/gpt-6-astra#high` or `openai/gpt-6.1-sol#high` when Collab picks one explicitly.
-- Seat a fresh Opus reviewer beside Sol or Astra in each review council.
+- Seat a **fresh Opus reviewer** beside Sol or Astra in every review council, and convene one for harness changes, production-impact findings, and design verdicts.
   - Pass `claude/claude-opus-5-5#high` for the Opus seat.
   - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
 - Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
@@ -107,13 +106,14 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5#high` yourself.
-- Fast and cheap with plenty of usage, so route review and verification here.
+- Fast and cheap with plenty of usage, so use Sol alone for small checks and keep the Sol `review/*` and `verify/*` routes for routine work.
 - Best `build/scribe`, and best at browser QA and computer use.
 - Gathers wide context well and makes sound architecture calls.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
 ### `openai/gpt-6-astra`
 
+- Use only as a **council seat** or **parallel leaf**, never as the primary.
 - Reasoning: `high`, `xhigh`, and `max` are available.
 - Fallback: Opus when OpenAI is capped, because Astra and Sol share one OpenAI window.
 - Strength relative to Sol and Opus on this work is untested; record evidence as councils compare it.
