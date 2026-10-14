@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { denial } from "./policy.ts";
+import { launches } from "./shell.ts";
 
 const home = homedir();
 const secrets = [
@@ -21,6 +22,7 @@ const secrets = [
   ".local/share/opencode/auth.json",
   ".local/share/opencode-v2/opencode/auth.json",
 ].map((secret) => path.join(home, secret));
+const navigators = new Set(["cd", "pushd", "popd"]);
 
 function text(input: unknown, key: string) {
   if (typeof input !== "object" || input === null) return undefined;
@@ -38,6 +40,14 @@ function broad(root: string) {
   return root === home || secrets.some((secret) => secret === root || secret.startsWith(prefix));
 }
 
+function describe(event: { tools: Record<string, { description: string }> }) {
+  return Effect.sync(() => {
+    const shell = event.tools.shell;
+    if (!shell) return;
+    shell.description = `${shell.description} Set the working directory with \`workdir\`; commands that run \`cd\`, \`pushd\`, or \`popd\` are rejected.`;
+  });
+}
+
 export default Plugin.define({
   id: "guard",
   effect: (ctx) =>
@@ -53,6 +63,10 @@ export default Plugin.define({
         if (path.isAbsolute(expanded)) return Effect.succeed(path.normalize(expanded));
         return directory(sessionID).pipe(Effect.map((base) => path.resolve(base, expanded)));
       };
+
+      yield* ctx.session.hook("context", describe);
+      yield* ctx.session.hook("compaction", describe);
+      yield* ctx.session.hook("generate", describe);
 
       yield* ctx.permission.hook("evaluate", (event) =>
         Effect.sync(() => {
@@ -78,7 +92,14 @@ export default Plugin.define({
           }
           if (event.tool !== "shell") return;
           const command = text(event.input, "command");
-          if (!command?.includes("commit")) return;
+          if (!command) return;
+          if (launches(command).some(([name]) => navigators.has(name))) {
+            return yield* new Tool.Error({
+              message:
+                "`cd`, `pushd`, and `popd` are disabled; set the shell tool's `workdir` parameter instead, and use absolute paths, `git -C`, or a separate call for other directories",
+            });
+          }
+          if (!command.includes("commit")) return;
           const cwd = yield* resolve(event.sessionID, text(event.input, "workdir"));
           const rejection = yield* Effect.promise(() => commitRejection(command, cwd));
           if (rejection) return yield* new Tool.Error({ message: rejection });

@@ -79,8 +79,12 @@ This plugin has no tool, key, or TUI slot.
 ## Guard
 
 `guard/server.ts` denies recognized shell deletion with `rm`, shell Grok launches, OpenCode API calls, and credential or database reads.
+It denies recognized `cd`, `pushd`, and `popd` commands, including inside substitutions and `bash -c`.
 It also denies recognized shell mutations for read-only agents, rejects broad home or secret-ancestor `grep` and `glob` roots, and checks commit-message shape before execution.
 Use `trash -- <path>` for deletion, `x` for X search, `sessions` for history, and `session_create` for new sessions.
+Set the shell tool's `workdir` parameter; use absolute paths, `git -C`, or a separate call for other directories.
+V2 resolves each `cd` argument against `workdir`, so chained relative changes can cause false external-directory prompts.
+The `context`, `compaction`, and `generate` hooks add this rule to the shell tool's description for each request.
 These checks are guardrails rather than a shell sandbox.
 There is no persistent plugin state, tool, key, or TUI slot.
 
