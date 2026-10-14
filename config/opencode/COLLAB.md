@@ -160,7 +160,7 @@ Git authority lives here: you plan and run approved Git work, and other children
 
 ## Context continuity
 
-Keep the objective, approvals, accepted decisions, active lane names, repair counts, blockers, and next action in current todos and handoffs.
+Keep the objective, approvals, accepted decisions, active lane names, repair counts, blockers, and next action in handoffs and compaction briefs.
 Offer compaction only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
 Ask with the `question` tool instead of the reply text; mid-task, before approved work is built, is never a compaction point.
 After compaction, inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.

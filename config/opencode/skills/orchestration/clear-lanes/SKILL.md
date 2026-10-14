@@ -12,7 +12,7 @@ Its history stays, so a wrong close costs a re-brief.
 
 1. Run `lanes` for the current session.
 2. Collect each named lane with its status, agent, last activity, and session ID.
-3. Recall from this conversation and the todo list which lanes still own open work.
+3. Recall from this conversation which lanes still own open work.
 
 Skip one-shot children without a lane name, lanes already `closed`, and lanes that are `running`.
 The `lanes` tool still lists closed children with their old names.
@@ -21,7 +21,7 @@ The `lanes` tool still lists closed children with their old names.
 
 Close a lane when any of these holds:
 
-- Its work was accepted, committed, or abandoned, and no open todo or pending decision names it.
+- Its work was accepted, committed, or abandoned, and no remaining work or pending decision depends on it.
 - A newer lane took over its scope, such as a re-brief under a new name.
 - It exists only for a finished demo, probe, or smoke check.
 

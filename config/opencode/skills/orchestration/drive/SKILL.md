@@ -30,7 +30,6 @@ Stop and report when two scopes turn out to need the same design change.
 
 1. Reconcile the tree and Git state, and find the steps whose inputs are ready. Dispatch them.
 2. Judge each result and take the approved next step: continue, repair, or return.
-3. Keep todos current with accepted steps, active lanes, repair counts, and blockers.
 
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
@@ -60,14 +59,14 @@ The plugin adds a system line while armed and hides the `question` tool.
 Only the user can change it, and loading this skill yourself does not arm drive mode.
 When the line disappears, attended boundaries apply again from the next step.
 
-- Make in-scope execution decisions and record the reason and any dissent in todos and the final report.
+- Make in-scope execution decisions and record the reason and any dissent in your reply and the final report.
 - A reviewer model decides each permission ask before it reaches the user, with `allow`, `deny`, or `ask`.
 - Deny rules and explicit user limits still apply; drive mode does not expand scope or grant every permission.
 - Adapt to a denial when a permitted action meets the same approved objective, and never retry it through a bypass.
 - A reviewer `ask` or failure leaves the permission waiting for the user; report the blocker and continue independent permitted work.
 - The plugin journals reviewer decisions, and the user can inspect them with `/drive-log`.
 - Do not call `question` or stop only to request routine approval while armed.
-- Recover the workflow state from the summary, todos, lanes, and tree before new writes.
+- Recover the workflow state from the summary, lanes, and tree before new writes.
 
 ## Examples
 
