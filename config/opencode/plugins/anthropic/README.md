@@ -20,10 +20,13 @@ Refresh writes preserve other JSON fields and file mode, with an atomic rename o
 Every five minutes, and once at startup, each account refreshes a token that expires within one hour, so idle accounts stay signed in.
 The check reads only the local file; network use is one refresh per token lifetime.
 A failed early refresh keeps the current token, logs the HTTP status and OAuth error code, and retries on the next check.
-Refresh locks live at `~/.local/share/opencode/claude-auth-refresh-<digest>.lock` regardless of XDG overrides.
-This fixed lock path matters when testing with an isolated V2 data directory.
+When refresh fails for an expired or rejected token, `credentials.ts` runs one tool-free `claude -p` Haiku call with the account's `CLAUDE_CONFIG_DIR`.
+The CLI refreshes the credential file itself, and the plugin adopts the new token.
+CLI recovery runs at most once per account every 15 minutes across processes.
+Refresh locks (`claude-auth-refresh-<digest>.lock`) and recovery markers (`claude-auth-recovery-<digest>`) live in `~/.local/share/opencode/` regardless of XDG overrides.
+This fixed path matters when testing with an isolated V2 data directory.
 
-Missing or terminally rejected credentials return an authentication error with the account's login command.
+Missing credentials, and credentials that CLI recovery cannot restore, return an authentication error with the account's login command.
 Transient refresh failures return a rate-limit error with a retry hint.
 Authentication errors do not trigger account-pool fallback; `lanes/server.ts` owns quota-based account selection.
 

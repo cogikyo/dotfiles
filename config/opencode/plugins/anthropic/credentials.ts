@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -14,17 +15,20 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { Effect } from "effect";
 
-const tokenURL = "https://claude.ai/v1/oauth/token";
+const tokenURL = "https://platform.claude.com/v1/oauth/token";
 const clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const lockDir = path.join(os.homedir(), ".local", "share", "opencode");
-const lockTTL = 20_000;
+const lockTTL = 120_000;
 const margin = 60_000;
 const early = 60 * 60_000;
+const recoveryCooldown = 15 * 60_000;
+const execFileAsync = promisify(execFile);
 const terminalErrors = new Set(["invalid_grant", "invalid_client", "unauthorized_client", "unsupported_grant_type"]);
 
-export type Token = { accessToken: string; refreshToken: string; expiresAt: number };
+export type Token = { accessToken: string; refreshToken: string; expiresAt: number; scopes?: string[] };
 export type Failure = "transient" | "login";
 
 type Exchange = { token: Token } | { failure: Failure; detail: string; retryAfter?: number };
@@ -62,12 +66,17 @@ function acquire(file: string) {
   return undefined;
 }
 
-async function exchange(refreshToken: string): Promise<Exchange> {
+async function exchange({ refreshToken, scopes }: Token): Promise<Exchange> {
   try {
     const response = await fetch(tokenURL, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "refresh_token", client_id: clientID, refresh_token: refreshToken }),
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        client_id: clientID,
+        refresh_token: refreshToken,
+        scope: scopes?.join(" "),
+      }),
       signal: AbortSignal.timeout(15_000),
     });
     const data = await response.json().catch(() => ({}));
@@ -102,14 +111,16 @@ export class Credentials {
   private cooldown = { until: 0, count: 0 };
   private readonly file: string;
   private readonly lock: string;
+  private readonly recovery: string;
 
   constructor(
-    configDir: string,
+    private readonly configDir: string,
     private readonly log: (effect: Effect.Effect<void>) => void,
   ) {
     this.file = path.join(configDir, ".credentials.json");
     const digest = createHash("sha256").update(`file:${configDir}`).digest("hex").slice(0, 16);
     this.lock = path.join(lockDir, `claude-auth-refresh-${digest}.lock`);
+    this.recovery = path.join(lockDir, `claude-auth-recovery-${digest}`);
   }
 
   async get(): Promise<Token | Failure> {
@@ -120,13 +131,17 @@ export class Credentials {
     const stored = this.read();
     if (!stored) return "login";
     if (fresh(stored, rejected)) return (this.token = stored);
-    this.inflight ??= this.refresh(stored.accessToken).finally(() => (this.inflight = undefined));
+    this.inflight ??= this.refresh(stored.accessToken, rejected !== undefined).finally(
+      () => (this.inflight = undefined),
+    );
     return this.inflight;
   }
 
   async renewEarly() {
     const stored = this.read();
-    if (stored && stored.expiresAt <= Date.now() + early) await this.renew(stored.accessToken);
+    if (!stored || stored.expiresAt > Date.now() + early) return;
+    this.inflight ??= this.refresh(stored.accessToken).finally(() => (this.inflight = undefined));
+    await this.inflight;
   }
 
   private read(): Token | undefined {
@@ -139,6 +154,10 @@ export class Credentials {
         accessToken: entry.accessToken,
         refreshToken: entry.refreshToken,
         expiresAt: Math.trunc(entry.expiresAt),
+        scopes:
+          Array.isArray(entry.scopes) && entry.scopes.every((scope: unknown) => typeof scope === "string")
+            ? entry.scopes
+            : undefined,
       };
     } catch {
       return undefined;
@@ -152,7 +171,7 @@ export class Credentials {
     return (this.token = stored);
   }
 
-  private async refresh(stale: string): Promise<Token | Failure> {
+  private async refresh(stale: string, rejected = false): Promise<Token | Failure> {
     if (Date.now() < this.cooldown.until) return this.adopt(stale) ?? "transient";
     const lock = acquire(this.lock);
     if (!lock) {
@@ -167,8 +186,8 @@ export class Credentials {
       const current = this.read();
       if (!current) return "login";
       if (fresh(current, stale)) return (this.token = current);
-      if (current.refreshToken === this.dead) return "login";
-      const result = await exchange(current.refreshToken);
+      if (current.refreshToken === this.dead) return (await this.recover(current, rejected)) ?? "login";
+      const result = await exchange(current);
       if ("token" in result) {
         this.cooldown = { until: 0, count: 0 };
         this.write(result.token, current.accessToken);
@@ -184,10 +203,59 @@ export class Credentials {
       );
       if (result.failure === "login") this.dead = current.refreshToken;
       else this.backoff(result.retryAfter);
-      return result.failure;
+      return this.adopt(stale) ?? (await this.recover(current, rejected)) ?? result.failure;
     } finally {
       lock.release();
     }
+  }
+
+  private async recover(current: Token, rejected: boolean) {
+    if (!rejected && fresh(current)) return undefined;
+    try {
+      if (Date.now() - statSync(this.recovery).mtimeMs < recoveryCooldown) return undefined;
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+        this.log(Effect.logWarning("anthropic: CLI recovery cooldown unreadable", { file: this.recovery }));
+        return undefined;
+      }
+    }
+    try {
+      writeFileSync(this.recovery, "", { mode: 0o600 });
+      const cwd = path.join(os.tmpdir(), "opencode");
+      mkdirSync(cwd, { recursive: true });
+      const env: NodeJS.ProcessEnv = { ...process.env, CLAUDE_CONFIG_DIR: this.configDir };
+      for (const key of ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"]) delete env[key];
+      this.log(Effect.logInfo("anthropic: CLI recovery started", { file: this.file }));
+      await execFileAsync(
+        "claude",
+        [
+          "-p",
+          "Reply only OK.",
+          "--model",
+          "haiku",
+          "--max-turns",
+          "1",
+          "--tools",
+          "",
+          "--disable-slash-commands",
+          "--strict-mcp-config",
+          "--mcp-config",
+          '{"mcpServers":{}}',
+          "--setting-sources",
+          "",
+          "--no-session-persistence",
+        ],
+        { cwd, env, timeout: 60_000, killSignal: "SIGKILL", maxBuffer: 16_384 },
+      );
+    } catch {
+      this.log(Effect.logWarning("anthropic: CLI recovery failed", { file: this.file }));
+    }
+    const adopted = this.adopt(current.accessToken);
+    if (adopted) {
+      this.dead = undefined;
+      this.log(Effect.logInfo("anthropic: credentials recovered by CLI", { file: this.file }));
+    }
+    return adopted;
   }
 
   private backoff(retryAfter?: number) {
