@@ -93,6 +93,7 @@ export default Plugin.define({
           if (event.tool !== "shell") return;
           const command = text(event.input, "command");
           if (!command) return;
+          // The host asks external_directory before evaluating shell permissions, so reject navigation here.
           if (launches(command).some(([name]) => navigators.has(name))) {
             return yield* new Tool.Error({
               message:
