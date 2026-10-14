@@ -51,7 +51,8 @@ When a compaction this tool queued completes and the `drive` RPC reports the tre
 It does not continue when the compaction fails or is cancelled, when the session was interrupted (except by shutdown) or failed between the tool call and compaction, or when the execution that ran the compaction ends without `succeeded`.
 The `context` hook nudges root sessions at 150K and 250K tokens; both nudges allow compaction only after a commit lands or a task is done, never mid-task.
 Tokens are the last step's `input + output + reasoning + cache.read + cache.write`, the measure native compaction and the statusline use; V2 reports `input` without cached tokens.
-The final nudge names the model's input window, or its context window when no input limit is set; server plugins cannot read `compaction.buffer`, so the text gives no exact trigger.
+At or above 300K tokens, `session.step.ended` triggers root-only compaction with `delivery: "steer"` once per crossing.
+It runs at the next step boundary and continues the turn without creating a handoff brief or triggering drive resume.
 
 The `compaction` hook adds summary rules for user wording, approvals, remaining work, and path ownership, plus the stored handoff brief.
 Child summaries also preserve the delegate brief's objective, scope, limits, and checks.

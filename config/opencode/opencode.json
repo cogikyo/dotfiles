@@ -354,15 +354,15 @@
       "models": {
         "claude-opus-5-5": {
           "name": "Opus 5.5",
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         },
         "claude-sonnet-5-5": {
           "name": "Sonnet 5.5",
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         },
         "claude-fable-5-1": {
           "name": "Fable 5.1",
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         }
       }
     },
@@ -375,11 +375,11 @@
       "models": {
         "claude-opus-5-5": {
           "name": "Opus 5.5",
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         },
         "claude-sonnet-5-5": {
           "name": "Sonnet 5.5",
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         },
         "claude-fable-5-1": {
           "name": "Fable 5.1",
@@ -390,7 +390,7 @@
             },
             "effort": "medium"
           },
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         }
       }
     },
@@ -417,13 +417,13 @@
           "settings": {
             "reasoningEffort": "high"
           },
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         },
         "gpt-6.1-sol-fast": {
           "name": "Sol Fast"
         },
         "gpt-6-astra": {
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         }
       }
     },
@@ -460,7 +460,7 @@
               }
             }
           ],
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         }
       }
     },
@@ -497,7 +497,7 @@
               }
             }
           ],
-          "limit": { "input": 325000 }
+          "limit": { "input": 425000 }
         }
       }
     }

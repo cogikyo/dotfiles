@@ -3,6 +3,8 @@ import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 
 const tiers = [150_000, 250_000] as const;
+// Keep below opencode.json's limit.input - compaction.buffer so native compaction does not run first.
+const ceiling = 300_000;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -53,11 +55,10 @@ const BOUNDARY = [
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 
-function nudge(tier: number, window: number) {
+function nudge(tier: number) {
   const head = `Context passed ${label(tiers[tier])} tokens (compaction nudge ${tier + 1}/${tiers.length}).`;
   if (tier + 1 < tiers.length) return `${head} ${BOUNDARY}`;
-  const limit = window > 0 ? `this model's ${label(window)}-token window` : "the model's context window";
-  return `${head} Native auto-compaction fires as the context nears ${limit}, continues the turn, and gets no handoff brief. ${BOUNDARY}`;
+  return `${head} This session compacts automatically at ${label(ceiling)} tokens, mid-turn, with no handoff brief. ${BOUNDARY}`;
 }
 
 function explain(error: unknown) {
@@ -76,7 +77,7 @@ export default Plugin.define({
 
     const tokens = new Map<string, number>();
     const primaries = new Map<string, Promise<boolean>>();
-    const windows = new Map<string, Promise<number>>();
+    const compacting = new Set<string>();
 
     const primary = (sessionID: string) => {
       let known = primaries.get(sessionID);
@@ -84,21 +85,6 @@ export default Plugin.define({
         known = ctx.session.get({ sessionID }).then((session) => !session.parentID);
         known.catch(() => primaries.delete(sessionID));
         primaries.set(sessionID, known);
-      }
-      return known;
-    };
-
-    const window = (model: { providerID: string; id: string }) => {
-      const id = `${model.providerID}/${model.id}`;
-      let known = windows.get(id);
-      if (!known) {
-        known = ctx.model.list().then(({ data }) => {
-          const limit = data.find((entry) => entry.providerID === model.providerID && entry.id === model.id)?.limit;
-          if (!limit) windows.delete(id);
-          return limit ? limit.input || limit.context : 0;
-        });
-        known.catch(() => windows.delete(id));
-        windows.set(id, known);
       }
       return known;
     };
@@ -188,14 +174,7 @@ export default Plugin.define({
         const tier = tierFor(tokens.get(event.sessionID) ?? 0);
         if (tier < 0 || !(await primary(event.sessionID))) return;
         if ((await stored(event.sessionID)).length > 0) return;
-        const limit =
-          tier + 1 < tiers.length
-            ? 0
-            : await window(event.model).catch((error: unknown) => {
-                fail("model window", error);
-                return 0;
-              });
-        event.system.push({ type: "text", text: nudge(tier, limit) });
+        event.system.push({ type: "text", text: nudge(tier) });
       } catch (error) {
         fail("nudge", error);
       }
@@ -216,13 +195,26 @@ export default Plugin.define({
       }
     });
 
+    const cap = (sessionID: string, total: number) => {
+      if (total < ceiling || compacting.has(sessionID)) return;
+      compacting.add(sessionID);
+      void guard(
+        "compact at ceiling",
+        primary(sessionID).then((root) => (root ? ctx.session.compact({ sessionID, delivery: "steer" }) : undefined)),
+      );
+    };
+
     const controller = new AbortController();
     const watch = async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
         if (event.type === "session.step.ended") {
+          const { sessionID } = event.data;
           const { input, output, reasoning, cache } = event.data.tokens;
-          tokens.set(event.data.sessionID, input + output + reasoning + cache.read + cache.write);
+          const total = input + output + reasoning + cache.read + cache.write;
+          tokens.set(sessionID, total);
+          cap(sessionID, total);
         }
+        if (event.type === "session.compaction.started") compacting.add(event.data.sessionID);
         if (
           event.type === "session.execution.failed" ||
           (event.type === "session.execution.interrupted" && event.data.reason !== "shutdown")
@@ -231,6 +223,7 @@ export default Plugin.define({
         if (event.type === "session.compaction.ended") {
           const { sessionID } = event.data;
           tokens.delete(sessionID);
+          compacting.delete(sessionID);
           if (event.data.reason !== "manual") continue;
           const done = await sweep(sessionID).catch((error: unknown) => {
             fail("clear brief", error);
@@ -245,6 +238,7 @@ export default Plugin.define({
           await guard("clear brief", ctx.storage.remove(key(event.data.sessionID, event.data.inboxID)));
         if (event.type === "session.deleted") {
           tokens.delete(event.data.sessionID);
+          compacting.delete(event.data.sessionID);
           primaries.delete(event.data.sessionID);
           await guard(
             "clear brief",
