@@ -84,7 +84,6 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 			App:                  limitText(payloadString(payload, "app"), 128),
 			Message:              limitText(payloadString(payload, "message"), 512),
 			LastAssistantMessage: limitText(payloadString(payload, "last_assistant_message", "last-assistant-message"), 512),
-			AgentType:            limitText(payloadString(payload, "agent_type"), 128),
 			KittyPID:             envInt("KITTY_PID"),
 			KittyWindowID:        envInt("KITTY_WINDOW_ID"),
 		}, nil

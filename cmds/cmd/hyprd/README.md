@@ -220,6 +220,11 @@ hyprd notify dunst                    # handle Dunst script callbacks
 hyprd notify kitty-finish <command>   # emit kitty command-finish notification
 ```
 
+OpenCode events are `start`, `complete`, `lane`, `idle`, `permission`, `question`, `error`, and `viewed`; `viewed` clears the pane's notices.
+The configured `lane` event shows a green 2.5-second toast and plays `civ6-notification`.
+Hyprd tags OpenCode notices with desktop-entry `opencode` and dispatches notifications and sounds while locked.
+The [TUI plugin](../../../config/opencode/plugins/README.md#hyprd) owns reminder timing; hyprd applies no idle backoff.
+
 ### VPN
 
 ```bash

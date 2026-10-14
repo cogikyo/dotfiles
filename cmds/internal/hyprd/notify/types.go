@@ -23,26 +23,26 @@ type NotifyRequest struct {
 	Command              string `json:"command,omitempty"`
 	Message              string `json:"message,omitempty"`
 	LastAssistantMessage string `json:"last_assistant_message,omitempty"`
-	AgentType            string `json:"agent_type,omitempty"`
 	KittyPID             int    `json:"kitty_pid,omitempty"`
 	KittyWindowID        int    `json:"kitty_window_id,omitempty"`
 	birth                uint64
 }
 
 type notificationSpec struct {
-	App         string
-	Title       string
-	Body        string
-	IconPath    string
-	Style       string
-	Sound       string
-	Volume      int
-	Delay       time.Duration
-	NoReplace   bool
-	FocusAction bool
-	Urgency     *string
-	Timeout     *int
-	Birth       uint64
+	App          string
+	DesktopEntry string
+	Title        string
+	Body         string
+	IconPath     string
+	Style        string
+	Sound        string
+	Volume       int
+	Delay        time.Duration
+	NoReplace    bool
+	FocusAction  bool
+	Urgency      *string
+	Timeout      *int
+	Birth        uint64
 }
 
 type kittyContext struct {
@@ -59,11 +59,6 @@ type Notifier struct {
 	state   *state.State
 	cfg     *config.HyprConfig
 	publish func() // pushes the workspace payload after the attention set changes
-}
-
-type idleBackoff struct {
-	NextAllowed time.Time
-	Interval    time.Duration
 }
 
 func NewNotifier(h *hypr.Client, s *state.State, cfg *config.HyprConfig, publish func()) *Notifier {

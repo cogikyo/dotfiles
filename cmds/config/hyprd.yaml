@@ -281,12 +281,7 @@ notify:
       volume: 95
       timeout: 5000
 
-    subagent:
-      style: success
-      sound: sdv-collect-item
-      volume: 65
-      timeout: 2500
-    todo-complete:
+    lane:
       style: success
       sound: civ6-notification
       volume: 65

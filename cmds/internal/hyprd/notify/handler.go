@@ -16,9 +16,6 @@ import (
 )
 
 const (
-	idleBackoffInitial = 10 * time.Minute
-	idleBackoffStep    = 10 * time.Minute
-	idleBackoffMax     = 30 * time.Minute
 	dunstDeliveryTTL   = 30 * time.Minute
 	dunstDeliveryLimit = 1024
 )
@@ -26,8 +23,7 @@ const (
 var opencodePaneAckGroups = []string{
 	"start",
 	"complete",
-	"subagent",
-	"todo-complete",
+	"lane",
 	"idle",
 	"permission",
 	"question",
@@ -39,11 +35,6 @@ var globalPaneNotifications = &paneNotificationRegistry{
 	canceled: make(map[paneNotificationKey]map[uint64]struct{}),
 	ack:      make(map[paneNotificationKey]uint64),
 }
-
-var globalIdleGate = struct {
-	sync.Mutex
-	byKey map[string]idleBackoff
-}{byKey: make(map[string]idleBackoff)}
 
 var globalDunstDeliveries = &dunstDeliveryRegistry{
 	byID: make(map[int]dunstDelivery),
@@ -162,7 +153,6 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 		if paneNotificationID(ctx) == 0 {
 			return nil
 		}
-		n.trackAgentActivity(req, ctx)
 		n.acknowledgePane(ctx)
 		return nil
 	}
@@ -171,83 +161,34 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 	if !hasOpencodeContext(ctx) {
 		return nil
 	}
-	n.trackAgentActivity(req, ctx)
 
+	var title string
 	switch req.Event {
 	case "start":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Working", 80),
-			Style:       "start",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.Message, "Working", 80)
 	case "complete":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
-			Style:       "complete",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
-	case "subagent":
-		title := fmt.Sprintf("%s: %s",
-			preferredSummary(req.AgentType, "Agent", 32),
-			preferredSummary(req.Message, "Done", 70),
-		)
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       title,
-			Style:       "subagent",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
-	case "todo-complete":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Todo complete", 80),
-			Style:       "todo-complete",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.LastAssistantMessage, "Jobs done", 80)
+	case "lane":
+		title = preferredSummary(req.Message, "Lane done", 80)
 	case "idle":
-		if !n.allowIdleNotification(req, ctx) {
-			return nil
-		}
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Waiting for input", 80),
-			Style:       "idle",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.Message, "Waiting for input", 80)
 	case "permission":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Permission needed", 80),
-			Style:       "permission",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.Message, "Permission needed", 80)
 	case "question":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Question asked", 80),
-			Style:       "question",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.Message, "Question asked", 80)
 	case "error":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Session error", 80),
-			Style:       "error",
-			FocusAction: true,
-			Birth:       req.birth,
-		}, ctx)
+		title = preferredSummary(req.Message, "Session error", 80)
 	default:
 		return fmt.Errorf("unknown opencode event: %s", req.Event)
 	}
+	return n.dispatch(notificationSpec{
+		App:          ctx.App,
+		DesktopEntry: "opencode",
+		Title:        title,
+		Style:        req.Event,
+		FocusAction:  true,
+		Birth:        req.birth,
+	}, ctx)
 }
 
 func opencodePaneContext(req NotifyRequest) *kittyContext {
@@ -443,12 +384,17 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 		timeout = *spec.Timeout
 	}
 
+	entry := spec.DesktopEntry
+	if entry == "" {
+		entry = "hyprd"
+	}
+
 	args := []string{
 		"-a", app,
 		"-u", urgency,
 		"-t", strconv.Itoa(timeout),
 		"-h", "string:category:hyprd",
-		"-h", "string:desktop-entry:hyprd",
+		"-h", "string:desktop-entry:" + entry,
 	}
 	if !spec.NoReplace {
 		if id := replacementNotificationID(ctx, spec.Style); id > 0 {
@@ -680,54 +626,6 @@ func (n *Notifier) style(name string) config.ResolvedStyle {
 		return config.ResolvedStyle{}
 	}
 	return n.cfg.Notify.ResolveEvent(name)
-}
-
-func (n *Notifier) trackAgentActivity(req NotifyRequest, ctx *kittyContext) {
-	if req.Event == "idle" {
-		return
-	}
-
-	globalIdleGate.Lock()
-	delete(globalIdleGate.byKey, idleNotificationKey(req, ctx))
-	globalIdleGate.Unlock()
-}
-
-func (n *Notifier) allowIdleNotification(req NotifyRequest, ctx *kittyContext) bool {
-	now := time.Now()
-	key := idleNotificationKey(req, ctx)
-
-	globalIdleGate.Lock()
-	defer globalIdleGate.Unlock()
-
-	backoff := globalIdleGate.byKey[key]
-	if !backoff.NextAllowed.IsZero() && now.Before(backoff.NextAllowed) {
-		return false
-	}
-
-	interval := backoff.Interval
-	if interval == 0 {
-		interval = idleBackoffInitial
-	} else if interval < idleBackoffMax {
-		interval += idleBackoffStep
-		if interval > idleBackoffMax {
-			interval = idleBackoffMax
-		}
-	}
-	globalIdleGate.byKey[key] = idleBackoff{NextAllowed: now.Add(interval), Interval: interval}
-	return true
-}
-
-func idleNotificationKey(req NotifyRequest, ctx *kittyContext) string {
-	if id := paneNotificationID(ctx); id > 0 {
-		return req.Source + ":" + strconv.Itoa(id)
-	}
-	if ctx != nil && ctx.App != "" {
-		return req.Source + ":" + ctx.App
-	}
-	if req.App != "" {
-		return req.Source + ":" + req.App
-	}
-	return req.Source
 }
 
 func (n *Notifier) isSilentApp(app string) bool {
