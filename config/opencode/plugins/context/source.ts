@@ -6,7 +6,7 @@ export const configRoot = path.resolve(import.meta.dirname, "..", "..");
 const rootFiles = ["AGENTS.md", "COLLAB.md", "ROUTING.md"];
 const maxLabel = 36;
 
-export type Kind = "readme" | "agents" | "agent" | "skill" | "command" | "partial" | "spec" | "markdown";
+export type Kind = "readme" | "agents" | "agent" | "skill" | "command" | "partial" | "markdown";
 
 export function isMarkdown(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0]);
@@ -15,7 +15,6 @@ export function isMarkdown(value: string) {
 export function kindOf(filePath: string): Kind {
   const normalized = path.normalize(filePath);
   const leaf = path.basename(normalized).toLowerCase();
-  if (normalized.split(path.sep).includes(".spec")) return "spec";
   if (leaf === "readme.md") return "readme";
   if (leaf === "agents.md" || isRootFile(normalized)) return "agents";
   if (leaf === "skill.md") return "skill";
@@ -65,7 +64,6 @@ export function label(roots: readonly string[], filePath: string, kind: Kind) {
 }
 
 function rawLabel(roots: readonly string[], filePath: string, kind: Kind) {
-  if (kind === "spec") return specLabel(filePath);
   if (kind === "agent") return agentLabel(filePath);
   if (kind === "skill") return ownedLabel(roots, filePath, skillName(filePath), "skills", "skill");
   if (kind === "command") return ownedLabel(roots, filePath, commandName(filePath), "commands", "command");
@@ -134,12 +132,6 @@ function ownedLabel(roots: readonly string[], filePath: string, name: string, ..
   if (parts[index] === ".opencode" || parts[index] === "opencode") index -= 1;
   const owner = index >= 0 ? parts[index].replace(/^\./, "") : "";
   return `${owner || rootName(roots, filePath)}/${name}`;
-}
-
-function specLabel(filePath: string) {
-  const parts = path.normalize(filePath).split(path.sep).filter(Boolean);
-  const index = parts.lastIndexOf(".spec");
-  return stripExtension([parts[index - 1], ...parts.slice(index + 1)].filter(Boolean).join(path.sep));
 }
 
 function rootName(roots: readonly string[], filePath: string) {

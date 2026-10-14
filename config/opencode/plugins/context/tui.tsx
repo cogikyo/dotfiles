@@ -71,7 +71,6 @@ const glyph = {
   markdown: "\u{f0354}",
   compacted: "\u{ef2d}",
   readme: "\u{ef0d}",
-  spec: "\u{f1345}",
   nvim: "\u{e6ae}",
 };
 
@@ -241,8 +240,6 @@ function appearance(roots: readonly string[], file: string, kind: ReturnType<typ
         : { icon: glyph.commandProject, color: colors.cyan };
     case "partial":
       return { icon: glyph.partial, color: colors.yellow };
-    case "spec":
-      return { icon: glyph.spec, color: colors.cyan };
     case "markdown":
       return { icon: glyph.markdown, color: colors.muted };
   }

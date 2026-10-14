@@ -198,7 +198,7 @@ Never and always are usually the agent's failure mode; humans live in default-an
 - Prefer concise, complete sentences over dense paragraphs; do not over index and create series of extremely short sentences.
 - Use blank lines only between real Markdown blocks such as paragraphs, headings, lists, callouts, and fences.
 - Keep each paragraph about one topic, and use multiple adjacent sentence lines when the topic needs development.
-  For in-repo comments, docs, and specs, prefer ASD-STE100: common words, one meaning per word, one term per idea, short sentences, active voice.
+  For in-repo comments and docs, prefer ASD-STE100: common words, one meaning per word, one term per idea, short sentences, active voice.
 - Avoid general LLM slop. Ban the rhetorical move; stock phrases here are examples to help properly avoid. Taste.
   - **Cataphoric teasers** / setup-payoff: "Here's the part nobody tells you...", "Here's what most people get wrong...", "Here's where it gets interesting..."
   - **Negative parallelism** / fake contrast: "it's not X, it's Y", "the question is not X, it is Y", "not just X, but Y", "No X. No Y. Just Z". Frequent ", not" is a read flag.
