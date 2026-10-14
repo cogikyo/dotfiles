@@ -17,6 +17,7 @@ ShellRoot {
     property bool busy: false
     property var weather: null
     property var tally: ({})
+    property var seen: ({})
     property var hides: []
     readonly property var notices: Object.entries(tally)
         .map(([app, count]) => ({ app: app, count: count }))
@@ -123,16 +124,24 @@ ShellRoot {
         running: true
         stdout: SplitParser {
             onRead: line => {
-                let app, replaces, summary, body
+                let app, replaces, summary, body, hints
                 try {
-                    [app, replaces, , summary, body] = JSON.parse(line).payload.data
+                    [app, replaces, , summary, body, , hints] = JSON.parse(line).payload.data
                 } catch (e) {
                     console.warn("lock notices:", e)
                     return
                 }
-                if (replaces !== 0 || shell.hidden(app, summary, body))
+                if (shell.hidden(app, summary, body))
                     return
-                shell.tally = Object.assign({}, shell.tally, { [app]: (shell.tally[app] ?? 0) + 1 })
+                if (replaces !== 0) {
+                    const content = JSON.stringify([summary, body])
+                    if (shell.seen[replaces] === content)
+                        return
+                    shell.seen[replaces] = content
+                }
+                const key = hints?.["desktop-entry"]?.data === "opencode" ? "opencode" : app
+                const count = key === "Grok Bot" ? 1 : (shell.tally[key] ?? 0) + 1
+                shell.tally = Object.assign({}, shell.tally, { [key]: count })
             }
         }
         onExited: code => console.warn("lock notices: busctl exited", code)

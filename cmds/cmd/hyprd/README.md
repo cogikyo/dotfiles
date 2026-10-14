@@ -167,6 +167,10 @@ The lock UI shows the still image unless Hyprland reports that the focused works
 Until its first check returns, the lock surface on the focused monitor stays clear, and other monitors show the still; the still appears if the check fails or takes longer than 1 second.
 After the first check, each Hyprland window, workspace, monitor, and layer event shows the still and starts a new check, and a passing check hides the still again after 500 ms.
 
+The lock UI counts incoming notices that pass dunst's display rules and groups OpenCode notices under `opencode`.
+For a nonzero replacement ID, only a changed summary or body adds to the count; Grok Bot stays at one.
+Known apps use tinted single-color SVG icons from `config/quickshell/lock/icons/`; other apps show their names.
+
 ### Browser
 
 ```bash

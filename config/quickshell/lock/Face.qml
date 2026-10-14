@@ -21,6 +21,7 @@ Rectangle {
     readonly property string face: "Adwaita Sans"
     readonly property real s: height / 1080
     readonly property real edge: 96 * s
+    readonly property var icons: ["opencode", "slack", "firefox", "discord", "spotify"]
 
     readonly property color tint: music.tint
     property bool clear: false
@@ -171,7 +172,27 @@ Rectangle {
                         font.pixelSize: 26 * root.s
                     }
 
+                    Image {
+                        id: mark
+                        readonly property string key: group.modelData.app.toLowerCase().split(" ")[0]
+                        readonly property bool known: root.icons.includes(key)
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: known
+                        source: known ? `icons/${key}.svg` : ""
+                        width: 26 * root.s
+                        height: width
+                        sourceSize: Qt.size(width, height)
+                        fillMode: Image.PreserveAspectFit
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            brightness: 1
+                            colorization: 1
+                            colorizationColor: root.lavender
+                        }
+                    }
+
                     Label {
+                        visible: !mark.known
                         text: group.modelData.app
                         font.pixelSize: 26 * root.s
                     }
