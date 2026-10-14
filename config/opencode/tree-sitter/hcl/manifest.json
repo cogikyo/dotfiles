@@ -1,0 +1,8 @@
+{
+  "filetype": "vagari.hcl",
+  "wasm": "https://github.com/tree-sitter-grammars/tree-sitter-hcl/releases/download/v1.2.0/tree-sitter-hcl.wasm",
+  "aliases": [
+    "tf",
+    "terraform"
+  ]
+}

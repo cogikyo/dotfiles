@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.clojure",
+  "wasm": "https://github.com/anomalyco/tree-sitter-clojure/releases/download/v0.0.1/tree-sitter-clojure.wasm"
+}

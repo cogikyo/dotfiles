@@ -1,0 +1,7 @@
+{
+  "filetype": "vagari.python",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.23.6/tree-sitter-python.wasm",
+  "aliases": [
+    "python3"
+  ]
+}

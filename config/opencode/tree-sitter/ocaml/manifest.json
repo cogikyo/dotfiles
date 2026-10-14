@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.ocaml",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-ocaml/releases/download/v0.24.2/tree-sitter-ocaml.wasm"
+}

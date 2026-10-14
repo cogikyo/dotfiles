@@ -1,0 +1,7 @@
+{
+  "filetype": "vagari.json",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-json/releases/download/v0.24.8/tree-sitter-json.wasm",
+  "aliases": [
+    "jsonc"
+  ]
+}

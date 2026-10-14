@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.r",
+  "wasm": "https://github.com/r-lib/tree-sitter-r/releases/download/v1.2.0/tree-sitter-r.wasm"
+}

@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.lua",
+  "wasm": "https://github.com/tree-sitter-grammars/tree-sitter-lua/releases/download/v0.5.0/tree-sitter-lua.wasm"
+}

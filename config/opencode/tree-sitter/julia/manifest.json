@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.julia",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-julia/releases/download/v0.23.1/tree-sitter-julia.wasm"
+}

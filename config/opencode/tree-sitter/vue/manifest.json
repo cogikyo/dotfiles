@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.vue",
+  "wasm": "https://github.com/anomalyco/tree-sitter-vue/releases/download/v0.1.2/tree-sitter-vue.wasm"
+}

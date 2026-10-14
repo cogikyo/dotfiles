@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.java",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-java/releases/download/v0.23.5/tree-sitter-java.wasm"
+}

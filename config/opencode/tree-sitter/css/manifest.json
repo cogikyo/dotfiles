@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.css",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-css/releases/download/v0.25.0/tree-sitter-css.wasm"
+}

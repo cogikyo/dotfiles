@@ -1,0 +1,7 @@
+{
+  "filetype": "vagari.csharp",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-c-sharp/releases/download/v0.23.1/tree-sitter-c_sharp.wasm",
+  "aliases": [
+    "c#"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "filetype": "vagari.bash",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-bash/releases/download/v0.25.0/tree-sitter-bash.wasm",
+  "aliases": [
+    "shell"
+  ]
+}

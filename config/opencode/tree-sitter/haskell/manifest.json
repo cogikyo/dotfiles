@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.haskell",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-haskell/releases/download/v0.23.1/tree-sitter-haskell.wasm"
+}

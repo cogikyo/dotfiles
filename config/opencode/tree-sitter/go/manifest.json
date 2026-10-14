@@ -1,0 +1,7 @@
+{
+  "filetype": "vagari.go",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-go/releases/download/v0.25.0/tree-sitter-go.wasm",
+  "aliases": [
+    "golang"
+  ]
+}

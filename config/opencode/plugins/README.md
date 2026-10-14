@@ -234,6 +234,17 @@ Non-primary agents keep their labels.
 V2 has no slot for these rows, so `byline/rewrite.ts` rewrites native text nodes in a lifecycle pass each frame.
 An upstream layout change can leave the native label visible; assistant footers also keep the native label below 28 terminal columns.
 
+## Code blocks
+
+`code-blocks/tui.ts` renders supported fenced code blocks as padded cards with a raised background and a muted top-right language label.
+Cards always use Vagari highlighting, independent of the TUI theme.
+Converted nvim-treesitter queries use private `vagari.<ft>` parsers for cards; the hand-maintained `sql/` parser is public because OpenCode has no SQL parser.
+
+Add a parser folder at `config/opencode/tree-sitter/<ft>/` with `highlights.scm` and `tree-sitter-<ft>.wasm`; optional `manifest.json` sets `filetype`, `wasm`, and fence `aliases`.
+Sync needs `~/vagari/nvim`, the nvim-treesitter `main` checkout at `~/.local/share/nvim/lazy/nvim-treesitter`, headless Neovim, and the installed OpenCode source in the `src` cache (`src get github.com/anomalyco/opencode@<version>`).
+From `config/opencode`, run `bun plugins/code-blocks/sync.ts` after changes to Vagari, nvim-treesitter queries, or the host parser catalog.
+Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tree-sitter/` but keeps every parser folder whose manifest sets no `filetype`, and fails if such a folder shares a name with a generated one.
+
 ## Bullets
 
 `bullets/tui.ts` uses `•` for depth-0 unordered list markers and `◦` at deeper levels.

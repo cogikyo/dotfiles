@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.yaml",
+  "wasm": "https://github.com/tree-sitter-grammars/tree-sitter-yaml/releases/download/v0.7.2/tree-sitter-yaml.wasm"
+}

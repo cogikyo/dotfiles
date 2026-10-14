@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.html",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-html/releases/download/v0.23.2/tree-sitter-html.wasm"
+}

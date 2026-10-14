@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.rust",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-rust/releases/download/v0.24.0/tree-sitter-rust.wasm"
+}

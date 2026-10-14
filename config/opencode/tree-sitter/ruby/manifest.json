@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.ruby",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-ruby/releases/download/v0.23.1/tree-sitter-ruby.wasm"
+}

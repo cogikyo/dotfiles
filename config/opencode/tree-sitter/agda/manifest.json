@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.agda",
+  "wasm": "https://github.com/tree-sitter/tree-sitter-agda/releases/download/v1.3.3/tree-sitter-agda.wasm"
+}

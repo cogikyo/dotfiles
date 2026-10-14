@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.vim",
+  "wasm": "https://github.com/tree-sitter-grammars/tree-sitter-vim/releases/download/v0.8.1/tree-sitter-vim.wasm"
+}

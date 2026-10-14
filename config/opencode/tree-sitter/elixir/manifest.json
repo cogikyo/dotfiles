@@ -1,0 +1,4 @@
+{
+  "filetype": "vagari.elixir",
+  "wasm": "https://github.com/elixir-lang/tree-sitter-elixir/releases/download/v0.3.5/tree-sitter-elixir.wasm"
+}
