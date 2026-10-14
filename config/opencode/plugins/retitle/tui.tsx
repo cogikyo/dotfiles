@@ -2,8 +2,6 @@ import { Plugin } from "@opencode/plugin/tui";
 import { MouseButton, type BaseRenderable, type TextRenderable } from "@opentui/core";
 import { api, pinned } from "./rpc.ts";
 
-const MESSAGES = 6;
-const MESSAGE_CHARS = 600;
 const REACH = 8;
 
 function isTitle(node: BaseRenderable): node is TextRenderable {
@@ -46,22 +44,14 @@ export default Plugin.define({
       const sessionID = shown();
       return sessionID ? context.data.session.root(sessionID) : undefined;
     };
-    const recent = (sessionID: string) =>
-      context.data.session.message
-        .list(sessionID)
-        .flatMap((message) => (message.type === "user" ? [message.text.replace(/\s+/gu, " ").trim()] : []))
-        .filter(Boolean)
-        .slice(-MESSAGES)
-        .map((text) => text.slice(0, MESSAGE_CHARS));
     const run = async (sessionID: string | undefined, caps: boolean) => {
       const session = sessionID ? context.data.session.get(sessionID) : undefined;
       if (!session) return;
       const options = { location: { directory: session.location.directory } };
-      const input = { sessionID: session.id, recent: recent(session.id) };
       try {
         const result = caps
-          ? await rpc.caps({ ...input, on: !pinned(session.title) }, options)
-          : await rpc.now(input, options);
+          ? await rpc.caps({ sessionID: session.id, on: !pinned(session.title) }, options)
+          : await rpc.now({ sessionID: session.id }, options);
         context.ui.toast.show({ message: `Retitled: ${result.title}`, variant: "info" });
       } catch (error) {
         context.ui.toast.show({ title: "Retitle failed", message: String(error), variant: "error" });

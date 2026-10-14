@@ -5,7 +5,7 @@ export function pinned(title: string | undefined) {
   return !!title && /\p{L}/u.test(title) && !/\p{Ll}/u.test(title);
 }
 
-const input = { sessionID: Schema.String, recent: Schema.Array(Schema.String) };
+const input = { sessionID: Schema.String };
 const Result = Schema.toStandardSchemaV1(Schema.Struct({ title: Schema.String }));
 
 export const api = Rpc.define({

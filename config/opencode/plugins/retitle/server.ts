@@ -4,9 +4,12 @@ import { api, pinned } from "./rpc.ts";
 
 const TRIGGER = 2;
 const COOLDOWN_MS = 5 * 60_000;
-const MESSAGES = 6;
-const MESSAGE_CHARS = 600;
-const TOTAL_CHARS = 3_000;
+const WORDS = 3;
+const OPENING = 2;
+const SAMPLED = 4;
+const LATEST = 3;
+const MESSAGE_CHARS = 400;
+const SUMMARY_CHARS = 1_200;
 const MAX_CHARS = 36;
 const CLOSED = "[CLOSED] ";
 const ORCHESTRATOR =
@@ -32,24 +35,69 @@ const MINOR = new Set([
   "with",
 ]);
 
-type State = { count: number; recent: string[]; wrote: number; running: boolean };
+type Message = Awaited<ReturnType<Plugin.Context["session"]["context"]>>[number];
+type State = { count: number; wrote: number; running: boolean };
 
-function request(title: string, recent: readonly string[], force: boolean) {
-  const kept: string[] = [];
-  let total = 0;
-  for (const text of recent.toReversed()) {
-    if (total + text.length > TOTAL_CHARS) break;
-    kept.unshift(text);
-    total += text.length;
-  }
+function human(text: string) {
+  const plain = text
+    .replace(/\[Image \d+\]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return plain.split(" ").length >= WORDS ? plain : undefined;
+}
+
+function clip(text: string, max: number) {
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
+function transcript(messages: readonly Message[]) {
+  const summary = messages.flatMap((message) =>
+    message.type === "compaction" && message.status === "completed" ? [message.summary] : [],
+  )[0];
+  const said = messages.flatMap((message) => {
+    const text = message.type === "user" ? human(message.text) : undefined;
+    return text ? [text] : [];
+  });
+  if (!summary && said.length === 0) return undefined;
+  const middle = Math.max(0, said.length - OPENING - LATEST);
+  const picks = [
+    ...new Set([
+      ...Array.from({ length: OPENING }, (_, index) => index),
+      ...Array.from({ length: SAMPLED }, (_, index) => OPENING + Math.floor(((index + 0.5) * middle) / SAMPLED)),
+      ...Array.from({ length: LATEST }, (_, index) => said.length - LATEST + index),
+    ]),
+  ]
+    .filter((index) => index >= 0 && index < said.length)
+    .toSorted((a, b) => a - b);
+  const objective = summary?.split(/\n(?=#{1,6} )/u).find((section) => section.trim());
   return [
-    `Current title: ${title}`,
-    "Recent user messages, oldest first:",
-    "<messages>",
-    ...kept.map((text, index) => `${index + 1}. ${text}`),
-    "</messages>",
-    "Write a 2-4 word title in Title Case for what this session is working on now, in the language of the user messages.",
-    ...(force ? [] : ["If the current title still fits, reply with the current title unchanged."]),
+    ...(objective
+      ? ["Summary of the session's earlier work:", "<summary>", clip(objective.trim(), SUMMARY_CHARS), "</summary>"]
+      : []),
+    ...(picks.length > 0
+      ? [
+          `The user has sent ${said.length} messages${summary ? " since that summary" : ""}; a selection follows, oldest first, numbered by position:`,
+          "<messages>",
+          ...picks.map((index) => `#${index + 1} ${clip(said[index] ?? "", MESSAGE_CHARS)}`),
+          "</messages>",
+        ]
+      : []),
+  ].join("\n");
+}
+
+function request(title: string | undefined, context: string) {
+  return [
+    "Name this coding session so the user can find it later by scanning or searching a list of sessions.",
+    ...(title ? [`Current title: ${title}`] : []),
+    context,
+    "Write a 2-4 word title in Title Case that names the session's main work by its concrete subject, such as the feature, component, file, or bug, in the language of the user messages.",
+    "Judge the whole session: early messages usually state the goal, and later messages usually refine or follow up on it.",
+    'Approvals, "continue", formatting or length requests, and instructions about how to reply never name a session.',
+    ...(title
+      ? [
+          "If the current title still names the main work, reply with it unchanged; change it only when the main work has clearly moved to a different task.",
+        ]
+      : []),
     "Reply with the title only.",
   ].join("\n");
 }
@@ -68,7 +116,7 @@ function clean(raw: string) {
     .replace(/^["'“”‘’]+|["'“”‘’.]+$/gu, "")
     .trim();
   const cased = titleCase(title);
-  return cased.length > MAX_CHARS ? `${cased.slice(0, MAX_CHARS - 1).trimEnd()}…` : cased;
+  return clip(cased, MAX_CHARS);
 }
 
 function titleCase(title: string) {
@@ -92,14 +140,16 @@ export default Plugin.define({
     const controller = new AbortController();
 
     const state = (sessionID: string) => {
-      const current = states.get(sessionID) ?? { count: 0, recent: [], wrote: 0, running: false };
+      const current = states.get(sessionID) ?? { count: 0, wrote: 0, running: false };
       states.set(sessionID, current);
       return current;
     };
 
-    const generate = async (title: string, recent: readonly string[], force: boolean) => {
+    const generate = async (sessionID: string, title: string | undefined) => {
+      const context = transcript(await ctx.session.context({ sessionID }));
+      if (!context) throw new Error("retitle: the session has no user messages to title");
       const { data: agent } = await ctx.agent.get({ agentID: "title" });
-      const { text } = await ctx.generate.text({ prompt: request(title, recent, force), model: agent.model });
+      const { text } = await ctx.generate.text({ prompt: request(title, context), model: agent.model });
       return clean(text);
     };
 
@@ -119,9 +169,8 @@ export default Plugin.define({
       try {
         const session = await ctx.session.get({ sessionID });
         if (session.parentID || !session.title || pinned(session.title) || session.title.startsWith(CLOSED)) return;
-        const recent = current.recent.slice();
         current.count = 0;
-        const title = await generate(session.title, recent, false);
+        const title = await generate(sessionID, session.title);
         if (!title) return;
         const latest = await ctx.session.get({ sessionID });
         if (
@@ -137,21 +186,21 @@ export default Plugin.define({
       }
     };
 
-    const manual = async (sessionID: string, recent: readonly string[], caps: boolean) => {
+    const manual = async (sessionID: string, caps: boolean) => {
       const session = await ctx.session.get({ sessionID });
       if (session.parentID) throw new Error("retitle: child sessions keep their delegated titles");
-      const title = await generate(session.title ?? "", recent, true);
+      const title = await generate(sessionID, undefined);
       if (!title) throw new Error("retitle: the title model returned no title");
       return write(sessionID, caps ? title.toUpperCase() : title);
     };
 
     await ctx.rpc.register(api, {
-      now: async ({ sessionID, recent }) => {
+      now: async ({ sessionID }) => {
         const { title } = await ctx.session.get({ sessionID });
-        return manual(sessionID, recent, pinned(title));
+        return manual(sessionID, pinned(title));
       },
-      caps: async ({ sessionID, recent, on }) => {
-        if (!on) return manual(sessionID, recent, false);
+      caps: async ({ sessionID, on }) => {
+        if (!on) return manual(sessionID, false);
         const { title } = await ctx.session.get({ sessionID });
         if (!title) throw new Error("retitle: the session has no title to pin");
         return write(sessionID, title.toUpperCase());
@@ -169,13 +218,12 @@ export default Plugin.define({
 
     const watch = async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
-        if (event.type === "session.inbox.enqueued" && event.data.item.type === "user") {
-          const text = event.data.item.payload.text.replace(/\s+/gu, " ").trim().slice(0, MESSAGE_CHARS);
-          if (!text) continue;
-          const current = state(event.data.sessionID);
-          current.count++;
-          current.recent = [...current.recent, text].slice(-MESSAGES);
-        }
+        if (
+          event.type === "session.inbox.enqueued" &&
+          event.data.item.type === "user" &&
+          human(event.data.item.payload.text)
+        )
+          state(event.data.sessionID).count++;
         if (event.type === "session.deleted") states.delete(event.data.sessionID);
         if (event.type === "session.execution.succeeded") {
           retitle(event.data.sessionID).catch((error: unknown) =>
