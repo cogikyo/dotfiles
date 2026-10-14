@@ -220,6 +220,7 @@ export class Credentials {
       }
     }
     try {
+      // The refresh lock serializes this marker update, and failed CLI attempts also consume the shared cooldown.
       writeFileSync(this.recovery, "", { mode: 0o600 });
       const cwd = path.join(os.tmpdir(), "opencode");
       mkdirSync(cwd, { recursive: true });
