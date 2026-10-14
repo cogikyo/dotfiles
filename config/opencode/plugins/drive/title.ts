@@ -1,7 +1,8 @@
 import type { Renderable, RGBA, TextRenderable } from "@opentui/core";
 import { colors } from "../statusline/palette.ts";
 
-const glyph = "\u{f04d4} ";
+export const glyph = "\u{f04d4}";
+const prefix = `${glyph} `;
 const depth = 4;
 const arrival = 450;
 
@@ -85,7 +86,7 @@ export function title(root: Renderable) {
       decors.set(target, created);
       decor = created;
     }
-    if (target.textNode.children[0] !== glyph) target.textNode.add(glyph, 0);
+    if (target.textNode.children[0] !== prefix) target.textNode.add(prefix, 0);
     if (!target.fg.equals(colors.brightBlue)) {
       decor.fg = target.fg;
       target.fg = colors.brightBlue;
@@ -106,7 +107,7 @@ export function title(root: Renderable) {
     Reflect.deleteProperty(target, "rename");
     target.rename = decor.core;
     const children = target.textNode.children;
-    if (children[0] === glyph) target.textNode.children = children.slice(1);
+    if (children[0] === prefix) target.textNode.children = children.slice(1);
     if (target.fg.equals(colors.brightBlue)) target.fg = decor.fg;
   };
 

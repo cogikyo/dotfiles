@@ -54,6 +54,10 @@ export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }
   return <box position="absolute" ref={(box) => (host = box)} />;
 }
 
+export function edge(editor: Renderable) {
+  return editor.screenX + editor.width - Math.max(...Object.values(glyph).map((icon) => Bun.stringWidth(icon))) - gap;
+}
+
 function tip(context: Context, buffer: OptimizedBuffer, editor: Renderable) {
   const icon = queued() ? glyph.queue : glyph.steer;
   const width = Bun.stringWidth(icon);

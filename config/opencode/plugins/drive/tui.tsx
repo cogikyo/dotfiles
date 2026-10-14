@@ -1,9 +1,12 @@
-import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, createSignal, Show } from "solid-js";
+import { Plugin, usePlugin } from "@opencode/plugin/tui";
+import type { OptimizedBuffer, Renderable } from "@opentui/core";
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { edge } from "../statusline/delivery.tsx";
 import { colors } from "../statusline/palette.ts";
+import { cell, hook, locate } from "../statusline/prompt.ts";
 import { api, type Entry } from "./rpc.ts";
-import { title } from "./title.ts";
+import { glyph, title } from "./title.ts";
 
 const poll = 250;
 
@@ -84,7 +87,13 @@ export default Plugin.define({
           if (id && !(id in armed)) sync(id).catch(fail);
         });
         const key = () => root() ?? "";
-        return <Badge context={context} visible={(armed[key()] ?? false) && decorated() !== key()} />;
+        const on = () => armed[key()] ?? false;
+        return (
+          <>
+            <Badge context={context} visible={on() && decorated() !== key()} />
+            <Mark armed={on()} />
+          </>
+        );
       },
     });
 
@@ -160,6 +169,34 @@ function Badge(props: { context: Plugin.Context; visible: boolean }) {
       </text>
     </Show>
   );
+}
+
+function Mark(props: { armed: boolean }) {
+  const context = usePlugin();
+  let host: Renderable | undefined;
+  createEffect(() => {
+    void props.armed;
+    context.renderer.requestRender();
+  });
+  onMount(() => {
+    const prompt = host && locate(host);
+    if (!prompt) return;
+    onCleanup(
+      hook(prompt.row, (buffer) => {
+        if (props.armed) stamp(buffer, prompt.editor);
+      }),
+    );
+  });
+  return <box position="absolute" ref={(box) => (host = box)} />;
+}
+
+function stamp(buffer: OptimizedBuffer, editor: Renderable) {
+  const width = Bun.stringWidth(glyph);
+  const x = edge(editor) - width;
+  const y = editor.screenY;
+  if (x - 1 < editor.screenX) return;
+  for (let column = x - 1; column < x + width; column++) if (cell(buffer, column, y) !== undefined) return;
+  buffer.drawText(glyph, x, y, colors.brightBlue);
 }
 
 function choice(entry: Entry) {
