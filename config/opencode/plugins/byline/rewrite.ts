@@ -1,4 +1,5 @@
 import {
+  BoxRenderable,
   isTextNodeRenderable,
   RGBA,
   TextAttributes,
@@ -16,6 +17,9 @@ type Frame = Renderable & { readonly border: unknown };
 type Scroll = Renderable & { readonly content: Renderable };
 type Undo = () => void;
 type Names = () => ReadonlySet<string>;
+type Host = { context: Plugin.Context; sessionID?: string };
+type Mark = { tone: RGBA; top: number };
+type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; info: RGBA };
 
 const separator = " · ";
 
@@ -27,8 +31,11 @@ const tones = {
 
 const italic = { attributes: TextAttributes.ITALIC };
 
+// Exclude injected nodes from host-tree matching and repeated italic wrapping.
 const owned = new WeakSet<object>();
 const rules = new WeakMap<Renderable, TextRenderable[]>();
+const rails = new WeakMap<Renderable, BoxRenderable>();
+const spans = new WeakMap<Renderable, RGBA | undefined>();
 
 export class Ledger {
   readonly #entries = new Map<Renderable, Map<unknown, Undo>>();
@@ -142,20 +149,39 @@ function metadata(anchor: Renderable) {
   return inner[editor + 1]?.getChildren()[0]?.getChildren();
 }
 
-export function transcript(anchor: Renderable, names: Names, ledger: Ledger, context: Plugin.Context) {
+export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { context, sessionID }: Host) {
   const scroll = scroller(anchor.parent?.parent, 2);
   if (!scroll) return;
   ledger.prune();
   const renderer = context.renderer;
   if (renderer.width < 28) return ledger.clear();
-  for (const row of scroll.content.getChildren()) {
-    const box = row.getChildren().at(-1);
-    if (!box) continue;
-    const [text, ...extra] = box.getChildren().filter((node) => !rules.get(box)?.some((side) => side === node));
-    if (extra.length > 0 || !textual(text)) continue;
-    if (byline(text, names, ledger)) rule(box, scroll.content.width - Bun.stringWidth(read(text)), ledger, renderer);
-    else notice(text, ledger, context.theme.text.feedback.info.base);
+  const scan = { names, ledger, renderer, width: scroll.content.width, info: context.theme.text.feedback.info.base };
+  const rows = scroll.content.getChildren();
+  // Retained rows preserve tone when the completion notice leaves the mounted window.
+  let tone = spans.get(rows[0]);
+  for (const row of rows) {
+    const box = native(row).at(-1);
+    const edge = box && boundary(box, scan);
+    if (edge) tone = edge.tone;
+    if (sessionID && context.data.session.message.get(sessionID, row.id)?.type === "user") tone = undefined;
+    rail(row, box && tone ? { tone, top: edge?.top ?? -1 } : undefined, ledger, renderer);
+    spans.set(row, tone);
   }
+}
+
+function boundary(box: Renderable, scan: Scan): { tone?: RGBA; top: number } | undefined {
+  const [text, ...extra] = native(box);
+  if (extra.length > 0 || !textual(text)) return;
+  if (byline(text, scan.names, scan.ledger)) {
+    rule(box, scan.width - Bun.stringWidth(read(text)), scan.ledger, scan.renderer);
+    return { top: -1 };
+  }
+  const done = completion(text);
+  if (done) {
+    notice(done, text, scan.ledger, scan.info);
+    return { tone: done.tone, top: 0 };
+  }
+  if (turned(text)) return { top: -1 };
 }
 
 function byline(text: Text, names: Names, ledger: Ledger) {
@@ -207,15 +233,62 @@ function sides(box: Renderable, renderer: CliRenderer) {
             }),
         );
   rules.set(box, pair);
+  for (const side of pair) owned.add(side);
   for (const side of pair) if (side.plainText.length !== renderer.width) side.content = "─".repeat(renderer.width);
   return pair;
 }
 
-function notice(text: Text, ledger: Ledger, info: RGBA) {
-  const [heading] = text.textNode.children;
-  if (!isTextNodeRenderable(heading) || !heading.fg?.equals(info)) return;
-  const tone = roles[/^↳ ([^/\s]+)\//.exec(flatten(heading))?.[1].toLowerCase() ?? ""];
-  if (tone && ledger.paint(text, heading, tone)) text.onLifecyclePass?.();
+function rail(row: Renderable, mark: Mark | undefined, ledger: Ledger, renderer: CliRenderer) {
+  if (!mark) return ledger.restore(row);
+  const known = rails.get(row);
+  const bar =
+    known && !known.isDestroyed
+      ? known
+      : new BoxRenderable(renderer, {
+          position: "absolute",
+          left: 0,
+          bottom: 0,
+          width: 1,
+          border: ["left"],
+          customBorderChars: {
+            topLeft: "",
+            topRight: "",
+            bottomLeft: "",
+            bottomRight: "",
+            horizontal: " ",
+            vertical: "▎",
+            topT: "",
+            bottomT: "",
+            leftT: "",
+            rightT: "",
+            cross: "",
+          },
+        });
+  rails.set(row, bar);
+  owned.add(bar);
+  if (!bar.borderColor.equals(mark.tone)) bar.borderColor = mark.tone;
+  if (bar.top !== mark.top) bar.top = mark.top;
+  ledger.mount(row, bar);
+}
+
+function completion(text: Text) {
+  const [heading, suffix, ...rest] = text.textNode.children;
+  if (rest.length > 0 || !isTextNodeRenderable(heading) || !isTextNodeRenderable(suffix)) return;
+  if (!/^( ·|…| …|$)/.test(flatten(suffix))) return;
+  const [, glyph, role] = /^([↳!]) (?:([^/\s]+)\/)?\S/.exec(flatten(heading)) ?? [];
+  if (glyph === "!") return { heading, tone: undefined };
+  if (glyph && role) return { heading, tone: roles[role.toLowerCase()] };
+}
+
+function notice(done: { heading: TextNodeRenderable; tone?: RGBA }, text: Text, ledger: Ledger, info: RGBA) {
+  if (!done.tone || !done.heading.fg?.equals(info)) return;
+  if (ledger.paint(text, done.heading, done.tone)) text.onLifecyclePass?.();
+}
+
+function turned(text: Text) {
+  const [agent, model] = text.textNode.children;
+  if (!isTextNodeRenderable(agent) || !isTextNodeRenderable(model)) return false;
+  return !/^[↳!] /.test(flatten(agent)) && flatten(model).startsWith(separator);
 }
 
 function emphasize(owner: Renderable, node: TextNodeRenderable, ledger: Ledger) {
@@ -248,6 +321,10 @@ function leaves(node: TextNodeRenderable): [TextNodeRenderable, number, string][
 
 function flatten(node: TextNodeRenderable): string {
   return node.children.map((child) => (typeof child === "string" ? child : flatten(child))).join("");
+}
+
+function native(node: Renderable) {
+  return node.getChildren().filter((child) => !owned.has(child));
 }
 
 function read(node: Text) {

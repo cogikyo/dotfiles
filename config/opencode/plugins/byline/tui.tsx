@@ -13,7 +13,9 @@ export default Plugin.define({
       const agent = sessionID ? context.data.session.get(sessionID)?.agent : undefined;
       prompt(box, names, ledger, agent && titlecase(agent));
     });
-    const Transcript = anchor(context, (box, names, ledger) => transcript(box, names, ledger, context));
+    const Transcript = anchor(context, (box, names, ledger, sessionID) =>
+      transcript(box, names, ledger, { context, sessionID }),
+    );
     return createRoot((dispose) => {
       context.ui.slot({
         append: "prompt.footer",
