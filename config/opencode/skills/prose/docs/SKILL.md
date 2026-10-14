@@ -33,6 +33,11 @@ Add explanation only for useful interpretation, a non-obvious consequence, or a 
 Choose a tree for load-bearing hierarchy and a diagram for load-bearing relationships; inspect source for every path, node, label, and edge.
 Load `diagram` for construction only after deciding the representation earns its place.
 
+Leave worked examples out of agent prompts and skills; agents copy their surface, and every load pays for them in context.
+When a rule seems to need an example, rewrite the rule until it stands alone.
+Notation is the exception: a diagram, graph, or format whose shape words cannot carry may show one sample.
+This rule is a trial; `retro` proposes removing examples where they caused problems.
+
 ## Structure and emphasis
 
 Apply `AGENTS.md`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.

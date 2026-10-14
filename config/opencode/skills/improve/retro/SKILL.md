@@ -57,6 +57,8 @@ Past mode returns findings and open questions to the parent without this exchang
 Pick the smallest owner from epistemology's owner list that prevents the repeat.
 Also consider `opencode.json` permissions and plugins or tools when they own the friction.
 Prefer editing or deleting existing guidance over adding more.
+When the owner carries a worked example, propose removing it and tightening the rule it shows; keep notation samples such as diagrams.
+This follows the trial rule in `docs`; note in the report whether the example-free version held.
 Keep papercuts' Proper deny and Recovered protections; an agent miss alone does not justify wider permissions.
 
 ## Apply
