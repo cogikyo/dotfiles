@@ -215,6 +215,7 @@ const entries = [
   asset("zig"),
   asset("markdown", ["markdown_inline"]),
 ];
+// Matching filetype and folder name identifies hand-maintained parsers; generated parsers use vagari.<ft>.
 const vendored = scan().flatMap((language) =>
   language.parser && language.filetype === language.name ? [language.parser] : [],
 );
