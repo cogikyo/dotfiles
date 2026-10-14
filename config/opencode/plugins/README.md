@@ -139,6 +139,7 @@ Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_mess
 Message reads must use an indexed `session_id` bound.
 
 `sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>r` to Sessions.
+`<leader>shift+return` sends `/done` with no arguments to the root session.
 `cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 

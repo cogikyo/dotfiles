@@ -48,6 +48,21 @@ export default Plugin.define({
             if (shown?.kind !== "list") void list(picker);
           },
         },
+        {
+          bind: "<leader>shift+return",
+          title: "Finish session with /done",
+          group: "Session",
+          run: () => {
+            const current = context.ui.router.current();
+            if (current.type !== "session") return;
+            const sessionID = context.data.session.root(current.sessionID);
+            context.client.session
+              .command({ sessionID, name: "done", text: "" })
+              .catch((error: unknown) =>
+                context.ui.toast.show({ title: "/done failed", message: String(error), variant: "error" }),
+              );
+          },
+        },
       ],
     }));
 
