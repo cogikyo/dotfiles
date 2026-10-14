@@ -9,6 +9,8 @@ export default Plugin.define({
   setup(context) {
     const [prefs, update] = context.storage.store("list", { initial: { allProjects: true } });
     let shown: { kind: Kind } | undefined;
+    let generation = 0;
+    const route = () => JSON.stringify(context.ui.router.current());
     const picker: Picker = {
       context,
       source: source(context),
@@ -18,7 +20,13 @@ export default Plugin.define({
           draft.allProjects = !draft.allProjects;
         }).catch(() => undefined);
       },
+      claim() {
+        const mine = ++generation;
+        const at = route();
+        return () => generation === mine && route() === at && context.keymap.mode.current() !== "modal";
+      },
       hold(kind) {
+        generation++;
         const token = { kind };
         shown = token;
         return () => {

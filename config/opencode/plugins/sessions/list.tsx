@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createRoot } from "solid-js";
+import { createMemo, createRoot } from "solid-js";
 import {
   attention,
   closed,
@@ -46,6 +46,7 @@ function arrange(context: Context, scope: Session[]) {
 
 async function remove(picker: Picker, session: Session) {
   const { context, source } = picker;
+  const mine = picker.claim();
   const confirmed = await context.ui.dialog.confirm({
     title: "Delete session",
     message: `Delete "${title(session)}"?`,
@@ -60,7 +61,7 @@ async function remove(picker: Picker, session: Session) {
       context.ui.toast.show({ message: `Failed to delete session: ${message(error)}`, variant: "error" });
     }
   }
-  await list(picker);
+  if (mine()) await list(picker);
 }
 
 async function rename(picker: Picker, session: Session) {
@@ -86,11 +87,18 @@ export async function list(picker: Picker) {
   const [pick, close] = createRoot((dispose) => {
     const route = context.ui.router.current();
     const current = route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
-    const location = located(context);
-    const directory = location?.directory ?? context.data.location.default().directory;
-    const scoped = (session: Session) =>
-      picker.prefs.allProjects ||
-      (session.location.directory === directory && (!location?.project || session.projectID === location.project.id));
+    const here = createMemo(() => {
+      const session = route.type === "session" ? context.data.session.get(route.sessionID) : undefined;
+      if (session) return { directory: session.location.directory, projectID: session.projectID };
+      const location = located(context);
+      return location && { directory: location.directory, projectID: location.project?.id };
+    });
+    const scoped = (session: Session) => {
+      if (picker.prefs.allProjects) return true;
+      const scope = here();
+      if (!scope || session.location.directory !== scope.directory) return false;
+      return !scope.projectID || session.projectID === scope.projectID;
+    };
     const all = () => sessions(context, source.loaded());
     const find = (sessionID: string) => all().find((session) => session.id === sessionID);
     watch(context, source.loaded);
@@ -102,8 +110,10 @@ export async function list(picker: Picker) {
         option(context, session, session.id === current, today),
       );
     });
-    const project = location?.project;
-    const name = () => (project ? projectName(context.data.project.get(project.id)) : undefined);
+    const name = () => {
+      const projectID = here()?.projectID;
+      return projectID ? projectName(context.data.project.get(projectID)) : undefined;
+    };
     const selected = context.ui.dialog.select<string>({
       get title() {
         const label = name();
@@ -112,7 +122,7 @@ export async function list(picker: Picker) {
       get options() {
         return options();
       },
-      current,
+      current: current ?? "",
       get actions() {
         return [
           {

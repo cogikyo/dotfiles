@@ -13,6 +13,7 @@ export type Picker = {
   readonly prefs: { readonly allProjects: boolean };
   readonly toggle: () => void;
   readonly hold: (kind: Kind) => () => void;
+  readonly claim: () => () => boolean;
 };
 
 export type Option<Value> = DialogSelectOption<Value> & {
@@ -130,7 +131,13 @@ export function row<Value>(context: Context, session: Session, value: Value, cur
 }
 
 const signature = (option: Option<unknown>) =>
-  [JSON.stringify(option.value), option.title, option.footer ?? "", option.category ?? ""].join("\u0000");
+  [
+    JSON.stringify(option.value),
+    option.title,
+    option.footer ?? "",
+    option.category ?? "",
+    option.searchText ?? "",
+  ].join("\u0000");
 
 export function stable<Value>(build: () => Option<Value>[]) {
   return createMemo(build, [], {

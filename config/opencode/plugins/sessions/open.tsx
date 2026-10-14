@@ -105,7 +105,7 @@ export async function open(picker: Picker) {
       get options() {
         return options();
       },
-      current: current ? { type: "session", sessionID: current } : undefined,
+      current: { type: "session", sessionID: current ?? "" },
       actions: [
         {
           bind: "right",
@@ -157,14 +157,18 @@ async function worktrees(picker: Picker, project: { directory: string; projectID
   const release = picker.hold("open");
   const [pick, close] = createRoot((dispose) => {
     const [list, setList] = createSignal<string[]>();
-    const load = () =>
-      context.client.worktree
-        .list({ projectID })
-        .then((items) => setList(items.map((item) => item.directory)))
-        .catch((error: unknown) => {
-          context.ui.toast.show({ title: "Loading worktrees failed", message: message(error), variant: "error" });
-          setList([]);
-        });
+    let latest = 0;
+    const load = async () => {
+      const request = ++latest;
+      try {
+        const items = await context.client.worktree.list({ projectID });
+        if (request === latest) setList(items.map((item) => item.directory));
+      } catch (error) {
+        if (request !== latest) return;
+        context.ui.toast.show({ title: "Loading worktrees failed", message: message(error), variant: "error" });
+        setList([]);
+      }
+    };
     void load().then(() => context.client.worktree.refresh({ projectID }).catch(() => undefined));
     onCleanup(
       context.data.on("worktree.updated", (event) => {
@@ -180,6 +184,7 @@ async function worktrees(picker: Picker, project: { directory: string; projectID
       get options() {
         return options();
       },
+      current: { type: "directory", directory: "" },
       actions: [{ bind: "left", title: "projects", selection: "none", onTrigger: () => void open(picker) }],
     });
     context.ui.dialog.set({ size: "large" });
@@ -194,19 +199,24 @@ async function worktrees(picker: Picker, project: { directory: string; projectID
 
 async function create(picker: Picker, project: { directory: string; projectID: string }, name: string) {
   const { context } = picker;
+  const mine = picker.claim();
   const value = await context.ui.dialog.prompt({
     title: `${name} / New worktree`,
     placeholder: "Worktree name (optional)",
     description: "Leave blank for a random name.",
   });
-  if (value === undefined) return worktrees(picker, project);
+  if (value === undefined) {
+    if (mine()) await worktrees(picker, project);
+    return;
+  }
   context.ui.toast.show({ message: "Creating worktree…", variant: "info" });
   try {
     const created = await context.client.worktree.create({
       projectID: project.projectID,
       ...(value.trim() ? { name: value.trim() } : {}),
     });
-    go(context, { type: "project", directory: created.directory });
+    if (mine()) go(context, { type: "project", directory: created.directory });
+    else context.ui.toast.show({ message: `Created worktree ${context.ui.format.path(created.directory)}` });
   } catch (error) {
     context.ui.toast.show({ title: "Creating worktree failed", message: message(error), variant: "error" });
   }
