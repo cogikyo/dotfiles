@@ -15,7 +15,7 @@ const ASK_MS = 10 * 60_000;
 const IDLE_MS = 15 * 60_000;
 const REQUEST_MS = 2_000;
 const SYNC_MS = 10_000;
-const LINE_MAX = 200;
+const LINE_MAX = 200; // Keeps the JSON request within hyprd's single 4096-byte Read.
 
 type Kind = "permission" | "question" | "complete" | "idle" | "error" | "lane" | "viewed";
 
@@ -110,6 +110,8 @@ function reminder(data: Data, id: string, { permissions, forms }: Asks) {
   return { key, kind: "idle" as const, after: IDLE_MS, message: title };
 }
 
+// Interrupted permissions can disappear on the server without an event, leaving stale store entries.
+// Read directly because syncing the store can overwrite newer live events.
 async function asked(client: Client, members: string[], signal: AbortSignal): Promise<Asks> {
   const options = { signal: AbortSignal.any([AbortSignal.timeout(SYNC_MS), signal]) };
   const [permissions, forms] = await Promise.all([
