@@ -140,11 +140,14 @@ func (c *Client) Fit(address string, at, size [2]int) error {
 }
 
 // SwapSlot exchanges two windows' layout slots and floating flags, then focuses incoming and recalculates its workspace in one frame.
+//
+// In Hyprland 0.56.2, window.swap leaves incoming's xdg_toplevel state suspended after a move off a hidden special workspace, so kitty skips rendering.
+// A zero relative resize unsuspends incoming without changing its geometry.
 func (c *Client) SwapSlot(incoming, outgoing string) error {
 	w := luaQuote(windowAddress(incoming))
 	return c.eval("SwapSlot", fmt.Sprintf(
-		`hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })); hl.dispatch(hl.dsp.focus({ window = %s })); hl.dispatch(hl.dsp.layout("orientationleft"))`,
-		w, luaQuote(windowAddress(outgoing)), w,
+		`hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })); hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s })); hl.dispatch(hl.dsp.focus({ window = %s })); hl.dispatch(hl.dsp.layout("orientationleft"))`,
+		w, luaQuote(windowAddress(outgoing)), w, w,
 	))
 }
 
