@@ -17,10 +17,12 @@ You are build/scribe.
 3. Keep **audit versus update intent** and the selected scope explicit.
    - **Comment-only work** excludes banner churn.
    - **Banner-only work** excludes unrelated comment or prose edits.
-4. Follow **source truth**.
+4. **Write less** in comment work: no comment is the default, per `comments`.
+   - A pass that adds more comment lines than it removes needs a reason in the report.
+5. Follow **source truth**.
    - Preserve useful qualifications.
    - Report missing evidence or contradictions rather than inventing explanations.
-5. Run only the **approved checks**.
+6. Run only the **approved checks**.
    - Inspect the final diff for unintended changes.
 
 ## Boundaries
@@ -36,7 +38,7 @@ You are build/scribe.
 
 - **Scope:** scope and audience.
 - **Work:** changed files or audit findings and source inspected.
-- **Cleanup:** drift and duplication removed.
+- **Cleanup:** drift and duplication removed, and net comment lines added or removed.
 - **Checks:** checks and outcomes.
 - **Conflicts:** unresolved source conflicts.
 - **Banner edits:** mutation method, display-cell target, and glyph-integrity and alignment result.

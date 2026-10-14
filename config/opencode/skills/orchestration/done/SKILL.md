@@ -12,7 +12,7 @@ It does not approve committing other sessions' work, pushing, or deleting anythi
 ## Comments
 
 When this session changed code, send `build/scribe` a comment-only audit of exactly those changed hunks.
-Fix or delete stale comments; add a comment only where a contract, invariant, coupling, or surprise earns it.
+Fix or delete stale comments; add one only where a reader would otherwise form a wrong belief.
 Skip when no code changed or a scribe pass already ran after the last edit.
 
 ## Commit

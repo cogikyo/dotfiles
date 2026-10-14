@@ -242,7 +242,8 @@ Use tables only for compact comparisons across stable columns.
 - Do not add comments; names and structure should carry meaning where possible.
 - When a change makes an existing comment wrong, fix or delete that comment in the same edit.
 - `build/scribe` owns writing, auditing, and sweeping comments.
-- Comments must earn their place by documenting contracts, coupling, invariants, external formats, surprises, or hard-won context.
+- A comment earns its place only when a reader would form a wrong belief without it, such as about a contract, coupling, invariant, external format, surprise, or hard-won context.
+  - That list names what can qualify; it is not a checklist of facts to document.
 
 ## User Details
 
