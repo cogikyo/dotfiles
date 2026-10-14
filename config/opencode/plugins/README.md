@@ -5,6 +5,8 @@ OpenCode discovers immediate plugin directories and loads their server and TUI e
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
 The sidebar shows usage, Markdown Context, lanes, then browser; claims that share a placement render in plugin directory-name order.
 Run `npm run check` from `config/opencode` for type, lint, and format checks.
+Saves apply live: the TUI watches plugin sources, discovery directories, and `cli.json`, and the server watches its plugin modules.
+Plugin types under-declare the host; some extra fields, such as `titleView` on `dialog.select` options, still reach the native component at runtime.
 
 Drive, sidebar, and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
 Their four leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.

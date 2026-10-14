@@ -65,4 +65,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
   - With `cmds/` dirty, `dctl update` with `--all` or `--yes` skips the build yet reports OK; use `hyprd rebuild` for hyprd.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
+- OpenCode applies saved plugin edits, new plugin directories, and `cli.json` live; `/reload` reloads `opencode.json`.
+  - Claim a restart is needed only after a reload failed, and quote the log line.
+  - Judge what a plugin can do from the installed host source in the `src` cache, not from `@opencode/plugin` types.
 - Commit `config/opencode/cli.json` setting toggles, such as thinking or verbosity, without asking; fold them into a nearby opencode commit or commit them alone.
