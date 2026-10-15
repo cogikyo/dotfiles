@@ -1,10 +1,10 @@
 local servers = require("config.lsp.servers")
 
--- tsc ships with the project's TypeScript 7 install; mason has no package for it.
-local project_provided = { tsc = true }
+-- tsc ships with the project's TypeScript 7 install (no mason package); pacman provides gopls.
+local external = { tsc = true, gopls = true }
 
 local mason_servers = vim.tbl_filter(function(name)
-	return not project_provided[name]
+	return not external[name]
 end, servers)
 
 local tools = {
@@ -13,10 +13,7 @@ local tools = {
 	"beautysh",
 	"prettierd",
 	"stylua",
-	"goimports",
-	"gofumpt",
 	-- Linters
-	"staticcheck",
 	"hadolint",
 }
 

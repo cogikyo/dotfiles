@@ -4,6 +4,7 @@ base-devel
 bun
 chromium
 clang
+delve
 devtools
 discord
 docker
@@ -11,6 +12,11 @@ docker-compose
 fuse-overlayfs
 github-cli
 go
+go-tools
+gofumpt
+golangci-lint
+gopls
+govulncheck
 imagemagick
 inkscape
 lazydocker
@@ -32,6 +38,7 @@ satty
 shellcheck
 spotify-launcher
 sqlc
+staticcheck
 tailwindcss-language-server
 tea
 uv
