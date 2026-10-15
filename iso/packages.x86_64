@@ -6,8 +6,10 @@ cryptsetup
 dosfstools
 efibootmgr
 gptfdisk
+intel-ucode
 linux
 linux-firmware-amdgpu
+linux-firmware-intel
 mkinitcpio
 mkinitcpio-archiso
 sbctl

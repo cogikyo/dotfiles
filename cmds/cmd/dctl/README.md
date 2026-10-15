@@ -27,6 +27,9 @@ dctl <command> --help
 Installation uses the ISO's package payload without a network.
 The live ISO starts the installer on tty1.
 
+The ISO is not signed for Secure Boot, so disable Secure Boot in firmware before booting it (on by default on Dell and most OEM laptops).
+dctl enrolls its own keys later during [setup](#secure-boot).
+
 > [!CAUTION]
 >
 > `dctl install` erases the whole **target drive**.
