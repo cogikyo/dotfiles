@@ -190,9 +190,11 @@ The OpenCode TUI renders every heading level alike in orange, so replies use `##
   - Keep each question to one short line, with its context in the option descriptions.
   - When choices matter, put the recommended option first and name when another wins.
   - While drive mode hides the tool, put questions last in the reply and suggest turning drive off.
+  - When the user answers with a question, answer it in text and ask nothing new that turn.
 - Report a returning lane between two `---` rules, each with a blank line above it.
   - Name the lane and its task in words, then give its result and what that changes for the plan.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
+  - Before offering a destructive option, say what it removes and what stays untouched.
 - When the user says "detailed" or "deep", give full depth in the same shape.
 - When the user says "adhd me", "too much", or "simpler", rewrite the last reply at about a third of its length, keeping the lead, warnings, and questions.
 
