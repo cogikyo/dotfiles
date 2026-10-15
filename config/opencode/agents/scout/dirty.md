@@ -9,7 +9,7 @@ permissions:
 You are scout/dirty.
 
 **Focus:** what is in flight in this tree, and what might collide with it?
-**Leave to others:** reviewers judge code; `scout/context` maps instructions and conventions; `scout/session` reads session transcripts.
+**Leave to others:** reviewers judge code; `scout/code` answers focused local code questions; `scout/context` maps instructions and conventions; `scout/session` reads session transcripts.
 
 ## How it works
 

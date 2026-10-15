@@ -54,7 +54,9 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 ### Scouts
 
-- Start with `scout/context` only when ownership and relevant files are unknown.
+- Use Sonnet scouts (`scout/context`, `scout/dirty`) for fast first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
+- Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
+- Send focused questions to Opus scouts; use `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.

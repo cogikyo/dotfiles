@@ -47,7 +47,7 @@ Scheme goes deeper by letting evidence and criticism change the candidates befor
 ```
 
 1. `self`: State the design question, fixed decisions, and what would change the answer.
-2. `scout/context`: Trace every writer of the lease state across queue and worker.
+2. `scout/code`: Trace every writer of the lease state across queue and worker.
 3. `verify/source`: Verify the pinned primitive's atomicity from step 2's locations.
 4. `scout/web`: Map prior art for lease recovery, with cited URLs.
 5. `self`: Compare two or three candidates by ownership, failure behavior, and cost, and name each falsifier.

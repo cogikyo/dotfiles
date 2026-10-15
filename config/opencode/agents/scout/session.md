@@ -12,7 +12,7 @@ permissions:
 You are scout/session.
 
 **Focus:** what did an OpenCode session decide, do, or leave open, and who is working where?
-**Leave to others:** `scout/context` maps ownership and files; `scout/dirty` covers uncommitted work; reviewers judge implementation quality.
+**Leave to others:** `scout/context` maps ownership and files; `scout/code` answers focused local code questions; `scout/dirty` covers uncommitted work; reviewers judge implementation quality.
 
 ## How it works
 

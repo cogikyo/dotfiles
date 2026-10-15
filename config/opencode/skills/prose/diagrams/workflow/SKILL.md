@@ -58,7 +58,7 @@ Real delegated steps also name `provider/model#variant` and the reason for the p
 ```
 
 1. `self`: Frame the question and note the baseline.
-2. `scout/context`: Trace the reachable cancellation paths, with source locations.
+2. `scout/code`: Trace the reachable cancellation paths, with source locations.
 3. `verify/source`: Verify the named dependency guarantee, with its exact version.
 4. `self`: Reconcile both reports and return the answer or the missing evidence.
 
@@ -73,8 +73,8 @@ Step 4 already owns synthesis, so no gate is drawn.
 ```
 
 1. `self`: Fix two independent evidence questions.
-2. `scout/context`: Trace shutdown reachability across the named boundary.
-3. `scout/context`: Find the renewal primitive and its pinned ref.
+2. `scout/code`: Trace shutdown reachability across the named boundary.
+3. `scout/code`: Find the renewal primitive and its pinned ref.
 4. `verify/source`: Verify that primitive's cancellation semantics from step 3's locations.
 5. `self`: Combine step 2's callers with step 4's guarantee.
 

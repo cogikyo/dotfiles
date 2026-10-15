@@ -53,6 +53,7 @@ const scopes: Partial<Record<string, string>> = {
   security: "\u{f033e}",
   profile: "\u{f04c5}",
   context: "\u{f034d}",
+  code: "\u{f0174}",
   library: "\u{f0331}",
   dirty: "\u{f0dc8}",
   session: "\u{f02da}",
