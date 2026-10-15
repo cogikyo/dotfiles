@@ -52,6 +52,7 @@ const colors = {
   pink: RGBA.fromHex("#ea76c0"),
   cyan: RGBA.fromHex("#50dec8"),
   sky: RGBA.fromHex("#7cc5ef"),
+  lime: RGBA.fromHex("#d2dc78"),
   muted: RGBA.fromHex("#7b7fb0"),
 } as const;
 
@@ -61,6 +62,7 @@ const glyph = {
   collab: "\u{f1218}",
   routing: "\u{f0781}",
   subagent: "\u{e36e}",
+  principle: "\u{f05d1}",
   folder: "\u{ea83}",
   library: "\u{eb46}",
   skill: "\u{f0e7}",
@@ -91,6 +93,11 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
     const location = session()?.location;
     if (location && !props.context.data.location.skill.list(location))
       void props.context.data.location.skill.sync(location);
+  });
+  createEffect(() => {
+    const current = session();
+    if (current)
+      for (const child of children(props.context, current)) void props.context.data.session.message.sync(child.id);
   });
   const list = createMemo(() => {
     const current = session();
@@ -136,27 +143,39 @@ function items(context: Context, session: Session, prompts: Prompts) {
     if (!pinned.has(key) && existsSync(file)) pinned.set(key, item(roots, { path: file, time: 0 }, false));
   }
 
-  const messages = context.data.session.message.list(session.id);
-  const boundary = messages.findLastIndex((message) => message.type === "compaction" && message.status === "completed");
   const skills = context.data.location.skill.list(session.location);
   const skill = (id: string) => skills?.find((entry) => entry.id === id);
   const reads = new Map<string, Item>();
-  messages.forEach((message, index) => {
-    for (const load of loads(message, session.location.directory, skill)) {
-      const key = identity(load.path);
-      if (pinned.has(key)) continue;
-      const compacted = index < boundary;
-      const existing = reads.get(key);
-      if (!existing) {
-        reads.set(key, item(roots, load, compacted));
-        continue;
+  const collect = (source: Session, principles: boolean) => {
+    const messages = context.data.session.message.list(source.id);
+    const boundary = messages.findLastIndex(
+      (message) => message.type === "compaction" && message.status === "completed",
+    );
+    messages.forEach((message, index) => {
+      for (const load of loads(message, source.location.directory, skill)) {
+        if (principles && kindOf(load.path) !== "principle") continue;
+        const key = identity(load.path);
+        if (pinned.has(key)) continue;
+        const compacted = index < boundary;
+        const existing = reads.get(key);
+        if (!existing) {
+          reads.set(key, item(roots, load, compacted));
+          continue;
+        }
+        if (load.time >= existing.time) reads.set(key, item(roots, load, existing.compacted && compacted));
+        else existing.compacted &&= compacted;
       }
-      if (load.time >= existing.time) reads.set(key, item(roots, load, existing.compacted && compacted));
-      else existing.compacted &&= compacted;
-    }
-  });
+    });
+  };
+  collect(session, false);
+  for (const child of children(context, session)) collect(child, true);
 
   return [...pinned.values(), ...[...reads.values()].toSorted((left, right) => right.time - left.time)];
+}
+
+function children(context: Context, session: Session) {
+  if (session.parentID !== undefined) return [];
+  return context.data.session.list().filter((child) => child.parentID === session.id);
 }
 
 function pinnedFiles(context: Context, session: Session, prompts: Prompts) {
@@ -230,6 +249,8 @@ function appearance(roots: readonly string[], file: string, kind: ReturnType<typ
       return isSubagent(file)
         ? { icon: glyph.subagent, color: colors.magenta }
         : { icon: glyph.agents, color: colors.blue };
+    case "principle":
+      return { icon: glyph.principle, color: colors.lime };
     case "skill":
       return isGlobal(file)
         ? { icon: glyph.skill, color: colors.orange }
