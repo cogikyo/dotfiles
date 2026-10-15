@@ -70,6 +70,7 @@ const families: [RegExp, string][] = [
   [/astra/, "astra"],
   [/fable/, "fable"],
   [/grok/, "grok"],
+  [/deepseek-v4.*-flash/, "v4 Flash"],
 ];
 
 const laneOf = (session: Session) => (typeof session.metadata?.lane === "string" ? session.metadata.lane : undefined);
