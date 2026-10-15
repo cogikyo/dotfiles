@@ -59,6 +59,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 ## Working here
 
 - Run `dctl setup` and `dctl update` as the user; setup batches root stages in one sudo child.
+- When a change adds something that needs updates, make sure `dctl update` covers it; extend dctl if needed.
 - Install and restart routine changes yourself once they build and pass checks; the user gives standing approval for these.
   - Routine: `hyprd rebuild`, `dctl update --only <cmd>`, and user stages such as `dctl setup home`.
   - Ask first for package upgrades, root or lock stages, secrets, and startup, lock, or boot changes that could leave the session unusable.
