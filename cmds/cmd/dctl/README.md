@@ -161,7 +161,7 @@ The optional stages do not gate security enrollment.
 | ---------- | --------------------------- | --------------------------------- |
 | machine    | —                           | Hardware profile                  |
 | system     | machine                     | Overlay, rendered files, services |
-| network    | —                           | Ethernet and DNS                  |
+| network    | —                           | Network and DNS                   |
 | packages   | machine, system, network    | Base, vendor, AUR, local packages |
 | home       | packages                    | Links and fonts                   |
 | extra      | home, network               | Background apps                   |

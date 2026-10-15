@@ -190,7 +190,7 @@ The installer creates the encrypted system and desktop from bundled packages.
 
 ### 5. First login
 
-Unlock with the passphrase, log in, and connect Ethernet for setup's network check.
+Unlock with the passphrase, log in, and connect Ethernet or join Wi-Fi with `nmcli --ask device wifi connect <SSID>` before setup.
 Secrets can use a YubiKey or the age recovery phrase.
 
 ```sh
@@ -199,7 +199,7 @@ dctl setup
 
 Phase 1, **make it work**, then runs:
 
-1. Check the machine profile, system services, and Ethernet/DNS (`machine`, `system`, `network`).
+1. Check the machine profile, system services, and network/DNS (`machine`, `system`, `network`).
 2. Apply packages and home settings (`packages`, `home`).
 3. Install extra applications in the background (`extra`).
 4. Restore secrets, SSH access, and repositories (`secrets`, `ssh`, `repos`).

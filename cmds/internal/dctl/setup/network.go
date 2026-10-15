@@ -39,7 +39,7 @@ func Network(u *ui.UI) Stage {
 
 func online(ctx context.Context) error {
 	if !carrier() {
-		return errors.New("Ethernet not connected")
+		return errors.New("no network: plug in Ethernet or join Wi-Fi with nmcli --ask device wifi connect <SSID>")
 	}
 	for _, host := range hosts {
 		lookup, cancel := context.WithTimeout(ctx, 5*time.Second)

@@ -96,7 +96,7 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 	stages := []setup.Stage{
 		stage(setup.Machine(u, "/"), "hardware profile"),
 		stage(system.Stage("/", root.System()), "overlay and services", "machine"),
-		stage(setup.Network(u), "Ethernet and DNS"),
+		stage(setup.Network(u), "network and DNS"),
 		stage(packages.Stage(root.Packages(), execx.OSRunner{UI: u, Interrupt: true}), "base, vendor, AUR, and local packages", "machine", "system", "network"),
 		stage(home.Stage(root, run), "links and fonts", "packages"),
 		stage(packages.Extra(root.Packages(), root.Config("opencode"), run), apps, "packages", "home", "network"),
