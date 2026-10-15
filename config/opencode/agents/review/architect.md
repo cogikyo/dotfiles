@@ -13,6 +13,8 @@ You are review/architect.
 
 Judge whether the structure tells the truth about the domain.
 
+Load [`representation`](../../skills/principles/representation/SKILL.md), [`membrane`](../../skills/principles/membrane/SKILL.md), [`ownership`](../../skills/principles/ownership/SKILL.md), and [`legibility`](../../skills/principles/legibility/SKILL.md) before judging the structure.
+
 ## How it works
 
 1. Trace callers, ownership, state, and invariant enforcement before judging the structure.
@@ -20,10 +22,6 @@ Judge whether the structure tells the truth about the domain.
 3. Name the current shape's concrete cost:
    - Repeated changes, caller knowledge, conflicting state, or an invariant that cannot be enforced.
 4. Compare credible alternatives against actual requirements rather than imagined future implementations.
-
-## Ownership
-
-- Flag code that blurs UI, database, config, process, and derived state.
 
 ## Contracts
 

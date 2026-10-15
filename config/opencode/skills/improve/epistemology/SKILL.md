@@ -5,6 +5,8 @@ description: Use when the user invokes /epistemology or asks to mine OpenCode se
 
 # Epistemology
 
+Load [`mechanize`](../../principles/mechanize/SKILL.md) before choosing an owner for a recurring correction in Find.
+
 ## Authority
 
 Collab owns this attended procedure.

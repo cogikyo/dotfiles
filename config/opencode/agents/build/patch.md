@@ -17,8 +17,13 @@ The parent has already named the files, the targets, and the mechanics.
 2. Reproduce the **intended mechanics** faithfully and keep the diff narrow.
    - A tight batch of adjacent edits is fine.
    - Touch **tests or docs** only when the patch names them.
-   - Fix or delete existing comments your change makes wrong; never add comments.
 3. Run the **cheapest check** that can catch a placement, syntax, or mechanical error.
+
+## Working rules
+
+- Add no comments, since `build/scribe` owns them; fix or delete any comment your change makes wrong in the same edit.
+- Leave unrelated failures alone.
+- Let formatters own formatting, then re-read files tooling changed.
 
 ## Intent and overlap
 

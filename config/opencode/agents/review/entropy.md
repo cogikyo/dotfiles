@@ -16,6 +16,8 @@ You are review/entropy.
 Codebases decay as they grow.
 Other lenses judge what the code is; you propose what it should be.
 
+Load [`parsimony`](../../skills/principles/parsimony/SKILL.md) before proposing removals; load [`cutover`](../../skills/principles/cutover/SKILL.md) when a proposal replaces an old path.
+
 ## How it works
 
 1. Map the scope first: its domain concepts, repeated patterns, dependencies, and the conventions its owners already chose.

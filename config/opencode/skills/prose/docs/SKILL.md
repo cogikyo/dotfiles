@@ -40,7 +40,7 @@ This rule is a trial; `retro` proposes removing examples where they caused probl
 
 ## Structure and emphasis
 
-Apply `AGENTS.md`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.
+Apply `prose`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.
 Do not convert connected prose into bullets only to make it look scannable.
 
 - Use **bold** for a rule's key term so a reader scanning the file lands on it; never bold whole sentences.
@@ -53,7 +53,7 @@ Use only types supported by the renderer.
 Put a concise title on the marker line, such as `> [!INFO] Humility`, followed by a blank quoted line, a one-line thesis, and at most a few short lines or bullets.
 Quote every body and blank line in the callout.
 Put the reasoning in a short plain paragraph immediately after the callout, outside it.
-Use `---` to separate a series of peer callouts when useful, as in `AGENTS.md`'s Core Principles.
+Use `---` to separate peer callouts when useful, as in the virtue callouts under `# Soul` in `AGENTS.md`.
 
 Keep one callout per concept; do not wrap ordinary content or whole sections.
 Do not flatten or remove existing callouts unless the brief asks you to.

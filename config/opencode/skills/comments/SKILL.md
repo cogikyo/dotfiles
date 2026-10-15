@@ -5,7 +5,8 @@ description: Use when auditing or editing code comments, doc comments, or struct
 
 # Comments
 
-This procedure extends the global comment and prose rules for any owner with an approved comment assignment.
+This skill owns comment admission and editing; `prose` owns writing style.
+`build/scribe` owns comment writing, audits, and sweeps.
 Loading it does not grant write authority or permission to change behavior.
 
 ## Compose
@@ -23,6 +24,7 @@ Keep comment-only, banner-only, and combined scopes distinct; unclear audit vers
 ## Default
 
 No comment is the default.
+Let names and structure carry meaning where possible.
 Add or keep one only where a competent reader would otherwise form a wrong belief, such as about a sign, unit, source, scope, surprising edge case, or the reason behind odd code.
 These examples say what can qualify; do not treat them, or a brief's list of them, as a checklist of facts to document.
 Match the comment density of the surrounding file and repository, so sparse code stays sparse.
@@ -31,6 +33,7 @@ Keep a comment that carries hard-won context, such as why a workaround exists or
 ## Audit and edit
 
 Read the declaration, implementation, relevant callers, and any external contract needed to verify the comment.
+Fix or delete a comment in the same edit when a code change makes it wrong.
 Target drift first, then delete redundant narration and noise before rewriting.
 Preserve useful local voice without treating stale comments as authority, and avoid wording churn without a concrete gain.
 If a structural fix would remove the need for a comment, recommend that fix instead of hiding the problem in prose.

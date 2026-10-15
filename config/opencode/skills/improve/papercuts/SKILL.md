@@ -5,6 +5,8 @@ description: Use when the user invokes /papercuts or asks to diagnose failed com
 
 # Papercuts
 
+Load [`mechanize`](../../principles/mechanize/SKILL.md) before proposing a fix for a recurring Hole in Report.
+
 ## Authority
 
 Collab owns this procedure.
