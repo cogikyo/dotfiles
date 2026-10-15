@@ -7,9 +7,8 @@ type Option = { flag: string; value?: string };
 
 const maxDepth = 8;
 const assignment = /^[A-Za-z_]\w*=/u;
-export const redirect = /^\d*(?:[<>]|&>)/u;
-export const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
-// Handles bare, single-quoted, and double-quoted tags; quoting allows spaces and punctuation.
+const redirect = /^\d*(?:[<>]|&>)/u;
+const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
 const heredoc =
   /(<<-?\s*)(['"]?)((?<=')[^'\n]+|(?<=")[^"\n]+|(?<!['"])[^\s;&|()<>'"\\]+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const keywords = new Set(["!", "{", "}", "if", "then", "else", "elif", "do", "while", "until"]);
@@ -20,6 +19,7 @@ const wrappers: Record<string, Spec> = {
   builtin: plain,
   nohup: plain,
   setsid: plain,
+  cage: { short: "", long: ["hide"], positional: 2 },
   exec: { short: "a", long: [] },
   nice: { short: "n", long: ["adjustment"] },
   stdbuf: { short: "ioe", long: ["input", "output", "error"] },
@@ -205,7 +205,6 @@ class Lexer {
     return true;
   }
 
-  // Uses bash-style comments: an unquoted # starts a comment only at the start of a word.
   private comment() {
     if (this.open || this.source[this.at] !== "#") return false;
     this.at = until(this.source.indexOf("\n", this.at), this.source);

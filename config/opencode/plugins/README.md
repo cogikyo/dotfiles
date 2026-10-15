@@ -89,13 +89,29 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 
 `guard/server.ts` denies recognized shell deletion with `rm`, shell Grok launches, OpenCode API calls, and credential or database reads.
 It denies recognized `cd`, `pushd`, and `popd` commands, including inside substitutions and `bash -c`.
-It also denies recognized shell mutations for read-only agents, rejects broad home or secret-ancestor `grep` and `glob` roots, and checks commit-message shape before execution.
+It also rejects broad home or secret-ancestor `grep` and `glob` roots and checks commit-message shape for agents outside the read-only set.
 Use `trash -- <path>` for deletion, `x` for X search, `sessions` for history, and `session_create` for new sessions.
 Set the shell tool's `workdir` parameter; use absolute paths, `git -C`, or a separate call for other directories.
 V2 resolves each `cd` argument against `workdir`, so chained relative changes can cause false external-directory prompts.
 The `context`, `compaction`, and `generate` hooks add this rule to the shell tool's description for each request.
-These checks are guardrails rather than a shell sandbox.
-There is no persistent plugin state, tool, key, or TUI slot.
+
+For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, and `diagram`; agent permissions can restrict these further.
+Code Mode `execute` is excluded, and `verify/web` denies all shell calls.
+Each read-only shell runs through [cage](../../../cmds/cmd/cage/README.md) offline, with writes limited to `~/.local/state/opencode/scratch/<session-id>`.
+`$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.
+The pattern checks are guardrails; cage supplies the kernel sandbox and trusts the scratch path the guard computes.
+
+`paths.ts` supplies one hide inventory for cage and native `read`, `grep`, `glob`, and file-backed `diagram` checks.
+Native checks walk symlinks hop by hop and refuse hidden paths, `/proc`, `/sys`, `/dev`, and every session's scratch `tmp/` or `cache/`; recursive searches also refuse roots containing protected paths.
+Unlisted secret stores remain readable, so the inventory needs maintenance.
+
+Read-only `webfetch` is replaced by `fetch.ts`: public HTTP(S) on ports 80/443, with connect-time DNS vetting, connected-peer checks, and checks on every redirect.
+It rejects non-public addresses and local interface prefixes, including locally assigned public ranges.
+HTML conversion runs in a killable Worker (`convert.ts`) using `html.ts`, a verbatim copy of OpenCode v2.0.29's `packages/core/src/tool/html-markdown.ts` that requires `htmlparser2` 8.0.2.
+
+Read-only shell and `x` calls append request and return records to `~/.local/state/opencode/scratch/runs.jsonl`, keyed by call and session IDs.
+Return records contain tool status, not process exit codes; the index is not proof of command success.
+The index and scratch files persist; there is no tool, key, or TUI slot.
 
 ## Retitle
 

@@ -89,7 +89,7 @@ Only Collab delegates: the session tree has one parent and one level of children
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
   - Read-only or exact write scope, and the evidence already settled; never authorize writes the agent's contract forbids.
-  - For read-only children, the scratch directory `~/.local/state/opencode/scratch/$OPENCODE_SESSION_ID/` as their only write scope.
+  - For read-only children, `$OPENCODE_SCRATCH` as their only write scope; pass the variable literally, because your session ID names the parent's directory, not the child's.
   - Required checks, acceptance conditions, report shape, and decisions that return to you.
   - User overrides and presentation needs the child should carry.
 
