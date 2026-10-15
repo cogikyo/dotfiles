@@ -68,7 +68,7 @@ func revision(ctx context.Context, run execx.Runner, dir string, as []string) (s
 }
 
 func gocmd(dir string) []string {
-	return slices.Concat([]string{"env", "GOENV=off", "GOTOOLCHAIN=local"}, gobuild.Env, []string{"go", "-C", dir, "build"}, gobuild.Flags)
+	return slices.Concat([]string{"env", "GOTOOLCHAIN=local"}, gobuild.Env, []string{"go", "-C", dir, "build"}, gobuild.Flags)
 }
 
 type resolved struct {

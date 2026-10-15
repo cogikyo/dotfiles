@@ -16,6 +16,9 @@ config/xplr/plugins/preview/
 # Machine-specific local overrides
 cmds/config/*.local.yaml
 
+# Go telemetry via the ~/.config/go symlink
+config/go/telemetry/
+
 # ISO build artifacts
 iso/work/
 iso/out/
