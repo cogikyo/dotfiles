@@ -25,10 +25,10 @@ func TestCatalog(t *testing.T) {
 			}
 		}
 	}
-	if want := []string{"system", "network", "packages", "home", "extra", "secrets", "ssh", "repos", "firefox", "certs", "tailscale", "vpn", "luks", "secureboot", "totp"}; !slices.Equal(names, want) {
+	if want := []string{"machine", "system", "network", "packages", "home", "extra", "secrets", "ssh", "repos", "firefox", "certs", "tailscale", "vpn", "luks", "secureboot", "totp"}; !slices.Equal(names, want) {
 		t.Errorf("stages %v, want %v", names, want)
 	}
-	if want := []string{"system", "packages", "tailscale", "luks", "secureboot", "totp"}; !slices.Equal(root, want) {
+	if want := []string{"machine", "system", "packages", "tailscale", "luks", "secureboot", "totp"}; !slices.Equal(root, want) {
 		t.Errorf("root stages %v, want %v", root, want)
 	}
 }

@@ -16,6 +16,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/machine"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +25,6 @@ const (
 	global    = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
 	security  = "d719b2cb-3d3a-4596-a3bc-dad00e67656f"
 	fallback  = "EFI/BOOT/BOOTX64.EFI"
-	bios      = "reboot; F2 → Erase all Secure Boot Settings → F10 to save; then run dctl setup"
 	sbctlPK   = "var/lib/sbctl/keys/PK/PK.pem"
 	sbctlConf = "etc/sbctl/sbctl.conf"
 	measured  = "sys/kernel/security/tpm0/binary_bios_measurements"
@@ -81,6 +81,10 @@ func Stage(run execx.Runner, root string) setup.Stage {
 	limine := filepath.Join(root, "etc", "default", "limine")
 	errReady := errors.New("firmware in Setup Mode; keys not enrolled")
 	keys := func(context.Context) error {
+		bios, err := firmware(root)
+		if err != nil {
+			return err
+		}
 		fw, err := Read(efi)
 		switch {
 		case err != nil:
@@ -93,18 +97,18 @@ func Stage(run execx.Runner, root string) setup.Stage {
 		case err != nil:
 			return err
 		case ours:
-			return vendors(efi)
+			return vendors(efi, bios)
 		}
 		if err := preflight(root); err != nil {
 			return err
 		}
-		switch {
-		case fw.Setup:
+		if fw.Setup {
 			return errReady
-		case fw.Enabled:
-			return setup.Manual("Secure Boot is on with keys dctl did not create; %s", bios)
 		}
-		return setup.Later("%s", bios)
+		if fw.Enabled {
+			return setup.Manual("Secure Boot is on with keys dctl did not create; reboot, %s; then run dctl setup", bios.Clear)
+		}
+		return setup.Later("reboot, %s; then run dctl setup", bios.Clear)
 	}
 	sign := func(ctx context.Context) error {
 		if err := configure(limine); err != nil {
@@ -170,6 +174,10 @@ func Stage(run execx.Runner, root string) setup.Stage {
 		{
 			Name: Enforced,
 			Check: func(context.Context) error {
+				bios, err := firmware(root)
+				if err != nil {
+					return err
+				}
 				fw, err := Read(efi)
 				switch {
 				case err != nil:
@@ -185,9 +193,9 @@ func Stage(run execx.Runner, root string) setup.Stage {
 					return setup.Later("after key enrollment")
 				}
 				if log, err := readLog(root); err == nil && log.pk {
-					return setup.Manual("Secure Boot still off; reboot, press F2, enable Secure Boot, save with F10, then run dctl setup")
+					return setup.Manual("Secure Boot still off; reboot, %s; then run dctl setup", bios.Enable)
 				}
-				return setup.Later("reboot; if Secure Boot is still off, enable it in the BIOS with F2 and save with F10; then run dctl setup")
+				return setup.Later("reboot; if Secure Boot is still off, %s; then run dctl setup", bios.Enable)
 			},
 		},
 	}}
@@ -214,7 +222,12 @@ func preflight(root string) error {
 	return nil
 }
 
-func vendors(efi string) error {
+func firmware(root string) (machine.Firmware, error) {
+	p, err := machine.Read(filepath.Join(root, machine.Path))
+	return p.Firmware(), err
+}
+
+func vendors(efi string, bios machine.Firmware) error {
 	var found []string
 	for name, guid := range map[string]string{"KEK": global, "db": security} {
 		data, err := os.ReadFile(filepath.Join(efi, "efivars", name+"-"+guid))
@@ -230,7 +243,7 @@ func vendors(efi string) error {
 	}
 	if len(found) > 0 {
 		slices.Sort(found)
-		return setup.Manual("Microsoft certificates remain in %s; %s", strings.Join(found, " and "), bios)
+		return setup.Manual("Microsoft certificates remain in %s; reboot, %s; then run dctl setup", strings.Join(found, " and "), bios.Clear)
 	}
 	return nil
 }

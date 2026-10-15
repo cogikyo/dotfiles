@@ -76,7 +76,7 @@ func TestSteps(t *testing.T) {
 
 func TestNoconfirm(t *testing.T) {
 	root := paths.Root{Dotfiles: t.TempDir()}
-	for _, rel := range []string{"base.lst", "aur.lst", "extra.lst", "eww/PKGBUILD", "yubikey-tools/PKGBUILD"} {
+	for _, rel := range []string{"base.lst", "aur.lst", "extra.lst", "amd.lst", "intel.lst", "eww/PKGBUILD", "yubikey-tools/PKGBUILD"} {
 		path := root.Packages(rel)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)

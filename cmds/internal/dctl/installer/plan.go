@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/machine"
 )
 
 const (
-	target  = "/mnt"
-	mapper  = "root"
-	login   = "cullyn"
-	machine = "costello"
+	target = "/mnt"
+	mapper = "root"
+	login  = "cullyn"
 
 	espSize    = "+4G"
 	options    = "noatime,compress=zstd"
@@ -30,15 +32,17 @@ var (
 func (s subvolume) options() string { return options + ",subvol=/" + s.name }
 
 type plan struct {
-	Disk   disk
-	Zone   string
-	LUKSID string
-	RootID string
-	ESPID  string
+	Disk     disk
+	Zone     string
+	Hostname string
+	Machine  machine.Profile
+	LUKSID   string
+	RootID   string
+	ESPID    string
 }
 
-func newPlan(d disk, zone string) plan {
-	return plan{Disk: d, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
+func newPlan(d disk, a iso.Answers) plan {
+	return plan{Disk: d, Zone: a.Zone, Hostname: a.Hostname, Machine: a.Machine, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
 }
 
 func uuid() string {
@@ -100,7 +104,7 @@ func (p plan) mount() []cmd {
 func (p plan) firstboot() []cmd {
 	return []cmd{run(
 		"systemd-firstboot", "--root="+target, "--force",
-		"--locale=en_US.UTF-8", "--keymap=us", "--timezone="+p.Zone, "--hostname="+machine,
+		"--locale=en_US.UTF-8", "--keymap=us", "--timezone="+p.Zone, "--hostname="+p.Hostname,
 		"--setup-machine-id",
 	)}
 }

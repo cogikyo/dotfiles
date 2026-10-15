@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"strings"
+
+	"dotfiles/cmds/internal/machine"
 )
 
 type file struct {
@@ -18,6 +20,7 @@ func (p plan) files() []file {
 		{"etc/default/limine", 0o644, p.limine()},
 		{"etc/locale.gen", 0o644, "en_US.UTF-8 UTF-8\n"},
 		{"etc/sudoers.d/wheel", 0o440, "%wheel ALL=(ALL:ALL) ALL\n"},
+		{strings.TrimPrefix(machine.Path, "/"), 0o644, string(p.Machine.Format())},
 	}
 }
 

@@ -1,6 +1,6 @@
 # Dotfiles
 
-Arch Linux + Hyprland environment, Go commands, and an offline UEFI installer targeting the Framework Desktop (AMD Strix Halo, Ethernet only).
+Arch Linux + Hyprland environment, Go commands, and an offline UEFI installer with AMD/Intel machine profiles and a Framework Desktop preset.
 Edits to linked `config/` files change what applications read; see [setup](./README.md) for how changes reach the system.
 
 > [!WARNING]
@@ -19,7 +19,7 @@ Edits to linked `config/` files change what applications read; see [setup](./REA
 | `share/`           | Fonts and assets                                             | Setup or application references |
 | `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config                   |
 
-User units and their `.wants` links live only in `config/systemd/user/`.
+User units and their `.wants` links live in `config/systemd/user/`; machine-specific CPU-lane drop-ins are rendered into `/etc/systemd/user/` by `dctl setup system`.
 Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packages/`.
 
 ## Commands

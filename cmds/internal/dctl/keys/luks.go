@@ -15,11 +15,11 @@ import (
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/machine"
 	"dotfiles/cmds/internal/ui"
 )
 
 const (
-	YubiKeys = 2
 	enrolled = "etc/dctl/luks-yubikeys"             // Serials for this disk; the LUKS header cannot identify each key.
 	unpaper  = "etc/dctl/luks-recovery.unconfirmed" // Persists until the user confirms the paper copy.
 )
@@ -145,18 +145,26 @@ func Stage(u *ui.UI, run execx.Runner, root string) setup.Stage {
 		{
 			Name: "luks-yubikeys",
 			Check: func(ctx context.Context) error {
+				want, err := Required(root)
+				if err != nil {
+					return err
+				}
 				h, err := read(ctx)
 				if err != nil {
 					return err
 				}
-				return checkTokens(h)
+				return checkTokens(h, want)
 			},
 			Fix: func(ctx context.Context) error {
+				want, err := Required(root)
+				if err != nil {
+					return nil
+				}
 				h, err := read(ctx)
 				if err != nil {
 					return nil
 				}
-				return enrollTokens(ctx, u, run, h, ledger)
+				return enrollTokens(ctx, u, run, h, ledger, want)
 			},
 		},
 		{
@@ -195,9 +203,14 @@ func Stage(u *ui.UI, run execx.Runner, root string) setup.Stage {
 	}}
 }
 
-func checkTokens(h Header) error {
-	if n := h.Unattended(); n < YubiKeys {
-		return fmt.Errorf("%d of %d PIN-required, no-touch FIDO2 tokens enrolled", n, YubiKeys)
+func Required(root string) (int, error) {
+	p, err := machine.Read(filepath.Join(root, machine.Path))
+	return p.YubiKeys, err
+}
+
+func checkTokens(h Header, want int) error {
+	if n := h.Unattended(); n < want {
+		return fmt.Errorf("%d of %d PIN-required, no-touch FIDO2 tokens enrolled", n, want)
 	}
 	for _, t := range h.Fido2 {
 		if !t.unattended() {
@@ -209,12 +222,12 @@ func checkTokens(h Header) error {
 
 var errSkip = errors.New("skipped")
 
-func enrollTokens(ctx context.Context, u *ui.UI, run execx.Runner, h Header, ledger string) error {
-	for n := h.Unattended(); n < YubiKeys; n++ {
-		u.Section(fmt.Sprintf("YubiKey %d of %d for %s", n+1, YubiKeys, h.Device), "insert a YubiKey not yet enrolled for this disk")
+func enrollTokens(ctx context.Context, u *ui.UI, run execx.Runner, h Header, ledger string, want int) error {
+	for n := h.Unattended(); n < want; n++ {
+		u.Section(fmt.Sprintf("YubiKey %d of %d for %s", n+1, want, h.Device), "insert a YubiKey not yet enrolled for this disk")
 		serial, err := insert(ctx, u, run, ledger)
 		if errors.Is(err, errSkip) {
-			return setup.Manual("skipped after %d of %d enrollments; run sudo dctl keys luks with the remaining YubiKey", n, YubiKeys)
+			return setup.Manual("skipped after %d of %d enrollments; run sudo dctl keys luks with the remaining YubiKey", n, want)
 		}
 		if err != nil {
 			return err

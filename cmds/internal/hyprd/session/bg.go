@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/machine"
 )
 
 const (
@@ -28,10 +29,7 @@ type BG struct {
 	cfg *config.BackgroundConfig
 }
 
-const (
-	backgroundCPUs        = "0-6,8-14,16-1023"
-	backgroundOOMScoreAdj = "1000"
-)
+const backgroundOOMScoreAdj = "1000"
 
 func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
@@ -184,7 +182,7 @@ func (b *BG) spawn() (string, error) {
 		return "", err
 	}
 	opts := "--loop --hwdec=auto-safe --input-ipc-server=" + b.cfg.Socket
-	cmd := exec.Command("taskset", "-c", backgroundCPUs, "mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
+	cmd := machine.Pooled("mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
 	}

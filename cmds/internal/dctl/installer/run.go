@@ -113,14 +113,15 @@ func (s *session) main(ctx context.Context) (err error) {
 	if err := s.u.Spin(ctx, "payload verification and disk survey", func(context.Context) error { return prep.wait() }); err != nil {
 		return err
 	}
-	s.u.OK("payload: %d packages", len(prep.targets))
+	pkgs := prep.targets.Select(a.Machine.Vendors())
+	s.u.OK("payload: %d packages for %s", len(pkgs), strings.Join(a.Machine.Vendors(), ", "))
 	d, err := choose(s.u, prep.disks, test)
 	if err != nil {
 		return err
 	}
 	s.u.End(ui.OK, "")
 
-	p := newPlan(d, a.Zone)
+	p := newPlan(d, a)
 	s.u.Begin("disk", p.Disk.Path)
 	if test == nil {
 		if err := s.confirm(p.Disk); err != nil {
@@ -149,14 +150,14 @@ func (s *session) main(ctx context.Context) (err error) {
 	defer log.Close()
 	s.log = log
 	start := time.Now()
-	if err := s.install(ctx, p, a, prep.targets); err != nil {
+	if err := s.install(ctx, p, a, pkgs); err != nil {
 		return errors.Join(err, errModified)
 	}
 	if test != nil {
 		s.report(nil)
 	}
 	s.u.Begin("summary", "")
-	s.u.OK("installed %s on %s in %s", machine, p.Disk.Path, time.Since(start).Round(time.Second))
+	s.u.OK("installed %s on %s in %s", p.Hostname, p.Disk.Path, time.Since(start).Round(time.Second))
 	s.u.Info("remove the USB stick")
 	s.u.Info("reboot")
 	s.u.Info("unlock with the disk passphrase; the boot TOTP shows `not set up yet` until dctl setup seals it")
@@ -319,7 +320,7 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		{"mount", target, s.logged("mount subvolumes and EFI partition", cmds(p.mount()))},
 		{"packages", fmt.Sprintf("%d from the ISO payload", len(pkgs)), s.logged("pacstrap", func(ctx context.Context) error { return s.pacstrap(ctx, pkgs) })},
 		{"files", "", func(context.Context) error { return s.write(p) }},
-		{"identity", machine + ", " + p.Zone, s.logged("systemd-firstboot", cmds(p.firstboot()))},
+		{"identity", p.Hostname + ", " + p.Zone, s.logged("systemd-firstboot", cmds(p.firstboot()))},
 		{"accounts", login, s.logged("locale-gen, useradd, chpasswd, root lock", func(ctx context.Context) error { return s.accounts(ctx, a) })},
 		{"keyring", "", s.logged("pacman-key --init and --populate archlinux", cmds([]cmd{
 			run(chroot("pacman-key", "--init")...),

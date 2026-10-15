@@ -34,3 +34,4 @@ chmod 750 /mnt/.snapshots
 0644 etc/default/limine
 0644 etc/locale.gen
 0440 etc/sudoers.d/wheel
+0644 etc/dctl/machine

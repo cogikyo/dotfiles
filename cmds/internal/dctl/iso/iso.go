@@ -102,10 +102,6 @@ func unresolved(targets []string, pkgs []resolved) []string {
 	return out
 }
 
-func writeTargets(file string, names []string) error {
-	return os.WriteFile(file, []byte(strings.Join(names, "\n")+"\n"), 0o644)
-}
-
 type sized struct {
 	Name string
 	Size int64

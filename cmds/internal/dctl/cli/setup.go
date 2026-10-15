@@ -94,9 +94,10 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 	trust := stage(certs.Stage(root, run), "local CA and certificates", "packages", "firefox")
 	trust.Sudo = true
 	stages := []setup.Stage{
-		stage(system.Stage("/", root.System()), "overlay and services"),
+		stage(setup.Machine(u, "/"), "hardware profile"),
+		stage(system.Stage("/", root.System()), "overlay and services", "machine"),
 		stage(setup.Network(u), "Ethernet and DNS"),
-		stage(packages.Stage(root.Packages(), execx.OSRunner{UI: u, Interrupt: true}), "base, AUR, and local packages", "system", "network"),
+		stage(packages.Stage(root.Packages(), execx.OSRunner{UI: u, Interrupt: true}), "base, vendor, AUR, and local packages", "machine", "system", "network"),
 		stage(home.Stage(root, run), "links and fonts", "packages"),
 		stage(packages.Extra(root.Packages(), root.Config("opencode"), run), apps, "packages", "home", "network"),
 		stage(secrets.Stage(u, root), "PIV PIN or recovery phrase", "system"),
@@ -113,8 +114,18 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 			phase = append(phase, s.Name)
 		}
 	}
+	tokens := "the profile's YubiKeys plus a recovery key"
+	switch n, err := keys.Required("/"); {
+	case err != nil:
+	case n == 0:
+		tokens = "a recovery key"
+	case n == 1:
+		tokens = "one YubiKey plus a recovery key"
+	default:
+		tokens = "both YubiKeys plus a recovery key"
+	}
 	return append(stages,
-		lock(keys.Stage(u, run, "/"), "both YubiKeys plus a recovery key", phase...),
+		lock(keys.Stage(u, run, "/"), tokens, phase...),
 		lock(secureboot.Stage(run, "/"), "enroll keys and sign boot images", "luks"),
 		lock(secureboot.TOTP(u, run, "/"), "seal the boot TOTP", "secureboot"),
 	)

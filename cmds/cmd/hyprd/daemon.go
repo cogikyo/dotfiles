@@ -13,12 +13,13 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
 	"dotfiles/cmds/internal/hyprd/wm"
+	"dotfiles/cmds/internal/machine"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -33,8 +34,6 @@ const SocketPath = "/tmp/hyprd.sock"
 
 // stateFile is the one-shot handoff used by `hyprd rebuild` before execing the new binary.
 const stateFile = "/tmp/hyprd-state.json"
-
-const computeCPUs = "0-6,8-14,16-1023"
 
 // Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
 //
@@ -473,8 +472,7 @@ func (d *Daemon) handleRebuild() string {
 		return fmt.Sprintf("error: install dir: %v", err)
 	}
 
-	args := append([]string{"-c", computeCPUs, "go", "build"}, gobuild.Flags...)
-	cmd := exec.Command("taskset", append(args, "-o", tmpBin, "./cmd/hyprd")...)
+	cmd := machine.Pooled("go", slices.Concat([]string{"build"}, gobuild.Flags, []string{"-o", tmpBin, "./cmd/hyprd"})...)
 	cmd.Dir = srcDir
 	cmd.Env = append(os.Environ(), gobuild.Env...)
 	if out, err := cmd.CombinedOutput(); err != nil {

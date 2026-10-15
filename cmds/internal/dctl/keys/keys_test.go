@@ -261,11 +261,12 @@ func luksRoot(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	dm := filepath.Join(root, "sys", "block", "dm-0")
-	for _, d := range []string{filepath.Join(dm, "dm"), filepath.Join(dm, "slaves", "nvme0n1p2"), filepath.Join(root, "etc", "default"), filepath.Join(root, "boot")} {
+	for _, d := range []string{filepath.Join(dm, "dm"), filepath.Join(dm, "slaves", "nvme0n1p2"), filepath.Join(root, "etc", "default"), filepath.Join(root, "etc", "dctl"), filepath.Join(root, "boot")} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
+	write(t, filepath.Join(root, "etc", "dctl", "machine"), "preset=framework\ncpu=amd\ngpus=amd\nform=desktop\nbacklight=no\nwifi=off\nwlan=mt7925e\nyubikeys=2\nlane=15,31\n")
 	write(t, filepath.Join(dm, "dm", "name"), "root\n")
 	write(t, filepath.Join(dm, "dm", "uuid"), "CRYPT-LUKS2-0123-root\n")
 	return root

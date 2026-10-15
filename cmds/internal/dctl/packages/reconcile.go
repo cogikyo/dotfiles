@@ -18,7 +18,11 @@ func Reconcile(ctx context.Context, u *ui.UI, dir string, run execx.Runner, all 
 	if err != nil {
 		return err
 	}
-	d, err := drift(ctx, run, l)
+	vendors, err := selected()
+	if err != nil {
+		return err
+	}
+	d, err := drift(ctx, run, l, vendors)
 	if err != nil {
 		return err
 	}

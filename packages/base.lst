@@ -1,9 +1,7 @@
 # system
-amd-ucode
 base
 linux
-linux-firmware-amd
-linux-firmware-amdgpu
+linux-firmware-intel
 linux-firmware-mediatek
 linux-firmware-realtek
 man-db
@@ -34,7 +32,6 @@ mesa
 nvtop
 tuned
 usbutils
-vulkan-radeon
 
 # security
 age

@@ -11,10 +11,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/machine"
 )
 
 const preset = "etc/systemd/system-preset/10-dotfiles.preset"
@@ -42,9 +44,10 @@ func Stage(root, overlay string) setup.Stage {
 type file struct {
 	rel  string
 	mode fs.FileMode
+	data []byte
 }
 
-func files(overlay string) ([]file, error) {
+func files(rootDir, overlay string) ([]file, error) {
 	var out []file
 	err := fs.WalkDir(os.DirFS(overlay), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
@@ -61,19 +64,40 @@ func files(overlay string) ([]file, error) {
 		if info.Mode()&0o111 != 0 {
 			mode = 0o755
 		}
-		out = append(out, file{rel: rel, mode: mode})
+		data, err := os.ReadFile(filepath.Join(overlay, rel))
+		if err != nil {
+			return err
+		}
+		out = append(out, file{rel: rel, mode: mode, data: data})
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	p, err := machine.Read(filepath.Join(rootDir, machine.Path))
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range p.Files() {
+		if slices.ContainsFunc(out, func(f file) bool { return f.rel == r.Path }) {
+			return nil, fmt.Errorf("overlay %s: rendered from %s; remove it from the overlay", r.Path, machine.Path)
+		}
+		out = append(out, file{rel: r.Path, mode: 0o644, data: r.Data})
+	}
+	return out, nil
 }
 
-func (f file) drift(want []byte, root *os.Root) (string, error) {
+func (f file) drift(root *os.Root) (string, error) {
 	st, err := root.Lstat(f.rel)
 	switch {
+	case errors.Is(err, fs.ErrNotExist) && f.data == nil:
+		return "", nil
 	case errors.Is(err, fs.ErrNotExist):
 		return "missing", nil
 	case err != nil:
 		return "", err
+	case f.data == nil:
+		return "unwanted", nil
 	case !st.Mode().IsRegular():
 		return "not a regular file", nil
 	case st.Mode().Perm() != f.mode:
@@ -83,14 +107,14 @@ func (f file) drift(want []byte, root *os.Root) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !bytes.Equal(got, want) {
+	if !bytes.Equal(got, f.data) {
 		return "content differs", nil
 	}
 	return "", nil
 }
 
 func check(rootDir, overlay string) error {
-	list, err := files(overlay)
+	list, err := files(rootDir, overlay)
 	if err != nil {
 		return err
 	}
@@ -101,11 +125,7 @@ func check(rootDir, overlay string) error {
 	defer root.Close()
 	var drift, unknown []string
 	for _, f := range list {
-		want, err := os.ReadFile(filepath.Join(overlay, f.rel))
-		if err != nil {
-			return err
-		}
-		reason, err := f.drift(want, root)
+		reason, err := f.drift(root)
 		switch {
 		case err != nil:
 			unknown = append(unknown, f.rel+" ("+err.Error()+")")
@@ -127,7 +147,7 @@ func check(rootDir, overlay string) error {
 }
 
 func apply(rootDir, overlay string) error {
-	list, err := files(overlay)
+	list, err := files(rootDir, overlay)
 	if err != nil {
 		return err
 	}
@@ -137,18 +157,19 @@ func apply(rootDir, overlay string) error {
 	}
 	defer root.Close()
 	for _, f := range list {
-		data, err := os.ReadFile(filepath.Join(overlay, f.rel))
-		if err != nil {
-			return err
-		}
-		reason, err := f.drift(data, root)
+		reason, err := f.drift(root)
 		if err != nil {
 			return fmt.Errorf("%s: %w", f.rel, err)
 		}
 		if reason == "" {
 			continue
 		}
-		if err := write(root, f.rel, data, f.mode); err != nil {
+		if f.data == nil {
+			err = root.Remove(f.rel)
+		} else {
+			err = write(root, f.rel, f.data, f.mode)
+		}
+		if err != nil {
 			return fmt.Errorf("%s: %w", f.rel, err)
 		}
 	}

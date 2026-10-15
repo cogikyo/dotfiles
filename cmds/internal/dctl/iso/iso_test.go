@@ -34,14 +34,20 @@ func TestClosure(t *testing.T) {
 }
 
 func TestTargets(t *testing.T) {
-	file := filepath.Join(t.TempDir(), "targets")
-	names := []string{"base", "eww", "linux"}
-	if err := writeTargets(file, names); err != nil {
+	dir := filepath.Join(t.TempDir(), "targets")
+	l := packages.Lists{Base: []string{"linux", "base"}, AUR: []string{"eww"}, Extra: []string{"docker"}, Vendor: map[string][]string{"amd": {"amd-ucode"}, "intel": {"intel-ucode"}}}
+	if err := l.Targets().Write(dir); err != nil {
 		t.Fatal(err)
 	}
-	got, err := packages.Read(file)
-	if err != nil || !slices.Equal(got, names) {
-		t.Fatalf("read back %v, %v", got, err)
+	got, err := packages.ReadTargets(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := got.Select([]string{"amd"}); !slices.Equal(names, []string{"amd-ucode", "base", "eww", "linux"}) {
+		t.Fatalf("amd install %v", names)
+	}
+	if names := got.Select(packages.Vendors); !slices.Equal(names, l.Payload()) {
+		t.Fatalf("all vendors %v, payload %v", names, l.Payload())
 	}
 }
 

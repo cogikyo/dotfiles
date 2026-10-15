@@ -6,7 +6,17 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"dotfiles/cmds/internal/machine"
 )
+
+func record(t *testing.T, root string) {
+	t.Helper()
+	p := machine.Profile{Preset: machine.Custom, CPU: machine.AMD, Form: machine.Desktop, WLAN: []string{"mt7925e"}, YubiKeys: 2, Lane: []int{3, 7}}
+	if err := machine.Write(filepath.Join(root, machine.Path), p); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func overlay(t *testing.T) string {
 	t.Helper()
@@ -34,6 +44,7 @@ func mode(t *testing.T, path string) os.FileMode {
 
 func TestApply(t *testing.T) {
 	src, root := overlay(t), t.TempDir()
+	record(t, root)
 	if err := check(root, src); err == nil {
 		t.Fatal("empty root reported clean")
 	}
@@ -62,10 +73,28 @@ func TestApply(t *testing.T) {
 	if data, _ := os.ReadFile(outside); string(data) != "keep" {
 		t.Errorf("leaf symlink target was written through: %q", data)
 	}
+	if data, _ := os.ReadFile(filepath.Join(root, "etc", "modprobe.d", "blacklist-wifi.conf")); string(data) != "blacklist mt7925e\n" {
+		t.Errorf("rendered blacklist %q", data)
+	}
+	p, err := machine.Read(filepath.Join(root, machine.Path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.WiFi = true
+	if err := machine.Write(filepath.Join(root, machine.Path), p); err != nil {
+		t.Fatal(err)
+	}
+	if err := apply(root, src); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "etc", "modprobe.d", "blacklist-wifi.conf")); !os.IsNotExist(err) {
+		t.Errorf("blacklist kept with Wi-Fi on: %v", err)
+	}
 }
 
 func TestApplyReplacesAtomically(t *testing.T) {
 	src, root := overlay(t), t.TempDir()
+	record(t, root)
 	if err := apply(root, src); err != nil {
 		t.Fatal(err)
 	}
@@ -92,14 +121,15 @@ func TestApplyReplacesAtomically(t *testing.T) {
 		t.Errorf("content %q mode %v", data, mode(t, target))
 	}
 	entries, _ := os.ReadDir(filepath.Join(root, "etc"))
-	if len(entries) != 1 {
+	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return strings.HasPrefix(e.Name(), ".") }) {
 		t.Errorf("temp files left behind: %v", entries)
 	}
 }
 
 func TestApplyRefusesSymlinkEscape(t *testing.T) {
 	src, root, outside := overlay(t), t.TempDir(), t.TempDir()
-	if err := os.Symlink(outside, filepath.Join(root, "etc")); err != nil {
+	record(t, root)
+	if err := os.Symlink(outside, filepath.Join(root, "usr")); err != nil {
 		t.Fatal(err)
 	}
 	if err := apply(root, src); err == nil {
@@ -115,7 +145,7 @@ func TestOverlayRejectsSymlinks(t *testing.T) {
 	if err := os.Symlink("a.conf", filepath.Join(src, "etc", "b.conf")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := files(src); err == nil {
+	if _, err := files(t.TempDir(), src); err == nil {
 		t.Fatal("overlay symlink accepted")
 	}
 }
@@ -137,6 +167,7 @@ func TestUnreadableTarget(t *testing.T) {
 		t.Skip("root reads through permissions")
 	}
 	src, root := overlay(t), t.TempDir()
+	record(t, root)
 	if err := apply(root, src); err != nil {
 		t.Fatal(err)
 	}
@@ -145,13 +176,13 @@ func TestUnreadableTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.Chmod(usr, 0o755) })
-	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "cannot inspect 1 of 2 files") {
+	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "cannot inspect 1 of 11 files") {
 		t.Errorf("unreadable only: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "etc", "a.conf"), []byte("drift"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "1 of 2 files differ") {
+	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "1 of 11 files differ") {
 		t.Errorf("unreadable plus drift: %v", err)
 	}
 }

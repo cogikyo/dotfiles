@@ -3,8 +3,8 @@
 `dctl` installs and maintains this single-user Arch Linux system.
 It builds the offline ISO, applies configuration, and runs attended updates.
 
-- Built for the Framework Desktop with AMD Strix Halo and Ethernet only.
-- Installs the `cullyn` account and `costello` hostname.
+- Detects AMD/Intel hardware and records a machine profile, with a preset for a recognized Framework Desktop.
+- Installs the `cullyn` account with the chosen hostname.
 
 > _See [Installation](../../../README.md#installation) for the overview._
 
@@ -37,7 +37,14 @@ prepare ──▶ disk consent ──▶ install steps ──▶ unmount ──�
 ```
 
 - Requires root, UEFI, and the dctl live ISO; stock Arch media are refused.
-- Prompts for the login password, timezone, and LUKS passphrase.
+- First shows detected hardware and asks you to confirm a recognized Framework preset or choose a Wi-Fi policy and 0, 1, or 2 YubiKeys (default 2).
+  - Wi-Fi is offered when a wireless driver is detected; missing CPU/GPU detection adds vendor questions.
+  - Wi-Fi defaults off on desktops and on when a battery is detected; the Framework preset forces it off.
+  - Framework DMI identifiers are not configured yet, so all machines currently use the questions.
+  - NVIDIA detection warns but does not stop installation; NVIDIA is unsupported.
+- Then prompts for the hostname, login password, timezone, and LUKS passphrase.
+  - The hostname defaults to `costello` with the Framework preset; custom machines have no default.
+  - After installation, the hostname lives only in `/etc/hostname`, outside the machine record.
 - After success, remove the USB, reboot, and unlock with the disk passphrase.
 - Failed install steps can leave a partly modified disk; there is no rollback.
   - Unmount and LUKS-close cleanup is attempted after success or failure.
@@ -73,6 +80,7 @@ Root snapshots cannot restore the boot images or the other subvolumes.
 
 - Creates a shallow `~/dotfiles` checkout from the bundled `master` tip.
 - Installs prebuilt commands in `~/.local/bin/` and disables root password login.
+- Writes `/etc/dctl/machine` and installs base packages plus the CPU/GPU vendor sets selected by that record.
 - Applies `system`, `packages`, and `home`; rebuilds and checks Limine boot images.
 - Snapper retains five hourly and seven daily root snapshots.
 - Secure Boot keys are enrolled later; installation does not require Setup Mode.
@@ -110,8 +118,8 @@ dctl --json setup --status
 ```
 
 ```text
-system ─▶ network ─▶ packages ─▶ home ─▶ extra (background)
-  ┌──────────────────────────────────────────┘
+machine ─▶ system ─▶ network ─▶ packages ─▶ home ─▶ extra (background)
+  ┌─────────────────────────────────────────────────────┘
   ▼
 secrets ─▶ ssh ─▶ repos ─▶ firefox ─▶ certs
   ┌─────────────────────────────────────┘
@@ -143,34 +151,58 @@ For non-lock stages, each need pulls in its own needs only when it is not OK, re
 
 ### Stages and prerequisites
 
-Required phase-1 stages run in the table's order, from system through certs.
+Required phase-1 stages run in the table's order, from machine through certs.
 The optional stages do not gate security enrollment.
 
-| Stage      | Needs                       | Work                      |
-| ---------- | --------------------------- | ------------------------- |
-| system     | —                           | Overlay and services      |
-| network    | —                           | Ethernet and DNS          |
-| packages   | system, network             | Base, AUR, local packages |
-| home       | packages                    | Links and fonts           |
-| extra      | home, network               | Background apps           |
-| secrets    | system                      | Restore private files     |
-| ssh        | secrets, network            | GitHub access             |
-| repos      | ssh                         | Clone and fetch history   |
-| firefox    | packages                    | Profile and config        |
-| certs      | firefox                     | Local CA and certificates |
-| tailscale  | network                     | Optional login and SSH    |
-| vpn        | secrets                     | Optional work VPN         |
-| luks       | All required phase-1 stages | Two YubiKeys and recovery |
-| secureboot | luks                        | Keys and boot signatures  |
-| totp       | secureboot                  | Seal the boot TOTP        |
+| Stage      | Needs                       | Work                              |
+| ---------- | --------------------------- | --------------------------------- |
+| machine    | —                           | Hardware profile                  |
+| system     | machine                     | Overlay, rendered files, services |
+| network    | —                           | Ethernet and DNS                  |
+| packages   | machine, system, network    | Base, vendor, AUR, local packages |
+| home       | packages                    | Links and fonts                   |
+| extra      | home, network               | Background apps                   |
+| secrets    | system                      | Restore private files             |
+| ssh        | secrets, network            | GitHub access                     |
+| repos      | ssh                         | Clone and fetch history           |
+| firefox    | packages                    | Profile and config                |
+| certs      | firefox                     | Local CA and certificates         |
+| tailscale  | network                     | Optional login and SSH            |
+| vpn        | secrets                     | Optional work VPN                 |
+| luks       | All required phase-1 stages | Profile's 0–2 keys and recovery   |
+| secureboot | luks                        | Keys and boot signatures          |
+| totp       | secureboot                  | Seal the boot TOTP                |
 
 - Root stages other than lock stages are checked as the user first; only stages that are not OK and lock stages need sudo.
   - `dctl setup home` checks `packages`; if it is OK, `system` and `network` are not checked and no sudo is needed.
 - Consecutive root stages share one sudo child; user stages stay in your session.
   - When sudo needs authentication, setup explains which stages it will check or run as root and prompts with `dctl: sudo password for <user>:`.
   - If no terminal can ask for the sudo password and no cached authentication is available, the stage fails with a message to run the named stages in a terminal.
-- Root runs `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
+- Root runs `machine`, `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
 - `certs` uses sudo from the user session; user stages refuse root execution.
+
+### Machine profile
+
+On an existing install, run `dctl setup machine` before system, package, or lock work if `/etc/dctl/machine` is missing or invalid.
+Installation writes the record before applying setup stages.
+The `machine` stage detects hardware and records the Wi-Fi policy and YubiKey count without asking for or changing the hostname.
+
+The record uses `key=value` lines; all keys are required: `preset`, `cpu`, `gpus`, `form`, `backlight`, `wifi`, `wlan`, `yubikeys`, and `lane`.
+Unknown keys, including `hostname`, are rejected.
+Detection reads DMI, CPU/GPU vendors, battery/backlight, wireless drivers, and CPU topology.
+Confirm the Framework preset when the machine is recognized.
+Wireless detection checks PCI class `0x0280` and module aliases from every installed kernel; unmatched devices add nothing to `wlan`.
+Alias lookup blocks installation and `dctl setup machine` if no installed kernel has PCI aliases or an alias file cannot be read.
+
+- `system` renders CPU-affinity files and the Wi-Fi module blacklist from the record; duplicate paths in `system/` stop the stage.
+- The CPU lane contains the highest core's SMT siblings on machines with at least four cores; smaller machines have no lane.
+  - System `CPUAffinity` excludes the lane; Bluetooth, rtkit, audio services, hyprd, ewwd, and dunst use it.
+  - User-service drop-ins go under `/etc/systemd/user/<unit>.service.d/`, not the home config.
+  - Hyprd rebuilds and mpvpaper exclude the lane, with no explicit pinning when the record or lane is absent.
+- `wifi=off` blacklists the recorded wireless drivers; `wifi=on` removes that blacklist.
+- Hyprland reads the record through `config/hypr/machine.lua`.
+  - Brightness uses `brightnessctl` with `backlight=yes`; otherwise ddcutil uses each connected display's DDC bus found through sysfs.
+  - Lua checks only `lane` and `backlight`; if either is missing or invalid, dunst runs unpinned and brightness uses DDC.
 
 ### Status and output
 
@@ -225,7 +257,8 @@ Independent stages can still run.
 Setup installs missing official packages and starts extra applications in the background.
 Missing AUR and local base packages need manual installation.
 
-- `packages` reads the base, AUR, and local inputs under `packages/`.
+- `packages` reads base, selected AMD/Intel vendor, AUR, and local inputs under `packages/`.
+  - Intel adds `sof-firmware`; `linux-firmware-intel`, `linux-firmware-mediatek`, and `linux-firmware-realtek` stay in base.
   - Missing official packages trigger `pacman -Syu --noconfirm --needed`.
   - No official packages missing means no upgrade from this stage.
 - Install missing AUR packages:
@@ -285,18 +318,19 @@ Naming a lock stage pulls in its full dependency chain before checks and still r
 Enrollment trusts only the owner's keys.
 It refuses automatic option-ROM trust and does not add Microsoft keys.
 
-1. Press F2 and choose **Erase all Secure Boot Settings** to enter Setup Mode.
+1. Enter firmware setup and clear the Secure Boot keys to enter Setup Mode.
+   On the Framework Desktop, press F2 and choose **Erase all Secure Boot Settings**.
    Leave the TPM enabled.
-2. Save with F10; prepare both YubiKeys' PINs and age identities before locking down.
+2. Save (F10 on Framework); prepare PINs and age identities for the profile's YubiKeys before locking down.
 3. Run setup as the user and accept the lock confirmation once phase 1 is OK:
 
    ```sh
    dctl setup
    ```
 
-4. Complete the `luks` prompts for both keys and confirm the paper recovery copy.
-5. Let `secureboot` enroll keys and sign images, then reboot with a YubiKey inserted.
-   - If Secure Boot is still off, enable it with F2 and save with F10.
+4. Complete the `luks` prompts for the profile's 0–2 keys and confirm the paper recovery copy.
+5. Let `secureboot` enroll keys and sign images, then reboot with a configured YubiKey inserted or unlock with the passphrase.
+   - If Secure Boot is still off, enable it in firmware setup and save (F2/F10 on Framework).
 6. Run setup again to seal `totp` once Secure Boot is enforced.
 7. Reboot and compare the boot code with the authenticator before unlocking.
 
@@ -357,10 +391,11 @@ Only replace the secret after establishing a known firmware or Secure Boot chang
 #### Lock state
 
 Setup records enrollment and image-build state separately.
-These files are under `/etc/dctl/`.
+These files and the machine profile are under `/etc/dctl/`.
 
 | File                        | Records                            |
 | --------------------------- | ---------------------------------- |
+| `machine`                   | Hardware and setup policy          |
 | `boot-totp`                 | Verified authenticator enrollment  |
 | `boot-totp.built`           | Marker used for a verified rebuild |
 | `luks-yubikeys`             | Serials enrolled for this disk     |
@@ -429,7 +464,8 @@ Ewwd, newtab, and keys restart only when replaced.
 
 ### Package reconciliation
 
-Reconciliation treats the package lists and local recipes as the desired set.
+Reconciliation treats base, selected vendor lists, AUR, extra, and local recipes as the desired set.
+It needs `/etc/dctl/machine`; if missing, run `dctl setup machine` first.
 It changes package reasons before prompting, so cancelling is not a complete undo.
 
 1. Mark listed packages explicit and unlisted packages needed by others as dependencies.
@@ -446,7 +482,7 @@ It changes package reasons before prompting, so cancelling is not a complete und
 ## Firmware
 
 Firmware flashing is outside dctl.
-Follow Framework's instructions for the chosen release and updater.
+Follow the hardware vendor's instructions for the chosen release and updater.
 
 - There is no firmware command; `fwupd` is absent from the base list.
 - Firmware and Secure Boot changes can invalidate the sealed boot TOTP.
@@ -476,7 +512,7 @@ dctl iso build --fresh
 ```
 
 - Bundles a depth-1 clone; working-tree changes and full history are excluded.
-- Resolves base, AUR, and local recipes; missing packages stop the build.
+- Resolves base, both AMD/Intel vendor sets, AUR, and local recipes; missing packages stop the build.
 - `extra.lst` must exist but is not bundled; use `dctl setup extra` after installation.
 - Declared recipe PGP keys must be provided under recipe `keys/pgp/*.asc`.
 - Uses `/var/cache/dctl-iso/` for caching; concurrent builds are refused.
@@ -615,7 +651,7 @@ The age phrase unlocks the recovery identity, not the disk.
 Secret recovery does not restore user data; keep a separate off-site backup.
 
 1. Keep the age phrase and LUKS recovery key available outside the encrypted disk.
-2. Verify the phrase and rehearse decryption with both YubiKeys removed:
+2. Verify the phrase and rehearse decryption with all YubiKeys removed:
 
    ```sh
    dctl secrets verify-phrase
@@ -641,15 +677,16 @@ Later failures do not undo earlier changes to the key or checkout.
 
 1. Insert only the intended YubiKey and run `dctl keys enroll` as the user.
 2. Follow PIN, age identity/rekey, and signing-key prompts.
-3. Inspect status before retrying a failure; repeat with the other key.
+3. Inspect status before retrying a failure; repeat for each key you plan to use.
 
 - Age uses the PIV PIN without touch; release signing uses the FIDO2 PIN and touch.
 - Changes `secrets/`, `share/allowed_signers`, and local SSH signing-key files.
 
 ### Enroll disk tokens and recovery
 
-Disk enrollment keeps the passphrase and adds two PIN-required, no-touch tokens.
+Disk enrollment keeps the passphrase and adds the profile's 0–2 PIN-required, no-touch tokens.
 The recovery key is an independent disk-unlock method.
+With `yubikeys=0`, `luks` still requires confirmed paper recovery and permits Secure Boot and boot-TOTP setup.
 
 1. Use the user setup flow for its phase-1 gate and lock confirmation:
 
@@ -657,7 +694,7 @@ The recovery key is an independent disk-unlock method.
    dctl setup luks
    ```
 
-2. Insert one key at a time; enter the disk passphrase and FIDO2 PIN as prompted.
+2. If the profile requires YubiKeys, insert one at a time and enter the disk passphrase and FIDO2 PIN as prompted.
 3. Copy the recovery key onto paper, store it away from the machine, and confirm.
    - Deferring paper confirmation leaves work for the next run.
 
@@ -693,7 +730,7 @@ Retain a tested passphrase or recovery key before deleting disk slots.
 
 ### LUKS unlock
 
-Insert the YubiKey before boot; unlock does not wait for a late insertion.
+For token unlock, insert the YubiKey before boot; unlock does not wait for a late insertion.
 Token errors fall back to the passphrase or recovery-key prompt.
 
 - Dctl-enrolled tokens ask once for **LUKS2 token PIN**, without touch.
@@ -795,10 +832,10 @@ Run user commands as the owning user.
 
 ## Manual hardware acceptance
 
-These checks require the Framework Desktop and real YubiKeys.
+Run these checks on each target machine, with real YubiKeys when the profile requires them.
 The VM cannot prove hardware enrollment, boot-code stability, or recovery access.
 
-1. Confirm Setup Mode and TPM enablement before enrollment.
+1. Check `/etc/dctl/machine` against the hardware and chosen Wi-Fi/YubiKey policy, then confirm Setup Mode and TPM enablement before enrollment.
 2. Before TOTP sealing, confirm the boot screen reports **Boot TOTP not set up yet**.
 3. After enrollment, confirm own-key enforcement and setup status:
 
@@ -807,9 +844,9 @@ The VM cannot prove hardware enrollment, boot-code stability, or recovery access
    ```
 
 4. Compare boot TOTP with the authenticator across two reboots.
-5. Check each YubiKey separately before boot: one PIN prompt, no touch.
-6. With both keys removed, unlock using the paper recovery key.
-7. Decrypt secrets with each key separately, then rehearse phrase recovery.
+5. For each configured YubiKey, insert it before boot and check for one PIN prompt without touch.
+6. With all YubiKeys removed, test both passphrase and paper recovery unlock.
+7. Decrypt secrets with each configured age identity, then rehearse phrase recovery with all keys removed.
 8. Check network and Bluetooth devices:
 
    ```sh
@@ -817,7 +854,8 @@ The VM cannot prove hardware enrollment, boot-code stability, or recovery access
    bluetoothctl list
    ```
 
-   - Expect no Wi-Fi interface; pair and use a Bluetooth device.
+   - With Wi-Fi off, expect no Wi-Fi interface; with it on, verify the detected interface and a connection.
+   - Pair and use a Bluetooth device.
 
 9. Inspect kernel logs for firmware-load errors:
 
@@ -830,5 +868,8 @@ The VM cannot prove hardware enrollment, boot-code stability, or recovery access
 - With Secure Boot off, expect **NO BOOT TOTP**; restore enforcement before proceeding.
   - Investigate any remaining mismatch before resealing.
 - Avoid repeated wrong PINs that can block a key; cancel age-phrase fallback in key tests.
+- Check rendered CPU-affinity files and `/etc/systemd/user/` lane drop-ins against the record, including no lane below four cores.
+- Exercise brightness keys on backlight hardware and every connected DDC-capable display.
+- With `yubikeys=0`, verify that recovery confirmation completes `luks` and unlocks the Secure Boot and boot-TOTP stages.
 
 > _See [Secure Boot](#secure-boot) for investigation and explicit resealing._

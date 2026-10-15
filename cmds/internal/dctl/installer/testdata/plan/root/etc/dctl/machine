@@ -1,0 +1,9 @@
+preset=framework
+cpu=amd
+gpus=amd
+form=desktop
+backlight=no
+wifi=off
+wlan=mt7925e
+yubikeys=2
+lane=15,31

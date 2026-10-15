@@ -30,9 +30,9 @@ hl.env("PATH", home .. "/.local/bin:" .. path)
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 hl.on("hyprland.start", function()
-	hl.exec_cmd([[sh -c 'taskset -cp 0-6,8-14,16-1023 "$PPID" >/dev/null']])
+	local lane = require("machine").lane or ""
 	for _, command in ipairs({
-		"taskset -c 7,15 dunst",
+		lane == "" and "dunst" or "taskset -c " .. lane .. " dunst",
 		"hyprpaper",
 	}) do
 		hl.exec_cmd(command)

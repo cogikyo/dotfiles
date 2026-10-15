@@ -21,6 +21,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/machine"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -188,7 +189,9 @@ func rig(t *testing.T) (*session, *fake) {
 	put(t, filepath.Join(root, "run", "archiso", "bootmnt", ".keep"), nil, 0o644)
 	put(t, filepath.Join(root, "opt", "dctl", "payload", "base-1-1-any.pkg.tar.zst"), pkg, 0o644)
 	put(t, filepath.Join(root, "opt", "dctl", "payload", "SHA256SUMS"), []byte(hex.EncodeToString(sum[:])+"  base-1-1-any.pkg.tar.zst\n"), 0o644)
-	put(t, filepath.Join(root, "opt", "dctl", "targets"), []byte("base\nlinux\n"), 0o644)
+	put(t, filepath.Join(root, "opt", "dctl", "targets", "common"), []byte("base\nlinux\n"), 0o644)
+	put(t, filepath.Join(root, "opt", "dctl", "targets", "amd"), []byte("amd-ucode\n"), 0o644)
+	put(t, filepath.Join(root, "opt", "dctl", "targets", "intel"), []byte("intel-ucode\n"), 0o644)
 	put(t, filepath.Join(root, "opt", "dctl", "dotfiles.bundle"), []byte("bundle"), 0o644)
 	for _, name := range binaries.Names {
 		put(t, filepath.Join(root, "usr", "local", "bin", name), []byte(name), 0o755)
@@ -205,7 +208,9 @@ func rig(t *testing.T) (*session, *fake) {
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
 	s.ask = func(context.Context) (iso.Answers, error) {
-		return iso.Answers{Password: "pw", Zone: "America/Denver", LUKS: "luks"}, nil
+		return iso.Answers{Password: "pw", Zone: "America/Denver", Hostname: "costello", LUKS: "luks", Machine: machine.Profile{
+			Preset: machine.Custom, CPU: machine.AMD, GPUs: []string{machine.AMD}, Form: machine.Desktop, YubiKeys: 2,
+		}}, nil
 	}
 	s.confirm = func(disk) error {
 		f.confirmed = len(f.calls)

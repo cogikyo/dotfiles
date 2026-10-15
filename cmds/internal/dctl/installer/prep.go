@@ -3,7 +3,6 @@ package installer
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -16,7 +15,7 @@ import (
 type prep struct {
 	wg      sync.WaitGroup
 	disks   survey
-	targets []string
+	targets packages.Targets
 	errs    [4]error
 }
 
@@ -37,14 +36,7 @@ func (s *session) prepare(ctx context.Context) *prep {
 			p.errs[2] = errors.New("not booted with UEFI; reboot the dctl ISO in UEFI mode")
 		}
 	})
-	p.wg.Go(func() {
-		var err error
-		p.targets, err = packages.Read(s.path(iso.Targets))
-		if err == nil && len(p.targets) == 0 {
-			err = fmt.Errorf("%s names no packages", iso.Targets)
-		}
-		p.errs[3] = err
-	})
+	p.wg.Go(func() { p.targets, p.errs[3] = packages.ReadTargets(s.path(iso.Targets)) })
 	return p
 }
 

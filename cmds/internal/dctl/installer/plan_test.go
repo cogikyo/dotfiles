@@ -2,6 +2,7 @@ package installer
 
 import (
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/machine"
 	"fmt"
 	"maps"
 	"os"
@@ -13,8 +14,13 @@ import (
 )
 
 var testPlan = plan{
-	Disk:   disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
-	Zone:   "America/Denver",
+	Disk:     disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
+	Zone:     "America/Denver",
+	Hostname: "costello",
+	Machine: machine.Profile{
+		Preset: machine.Framework, CPU: machine.AMD, GPUs: []string{machine.AMD},
+		Form: machine.Desktop, WLAN: []string{"mt7925e"}, YubiKeys: 2, Lane: []int{15, 31},
+	},
 	LUKSID: "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
 	RootID: "0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a",
 	ESPID:  "5A3C-91E7",
@@ -205,7 +211,7 @@ func value(args []string, name string) string {
 }
 
 func TestNew(t *testing.T) {
-	p := newPlan(disk{Path: "/dev/vda"}, "UTC")
+	p := newPlan(disk{Path: "/dev/vda"}, iso.Answers{Zone: "UTC"})
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 	if !uuid.MatchString(p.LUKSID) || !uuid.MatchString(p.RootID) || p.LUKSID == p.RootID {
 		t.Errorf("LUKS %s, root %s: want two distinct v4 UUIDs", p.LUKSID, p.RootID)
@@ -217,7 +223,7 @@ func TestNew(t *testing.T) {
 
 func TestValid(t *testing.T) {
 	s, _ := rig(t)
-	ok := iso.Answers{Password: "pw", Zone: "America/Denver", LUKS: "luks", Serial: "24123A800123"}
+	ok := iso.Answers{Password: "pw", Zone: "America/Denver", Hostname: "costello", LUKS: "luks", Serial: "24123A800123"}
 	if err := s.valid(ok); err != nil {
 		t.Fatal(err)
 	}

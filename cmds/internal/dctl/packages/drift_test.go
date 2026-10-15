@@ -3,6 +3,8 @@ package packages
 import (
 	"slices"
 	"testing"
+
+	"dotfiles/cmds/internal/machine"
 )
 
 func TestClassify(t *testing.T) {
@@ -39,7 +41,7 @@ func TestDriftListsExtra(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := &fake{out: map[string]string{"pacman -Qq": "base\n", "pacman -Qqen": "base\ndocker\n"}}
-	d, err := drift(t.Context(), run, l)
+	d, err := drift(t.Context(), run, l, []string{machine.AMD})
 	if err != nil {
 		t.Fatal(err)
 	}

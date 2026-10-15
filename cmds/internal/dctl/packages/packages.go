@@ -16,6 +16,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/machine"
 )
 
 func Read(path string) ([]string, error) {
@@ -47,16 +48,23 @@ func Parse(r io.Reader) ([]string, error) {
 
 type Lists struct {
 	Base, AUR, Extra, Local []string
+	Vendor                  map[string][]string
 }
 
-// Load requires base.lst, aur.lst, and extra.lst and uses local PKGBUILD directory names as package names.
+var Vendors = []string{machine.AMD, machine.Intel}
+
 func Load(dir string) (Lists, error) {
 	base, berr := Read(filepath.Join(dir, "base.lst"))
 	aur, aerr := Read(filepath.Join(dir, "aur.lst"))
 	extra, eerr := Read(filepath.Join(dir, "extra.lst"))
-	l := Lists{Base: base, AUR: aur, Extra: extra}
+	l := Lists{Base: base, AUR: aur, Extra: extra, Vendor: map[string][]string{}}
 	entries, err := os.ReadDir(dir)
 	errs := []error{berr, aerr, eerr, err}
+	for _, v := range Vendors {
+		names, err := Read(filepath.Join(dir, v+".lst"))
+		l.Vendor[v] = names
+		errs = append(errs, err)
+	}
 	for _, e := range entries {
 		_, err := os.Lstat(filepath.Join(dir, e.Name(), "PKGBUILD"))
 		switch {
@@ -69,9 +77,24 @@ func Load(dir string) (Lists, error) {
 	return l, errors.Join(errs...)
 }
 
-// Payload returns sorted, unique base, AUR, and local package names, excluding Extra.
+// Payload includes every vendor set for offline installs, but excludes Extra.
 func (l Lists) Payload() []string {
-	return unique(slices.Concat(l.Base, l.AUR, l.Local))
+	return l.Targets().Select(Vendors)
+}
+
+func (l Lists) Official(vendors []string) []string {
+	names := slices.Clone(l.Base)
+	for _, v := range vendors {
+		names = append(names, l.Vendor[v]...)
+	}
+	return unique(names)
+}
+
+var record = machine.Path
+
+func selected() ([]string, error) {
+	p, err := machine.Read(record)
+	return p.Vendors(), err
 }
 
 func unique(names []string) []string {
@@ -128,11 +151,15 @@ func missing(ctx context.Context, dir string, run execx.Runner) (official, other
 	if err != nil {
 		return nil, nil, err
 	}
+	vendors, err := selected()
+	if err != nil {
+		return nil, nil, err
+	}
 	have, err := installed(ctx, run)
 	if err != nil {
 		return nil, nil, err
 	}
-	return absent(l.Base, have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
+	return absent(l.Official(vendors), have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
 }
 
 var coreDB = "/var/lib/pacman/sync/core.db"

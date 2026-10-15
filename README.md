@@ -111,10 +111,11 @@
 
 ## 🛠️ Installation
 
-This system is built specifically for the Framework Desktop (AMD Strix Halo, Ethernet only).
+The installer detects AMD or Intel hardware and records a machine profile in `/etc/dctl/machine`.
+The Framework Desktop remains the reference machine; other hardware needs the [acceptance checks](cmds/cmd/dctl/README.md#manual-hardware-acceptance).
 
 - Offline Arch ISO: installs the base system and dotfiles without a network.
-- LUKS2 and YubiKey unlock: encrypts the disk; keeps passphrase and paper recovery options.
+- LUKS2 with optional YubiKey unlock: encrypts the disk; keeps passphrase and paper recovery options.
 - btrfs with Snapper: keeps root snapshots for recovery and manual rollback.
 - Limine and unified kernel images (UKIs): supports signed boot images and snapshot boot.
 - Own-key Secure Boot and TPM-sealed TOTP: adds signatures and boot-state evidence.
@@ -122,8 +123,8 @@ This system is built specifically for the Framework Desktop (AMD Strix Halo, Eth
 
 > _See the [dctl guide](cmds/cmd/dctl/README.md) for commands and recovery._
 
-There is no model check, but this system is only tested on that machine.
-AMD packages, no Wi-Fi packages, NVMe selection, and firmware menus limit portability.
+The profile selects vendor packages, Wi-Fi policy, CPU affinity, and brightness control.
+NVIDIA is unsupported; detection warns but does not stop installation.
 
 > [!CAUTION]
 >
@@ -166,26 +167,31 @@ Add `--iso /path/to/dotfiles-REV.iso` for a downloaded ISO.
 dctl iso usb /dev/sdX
 ```
 
-### 3. Prepare the Framework
+### 3. Prepare the firmware
 
 Prepare the firmware now to avoid another visit during security enrollment.
 
 1. Back up any data on the internal disk.
-2. Press F2 and choose **Erase all Secure Boot Settings** to enter Setup Mode.
-3. Leave the TPM enabled and press F10 to save.
+2. Enter firmware setup and clear the Secure Boot keys to enter Setup Mode.
+   On the Framework Desktop, press F2 and choose **Erase all Secure Boot Settings**.
+3. Leave the TPM enabled and save; on the Framework Desktop, press F10.
 
 ### 4. Install
 
 The installer creates the encrypted system and desktop from bundled packages.
 
-1. Press F12 and choose the USB in UEFI mode; the ISO starts the installer on tty1.
-2. Enter the login password for `cullyn`, the timezone, and the disk passphrase.
-3. Check the selected disk before confirming **Erase `<disk>` and install?**.
-4. At the completed summary, remove the USB and reboot.
+1. Choose the USB in the firmware's UEFI boot menu; on the Framework Desktop, press F12.
+   The ISO starts the installer on tty1.
+2. Review the detected hardware and confirm the preset or choose a Wi-Fi policy and 0, 1, or 2 YubiKeys (default 2).
+   Wi-Fi defaults off on desktops and on when a battery is detected; the Framework preset forces it off.
+3. Enter the hostname, login password for `cullyn`, timezone, and disk passphrase.
+4. Check the selected disk before confirming **Erase `<disk>` and install?**.
+5. At the completed summary, remove the USB and reboot.
 
 ### 5. First login
 
-Unlock with the passphrase, log in, connect Ethernet, and insert a YubiKey.
+Unlock with the passphrase, log in, and connect Ethernet for setup's network check.
+Secrets can use a YubiKey or the age recovery phrase.
 
 ```sh
 dctl setup
@@ -193,7 +199,7 @@ dctl setup
 
 Phase 1, **make it work**, then runs:
 
-1. Check system services and Ethernet/DNS (`system`, `network`).
+1. Check the machine profile, system services, and Ethernet/DNS (`machine`, `system`, `network`).
 2. Apply packages and home settings (`packages`, `home`).
 3. Install extra applications in the background (`extra`).
 4. Restore secrets, SSH access, and repositories (`secrets`, `ssh`, `repos`).
@@ -207,9 +213,10 @@ Setup asks you to accept the plan; zsh prints the next action as `dctl · …`.
 
 Phase 2, **lock it down**, secures the system after a separate confirmation.
 Run setup as the normal user; `--yes` never accepts the lock confirmation.
+With zero YubiKeys, the full lock setup uses passphrase and paper recovery.
 
-1. Enroll both YubiKeys for disk unlock and save the recovery key onto paper.
-2. Enroll the Secure Boot keys, then reboot with a YubiKey inserted.
+1. Enroll the profile's 0–2 YubiKeys for disk unlock and save the recovery key onto paper.
+2. Enroll the Secure Boot keys, then reboot with a configured YubiKey inserted or unlock with the passphrase.
 3. Once Secure Boot is enforced, run setup again to seal and verify the boot TOTP.
 4. Reboot and compare the boot code with the authenticator before unlocking.
 

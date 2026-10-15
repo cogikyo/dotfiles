@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"dotfiles/cmds/internal/machine"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -29,7 +30,12 @@ type Request struct {
 	Status bool
 }
 
-const lockQuestion = "Everything works. Lock it down now? YubiKeys, then Secure Boot"
+func lockQuestion() string {
+	if p, err := machine.Read(machine.Path); err == nil && p.YubiKeys == 0 {
+		return "Everything works. Lock it down now? Recovery key, then Secure Boot"
+	}
+	return "Everything works. Lock it down now? YubiKeys, then Secure Boot"
+}
 
 func (f *Flow) Run(ctx context.Context, req Request) error {
 	u := f.UI
@@ -474,7 +480,7 @@ func (e *execution) lock(ctx context.Context) {
 	for _, w := range rows {
 		w.show(u)
 	}
-	ok, err := u.Confirm(lockQuestion)
+	ok, err := u.Confirm(lockQuestion())
 	if errors.Is(err, ui.ErrEscaped) {
 		ok, err = false, nil
 	}
@@ -641,7 +647,12 @@ func labeled(head string, names []string) string {
 
 func (e *execution) later(rows []row) string {
 	if r := e.results["secureboot"]; r.State == LaterState && slices.ContainsFunc(r.Items, func(it Result) bool { return it.Item == "secureboot-keys" && it.State == Done }) {
-		return "Reboot and unlock with a YubiKey's FIDO2 PIN; if Secure Boot is still off, turn it on with F2 and save with F10. Then run `dctl setup` to seal the boot TOTP."
+		p, err := machine.Read(machine.Path)
+		unlock := "a YubiKey's FIDO2 PIN"
+		if err == nil && p.YubiKeys == 0 {
+			unlock = "the disk passphrase"
+		}
+		return "Reboot and unlock with " + unlock + "; if Secure Boot is still off, " + p.Firmware().Enable + ". Then run `dctl setup` to seal the boot TOTP."
 	}
 	w := rows[slices.IndexFunc(rows, func(w row) bool { return w.mark == laterMark })]
 	return w.stage.Name + ": " + w.text

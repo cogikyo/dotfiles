@@ -104,8 +104,16 @@ end)
 
 local player = "playerctl --player=spotify"
 local audio = "wpctl"
-local display = "ddcutil --bus 8 --noverify"
+local backlight = require("machine").backlight == "yes"
 local terminal = "kitty --title terminalfloat -e"
+
+local function display(vcp, percent)
+	if backlight then
+		return "brightnessctl --class=backlight set " .. percent
+	end
+	return [[sh -c 'for c in /sys/class/drm/card*-*; do read -r s < "$c/status" && [ "$s" = connected ] && b=$(readlink "$c/ddc") && { ddcutil --bus "${b##*-}" --noverify setvcp 10 ]]
+		.. vcp .. [[ & }; done; wait']]
+end
 
 local function locked(keys, command)
 	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true, device = device })
@@ -122,10 +130,10 @@ locked("XF86AudioRaiseVolume",           audio .. " set-volume -l 1.5 @DEFAULT_A
 locked("XF86AudioLowerVolume",           audio .. " set-volume @DEFAULT_AUDIO_SINK@ 5%-")
 locked("SUPER + XF86AudioRaiseVolume",   player .. " volume 0.05+")
 locked("SUPER + XF86AudioLowerVolume",   player .. " volume 0.05-")
-locked("SUPER + XF86MonBrightnessUp",    display .. " setvcp 10 85")
-locked("XF86MonBrightnessUp",            display .. " setvcp 10 + 5")
-locked("XF86MonBrightnessDown",          display .. " setvcp 10 - 5")
-locked("SUPER + XF86MonBrightnessDown",  display .. " setvcp 10 15")
+locked("SUPER + XF86MonBrightnessUp",    display("85", "85%"))
+locked("XF86MonBrightnessUp",            display("+ 5", "5%+"))
+locked("XF86MonBrightnessDown",          display("- 5", "5%-"))
+locked("SUPER + XF86MonBrightnessDown",  display("15", "15%"))
 
 bind("XF86Calculator", nil, terminal .. " calc")
 bind("XF86Explorer",   nil, terminal .. [[ zsh -c 'cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh -l']])

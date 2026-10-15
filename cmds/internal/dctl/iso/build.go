@@ -226,11 +226,11 @@ func (b *build) build(ctx context.Context) (string, error) {
 		return "", err
 	}
 	b.section("payload", "offline package closure")
-	sizes, targets, err := b.payload(ctx, l, built, payload)
+	sizes, err := b.payload(ctx, l, built, payload)
 	if err != nil {
 		return "", err
 	}
-	if err := writeTargets(filepath.Join(air, Targets), targets); err != nil {
+	if err := l.Targets().Write(filepath.Join(air, Targets)); err != nil {
 		return "", err
 	}
 	var total int64
@@ -727,26 +727,26 @@ func prune(store string, keys map[string]string) error {
 	return nil
 }
 
-func (b *build) payload(ctx context.Context, l packages.Lists, built, payload string) ([]sized, []string, error) {
+func (b *build) payload(ctx context.Context, l packages.Lists, built, payload string) ([]sized, error) {
 	if err := b.run.Run(ctx, "", "pacman", b.pacman("dctl.conf", "-Sy")...); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	targets := l.Payload()
 	out, err := b.run.Output(ctx, "", "pacman", b.pacman("pacman.conf", slices.Concat([]string{"-Sp", "--print-format", "%r %n %f"}, targets)...)...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	closure, err := parseResolved(out)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if missing := unresolved(targets, closure); len(missing) > 0 {
-		return nil, nil, fmt.Errorf("not package names in the closure (group or provider?): %s", strings.Join(missing, " "))
+		return nil, fmt.Errorf("not package names in the closure (group or provider?): %s", strings.Join(missing, " "))
 	}
 
 	pkgs := filepath.Join(b.cache, "pkg")
 	if err := os.MkdirAll(pkgs, 0o755); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	var official, files []string
 	keep := map[string]bool{}
@@ -763,22 +763,22 @@ func (b *build) payload(ctx context.Context, l packages.Lists, built, payload st
 	b.u.Info("fetching %d packages through %s", len(official), pkgs)
 	if len(official) > 0 {
 		if err := b.run.Run(ctx, "", "pacman", b.pacman("pacman.conf", slices.Concat([]string{"--cachedir", pkgs, "-Sw", "-dd", "--noconfirm"}, official)...)...); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 	entries, err := os.ReadDir(pkgs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, e := range entries {
 		if !keep[e.Name()] {
 			if err := os.RemoveAll(filepath.Join(pkgs, e.Name())); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
 	if err := b.run.Run(ctx, "", "cp", slices.Concat([]string{"--reflink=auto", "-t", payload}, files)...); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var sizes []sized
@@ -786,15 +786,15 @@ func (b *build) payload(ctx context.Context, l packages.Lists, built, payload st
 	for _, p := range closure {
 		st, err := os.Stat(filepath.Join(payload, p.File))
 		if err != nil {
-			return nil, nil, fmt.Errorf("payload is missing resolved package %s: %w", p.Name, err)
+			return nil, fmt.Errorf("payload is missing resolved package %s: %w", p.Name, err)
 		}
 		sizes = append(sizes, sized{p.Name, st.Size()})
 		names = append(names, p.File)
 	}
 	if err := b.run.Run(ctx, payload, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, names...)...); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return sizes, targets, writeSums(ctx, payload)
+	return sizes, writeSums(ctx, payload)
 }
 
 func (b *build) seed() error {

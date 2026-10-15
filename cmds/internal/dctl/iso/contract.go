@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"dotfiles/cmds/internal/machine"
 )
 
 const (
@@ -26,10 +28,12 @@ const (
 )
 
 type Answers struct {
-	Password string `json:"password"`
-	Zone     string `json:"zone"`
-	LUKS     string `json:"luks"`
-	Serial   string `json:"disk_serial"`
+	Password string          `json:"password"`
+	Zone     string          `json:"zone"`
+	Hostname string          `json:"hostname"`
+	LUKS     string          `json:"luks"`
+	Serial   string          `json:"disk_serial"`
+	Machine  machine.Profile `json:"-"`
 }
 
 type Phase struct {

@@ -48,7 +48,7 @@ func report(u *ui.UI, d Drift) {
 	u.Info("run `dctl update packages` interactively to resolve the differences")
 }
 
-func drift(ctx context.Context, run execx.Runner, l Lists) (Drift, error) {
+func drift(ctx context.Context, run execx.Runner, l Lists, vendors []string) (Drift, error) {
 	have, herr := installed(ctx, run)
 	native, nerr := query(ctx, run, "-Qqen")
 	foreign, ferr := query(ctx, run, "-Qqem")
@@ -58,7 +58,7 @@ func drift(ctx context.Context, run execx.Runner, l Lists) (Drift, error) {
 	if err := errors.Join(herr, nerr, ferr, oerr, derr, lerr); err != nil {
 		return Drift{}, err
 	}
-	listed := set(slices.Values(slices.Concat(l.Base, l.AUR, l.Extra, l.Local)))
+	listed := set(slices.Values(slices.Concat(l.Official(vendors), l.AUR, l.Extra, l.Local)))
 	return classify(listed, have, native, foreign, orphans, deps, leaves), nil
 }
 

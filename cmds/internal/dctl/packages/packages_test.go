@@ -2,11 +2,14 @@ package packages
 
 import (
 	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"dotfiles/cmds/internal/machine"
 )
 
 type fake struct {
@@ -28,6 +31,19 @@ func (f *fake) Output(ctx context.Context, dir, name string, args ...string) (st
 func lists(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
+	old := record
+	record = filepath.Join(dir, "machine")
+	t.Cleanup(func() { record = old })
+	p := machine.Profile{Preset: machine.Custom, CPU: machine.AMD, GPUs: []string{machine.AMD}, Form: machine.Desktop, YubiKeys: 2}
+	if err := machine.Write(record, p); err != nil {
+		t.Fatal(err)
+	}
+	files = maps.Clone(files)
+	for _, v := range []string{"amd.lst", "intel.lst"} {
+		if _, ok := files[v]; !ok {
+			files[v] = ""
+		}
+	}
 	for rel, data := range files {
 		path := filepath.Join(dir, rel)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -68,11 +84,13 @@ func TestMissing(t *testing.T) {
 		"base.lst":         "git\nzsh\nmesa\n",
 		"aur.lst":          "yay\nlimine-snapper-sync\n",
 		"extra.lst":        "docker\n",
+		"amd.lst":          "vulkan-radeon\n",
+		"intel.lst":        "vulkan-intel\n",
 		"eww/PKGBUILD":     "pkgname=eww\npkgver=1\n",
 		"notes/README.txt": "not a package",
 	})
 	l, err := Load(dir)
-	if want := []string{"eww", "git", "limine-snapper-sync", "mesa", "yay", "zsh"}; err != nil || !slices.Equal(l.Payload(), want) {
+	if want := []string{"eww", "git", "limine-snapper-sync", "mesa", "vulkan-intel", "vulkan-radeon", "yay", "zsh"}; err != nil || !slices.Equal(l.Payload(), want) {
 		t.Fatalf("payload %v, %v; want %v", l.Payload(), err, want)
 	}
 	run := &fake{out: map[string]string{"pacman -Qq": "git\nyay\neww\nunrelated\n"}}
@@ -80,13 +98,13 @@ func TestMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(official, []string{"mesa", "zsh"}) || !slices.Equal(other, []string{"limine-snapper-sync"}) {
+	if !slices.Equal(official, []string{"mesa", "vulkan-radeon", "zsh"}) || !slices.Equal(other, []string{"limine-snapper-sync"}) {
 		t.Fatalf("official %v, other %v", official, other)
 	}
 	if err := Stage(dir, run).Items[0].Fix(context.Background()); err == nil || !strings.Contains(err.Error(), "limine-snapper-sync") {
 		t.Fatalf("fix err %v, want blocked on limine-snapper-sync", err)
 	}
-	if last := run.calls[len(run.calls)-1]; last != "pacman -Syu --noconfirm --needed mesa zsh" {
+	if last := run.calls[len(run.calls)-1]; last != "pacman -Syu --noconfirm --needed mesa vulkan-radeon zsh" {
 		t.Fatalf("fix ran %q", last)
 	}
 }

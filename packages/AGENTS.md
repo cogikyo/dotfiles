@@ -5,13 +5,14 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 
 ## Inputs
 
-| Path             | Role                              |
-| ---------------- | --------------------------------- |
-| `base.lst`       | Official offline payload packages |
-| `aur.lst`        | AUR offline payload recipes       |
-| `extra.lst`      | Online `dctl setup extra`         |
-| `repos.lst`      | Repository clone catalog          |
-| `<pkg>/PKGBUILD` | Local offline payload recipe      |
+| Path                   | Role                              |
+| ---------------------- | --------------------------------- |
+| `base.lst`             | Official offline payload packages |
+| `amd.lst`, `intel.lst` | Vendor-specific offline packages  |
+| `aur.lst`              | AUR offline payload recipes       |
+| `extra.lst`            | Online `dctl setup extra`         |
+| `repos.lst`            | Repository clone catalog          |
+| `<pkg>/PKGBUILD`       | Local offline payload recipe      |
 
 ## Rules
 
@@ -19,6 +20,7 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 - `repos.lst` uses `owner/name path` per line, with a `~/` or absolute destination and the same comment rules.
 - Name local recipe directories after the package; the loader uses directory names as package names.
 - Ship keys for `validpgpkeys` under `<pkg>/keys/pgp/*.asc`; ISO builds fail before building if a required fingerprint is absent from the build keyring.
-- ISO builds require the base, AUR, and extra lists, but only base, AUR, and local packages enter the offline payload.
+- ISO builds require the base, vendor, AUR, and extra lists; base, both vendor sets, AUR, and local packages enter the offline payload.
+- Installation, package setup, and reconciliation select vendor lists from `/etc/dctl/machine`; `linux-firmware-intel`, `linux-firmware-mediatek`, and `linux-firmware-realtek` remain in base.
 - `dctl update packages` reconciles the system with the lists; packages kept from its removal checklist are inserted into `extra.lst` under `# official` or `# aur`.
 - A binary at `~/.local/bin/eww` shadows the packaged eww from `eww/`.

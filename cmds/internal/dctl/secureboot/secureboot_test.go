@@ -104,11 +104,12 @@ func writeUKI(t *testing.T, path string) {
 	put(t, path, b.Bytes())
 }
 
-func machine(t *testing.T) *fake {
+func rig(t *testing.T) *fake {
 	f := &fake{t: t, root: t.TempDir(), conf: "/Arch Linux\n    protocol: efi\n    path: boot():/EFI/Linux/linux.efi\n    cmdline: rd.luks.name=" + luks + "=root root=/dev/mapper/root rootflags=subvol=/@ rw\n"}
 	efivar(t, f.root, "SetupMode", 1)
 	efivar(t, f.root, "SecureBoot", 0)
 	put(t, filepath.Join(f.root, "etc", "default", "limine"), []byte("ESP_PATH=/boot\nENABLE_LIMINE_FALLBACK=yes\n"))
+	put(t, filepath.Join(f.root, "etc", "dctl", "machine"), []byte("preset=framework\ncpu=amd\ngpus=amd\nform=desktop\nbacklight=no\nwifi=off\nwlan=mt7925e\nyubikeys=2\nlane=15,31\n"))
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
 	put(t, filepath.Join(f.root, "dev", "nvme0n1p2"), nil)
 	put(t, filepath.Join(f.root, "dev", "tpmrm0"), nil)
@@ -144,7 +145,7 @@ func run(t *testing.T, f *fake, fix bool) map[string]setup.Result {
 }
 
 func TestFixEnrolls(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	rs := run(t, f, true)
 	if rs[Keys].State != setup.Done || rs[Signed].State != setup.Done {
 		t.Fatalf("after enrollment: %+v", rs)
@@ -208,7 +209,7 @@ func TestFixRefusesUnbootable(t *testing.T) {
 		"missing conf": {func(f *fake) { f.conf = "" }, "limine.conf: no such file"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := machine(t)
+			f := rig(t)
 			tt.mutate(f)
 			rs := run(t, f, true)
 			if r := rs[Keys]; r.State != setup.Failed || !strings.Contains(r.Detail, tt.want) || !strings.Contains(r.Detail, "keys not enrolled") {
@@ -222,7 +223,7 @@ func TestFixRefusesUnbootable(t *testing.T) {
 }
 
 func TestUnencryptedRootVerifies(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	f.conf = "/Arch Linux\n    path: boot():/EFI/Linux/linux.efi\n    cmdline: root=UUID=" + luks + " rw\n"
 	if r := run(t, f, true)[Keys]; r.State != setup.Done {
 		t.Errorf("%s = %+v, want enrollment over an unencrypted root", Keys, r)
@@ -235,7 +236,7 @@ func TestUnencryptedRootVerifies(t *testing.T) {
 }
 
 func TestSignedRepairs(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	run(t, f, true)
 	efivar(t, f.root, "SecureBoot", 1)
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
@@ -270,7 +271,7 @@ func TestPreflight(t *testing.T) {
 		"ready":               {true, synthetic(0, false), "keys not enrolled", false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := machine(t)
+			f := rig(t)
 			efivar(t, f.root, "SetupMode", map[bool]byte{true: 1}[tc.setup])
 			efivar(t, f.root, "SecureBoot", map[bool]byte{true: 1}[tc.on])
 			if tc.log == nil {
@@ -295,7 +296,7 @@ func TestPreflight(t *testing.T) {
 }
 
 func TestVendorKeys(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	put(t, filepath.Join(f.root, sbctlConf), []byte("db_additions:\n- microsoft\n"))
 	if r := run(t, f, true)[Keys]; r.State != setup.ManualState || !strings.Contains(r.Detail, "adds microsoft to db") || slices.Contains(f.calls, "sbctl enroll-keys") {
 		t.Fatalf("%s = %+v with db_additions, calls %q", Keys, r, f.calls)
@@ -310,7 +311,7 @@ func TestVendorKeys(t *testing.T) {
 }
 
 func TestStillOffAfterReboot(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	run(t, f, true)
 	put(t, filepath.Join(f.root, measured), synthetic(0, true))
 	if r := run(t, f, false)[Enforced]; r.State != setup.ManualState || !strings.Contains(r.Detail, "Secure Boot still off") {
@@ -336,7 +337,7 @@ func TestSealed(t *testing.T) {
 		"no TPM":          {nil, false, true, nil, "no TPM at"},
 		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR in main: 0xa000a - tcti:IO failure"), true, true, nil, "IO failure"},
 	} {
-		f := machine(t)
+		f := rig(t)
 		efivar(t, f.root, "SetupMode", 0)
 		efivar(t, f.root, "SecureBoot", 1)
 		if !tc.tpm {
@@ -360,7 +361,7 @@ func TestSealed(t *testing.T) {
 }
 
 func TestMarkerRepair(t *testing.T) {
-	f := machine(t)
+	f := rig(t)
 	run(t, f, true)
 	efivar(t, f.root, "SecureBoot", 1)
 	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))

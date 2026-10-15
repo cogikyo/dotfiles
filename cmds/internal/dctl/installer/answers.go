@@ -2,6 +2,7 @@ package installer
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,10 +11,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"syscall"
 	"time"
 
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/machine"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -23,6 +27,7 @@ const (
 	testLabel = "/dev/disk/by-label/" + iso.Label
 	testMount = "/run/dctltest"
 	testEnv   = "DCTLTEST_OVERRIDE"
+	testHost  = "dctltest"
 
 	overrideCopy = "/run/dctl-override"
 	lockFile     = "/run/dctl-install.lock"
@@ -30,7 +35,16 @@ const (
 
 func (s *session) form(context.Context) (iso.Answers, error) {
 	var a iso.Answers
-	var err error
+	facts, err := machine.Detect(s.root)
+	if err != nil {
+		return a, err
+	}
+	if a.Machine, err = setup.AskMachine(s.u, facts, facts.Profile()); err != nil {
+		return a, err
+	}
+	if a.Hostname, err = s.text("Hostname", a.Machine.DefaultHostname(), hostname); err != nil {
+		return a, err
+	}
 	if a.Password, err = s.secret("Login password", login+", also for sudo"); err != nil {
 		return a, err
 	}
@@ -46,7 +60,16 @@ func (s *session) valid(a iso.Answers) error {
 	if a.Password == "" || a.LUKS == "" || a.Serial == "" {
 		errs = append(errs, errors.New("password, luks, and disk_serial are required"))
 	}
-	return errors.Join(append(errs, s.zone(a.Zone))...)
+	return errors.Join(append(errs, s.zone(a.Zone), hostname(a.Hostname))...)
+}
+
+var hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+
+func hostname(v string) error {
+	if !hostPattern.MatchString(v) {
+		return fmt.Errorf("%q: use 1-63 lowercase letters, digits, and inner hyphens", v)
+	}
+	return nil
 }
 
 func (s *session) zone(v string) error {
@@ -130,8 +153,17 @@ func (s *session) dctltest(ctx context.Context) (*iso.Answers, error) {
 	if err := dec.Decode(&a); err != nil {
 		return nil, fmt.Errorf("DCTLTEST answers.json: %w", err)
 	}
+	a.Hostname = cmp.Or(a.Hostname, testHost)
 	if err := s.valid(a); err != nil {
 		return nil, fmt.Errorf("DCTLTEST answers.json: %w", err)
+	}
+	facts, err := machine.Detect(s.root)
+	if err != nil {
+		return nil, fmt.Errorf("DCTLTEST hardware: %w", err)
+	}
+	a.Machine = facts.Profile()
+	if err := a.Machine.Validate(); err != nil {
+		return nil, fmt.Errorf("DCTLTEST hardware: %w", err)
 	}
 	if b := s.path(testMount, "dotfiles.bundle"); exists(b) {
 		s.bundle = filepath.Join(testMount, "dotfiles.bundle")
