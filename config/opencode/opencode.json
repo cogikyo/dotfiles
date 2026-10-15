@@ -240,7 +240,6 @@
     { "action": "shell", "resource": "yay -Gp *", "effect": "allow" },
     { "action": "shell", "resource": "paru *", "effect": "deny" },
     { "action": "shell", "resource": "npm install*", "effect": "ask" },
-    { "action": "shell", "resource": "npm ci*", "effect": "allow" },
     { "action": "shell", "resource": "pnpm install*", "effect": "ask" },
     { "action": "shell", "resource": "pnpm install --frozen-lockfile*", "effect": "allow" },
     { "action": "shell", "resource": "yarn install*", "effect": "ask" },

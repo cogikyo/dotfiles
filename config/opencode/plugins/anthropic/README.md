@@ -32,5 +32,5 @@ Authentication errors do not trigger account-pool fallback; `lanes/server.ts` ow
 
 ## Verification
 
-Run `npm run check` from `config/opencode` for local type, lint, and format checks.
+Run `bun run check` from `config/opencode` for local type, lint, and format checks.
 Credential refresh and signed live requests require separate user-approved verification because they can write real account files and refresh locks.

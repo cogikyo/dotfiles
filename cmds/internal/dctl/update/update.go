@@ -77,10 +77,10 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			},
 		},
 		{
-			Name: "npm",
-			Plan: "OpenCode plugin dependencies from config/opencode/package-lock.json",
+			Name: "bun",
+			Plan: "OpenCode plugin dependencies from config/opencode/bun.lock",
 			Run: func(ctx context.Context) error {
-				return drawn(packages.NPM(ctx, run, root.Config("opencode")))
+				return drawn(packages.Bun(ctx, run, root.Config("opencode")))
 			},
 		},
 		{

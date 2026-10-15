@@ -10,7 +10,7 @@ import (
 	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func Extra(dir, npm string, run execx.Runner) setup.Stage {
+func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 	pending := func(ctx context.Context) ([]string, error) {
 		l, err := Load(dir)
 		if err != nil {
@@ -62,12 +62,9 @@ func Extra(dir, npm string, run execx.Runner) setup.Stage {
 			},
 		},
 		{
-			Name: "extra-npm",
-			Check: func(ctx context.Context) error {
-				_, err := run.Output(ctx, npm, "npm", "ls")
-				return err
-			},
-			Fix: func(ctx context.Context) error { return NPM(ctx, run, npm) },
+			Name:  "extra-bun",
+			Check: func(context.Context) error { return bunLocked(opencode) },
+			Fix:   func(ctx context.Context) error { return Bun(ctx, run, opencode) },
 		},
 	}}
 }
