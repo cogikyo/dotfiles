@@ -184,8 +184,12 @@ There is no persistent state, key, or TUI slot.
 
 ## X search
 
-`x/server.ts` exposes `x` with a self-contained `brief` and runs Grok CLI native X search from `/tmp` with a ten-minute deadline.
-Fixed flags disable shell, file, web-search, and child-agent tools; returned claims remain untrusted evidence.
+`x/server.ts` exposes `x` with a self-contained `brief` and runs Grok CLI native X search with a ten-minute deadline.
+Each call starts in an empty temporary directory under `~/.local/state/opencode/x/`, removed when the call finishes.
+Fixed flags disallow local tools and add explicit denials, disable web search and child agents, and use permission mode `default`; Grok's own sandbox is off, and this call does not run in cage.
+The brief is NFKC-normalized; control and format characters are rejected except newline and tab.
+Bare `@handle` text becomes `X user handle <name>`, other `@` text is rejected, and lines starting with `/` or `!` are rejected before the `X research brief:` prefix is added.
+Returned claims remain untrusted evidence.
 The plugin rejects near-duplicate briefs within a session and keeps that history only in memory.
 There is no key, TUI slot, or separate state file.
 

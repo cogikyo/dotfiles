@@ -1,7 +1,13 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
 
 const timeout = 10 * 60 * 1000;
+const workspace = path.join(homedir(), ".local/state/opencode/x");
+const handle = /(?<![A-Za-z0-9_])@([A-Za-z0-9_]{1,15})(?![A-Za-z0-9_])/gu;
+const invisible = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 
 const flags = [
   "--model",
@@ -14,10 +20,24 @@ const flags = [
   "--no-auto-update",
   "--verbatim",
   "--disable-web-search",
+  "--permission-mode",
+  "default",
   "--disallowed-tools",
-  "run_terminal_command,read_file,search_replace,write,list_dir,grep,kill_command_or_subagent,get_command_or_subagent_output,spawn_subagent,scheduler_create,scheduler_delete,scheduler_list,monitor,search_tool,use_tool,workflow,enter_plan_mode,exit_plan_mode,ask_user_question,send_feedback,web_search,web_fetch,image_gen,image_edit,image_to_video,reference_to_video,todo_write,Agent",
+  "run_terminal_cmd,run_terminal_command,read_file,search_replace,write,list_dir,grep,task,kill_command_or_subagent,get_command_or_subagent_output,spawn_subagent,scheduler_create,scheduler_delete,scheduler_list,monitor,search_tool,use_tool,workflow,enter_plan_mode,exit_plan_mode,ask_user_question,send_feedback,web_search,web_fetch,image_gen,image_edit,image_to_video,reference_to_video,todo_write,Agent",
   "--deny",
   "Bash",
+  "--deny",
+  "Read",
+  "--deny",
+  "Edit",
+  "--deny",
+  "Write",
+  "--deny",
+  "Grep",
+  "--deny",
+  "WebFetch",
+  "--deny",
+  "MCPTool",
   "--sandbox",
   "off",
   "--system-prompt-override",
@@ -55,10 +75,39 @@ function reject(sessionID: string, candidate: Set<string>) {
   }
 }
 
-async function search(brief: string, abort: AbortSignal) {
+function prompt(brief: string) {
+  const text = brief.normalize("NFKC");
+  for (const char of text) {
+    if (char === "\n" || char === "\t" || !invisible.test(char)) continue;
+    const code = char.codePointAt(0)?.toString(16).toUpperCase().padStart(4, "0");
+    throw new Error(`x brief must not contain control, format, or line-separator characters (found U+${code})`);
+  }
+  const named = text.replace(handle, "X user handle $1");
+  if (/[@＠﹫]/u.test(named)) {
+    throw new Error(
+      "x brief may use '@' only in bare X handles such as @xai; other '@' text would make Grok attach a local file",
+    );
+  }
+  if (named.split("\n").some((line) => /^\p{White_Space}*[/!]/u.test(line))) {
+    throw new Error("x brief lines must not start with '/' or '!', which Grok treats as commands");
+  }
+  return `X research brief:\n${named}`;
+}
+
+async function search(text: string, abort: AbortSignal) {
+  await mkdir(workspace, { recursive: true, mode: 0o700 });
+  const cwd = await mkdtemp(path.join(workspace, "run-"));
+  try {
+    return await grok(text, cwd, abort);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+}
+
+async function grok(text: string, cwd: string, abort: AbortSignal) {
   const deadline = AbortSignal.timeout(timeout);
-  const proc = Bun.spawn(["grok", "--single", brief, ...flags], {
-    cwd: "/tmp",
+  const proc = Bun.spawn(["grok", "--single", text, ...flags], {
+    cwd,
     stdin: "ignore",
     stdout: "pipe",
     stderr: "pipe",
@@ -111,14 +160,14 @@ export default Plugin.define({
         options: { codemode: false },
         execute: async (args, context) => {
           const brief = args.brief.trim();
-          if (brief.startsWith("-")) throw new Error("x brief must not start with '-'");
+          const text = prompt(brief);
           const run = { brief, words: words(brief) };
           reject(context.sessionID, run.words);
           const session = runs.get(context.sessionID) ?? [];
           session.push(run);
           runs.set(context.sessionID, session);
           try {
-            return { content: await search(brief, context.signal) };
+            return { content: await search(text, context.signal) };
           } catch (error) {
             session.splice(session.indexOf(run), 1);
             throw error;
