@@ -57,6 +57,10 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - Start with `scout/context` only when ownership and relevant files are unknown.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default.
+- Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
+  - Seat `scout/web` on its Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
+  - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design or otherwise matters.
+  - Drop a capped seat instead of substituting a fallback; the `x` tool stays on the xAI pool and is skipped when that pool is capped.
 
 ### Reviewers
 
@@ -128,16 +132,25 @@ Most models start at `high` for every role until evidence says otherwise.
 - Grok runs on three pools: `xai`, `cursor`, and `opencode-go`.
 - Route web scouting and quick context searches there freely; treat findings as leads and verify claims that decide a design.
 - The `x` tool runs the Grok CLI on the xAI pool for native X search.
-- A possible council member for web or verify searches.
+- A standing seat in web councils; see Scouts.
+
+### `opencode-go/deepseek-v4.1-flash`
+
+- A standing seat in web councils; see Scouts.
+- Costs cents per scout against an $80 monthly Go cap.
+- On one Go-tools brief in October 2026 it nearly matched Opus and found facts the others missed, at about 6 minutes per run.
 
 ### Fallback providers
 
-- `cursor/*`: C and O are separate pools; O is named-model API usage and is small.
+- `cursor/*`: C and O are separate monthly pools on a legacy Cursor plan.
+  - C covers Cursor models: Grok, Composer, and Auto; `cursor/grok-4.6-fast` bills C but took about 40 minutes for one web scout.
+  - O covers third-party models such as Opus fast and is small.
   - About **1,200 Opus fast steps** used up a month.
   - Use it for **short, bounded jobs**.
   - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
-- `opencode-go/*`: currently `grok-4.7`; the best model there changes often, and it is the fallback when both Anthropic accounts are capped.
+- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the fallback when both Anthropic accounts are capped.
+  - Each Go model has its own monthly dollar cap, with 20% per 5 hours and 50% per week; Grok's is $15, so one Grok scout spends about 15% of a week.
 
 ## Usage
 

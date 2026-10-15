@@ -342,6 +342,9 @@
       }
     }
   },
+  "websearch": {
+    "provider": "firecrawl"
+  },
   "watcher": {
     "ignore": [".git/**", "node_modules/**", "dist/**", "build/**"]
   },
