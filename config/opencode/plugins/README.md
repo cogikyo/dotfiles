@@ -77,6 +77,14 @@ It uses local credential refresh and vendored request-shaping modules from `open
 See [account state and login](anthropic/README.md) before changing auth code.
 This plugin has no tool, key, or TUI slot.
 
+`anthropic/clearing.ts` adds `clear_tool_uses_20250919` to root and child primary requests: trigger at 150K input tokens, keep the latest five tool uses, and clear at least 50K tokens per batch.
+Compaction, title, and generate requests receive no clearing policy.
+Results from `mcp_Question`, `mcp_Subagent`, and `mcp_Skill` are excluded when those names appear in the request's tools or tool-use history.
+These wire names must track the prefix rewrite in `anthropic/claude-auth/transforms.js`; a mismatch silently removes their protection.
+Clearing invalidates cached prompt prefixes, so the 50K minimum batches cache rebuilds.
+Anthropic reports usage after clearing (probed live 2026-10-15), so native compaction and the compact plugin's ceilings measure the cleared size.
+The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, and `inputTokens` because V2 discards `applied_edits`.
+
 ## Guard
 
 `guard/server.ts` denies recognized shell deletion with `rm`, shell Grok launches, OpenCode API calls, and credential or database reads.

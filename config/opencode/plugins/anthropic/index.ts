@@ -7,6 +7,7 @@ import { isLongContextError, LONG_CONTEXT_BETAS } from "./claude-auth/betas.js";
 import { fetchWithRetry } from "./claude-auth/http.js";
 import { config } from "./claude-auth/model-config.js";
 import { SYSTEM_IDENTITY, transformBody, transformResponseStream } from "./claude-auth/transforms.js";
+import { clearing } from "./clearing.ts";
 import { Credentials, type Failure } from "./credentials.ts";
 import { sign } from "./headers.ts";
 
@@ -18,7 +19,7 @@ const disabledVariants: Record<string, string[]> = {
 const cacheControl = { type: "ephemeral", ttl: "1h" };
 const renewEvery = 5 * 60_000;
 
-type Signed = { url: string; base: Headers; body: string | undefined; model: string; token: string };
+type Signed = { url: string; base: Headers; body: string | undefined; model: string; token: string; cleared: boolean };
 
 type Pending = Signed | { failure: Response };
 
@@ -71,6 +72,7 @@ export default Plugin.define({
       }
     });
 
+    const clear = clearing(log);
     const timers: ReturnType<typeof setInterval>[] = [];
     for (const { id: providerID, configDir, loginCommand } of Object.values(claudeAccounts)) {
       const credentials = new Credentials(configDir, log);
@@ -111,7 +113,15 @@ export default Plugin.define({
           if (url.pathname === "/v1/messages" && !url.searchParams.has("beta")) url.searchParams.set("beta", "true");
           const text = request.body ? await request.clone().text() : undefined;
           const shaped = text ? shape(text) : { model: "unknown", body: undefined };
-          const state = { url: url.href, base, body: shaped.body, model: shaped.model, token: found.accessToken };
+          const cleared = clear.inject(event.kind, shaped.body);
+          const state = {
+            url: url.href,
+            base,
+            body: cleared ?? shaped.body,
+            model: shaped.model,
+            token: found.accessToken,
+            cleared: cleared !== undefined,
+          };
           event.request = new Request(state.url, {
             method: request.method,
             headers: sign(base, state.token, state.model, excluded.get(state.model)),
@@ -170,7 +180,7 @@ export default Plugin.define({
             response = await resend();
           }
 
-          event.response = transformResponseStream(response);
+          event.response = transformResponseStream(clear.watch(state, event.sessionID, response));
         },
         { providerID },
       );
