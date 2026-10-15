@@ -37,6 +37,7 @@ Commands that depend on each other (e.g. hide needs to know about monocle) share
 
 ## Commands
 
+- **[cage](cmd/cage/README.md)** — Read-only command sandbox for OpenCode shells
 - **[dctl](cmd/dctl/)** — Dotfiles control plane
 - **[ewwd](cmd/ewwd/)** — System utilities: audio, clock, computer, cycles, music, network, date, weather, timer
 - **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts

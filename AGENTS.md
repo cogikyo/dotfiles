@@ -32,6 +32,7 @@ Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packa
 | `newtab` | Firefox new-tab server      | [Guide](cmds/cmd/newtab/README.md) |
 | `keys`   | Svalboard keymap viewer     | [Guide](cmds/cmd/keys/README.md)   |
 | `src`    | Upstream source cache       | [Source](cmds/internal/src/)       |
+| `cage`   | Read-only command sandbox   | [Guide](cmds/cmd/cage/README.md)   |
 
 Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
