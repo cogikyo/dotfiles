@@ -23,7 +23,10 @@ type Input = {
   lane?: string;
 };
 
-const routingPath = path.join(import.meta.dirname, "..", "..", "ROUTING.md");
+const configRoot = path.join(import.meta.dirname, "..", "..");
+const routingPath = path.join(configRoot, "ROUTING.md");
+const principleLink = /\]\((?![a-z][a-z+.-]*:|\/)([^)\s]*skills\/principles\/[^/)\s]+\/SKILL\.md)\)/gu;
+const frontmatter = /^---\r?\n[\s\S]*?\r?\n---\r?\n+/u;
 const pool = "claude";
 const accounts = Object.values(claudeAccounts).map(({ id }) => id);
 const staleAfter = 10 * 60_000;
@@ -58,6 +61,30 @@ const readRouting = Effect.tryPromise({
       message: `ROUTING.md at ${routingPath} is unusable (${error instanceof Error ? error.message : String(error)}); pass model explicitly.`,
     }),
 });
+
+const readPrinciples = (agent: string) =>
+  Effect.tryPromise({
+    try: async () => {
+      const file = path.join(configRoot, "agents", `${agent}.md`);
+      const prompt = await readFile(file, "utf8").catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return "";
+        throw error;
+      });
+      const paths = new Set(
+        [...prompt.matchAll(principleLink)].map(([, link]) => path.resolve(path.dirname(file), link)),
+      );
+      return Promise.all(
+        [...paths].map(async (skill) => ({
+          path: skill,
+          content: (await readFile(skill, "utf8")).replace(frontmatter, ""),
+        })),
+      );
+    },
+    catch: (error) =>
+      new Tool.Error({
+        message: `Principles linked from agent ${agent} are unreadable (${error instanceof Error ? error.message : String(error)}); fix the link in agents/${agent}.md.`,
+      }),
+  });
 
 function routeFor(routes: Record<string, Ref>, agent: string) {
   if (Object.hasOwn(routes, agent)) return routes[agent];
@@ -143,6 +170,8 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
 const Closed = Schema.Struct({ lane: Schema.String, by: Schema.Literals(["operator", "agent"]), at: Schema.Number });
 type Closed = typeof Closed.Type;
 
+const Instruction = Schema.Struct({ instruction: Schema.Struct({ paths: Schema.Array(Schema.String) }) });
+
 const laneOf = (session: Session.Info) =>
   typeof session.metadata?.lane === "string" ? session.metadata.lane : undefined;
 
@@ -174,7 +203,7 @@ export default Plugin.define({
             if (event.type === "session.execution.succeeded") live.set(event.data.sessionID, "idle");
             if (event.type === "session.execution.failed") live.set(event.data.sessionID, "error");
             if (event.type === "session.execution.interrupted") live.set(event.data.sessionID, "interrupted");
-            if (event.type === "session.inbox.enqueued") {
+            if (event.type === "session.inbox.enqueued" && event.data.item.type === "user") {
               const key = prompting.get(event.data.sessionID);
               if (key !== undefined) creating.delete(key);
               prompting.delete(event.data.sessionID);
@@ -214,6 +243,34 @@ export default Plugin.define({
         yield* ctx.session
           .update({ sessionID: child.id, metadata: { ...child.metadata, lane } })
           .pipe(Effect.tapCause(Effect.logError), Effect.ignore);
+      });
+
+      const preload = Effect.fn("lanes.preload")(function* (
+        sessionID: Session.ID,
+        agent: string,
+        principles: readonly { path: string; content: string }[],
+      ) {
+        if (!principles.length) return;
+        const loaded = new Set(
+          (yield* ctx.session.context({ sessionID })).flatMap((message) =>
+            message.type === "synthetic"
+              ? (Option.getOrUndefined(Schema.decodeUnknownOption(Instruction)(message.metadata))?.instruction.paths ??
+                [])
+              : [],
+          ),
+        );
+        const missing = principles.filter((file) => !loaded.has(file.path));
+        if (!missing.length) return;
+        yield* ctx.session.synthetic({
+          sessionID,
+          text: [
+            `Principle skills preloaded for the ${agent} agent; they are already in context, so do not load them with the skill tool.`,
+            ...missing.map((file) => `Instructions from: ${file.path}\n${file.content}`),
+          ].join("\n\n"),
+          description: `Preloaded ${missing.map((file) => path.basename(path.dirname(file.path))).join(", ")}`,
+          metadata: { instruction: { paths: missing.map((file) => file.path) } },
+          resume: false,
+        });
       });
 
       const close = Effect.fn("lanes.close")(function* (parentID: string, names: readonly string[], by: Closed["by"]) {
@@ -299,6 +356,7 @@ export default Plugin.define({
               message: `Session ${existing.id} is closed lane "${closed.lane}" and cannot resume; start a fresh lane by name instead.`,
             });
           const { model, note } = yield* resolve(input, existing);
+          const principles = yield* readPrinciples(input.agent);
           const { model: _, ...rest } = input;
           const call = { ...rest, ...(sessionID ? { sessionID } : {}), ...(model ? { model } : {}) };
 
@@ -308,6 +366,10 @@ export default Plugin.define({
               if (!tagged && typeof update.sessionID === "string") {
                 tagged = true;
                 yield* tag(context.sessionID, update.sessionID, lane);
+                yield* preload(update.sessionID as Session.ID, input.agent, principles).pipe(
+                  Effect.tapCause(Effect.logError),
+                  Effect.ignore,
+                );
                 if (lane && creating.has(key)) prompting.set(update.sessionID, key);
               }
               yield* context.progress(update);
