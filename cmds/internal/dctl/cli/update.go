@@ -18,6 +18,7 @@ import (
 
 type UpdateCmd struct {
 	All   bool     `help:"Run every step without asking and pass --noconfirm to pacman, yay, and makepkg; never installs or removes drifted packages."`
+	Dirty bool     `help:"Build dotfiles commands from uncommitted cmds/ without asking."`
 	Only  []string `placeholder:"NAME" help:"Limit the cmd step to these dotfiles commands or packages/ recipes; implies cmd."`
 	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, repos, cmd, go, rust (default: all, asking for each)."`
 }
@@ -26,7 +27,8 @@ func (c *UpdateCmd) Help() string {
 	return `Examples:
   dctl update
   dctl update cmd go
-  dctl update --only dctl,hyprd`
+  dctl update --only dctl,hyprd
+  dctl update --dirty --only dctl`
 }
 
 func (c *UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
@@ -37,7 +39,7 @@ func (c *UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return err
 	}
 	all := c.All || u.Yes()
-	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{UI: u}, all, c.Only), c.Steps)
+	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{UI: u}, all, c.Dirty, c.Only), c.Steps)
 	if err != nil {
 		return err
 	}

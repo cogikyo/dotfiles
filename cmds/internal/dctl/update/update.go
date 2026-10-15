@@ -21,7 +21,7 @@ type Step struct {
 	Run  func(context.Context) error
 }
 
-func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string) []Step {
+func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []string) []Step {
 	noconfirm := func(args ...string) []string {
 		if all {
 			return append(args, "--noconfirm")
@@ -73,7 +73,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 			Name: "cmd",
 			Plan: "build dotfiles commands; rebuild local packages when versions differ",
 			Run: func(ctx context.Context) error {
-				return cmd(ctx, u, root, run, all, only)
+				return cmd(ctx, u, root, run, all, dirty, only)
 			},
 		},
 		{

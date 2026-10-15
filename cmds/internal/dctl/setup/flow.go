@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -50,7 +51,7 @@ func (f *Flow) Run(ctx context.Context, req Request) error {
 		}
 		return f.status(sc.plan(reports, open || f.gate(reports)), reports, host)
 	}
-	reports, err := f.evaluate(ctx, sc.shown)
+	reports, err := f.pull(ctx, &sc)
 	if err != nil {
 		return err
 	}
@@ -71,6 +72,9 @@ func (f *Flow) Run(ctx context.Context, req Request) error {
 			question = "Run 1 step?"
 		}
 		ok, err := u.Proceed(question)
+		if errors.Is(err, ui.ErrNoTTY) {
+			return fmt.Errorf("%w: pass --yes to accept the plan", err)
+		}
 		if err != nil {
 			return err
 		}
@@ -120,13 +124,6 @@ func (f *Flow) scope(req Request) (scope, error) {
 	for name := range sc.named {
 		pick[name], sc.force[name] = true, !req.Status
 	}
-	if !req.Status {
-		for _, s := range all {
-			if pick[s.Name] {
-				f.pull(s, s.Name, pick, sc.pulled)
-			}
-		}
-	}
 	for _, s := range all {
 		if pick[s.Name] {
 			sc.shown = append(sc.shown, s)
@@ -135,14 +132,46 @@ func (f *Flow) scope(req Request) (scope, error) {
 	return sc, nil
 }
 
-func (f *Flow) pull(s Stage, by string, pick map[string]bool, pulled map[string]string) {
-	for _, need := range s.Needs {
-		if pick[need] {
+func (f *Flow) pull(ctx context.Context, sc *scope) (map[string]Report, error) {
+	pick, by := map[string]bool{}, map[string]string{}
+	for _, s := range sc.shown {
+		pick[s.Name], by[s.Name] = true, s.Name
+	}
+	eager := slices.ContainsFunc(sc.shown, func(s Stage) bool { return s.Lock })
+	reports := map[string]Report{}
+	todo, grow := slices.Clone(sc.shown), sc.shown
+	for {
+		var next []Stage
+		for _, s := range grow {
+			for _, need := range s.Needs {
+				if pick[need] {
+					continue
+				}
+				pick[need], by[need], sc.pulled[need] = true, by[s.Name], "needed by "+by[s.Name]
+				next = append(next, f.Stages[f.find(need)])
+			}
+		}
+		todo = append(todo, next...)
+		if eager && len(next) > 0 {
+			grow = next
 			continue
 		}
-		pick[need], pulled[need] = true, "needed by "+by
-		f.pull(f.Stages[f.find(need)], by, pick, pulled)
+		if len(todo) == 0 {
+			break
+		}
+		slices.SortFunc(todo, func(a, b Stage) int { return f.find(a.Name) - f.find(b.Name) })
+		rs, err := f.evaluate(ctx, todo)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(reports, rs)
+		todo, grow = nil, slices.DeleteFunc(next, func(s Stage) bool { return rs[s.Name].State == Done })
+		if len(grow) == 0 {
+			break
+		}
 	}
+	sc.shown = slices.DeleteFunc(slices.Clone(f.Stages), func(s Stage) bool { return !pick[s.Name] })
+	return reports, nil
 }
 
 func (f *Flow) find(name string) int {
@@ -164,10 +193,18 @@ func (f *Flow) gate(reports map[string]Report) bool {
 func (f *Flow) evaluate(ctx context.Context, stages []Stage) (map[string]Report, error) {
 	out := map[string]Report{}
 	var root []Stage
+	user := os.Geteuid() != 0
 	for _, s := range stages {
-		if s.Root {
-			root = append(root, s)
+		if !s.Root {
+			continue
 		}
+		if user && !s.Lock {
+			if r := s.Evaluate(ctx); r.State == Done {
+				out[s.Name] = r
+				continue
+			}
+		}
+		root = append(root, s)
 	}
 	if len(root) > 0 {
 		rs, err := f.elevate(ctx, root, Status, true)

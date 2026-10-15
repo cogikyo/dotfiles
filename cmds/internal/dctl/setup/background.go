@@ -28,7 +28,7 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 	if err != nil {
 		return nil, err
 	}
-	if err := Sudo(ctx, u, "install "+s.Name+" in the background"); err != nil {
+	if err := Sudo(ctx, u, "install "+s.Name+" in the background", "dctl setup "+s.Name); err != nil {
 		log.Close()
 		return nil, err
 	}
@@ -94,17 +94,30 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 	}, nil
 }
 
-func Sudo(ctx context.Context, u *ui.UI, why string) error {
+type noTerminal struct{ rerun string }
+
+func (e noTerminal) Error() string {
+	return "sudo needs a password and no terminal can ask; run `" + e.rerun + "` in a terminal"
+}
+
+func (noTerminal) Unwrap() error { return ui.ErrNoTTY }
+
+func Sudo(ctx context.Context, u *ui.UI, why, rerun string) error {
 	if exec.CommandContext(ctx, "sudo", "-n", "-v").Run() == nil {
 		return nil
 	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		return noTerminal{rerun}
+	}
+	tty.Close()
 	u.Line(ui.Info, "sudo", why)
 	cmd := exec.CommandContext(ctx, "sudo", "-v", "-p", "dctl: sudo password for %u: ")
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stderr, os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	switch {
 	case ctx.Err() != nil:
 		return ctx.Err()

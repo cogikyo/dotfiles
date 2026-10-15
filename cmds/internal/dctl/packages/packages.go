@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/setup"
@@ -53,12 +54,19 @@ func Load(dir string) (Lists, error) {
 	base, berr := Read(filepath.Join(dir, "base.lst"))
 	aur, aerr := Read(filepath.Join(dir, "aur.lst"))
 	extra, eerr := Read(filepath.Join(dir, "extra.lst"))
-	builds, gerr := filepath.Glob(filepath.Join(dir, "*", "PKGBUILD"))
 	l := Lists{Base: base, AUR: aur, Extra: extra}
-	for _, path := range builds {
-		l.Local = append(l.Local, filepath.Base(filepath.Dir(path)))
+	entries, err := os.ReadDir(dir)
+	errs := []error{berr, aerr, eerr, err}
+	for _, e := range entries {
+		_, err := os.Lstat(filepath.Join(dir, e.Name(), "PKGBUILD"))
+		switch {
+		case err == nil:
+			l.Local = append(l.Local, e.Name())
+		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
+			errs = append(errs, err)
+		}
 	}
-	return l, errors.Join(berr, aerr, eerr, gerr)
+	return l, errors.Join(errs...)
 }
 
 // Payload returns sorted, unique base, AUR, and local package names, excluding Extra.

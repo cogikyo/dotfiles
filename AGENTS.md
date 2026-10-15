@@ -58,12 +58,12 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
 ## Working here
 
-- Run `dctl setup` and `dctl update` as the user; setup batches root stages in one sudo child.
+- Run `dctl setup` and `dctl update` as the user; setup checks non-lock root stages as the user before batching needed root work through sudo.
 - When a change adds something that needs updates, make sure `dctl update` covers it; extend dctl if needed.
 - Install and restart routine changes yourself once they build and pass checks; the user gives standing approval for these.
-  - Routine: `hyprd rebuild`, `dctl update --only <cmd>`, and user stages such as `dctl setup home`.
+  - Routine: `hyprd rebuild`, `dctl update --dirty --only <cmd>`, and user stages such as `dctl --yes setup home`.
   - Ask first for package upgrades, root or lock stages, secrets, and startup, lock, or boot changes that could leave the session unusable.
-  - With `cmds/` dirty, `dctl update` with `--all` or `--yes` skips the build yet reports OK; use `hyprd rebuild` for hyprd.
+  - Use `dctl update --dirty` to build uncommitted `cmds/` without asking; it overrides the `--all`/`--yes` build skip.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
 - OpenCode applies saved plugin edits, new plugin directories, and `cli.json` live; `/reload` reloads `opencode.json`.

@@ -130,10 +130,14 @@ luks ──▶ secureboot ──▶ reboot ──▶ totp ──▶ reboot and c
 Stages run in catalog order, regardless of the order you name them.
 Applied items are checked again and the summary gives the next action.
 
+Without `--status`, named stages and `--from` stages always pull in and check their direct needs.
+For non-lock stages, each need pulls in its own needs only when it is not OK, recursively.
+
 - Omit stage names to show the full plan and apply pending work.
-- Name stages to redo them and pull in unfinished dependencies.
+- Name stages to redo them.
 - Use `--from <name>` to redo that stage and later ones; optional stages need names.
 - Use `--yes` to accept the plan; rerun without it for lock work.
+  - Without a terminal, the plan prompt requires `--yes`.
 - Use `--status` for a read-only check; pending, failed, or blocked work exits 1.
   - Manual or deferred work can exit 0; inspect the rows, not only the exit code.
 
@@ -160,8 +164,11 @@ The optional stages do not gate security enrollment.
 | secureboot | luks                        | Keys and boot signatures  |
 | totp       | secureboot                  | Seal the boot TOTP        |
 
+- Root stages other than lock stages are checked as the user first; only stages that are not OK and lock stages need sudo.
+  - `dctl setup home` checks `packages`; if it is OK, `system` and `network` are not checked and no sudo is needed.
 - Consecutive root stages share one sudo child; user stages stay in your session.
   - When sudo needs authentication, setup explains which stages it will check or run as root and prompts with `dctl: sudo password for <user>:`.
+  - If no terminal can ask for the sudo password and no cached authentication is available, the stage fails with a message to run the named stages in a terminal.
 - Root runs `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
 - `certs` uses sudo from the user session; user stages refuse root execution.
 
@@ -259,7 +266,7 @@ dctl setup vpn
 ### Lock confirmation and root execution
 
 Lock work waits for every required phase-1 stage to be OK and asks separately.
-Naming a lock stage still pulls in unfinished phase-1 work and requires consent.
+Naming a lock stage pulls in its full dependency chain before checks and still requires consent.
 
 > [!CAUTION]
 >
@@ -376,6 +383,7 @@ Failed steps are reported; later steps continue and the summary gives a retry co
 dctl update
 dctl update repos cmd
 dctl update --only dctl,hyprd
+dctl update --dirty --only dctl
 ```
 
 - Run as the normal user; root execution is refused.
@@ -398,6 +406,7 @@ Named steps omit that prompt and retain this order.
 
 - `--all` or global `--yes` skips step/recipe prompts and passes `--noconfirm`.
   - It never installs or removes package-list drift.
+  - Building uncommitted `cmds/` still needs `--dirty`.
 - `--only NAME,...` limits `cmd` to named commands or local recipes.
   - With no step names it selects `cmd`; explicit step names must include `cmd`.
 
@@ -408,7 +417,9 @@ Ewwd, newtab, and keys restart only when replaced.
 
 - **hyprd** replaces itself via `hyprd rebuild`.
   - Skips during full lock, an OpenCode refresh job, or when the daemon is stopped.
-- **Uncommitted `cmds/`** requires extra consent, default **No**; `--all` and `--yes` skip the build.
+- **Uncommitted `cmds/`**: `--dirty` builds dotfiles commands without extra consent, even with `--all` or `--yes`.
+  - Without `--dirty`, `--all` or `--yes` warn and skip the build.
+  - With none of these flags, a terminal asks for consent, default **No**; without a terminal, the build fails and names `--dirty`.
 - **Local recipes** with different installed versions ask separately, default **Yes**.
   - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
 - **Go tools** need module-proxy checksum metadata; locally built tools are skipped.

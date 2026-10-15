@@ -95,6 +95,9 @@ func (sc scope) mark(s Stage, r Report, marks map[string]mark, gate bool) row {
 	switch {
 	case r.State == Pending || w.force:
 		w.mark, w.text = todoMark, about(s, sc.pulled[s.Name])
+		if r.State == Unknown || r.State == Failed {
+			w.more, _ = headline(r, r.State)
+		}
 	case r.State == ManualState:
 		w.mark = fixMark
 		w.text, w.more = headline(r, ManualState)

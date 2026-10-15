@@ -91,14 +91,14 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 	if l, err := packages.Load(root.Packages()); err == nil {
 		apps = fmt.Sprintf("%d %s", len(l.Extra), apps)
 	}
-	trust := stage(certs.Stage(root, run), "local CA and certificates", "firefox")
+	trust := stage(certs.Stage(root, run), "local CA and certificates", "packages", "firefox")
 	trust.Sudo = true
 	stages := []setup.Stage{
 		stage(system.Stage("/", root.System()), "overlay and services"),
 		stage(setup.Network(u), "Ethernet and DNS"),
 		stage(packages.Stage(root.Packages(), execx.OSRunner{UI: u, Interrupt: true}), "base, AUR, and local packages", "system", "network"),
 		stage(home.Stage(root, run), "links and fonts", "packages"),
-		stage(packages.Extra(root.Packages(), run), apps, "home", "network"),
+		stage(packages.Extra(root.Packages(), run), apps, "packages", "home", "network"),
 		stage(secrets.Stage(u, root), "PIV PIN or recovery phrase", "system"),
 		stage(ssh.Stage(root, run), "SSH access to GitHub", "secrets", "network"),
 		stage(repos.Stage(root, run), "clone your repos", "ssh"),
@@ -207,11 +207,14 @@ func elevate(ctx context.Context, u *ui.UI, root paths.Root, stages []setup.Stag
 	if err != nil {
 		return nil, err
 	}
-	why := "run " + names(stages) + " as root"
-	if quiet {
-		why = "check " + names(stages) + " as root"
+	why, rerun := "run "+names(stages)+" as root", "dctl setup"
+	if mode == setup.Status {
+		why, rerun = "check "+names(stages)+" as root", rerun+" --status"
 	}
-	if err := setup.Sudo(ctx, u, why); err != nil {
+	for _, s := range stages {
+		rerun += " " + s.Name
+	}
+	if err := setup.Sudo(ctx, u, why, rerun); err != nil {
 		return nil, err
 	}
 	flags := globals(u)

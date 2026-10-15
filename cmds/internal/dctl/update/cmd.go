@@ -28,12 +28,12 @@ var (
 	refusals = []string{"error: full lock active", "error: opencode refresh job "}
 )
 
-func cmd(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string) error {
+func cmd(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []string) error {
 	lists, err := packages.Load(root.Packages())
 	if err != nil {
 		return err
 	}
-	err = commands(ctx, u, root, run, all, pick(binaries.Names, only))
+	err = commands(ctx, u, root, run, all, dirty, pick(binaries.Names, only))
 	if errors.Is(err, ui.ErrCanceled) {
 		return err
 	}
@@ -47,21 +47,27 @@ func pick(names, only []string) []string {
 	return slices.DeleteFunc(slices.Clone(names), func(n string) bool { return !slices.Contains(only, n) })
 }
 
-func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all bool, names []string) error {
+func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, names []string) error {
 	if len(names) == 0 {
 		return nil
 	}
-	dirty, err := run.Output(ctx, root.Dotfiles, "git", "status", "--porcelain", "--untracked-files=all", "--", "cmds")
+	status, err := run.Output(ctx, root.Dotfiles, "git", "status", "--porcelain", "--untracked-files=all", "--", "cmds")
 	if err != nil {
 		return err
 	}
-	if dirty != "" {
-		if all {
-			u.Warn("cmds/ has uncommitted changes; --all skips the dotfiles build")
-			return nil
-		}
+	switch {
+	case status == "":
+	case dirty:
+		u.Warn("cmds/ has uncommitted changes; the build includes them")
+	case all:
+		u.Warn("cmds/ has uncommitted changes; --all skips the dotfiles build")
+		return nil
+	default:
 		u.Warn("cmds/ has uncommitted changes; the build would include them")
 		ok, err := u.Confirm("Build dotfiles commands from the working tree?")
+		if errors.Is(err, ui.ErrNoTTY) {
+			return fmt.Errorf("cmds/ has uncommitted changes: pass --dirty to build them: %w", err)
+		}
 		if err != nil || !ok {
 			return err
 		}

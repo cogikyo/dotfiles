@@ -57,7 +57,7 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 func quiet() *ui.UI { return ui.New(ui.Options{JSON: true}) }
 
 func TestSteps(t *testing.T) {
-	steps := Steps(quiet(), paths.Root{}, &fake{t: t}, false, nil)
+	steps := Steps(quiet(), paths.Root{}, &fake{t: t}, false, false, nil)
 	var names []string
 	for _, s := range steps {
 		names = append(names, s.Name)
@@ -87,7 +87,7 @@ func TestNoconfirm(t *testing.T) {
 	}
 	for _, all := range []bool{false, true} {
 		f := &fake{t: t}
-		steps, _ := Select(Steps(quiet(), root, f, all, nil), []string{"aur"})
+		steps, _ := Select(Steps(quiet(), root, f, all, false, nil), []string{"aur"})
 		if err := steps[0].Run(t.Context()); err != nil {
 			t.Fatal(err)
 		}
@@ -123,7 +123,7 @@ func TestCommands(t *testing.T) {
 	for _, name := range binaries.Names {
 		f.builds[name] = name + " v1"
 	}
-	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); err != nil {
+	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range binaries.Names {
@@ -150,7 +150,7 @@ func TestCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.calls = nil
-	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); err != nil {
+	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err != nil {
 		t.Fatal(err)
 	}
 	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, "systemctl") || c == "hyprd rebuild" }) {
@@ -162,19 +162,19 @@ func TestCommands(t *testing.T) {
 
 	f.builds["hyprd"] = "hyprd v2"
 	f.rebuild = "error: full lock active; unlock before rebuilding"
-	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); err != nil {
+	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err != nil {
 		t.Errorf("hyprd refusal = %v, want a reported skip", err)
 	}
 	f.rebuild = "error: build failed: exit status 1"
-	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); err == nil {
+	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err == nil {
 		t.Error("hyprd build failure reported as success")
 	}
 
 	f.dirty, f.calls = " M cmds/x.go", nil
-	if err := commands(t.Context(), quiet(), root, f, true, binaries.Names); err != nil || slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, "go build") }) {
+	if err := commands(t.Context(), quiet(), root, f, true, false, binaries.Names); err != nil || slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, "go build") }) {
 		t.Errorf("dirty cmds under --all: %v, calls %q", err, f.calls)
 	}
-	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); !errors.Is(err, ui.ErrNoTTY) {
+	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); !errors.Is(err, ui.ErrNoTTY) {
 		t.Errorf("dirty cmds without --all = %v, want a prompt", err)
 	}
 }
