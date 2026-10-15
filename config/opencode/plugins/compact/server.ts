@@ -1,10 +1,9 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
+import { ceiling } from "./limits.ts";
 
 const tiers = [150_000, 250_000] as const;
-// Keep below opencode.json's limit.input - compaction.buffer so native compaction does not run first.
-const ceiling = 300_000;
 
 const SUMMARY = [
   "Summary rules for this session:",

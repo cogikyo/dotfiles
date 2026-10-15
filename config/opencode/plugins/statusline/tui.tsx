@@ -1,6 +1,7 @@
 import { Plugin } from "@opencode/plugin/tui";
 import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createResource, createRoot, createSignal, For, on, onCleanup, Show } from "solid-js";
+import { configured, threshold } from "../compact/limits.ts";
 import { Delivery } from "./delivery.tsx";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
@@ -13,7 +14,6 @@ type Assistant = Extract<Message, { type: "assistant" }>;
 type Measured = Assistant & { tokens: NonNullable<Assistant["tokens"]> };
 
 const poll = 2_000;
-const reserve = 16_000;
 
 const glyph = {
   fire: "\u{328b}",
@@ -45,8 +45,6 @@ const counts = [
   ["conflicted", colors.pink],
   ["renamed", colors.magenta],
 ] as const;
-
-const buffers = new Map<string, Promise<number | undefined>>();
 
 export default Plugin.define({
   id: "statusline",
@@ -228,28 +226,6 @@ function gauge(value: number, now: number, lit: number, running: boolean) {
   ];
 }
 
-function configured(context: Context, directory: string) {
-  const cached = buffers.get(directory);
-  if (cached) return cached;
-  const pending = context.client.config.get({ location: { directory } }).then(
-    (entries) =>
-      entries.reduce<number | undefined>(
-        (value, entry) => (entry.type === "document" ? (entry.info.compaction?.buffer ?? value) : value),
-        undefined,
-      ),
-    (error: unknown) => {
-      buffers.delete(directory);
-      context.ui.toast.show({
-        message: `Statusline: read compaction config: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "error",
-      });
-      throw error;
-    },
-  );
-  buffers.set(directory, pending);
-  return pending;
-}
-
 function Usage(props: { context: Context; sessionID?: string; mode: "normal" | "shell"; details: boolean }) {
   const [hovered, setHovered] = createSignal(false);
   const theme = () => props.context.theme.text;
@@ -325,11 +301,9 @@ function load(context: Context, sessionID: string) {
 function usage(context: Context, sessionID: string, buffer: number | undefined) {
   const current = load(context, sessionID);
   if (!current?.model) return;
-  const window = current.model.limit.input || current.model.limit.context;
-  if (window <= 0) return;
-  const threshold = window - (buffer ?? Math.max(Math.floor(window * 0.1), window >= 2 * reserve ? reserve : 0));
-  if (threshold <= 0) return;
-  return (current.tokens / threshold) * 100;
+  const root = !context.data.session.get(sessionID)?.parentID;
+  const limit = threshold(current.model.limit, buffer, root);
+  return limit && (current.tokens / limit) * 100;
 }
 
 function measured(messages: readonly Message[], boundary?: string) {

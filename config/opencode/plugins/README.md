@@ -201,7 +201,7 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 `<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
 
 `statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
-It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
+It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 300K for root sessions.
 The gauge starts with ㊌ (water) while idle and ㊋ (fire) while the session runs.
 While running, the fire glyph fades between the gauge color and up to 35% red over a two-second cycle; a wave sweeps only the dots, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.

@@ -1,6 +1,7 @@
 import { MouseButton, type MouseEvent } from "@opentui/core";
 import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { configured, threshold } from "../compact/limits.ts";
 import { hover, Section, spinner } from "../context/section.tsx";
 import { colors, pressure, roles } from "../statusline/palette.ts";
 import { api } from "./rpc.ts";
@@ -12,17 +13,17 @@ type Assistant = Extract<Message, { type: "assistant" }>;
 type Measured = Assistant & { tokens: NonNullable<Assistant["tokens"]> };
 type Status = "running" | "idle" | "error" | "interrupted";
 type Action = "steer" | "interrupt" | "continue" | "open";
+type Model = NonNullable<ReturnType<Context["data"]["location"]["model"]["list"]>>[number];
 type Row = {
   session: Session;
   name: string;
   status: Status;
   agent: string;
   model: string;
+  limit?: Model["limit"];
   tokens: number;
   spent: string;
 };
-
-const stop = 300_000;
 
 const glyph = {
   idle: "\u{f03e6}",
@@ -90,12 +91,18 @@ function row(context: Context, session: Session): Row {
   const last = latest(context.data.session.message.list(session.id));
   const usage = last?.tokens;
   const tokens = usage ? usage.input + usage.output + usage.reasoning + usage.cache.read + usage.cache.write : 0;
+  const model =
+    last &&
+    context.data.location.model
+      .list(session.location)
+      ?.find((entry) => entry.providerID === last.model.providerID && entry.id === last.model.id);
   return {
     session,
     name: laneOf(session) ?? session.title ?? session.id,
     status: status(context, session),
     agent: label(session.agent ?? "unknown"),
     model: family(last?.model.id ?? session.model?.id ?? "unknown"),
+    limit: model?.limit,
     tokens,
     spent: usage ? count(tokens) : "",
   };
@@ -210,6 +217,10 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
   const [hovered, setHovered] = createSignal(false);
   const [aimed, setAimed] = createSignal(false);
   const entry = createMemo(() => row(props.context, props.session));
+  const [buffer] = createResource(
+    () => props.session.location.directory,
+    (dir) => configured(props.context, dir),
+  );
   const theme = () => props.context.theme.text;
   const named = () => laneOf(entry().session) !== undefined;
   const closable = () => named() && entry().status !== "running";
@@ -236,6 +247,11 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
   };
   const role = () => roles[entry().session.agent?.split("/")[0] ?? ""] ?? theme().muted;
   const spent = () => (props.width.spent ? ` ${entry().spent.padStart(props.width.spent)}` : "");
+  const heat = () => {
+    const { limit, tokens } = entry();
+    const stop = limit && buffer.state === "ready" ? threshold(limit, buffer(), false) : undefined;
+    return stop ? pressure((tokens / stop) * 100) : theme().muted;
+  };
   const click = (event: MouseEvent) => {
     if (event.button === MouseButton.RIGHT) return void act(props.context, entry().session);
     props.context.ui.router.navigate({ type: "session", sessionID: entry().session.id });
@@ -279,7 +295,7 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
         <span style={{ fg: role() }}>{entry().agent}</span>
         {` ${entry().model.padStart(props.width.model)}]`}
       </text>
-      <text fg={pressure((entry().tokens / stop) * 100)} wrapMode="none" flexShrink={0}>
+      <text fg={heat()} wrapMode="none" flexShrink={0}>
         {spent()}
       </text>
     </box>
