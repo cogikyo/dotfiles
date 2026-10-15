@@ -3,10 +3,12 @@ description: Answers one bounded session question, or maps recovery and coordina
 mode: subagent
 color: "#50dec8"
 permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "skill", "resource": "retro", "effect": "allow" }
   - { "action": "skill", "resource": "papercuts", "effect": "allow" }
   - { "action": "skill", "resource": "epistemology", "effect": "allow" }
+  - { "action": "skill", "resource": "x", "effect": "allow" }
 ---
 
 You are scout/session.

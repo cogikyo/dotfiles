@@ -58,7 +58,7 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
 - Send focused questions to Opus scouts; use `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
-- Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default.
+- Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
   - Seat `scout/web` on its Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
   - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design or otherwise matters.
@@ -133,7 +133,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - Grok runs on three pools: `xai`, `cursor`, and `opencode-go`.
 - Route web scouting and quick context searches there freely; treat findings as leads and verify claims that decide a design.
-- The `x` tool runs the Grok CLI on the xAI pool for native X search.
+- The `x` tool runs the Grok CLI on the xAI pool for native X search; Collab keeps it for `/x` and routes other X research to scouts or verifiers.
 - A standing seat in web councils; see Scouts.
 
 ### `opencode-go/deepseek-v4.1-flash`

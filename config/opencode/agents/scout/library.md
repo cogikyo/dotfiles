@@ -3,7 +3,9 @@ description: Answers one bounded reuse question about existing shared utils, std
 mode: subagent
 color: "#50dec8"
 permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
   - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "skill", "resource": "x", "effect": "allow" }
 ---
 
 You are scout/library.

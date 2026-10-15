@@ -3,9 +3,11 @@ description: Verifies a specific claim against local target source or upstream s
 mode: subagent
 color: "#5fc976"
 permissions:
+  - { "action": "x", "resource": "*", "effect": "allow" }
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "shell", "resource": "*", "effect": "allow" }
   - { "action": "shell", "resource": "*src prune*", "effect": "deny" }
+  - { "action": "skill", "resource": "x", "effect": "allow" }
 ---
 
 You are verify/source.
