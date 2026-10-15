@@ -98,7 +98,7 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 		stage(setup.Network(u), "Ethernet and DNS"),
 		stage(packages.Stage(root.Packages(), execx.OSRunner{UI: u, Interrupt: true}), "base, AUR, and local packages", "system", "network"),
 		stage(home.Stage(root, run), "links and fonts", "packages"),
-		stage(packages.Extra(root.Packages(), run), apps, "packages", "home", "network"),
+		stage(packages.Extra(root.Packages(), root.Config("opencode"), run), apps, "packages", "home", "network"),
 		stage(secrets.Stage(u, root), "PIV PIN or recovery phrase", "system"),
 		stage(ssh.Stage(root, run), "SSH access to GitHub", "secrets", "network"),
 		stage(repos.Stage(root, run), "clone your repos", "ssh"),

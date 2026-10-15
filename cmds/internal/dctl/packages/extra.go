@@ -10,7 +10,7 @@ import (
 	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func Extra(dir string, run execx.Runner) setup.Stage {
+func Extra(dir, npm string, run execx.Runner) setup.Stage {
 	pending := func(ctx context.Context) ([]string, error) {
 		l, err := Load(dir)
 		if err != nil {
@@ -60,6 +60,14 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 			Fix: func(ctx context.Context) error {
 				return run.Run(ctx, "", "sudo", "-n", "systemctl", "enable", "docker.socket")
 			},
+		},
+		{
+			Name: "extra-npm",
+			Check: func(ctx context.Context) error {
+				_, err := run.Output(ctx, npm, "npm", "ls")
+				return err
+			},
+			Fix: func(ctx context.Context) error { return NPM(ctx, run, npm) },
 		},
 	}}
 }

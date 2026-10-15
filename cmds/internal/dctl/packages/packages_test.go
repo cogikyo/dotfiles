@@ -98,7 +98,7 @@ func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
 		"pacman -Qq":  "htop\n",
 		"pacman -Slq": "base-devel\ndocker\nhtop\n",
 	}}
-	if err := Extra(dir, run).Items[0].Fix(context.Background()); err != nil {
+	if err := Extra(dir, "", run).Items[0].Fix(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	var installs []string

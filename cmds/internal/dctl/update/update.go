@@ -77,6 +77,13 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			},
 		},
 		{
+			Name: "npm",
+			Plan: "OpenCode plugin dependencies from config/opencode/package-lock.json",
+			Run: func(ctx context.Context) error {
+				return drawn(packages.NPM(ctx, run, root.Config("opencode")))
+			},
+		},
+		{
 			Name: "go",
 			Plan: "Go tools installed from module releases",
 			Run: func(ctx context.Context) error {

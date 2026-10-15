@@ -62,14 +62,14 @@ func TestSteps(t *testing.T) {
 	for _, s := range steps {
 		names = append(names, s.Name)
 	}
-	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "go", "rust"}; !slices.Equal(names, want) {
+	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "npm", "go", "rust"}; !slices.Equal(names, want) {
 		t.Fatalf("steps %v, want %v", names, want)
 	}
 	got, err := Select(steps, []string{"rust", "aur"})
 	if err != nil || len(got) != 2 || got[0].Name != "aur" || got[1].Name != "rust" {
 		t.Fatalf("select %v %v", got, err)
 	}
-	if _, err := Select(steps, []string{"npm"}); err == nil {
+	if _, err := Select(steps, []string{"pip"}); err == nil {
 		t.Error("unknown step accepted")
 	}
 }

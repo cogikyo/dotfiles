@@ -241,6 +241,7 @@ Missing AUR and local base packages need manual installation.
   ```
 
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
+  - It then installs OpenCode plugin dependencies with `npm ci --ignore-scripts` when `npm ls` reports problems.
   - Output: `~/.local/state/dctl/extra.log`; failures show up to eight recent lines with progress output and terminal codes removed.
   - An interrupted install shows `WARN` with `interrupted`, without a log tail.
   - Setup waits before later root work, before `certs`, and at the end.
@@ -401,8 +402,9 @@ Named steps omit that prompt and retain this order.
 3. `packages`: reconcile installed packages with the lists.
 4. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
 5. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
-6. `go`: update eligible module-release tools.
-7. `rust`: run `rustup update`, or skip if rustup is absent.
+6. `npm`: reinstall OpenCode plugin dependencies from `config/opencode/package-lock.json`.
+7. `go`: update eligible module-release tools.
+8. `rust`: run `rustup update`, or skip if rustup is absent.
 
 - `--all` or global `--yes` skips step/recipe prompts and passes `--noconfirm`.
   - It never installs or removes package-list drift.
