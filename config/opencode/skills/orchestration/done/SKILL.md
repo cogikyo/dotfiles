@@ -1,12 +1,12 @@
 ---
 name: done
-description: Use when the user invokes /done or asks to finish and close the current session; Collab runs comments, commits, and a qualifying live retro, then asks to close finished lanes and mark the session closed.
+description: Use when the user invokes /done or asks to finish and close the current session; Collab runs comments, commits, and a qualifying live retro, then closes finished lanes and marks the session closed.
 ---
 
 # Done
 
 Collab runs this procedure attended in the current session, in the order below.
-Invoking `/done` approves the comment pass, commits of this session's own work, a qualifying live retro, and closing finished lanes after the user confirms close.
+Invoking `/done` approves the comment pass, commits of this session's own work, a qualifying live retro, and closing finished lanes and the session.
 It does not approve committing other sessions' work, pushing, or deleting anything.
 
 ## Comments
@@ -31,8 +31,9 @@ When nothing qualifies, say so in one line.
 
 ## Close
 
-Ask once with the `question` tool whether to close the session; on no, stop without renaming.
-On yes, load `clear-lanes` and close finished lanes under its judgment.
+Close without asking; `/done` already says the user wants the session closed.
+Ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without renaming.
+Load `clear-lanes` and close finished lanes under its judgment.
 Read `$OPENCODE_SESSION_ID` from the shell, then call `sessions` with `query: "sql"`, `sql: "SELECT title FROM session_v2 WHERE id = ?"`, and the ID bound in `params`.
 Call `tools.opencode.session_rename({ title })` through `execute` with `[CLOSED] <current title>`, omitting `sessionID` for the current session.
 Never add a second `[CLOSED] ` prefix.
