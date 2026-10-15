@@ -32,6 +32,7 @@ return {
 				ST1020 = false,
 			},
 			staticcheck = true,
+			vulncheck = "Imports",
 			directoryFilters = { "-.git", "-.vscode", "-.idea", "-.venv", "-node_modules" },
 			semanticTokens = false,
 			usePlaceholders = true,
