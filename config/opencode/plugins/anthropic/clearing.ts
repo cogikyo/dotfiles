@@ -7,6 +7,7 @@ const edit = {
   clear_at_least: { type: "input_tokens", value: 50_000 },
 };
 
+// Match the wire-name rewrite in claude-auth/transforms.js; mismatches silently lose clearing protection.
 const kept = ["mcp_Question", "mcp_Subagent", "mcp_Skill"];
 
 type Block = { type?: string; name?: string };
