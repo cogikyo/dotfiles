@@ -14,6 +14,7 @@ Hyprland config uses Lua `hl.*`, not `hyprland.conf`.
 ## Couplings
 
 - Binds call hyprd verbs; keep them aligned with `../../cmds/cmd/hyprd/{main,daemon}.go`.
+- `hyprd tab` sends Alt+N and Alt+Shift+N; `../../system/usr/lib/firefox-developer-edition/firefox.cfg` replaces Firefox's built-in Alt+1–8 keys to handle them.
 - `hyprland.lua` and the lid binds in `binds.lua` assume the internal panel is `eDP-1`.
 - Lock supervision belongs to the [hyprd lock controller](../../cmds/internal/hyprd/session/lock.go); these configs control triggers, and the lock UI lives in `../quickshell/lock/`.
 
