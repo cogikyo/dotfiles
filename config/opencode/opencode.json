@@ -345,7 +345,7 @@
     }
   },
   "websearch": {
-    "provider": "firecrawl"
+    "provider": "exa"
   },
   "watcher": {
     "ignore": [".git/**", "node_modules/**", "dist/**", "build/**"]
