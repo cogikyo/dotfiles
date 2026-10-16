@@ -180,18 +180,20 @@ Re-read image evidence when needed, because compaction summaries drop attachment
 
 The OpenCode TUI renders every heading level alike in orange, so replies use `##` as their only heading level.
 
+Default terse: the fewest words that keep correctness, nuance, and the next action.
 Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; keep the claim.
 Load `prose` for the full style rules and slop catalogue.
 
 - Open with one plain sentence: the result, or where the work stands.
 - Keep a reply on one topic short, with no headings: the opening sentence plus a short paragraph or list.
 - Split a reply with more than one topic into `##` sections named for their content.
-  - Inside a section, a bold line on its own is the sub-heading, followed by a paragraph or a list.
-  - Use bold for nothing else.
+  - Inside a section, a bold line on its own stands in for `###`, followed by a paragraph or a list.
+  - A bullet may open with a bold headline, `**Headline:** context`, when the whole bullet fits one line.
+  - Italics mark a phrase that needs attention; use them sparingly.
 - Use a paragraph for reasoning, bullets for peers, and a numbered list for order.
-  - Aim for list lines under about 80 characters so they rarely wrap.
+  - Fit each list line on one rendered line, under about 80 characters.
   - Move extra detail into a nested fragment instead of lengthening the line.
-- End a sectioned reply with `## TL;DR`, one or two sentences long.
+- End a sectioned reply with `## TL;DR`: a short paragraph, or a short list when next steps summarize it better.
 - Ask the user questions with the `question` tool after the reply text instead of listing them in the reply.
   - Keep each question to one short line, with its context in the option descriptions.
   - When choices matter, put the recommended option first and name when another wins.
