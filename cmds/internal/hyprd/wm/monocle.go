@@ -110,7 +110,10 @@ func (m *Monocle) activate() (string, error) {
 		displaced = append(displaced, state.MonocleWindow{Address: w.Address, OriginWS: wsID})
 	}
 
-	w, h := cfg.MonocleSize()
+	w, h, err := windows.MonocleSize(m.hypr, m.state)
+	if err != nil {
+		return "", fmt.Errorf("monocle size: %w", err)
+	}
 	ox, oy := cfg.MonocleOffset()
 	if err := m.hypr.ToggleFloatActive(); err != nil {
 		return "", fmt.Errorf("monocle float: %w", err)

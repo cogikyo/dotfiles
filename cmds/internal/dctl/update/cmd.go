@@ -114,7 +114,7 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 			_, err := run.Output(ctx, "", "systemctl", "--user", "restart", name+".service")
 			errs = append(errs, err)
 			if name == "ewwd" && err == nil {
-				errs = append(errs, reopen(ctx, u, run))
+				errs = append(errs, awaitEwwd(ctx, u, run))
 			}
 		}
 	}
@@ -133,7 +133,7 @@ func same(a, b string) bool {
 	return err == nil && bytes.Equal(x, y)
 }
 
-func reopen(ctx context.Context, u *ui.UI, run execx.Runner) error {
+func awaitEwwd(ctx context.Context, u *ui.UI, run execx.Runner) error {
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		_, err := run.Output(ctx, "", "ewwd", "status")
@@ -145,10 +145,7 @@ func reopen(ctx context.Context, u *ui.UI, run execx.Runner) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if _, err := run.Output(ctx, "", "ewwd", "open"); err != nil {
-		return fmt.Errorf("ewwd open: %w", err)
-	}
-	u.OK("reopened eww widgets")
+	u.OK("restarted ewwd")
 	return nil
 }
 

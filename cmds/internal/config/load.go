@@ -91,6 +91,9 @@ func warnMissing(cfg *HyprConfig) {
 	if cfg.Notify.Styles == nil {
 		warn("notify.styles")
 	}
+	if cfg.Windows.CompactBelow == 0 {
+		warn("windows.compact_below")
+	}
 	split := cfg.Windows.Split
 	for _, mode := range []struct {
 		name    string

@@ -83,6 +83,7 @@ hyprd saves the mode in `$XDG_STATE_HOME/hyprd/bg` (default `~/.local/state/hypr
 Init and lock release apply the saved mode.
 
 Monocle keeps the focused window on its workspace and parks the other tiled windows on `special:mono<n>`.
+Its size uses `windows.monocle` fractions of the focused monitor's usable area, capped by the active outer gaps.
 Run it again to restore the parked windows.
 
 ### Three-body & shadow
@@ -253,9 +254,12 @@ It prompts for a missing VPN password or IPsec PSK, stores and verifies the secr
 Used by eww widgets for real-time state.
 
 ```bash
-hyprd query [topic]      # get state as JSON (workspace|hidden|split|three-body|all)
+hyprd query [topic]      # get state as JSON (workspace|hidden|split|display|three-body|all)
 hyprd subscribe [...]    # stream events (workspace split)
 ```
+
+`hyprd query display` returns `layout` (`full` or `compact`), `monitor` (the widest non-mirrored monitor's name), and `hidden` (share mode or full lock is active).
+The layout is compact when that monitor's logical width is below `windows.compact_below` in `cmds/config/hyprd.yaml`.
 
 eww integration:
 
@@ -271,7 +275,7 @@ eww integration:
 - `background` — mpvpaper display, video, and socket; `hyprd bg` owns the mode
 - `init` — network wait and initial workspace
 - `notify` — sounds, icons, per-style appearance
-- `windows` — ignored classes, hidden/shadow workspace names, split presets, monocle sizing
+- `windows` — split presets, per-layout/share gaps, compact threshold, monocle sizing
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
 - `sessions` — layouts grouped by workspace, then keyed by session name; `init: true` launches on boot (at most one per workspace)
 

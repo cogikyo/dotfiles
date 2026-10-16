@@ -86,13 +86,7 @@ func New() (*Daemon, error) {
 			fmt.Fprintf(os.Stderr, "hyprd opencode notify: %v\n", err)
 		}
 	})
-	d.shareCtl = session.NewShare(hyprClient, stateStore, func() config.GapsOutConfig {
-		cfg := d.config.Load()
-		if cfg == nil {
-			return config.DefaultGapsOutConfig()
-		}
-		return cfg.Windows.GapsOut
-	})
+	d.shareCtl = session.NewShare(hyprClient, stateStore)
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
@@ -113,7 +107,7 @@ func (d *Daemon) Run() error {
 	}
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
-	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.accentCtl, d.server.Done())
+	events := NewEventLoop(d.hypr, d.state, d.shareCtl, d.server.Subs, d.accentCtl, d.server.Done())
 	go func() {
 		if err := events.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
@@ -572,7 +566,7 @@ func (d *Daemon) handleProject(arg string) string {
 }
 
 func (d *Daemon) newInit() *session.Init {
-	init := session.NewInit(d.hypr, d.state, d.lockCtl)
+	init := session.NewInit(d.hypr, d.state, d.lockCtl, d.shareCtl)
 	init.SetNotify(d.notify)
 	return init
 }
@@ -663,6 +657,13 @@ func (d *Daemon) query(topic string) (string, error) {
 
 	case "split":
 		return fmt.Sprintf(`"%s"`, wm.NewSplit(d.hypr, d.state).Preset()), nil
+
+	case "display":
+		jsonData, err := json.Marshal(struct {
+			state.Display
+			Hidden bool `json:"hidden"`
+		}{d.state.GetDisplay(), d.state.GetScreenShare() || d.lockCtl.Locked()})
+		return string(jsonData), err
 
 	case "three-body":
 		allTB := d.state.AllThreeBody()

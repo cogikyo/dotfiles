@@ -33,6 +33,7 @@ type State struct {
 	attention          map[string]bool         `json:"-"`
 	arrival            string                  `json:"-"`
 	arrivalWS          int                     `json:"-"`
+	display            Display
 	config             *config.HyprConfig
 }
 
@@ -123,6 +124,35 @@ func (s *State) GetScreenShare() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.ScreenShare
+}
+
+type Display struct {
+	Layout  config.Layout `json:"layout"`
+	Monitor string        `json:"monitor"`
+}
+
+func (s *State) SetDisplay(d Display) (changed bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	changed = s.display != d
+	s.display = d
+	return changed
+}
+
+func (s *State) GetDisplay() Display {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.display
+}
+
+func (s *State) OuterGaps() config.OuterGaps {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	gaps := s.config.Windows.GapsOut.WithDefaults()
+	if s.ScreenShare {
+		return gaps.Share
+	}
+	return gaps.For(s.display.Layout)
 }
 
 // BrowserQAWindow identifies one marked browser window and its dedicated workspace.

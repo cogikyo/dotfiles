@@ -7,10 +7,12 @@ windows:
     share: { narrow: "0.3713", default: "0.5000", wide: "0.7683", mobile: "0.8309" }
   gaps_out:
     normal: [85, 90, 27, 124]
+    compact: [48, 8, 8, 8]
     share: [14, 16, 14, 16]
+  compact_below: 3200
   monocle:
-    width: 2884
-    height: 1876
+    width: 0.751
+    height: 0.8685
     offset_x: 0
     offset_y: 25
 

@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -187,16 +188,31 @@ func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
 
 // WindowsConfig controls tiling policy.
 type WindowsConfig struct {
-	Split   SplitConfig   `yaml:"split"`
-	GapsOut GapsOutConfig `yaml:"gaps_out"`
-	Monocle MonocleConfig `yaml:"monocle"`
+	Split        SplitConfig   `yaml:"split"`
+	GapsOut      GapsOutConfig `yaml:"gaps_out"`
+	Monocle      MonocleConfig `yaml:"monocle"`
+	CompactBelow int           `yaml:"compact_below"`
 }
 
-// GapsOutConfig stores normal and screen-share outer gaps in Hyprland's order:
-// top, right, bottom, left.
+type Layout string
+
+const (
+	LayoutFull    Layout = "full"
+	LayoutCompact Layout = "compact"
+)
+
+// GapsOutConfig uses Hyprland's order: top, right, bottom, left.
 type GapsOutConfig struct {
-	Normal OuterGaps `yaml:"normal"`
-	Share  OuterGaps `yaml:"share"`
+	Normal  OuterGaps `yaml:"normal"`
+	Compact OuterGaps `yaml:"compact"`
+	Share   OuterGaps `yaml:"share"`
+}
+
+func (c GapsOutConfig) For(layout Layout) OuterGaps {
+	if layout == LayoutCompact {
+		return c.Compact
+	}
+	return c.Normal
 }
 
 // OuterGaps is Hyprland's four-value outer gap shape: top, right, bottom, left.
@@ -208,8 +224,9 @@ type OuterGaps struct {
 // DefaultGapsOutConfig returns the fallback gaps used when config omits the key.
 func DefaultGapsOutConfig() GapsOutConfig {
 	return GapsOutConfig{
-		Normal: NewOuterGaps(85, 85, 30, 125),
-		Share:  NewOuterGaps(12, 16, 12, 16),
+		Normal:  NewOuterGaps(85, 85, 30, 125),
+		Compact: NewOuterGaps(48, 8, 8, 8),
+		Share:   NewOuterGaps(12, 16, 12, 16),
 	}
 }
 
@@ -218,11 +235,13 @@ func NewOuterGaps(top, right, bottom, left int) OuterGaps {
 	return OuterGaps{values: [4]int{top, right, bottom, left}, set: true}
 }
 
-// WithDefaults fills omitted normal/share gap values with safe defaults.
 func (c GapsOutConfig) WithDefaults() GapsOutConfig {
 	defaults := DefaultGapsOutConfig()
 	if !c.Normal.set {
 		c.Normal = defaults.Normal
+	}
+	if !c.Compact.set {
+		c.Compact = defaults.Compact
 	}
 	if !c.Share.set {
 		c.Share = defaults.Share
@@ -263,12 +282,23 @@ func (g OuterGaps) OptionValue() string {
 	return fmt.Sprintf("%d %d %d %d", g.values[0], g.values[1], g.values[2], g.values[3])
 }
 
-// MonocleConfig controls single-window monocle mode sizing and offset (px).
+func (g OuterGaps) Sides() (top, right, bottom, left int) {
+	return g.values[0], g.values[1], g.values[2], g.values[3]
+}
+
+// MonocleConfig uses fractions of the usable monitor area and pixel offsets.
 type MonocleConfig struct {
-	Width   int `yaml:"width"`
-	Height  int `yaml:"height"`
-	OffsetX int `yaml:"offset_x"`
-	OffsetY int `yaml:"offset_y"`
+	Width   float64 `yaml:"width"`
+	Height  float64 `yaml:"height"`
+	OffsetX int     `yaml:"offset_x"`
+	OffsetY int     `yaml:"offset_y"`
+}
+
+func (c MonocleConfig) Size(width, height float64, gaps OuterGaps) (w, h int) {
+	top, right, bottom, left := gaps.Sides()
+	w = int(math.RoundToEven(min(width*c.Width, width-float64(2*max(left, right)))))
+	h = int(math.RoundToEven(min(height*c.Height, height-float64(2*max(top, bottom)))))
+	return w, h
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -474,11 +504,6 @@ func (b *BrowserConfig) AllURLs() []string {
 	}
 	urls = append(urls, b.URLs...)
 	return urls
-}
-
-// MonocleSize returns the monocle window dimensions (px).
-func (c *HyprConfig) MonocleSize() (w, h int) {
-	return c.Windows.Monocle.Width, c.Windows.Monocle.Height
 }
 
 // MonocleOffset returns the x/y offset (px) from monitor center.

@@ -13,6 +13,7 @@ import (
 
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/session"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
 	"dotfiles/cmds/internal/hyprd/wm"
@@ -22,16 +23,18 @@ import (
 type EventLoop struct {
 	hypr            *hypr.Client
 	state           *state.State
+	share           *session.Share
 	subs            *daemon.SubscriptionManager
 	accent          *Accent
 	done            <-chan struct{}
 	browserQAPlaced map[string]bool
 }
 
-func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
+func NewEventLoop(hypr *hypr.Client, state *state.State, share *session.Share, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:            hypr,
 		state:           state,
+		share:           share,
 		subs:            subs,
 		accent:          accent,
 		done:            done,
@@ -100,6 +103,9 @@ func (e *EventLoop) syncState() error {
 	e.reseedSplit()
 	e.refit()
 	e.state.UnlockLayout()
+	if _, err := e.share.SyncDisplay(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
+	}
 
 	return nil
 }
@@ -186,6 +192,10 @@ func (e *EventLoop) handleEvent(line string) {
 		e.reseedSplit()
 		e.refit()
 		e.state.UnlockLayout()
+		e.syncDisplay()
+
+	case "monitoraddedv2", "monitorremoved":
+		e.syncDisplay()
 
 	case "createworkspace", "destroyworkspace":
 		e.refreshClients()
@@ -227,6 +237,12 @@ func (e *EventLoop) handleEvent(line string) {
 		e.refreshClients()
 		e.notifyWorkspace()
 		e.applyAccent()
+	}
+}
+
+func (e *EventLoop) syncDisplay() {
+	if err := e.share.Relayout(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
 	}
 }
 

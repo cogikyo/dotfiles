@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,8 @@ import (
 )
 
 const SocketPath = "/tmp/ewwd.sock"
+
+const hyprdSocketPath = "/tmp/hyprd.sock"
 
 // importSystemdEnv backfills env vars (WAYLAND_DISPLAY et al.) from the systemd user environment.
 func importSystemdEnv() {
@@ -52,7 +55,8 @@ type Daemon struct {
 	openMu      sync.Mutex
 	reconcileMu sync.Mutex
 	desiredOpen bool
-	openPending bool
+	pending     bool
+	commanded   bool
 	ewwDone     chan error
 }
 
@@ -101,10 +105,12 @@ func (d *Daemon) Run() error {
 	if d.autoOpen {
 		// eww startup can take seconds; don't block signal handling.
 		go func() {
-			if result := d.openWindows(true); result != "" {
+			if result := d.openWindows(openPass); result != "" {
 				fmt.Printf("ewwd: %s\n", result)
 			}
 		}()
+	} else {
+		go d.resume()
 	}
 
 	sig := d.server.WaitForSignal()
@@ -172,11 +178,13 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "open":
-		return d.openWindows(true)
+		return d.openWindows(openPass)
 	case "restore":
-		return d.openWindows(false)
+		return d.openWindows(restorePass)
 	case "close":
 		return d.closeWindows()
+	case "relayout":
+		return d.relayoutWindows()
 	case "action":
 		actionParts := strings.Fields(arg)
 		if len(actionParts) == 0 {
@@ -221,25 +229,62 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 	return fmt.Sprintf("error: unknown provider: %s", providerName)
 }
 
+type pass string
+
+const (
+	restorePass  pass = "restore"
+	openPass     pass = "open"
+	relayoutPass pass = "relayout"
+)
+
 // openWindows ensures the eww daemon is running and reconciles configured windows.
-func (d *Daemon) openWindows(reload bool) string {
+func (d *Daemon) openWindows(p pass) string {
 	d.openMu.Lock()
 	d.desiredOpen = true
-	d.openPending = true
+	d.pending = true
+	d.commanded = true
 	d.openMu.Unlock()
 
-	go d.reconcileLatest(reload)
+	go d.reconcileLatest(p)
 	return "open: scheduled"
 }
 
 func (d *Daemon) closeWindows() string {
 	d.openMu.Lock()
 	d.desiredOpen = false
-	d.openPending = false
+	d.pending = true
+	d.commanded = true
 	d.openMu.Unlock()
 
-	go d.reconcileLatest(false)
+	go d.reconcileLatest(restorePass)
 	return "close: scheduled"
+}
+
+func (d *Daemon) resume() {
+	display, err := queryDisplay()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: hyprd display unavailable, widgets stay closed: %v\n", err)
+		return
+	}
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+	if d.commanded {
+		return
+	}
+	d.desiredOpen = !display.Hidden
+	d.pending = true
+	go d.reconcileLatest(openPass)
+}
+
+func (d *Daemon) relayoutWindows() string {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+	if !d.desiredOpen {
+		return "relayout: widgets closed"
+	}
+	d.pending = true
+	go d.reconcileLatest(relayoutPass)
+	return "relayout: scheduled"
 }
 
 func (d *Daemon) desiredWidgetsOpen() bool {
@@ -248,21 +293,21 @@ func (d *Daemon) desiredWidgetsOpen() bool {
 	return d.desiredOpen
 }
 
-func (d *Daemon) widgetsOpenPending() bool {
+func (d *Daemon) reconcilePending() bool {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
-	return d.desiredOpen && d.openPending
+	return d.pending
 }
 
-func (d *Daemon) markWidgetsOpen() {
+func (d *Daemon) markReconciled(open bool) {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
-	if d.desiredOpen {
-		d.openPending = false
+	if d.desiredOpen == open {
+		d.pending = false
 	}
 }
 
-func (d *Daemon) reconcileLatest(reload bool) {
+func (d *Daemon) reconcileLatest(p pass) {
 	d.reconcileMu.Lock()
 	defer d.reconcileMu.Unlock()
 
@@ -279,62 +324,130 @@ func (d *Daemon) reconcileLatest(reload bool) {
 	}
 
 	if !d.desiredWidgetsOpen() {
-		d.closeEwwWindows()
+		if d.closeEwwWindows() {
+			d.markReconciled(false)
+		}
 		return
 	}
 
-	result, ok := d.reconcileWindows(reload)
+	display, err := queryDisplay()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: hyprd display unavailable, using full: %v\n", err)
+		display.Layout = config.LayoutFull
+	}
+	if display.Hidden {
+		if d.closeEwwWindows() {
+			d.markReconciled(true)
+		}
+		fmt.Println("ewwd: hyprd reports widgets hidden; keeping eww closed")
+		return
+	}
+
+	result, ok := d.reconcileWindows(p, display)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "ewwd: reconcile failed: %s\n", result)
 	}
 	if !d.desiredWidgetsOpen() {
-		d.closeEwwWindows()
+		if d.closeEwwWindows() {
+			d.markReconciled(false)
+		}
 		return
 	}
 	if ok {
-		d.markWidgetsOpen()
+		d.markReconciled(true)
 	}
 	if result != "" {
 		fmt.Printf("ewwd: %s\n", result)
 	}
 }
 
-func (d *Daemon) reconcileWindows(reload bool) (string, bool) {
-	windows := d.config.Eww.Windows
-	verb := "restore"
-	if reload {
-		verb = "open"
-	}
+func (d *Daemon) reconcileWindows(p pass, display display) (string, bool) {
+	windows, others := d.config.Eww.Windows.For(display.Layout)
 	if len(windows) == 0 {
-		return verb + ": no windows configured", false
+		return fmt.Sprintf("%s: no %s windows configured", p, display.Layout), false
 	}
 
-	if os.Getenv("WAYLAND_DISPLAY") == "" {
-		importSystemdEnv()
-		if os.Getenv("WAYLAND_DISPLAY") == "" {
-			return "error: WAYLAND_DISPLAY not set", false
+	if p == relayoutPass {
+		if err := d.stopEww(); err != nil {
+			return fmt.Sprintf("error: %v", err), false
 		}
 	}
-
 	ewwRunning := exec.Command("eww", "ping").Run() == nil
 	if err := d.ensureEwwDaemon(); err != nil {
 		return fmt.Sprintf("error: %v", err), false
 	}
-	if reload && ewwRunning {
+	if p == openPass && ewwRunning {
 		if out, err := exec.Command("eww", "reload").CombinedOutput(); err != nil {
 			return fmt.Sprintf("error: eww reload: %v%s", err, commandOutput(out)), false
 		}
 	}
 
-	args := append([]string{"--no-daemonize", "open-many"}, windows...)
-	if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
-		return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
+	if err := closeActive(others); err != nil {
+		return fmt.Sprintf("error: %v", err), false
+	}
+	if err := openSet(windows, display.Monitor); err != nil {
+		return fmt.Sprintf("error: %v", err), false
 	}
 
-	return fmt.Sprintf("%s: %s", verb, strings.Join(windows, " ")), true
+	return fmt.Sprintf("%s: %s", p, strings.Join(windows, " ")), true
+}
+
+type display struct {
+	Layout  config.Layout `json:"layout"`
+	Monitor string        `json:"monitor"`
+	Hidden  bool          `json:"hidden"`
+}
+
+func queryDisplay() (display, error) {
+	var d display
+	resp, err := daemon.NewClient(hyprdSocketPath).Send("query display")
+	if err != nil {
+		return d, err
+	}
+	if err := json.Unmarshal([]byte(resp), &d); err != nil {
+		return d, fmt.Errorf("parse %q: %w", resp, err)
+	}
+	return d, nil
+}
+
+func openSet(windows []string, monitor string) error {
+	args := append([]string{"--no-daemonize", "open-many"}, windows...)
+	if monitor != "" {
+		args = append(args, "--arg", "screen="+monitor)
+	}
+	if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("eww open-many: %w%s", err, commandOutput(out))
+	}
+	return nil
+}
+
+func closeActive(windows []string) error {
+	out, err := exec.Command("eww", "active-windows").Output()
+	if err != nil {
+		return fmt.Errorf("eww active-windows: %w", err)
+	}
+	var open []string
+	for line := range strings.SplitSeq(string(out), "\n") {
+		if id, _, ok := strings.Cut(line, ":"); ok && slices.Contains(windows, id) {
+			open = append(open, id)
+		}
+	}
+	if len(open) == 0 {
+		return nil
+	}
+	if out, err := exec.Command("eww", append([]string{"close"}, open...)...).CombinedOutput(); err != nil {
+		return fmt.Errorf("eww close: %w%s", err, commandOutput(out))
+	}
+	return nil
 }
 
 func (d *Daemon) ensureEwwDaemon() error {
+	if os.Getenv("WAYLAND_DISPLAY") == "" {
+		importSystemdEnv()
+		if os.Getenv("WAYLAND_DISPLAY") == "" {
+			return fmt.Errorf("WAYLAND_DISPLAY not set")
+		}
+	}
 	if exec.Command("eww", "ping").Run() == nil {
 		if d.ewwDone != nil {
 			return nil
@@ -416,6 +529,7 @@ func (d *Daemon) stopEww() error {
 	if err := killEwwTrees(); err != nil {
 		return err
 	}
+	_ = exec.Command("hyprd", "picker", "close").Run()
 
 	if d.ewwDone != nil {
 		select {
@@ -565,23 +679,16 @@ func parseEwwListenerCounts(data []byte, runtimeDir string) map[string]int {
 	return counts
 }
 
-func (d *Daemon) closeEwwWindows() {
-	if exec.Command("eww", "ping").Run() != nil {
-		fmt.Fprintln(os.Stderr, "ewwd: eww is not responding while closing; stopping any stale processes")
-		if err := d.stopEww(); err != nil {
-			fmt.Fprintf(os.Stderr, "ewwd: stop unresponsive eww: %v\n", err)
-		}
-		return
+func (d *Daemon) closeEwwWindows() bool {
+	if err := d.stopEww(); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: stop eww: %v\n", err)
+		return false
 	}
-	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: eww close-all: %v%s\n", err, commandOutput(out))
+	if err := d.ensureEwwDaemon(); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: start eww: %v\n", err)
+		return false
 	}
-	if d.ewwDone == nil {
-		fmt.Fprintln(os.Stderr, "ewwd: stopping unmanaged eww daemon after close")
-		if err := d.stopEww(); err != nil {
-			fmt.Fprintf(os.Stderr, "ewwd: stop unmanaged eww: %v\n", err)
-		}
-	}
+	return true
 }
 
 func (d *Daemon) healthLoop() {
@@ -596,22 +703,19 @@ func (d *Daemon) healthLoop() {
 		}
 
 		if duplicates, err := duplicateEwwListeners(); err == nil && len(duplicates) > 0 {
-			go d.reconcileLatest(false)
+			go d.reconcileLatest(restorePass)
 			continue
 		}
-		if d.widgetsOpenPending() {
-			go d.reconcileLatest(false)
-			continue
-		}
-		if !d.desiredWidgetsOpen() {
+		if d.reconcilePending() {
+			go d.reconcileLatest(restorePass)
 			continue
 		}
 		if exec.Command("eww", "ping").Run() == nil {
 			continue
 		}
 
-		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; reopening windows")
-		go d.reconcileLatest(false)
+		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; restarting eww")
+		go d.reconcileLatest(restorePass)
 	}
 }
 

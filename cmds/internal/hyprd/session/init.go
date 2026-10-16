@@ -96,11 +96,12 @@ type Init struct {
 	hypr   *hypr.Client
 	state  *state.State
 	lock   *Lock
+	share  *Share
 	notify NotifyFunc
 }
 
-func NewInit(h *hypr.Client, s *state.State, lock *Lock) *Init {
-	return &Init{hypr: h, state: s, lock: lock}
+func NewInit(h *hypr.Client, s *state.State, lock *Lock, share *Share) *Init {
+	return &Init{hypr: h, state: s, lock: lock, share: share}
 }
 
 func (i *Init) SetNotify(fn NotifyFunc) {
@@ -140,6 +141,9 @@ func (i *Init) Execute() (string, error) {
 		go i.promptSetup(next, online)
 	}
 
+	if _, err := i.share.SyncDisplay(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: display: %v\n", err)
+	}
 	restoreEwwWidgets(true)
 
 	layout := NewLayout(i.hypr, i.state)

@@ -37,6 +37,8 @@ func main() {
 		cmdOpen("restore")
 	case "close":
 		cmdOpen("close")
+	case "relayout":
+		cmdOpen("relayout")
 	case "query":
 		cmdQuery()
 	case "subscribe":
@@ -203,10 +205,11 @@ func cmdHelp() {
 
 Usage:
   ewwd                  Start daemon (foreground, auto-opens eww windows)
-  ewwd --no-open        Start daemon without opening eww windows
+  ewwd --no-open         Start daemon; open only if hyprd reports hidden=false
   ewwd open             Reload eww config and reconcile configured windows
   ewwd restore          Reconcile configured windows without reloading config
-  ewwd close            Mark widgets closed and run eww close-all
+  ewwd close            Mark widgets closed and restart eww empty
+  ewwd relayout         Restart eww with hyprd's display layout if widgets are open
   ewwd status           Check if daemon is running
   ewwd status --json    Return full state as JSON
 

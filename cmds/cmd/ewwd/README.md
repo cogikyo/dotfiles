@@ -11,6 +11,11 @@ ewwd status              # check if running
 ewwd status --json       # full state dump
 ```
 
+When opening, ewwd selects `windows.full` or `windows.compact` from `cmds/config/ewwd.yaml` using [hyprd's display selection](../hyprd/README.md#query-and-subscribe), falling back to `full` if hyprd is unavailable.
+With `--no-open`, startup opens widgets only if hyprd reports `hidden=false`.
+Hyprd requests `ewwd relayout` when the layout or monitor changes; it restarts eww only while widgets are open.
+`ewwd close` restarts eww empty.
+
 ### Query and subscribe
 
 ```bash

@@ -4,6 +4,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os/exec"
@@ -116,7 +117,10 @@ func (p *Picker) open() (string, error) {
 		return "", fmt.Errorf("picker: set submap: %w", err)
 	}
 	p.pushState()
-	exec.Command("eww", "open", "picker").Run()
+	if out, err := exec.Command("eww", "--no-daemonize", "open", "picker").CombinedOutput(); err != nil {
+		p.active = false
+		return "", errors.Join(fmt.Errorf("picker: eww open: %w: %s", err, strings.TrimSpace(string(out))), p.lock.resetSubmap())
+	}
 	exec.Command("eww", "update", "picker-visible=true").Run()
 
 	return "picker: opened", nil

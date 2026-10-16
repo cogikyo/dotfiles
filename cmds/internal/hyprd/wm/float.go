@@ -5,11 +5,9 @@ import (
 
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 )
 
-// Float toggles floating on the active window, sizing it from cfg.Windows.Monocle on the way out of tiling.
-//
-// Stateless: the toggle direction comes from Window.Floating, so nothing is stored across calls.
 type Float struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -36,7 +34,10 @@ func (f *Float) Execute() (string, error) {
 		return "float off: tiled", nil
 	}
 
-	w, h := f.state.GetConfig().MonocleSize()
+	w, h, err := windows.MonocleSize(f.hypr, f.state)
+	if err != nil {
+		return "", fmt.Errorf("float size: %w", err)
+	}
 	if err := f.hypr.ToggleFloatActive(); err != nil {
 		return "", fmt.Errorf("float window: %w", err)
 	}

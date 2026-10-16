@@ -160,16 +160,32 @@ func (c *Client) ActiveWindow() (*Window, error) {
 
 // Monitor mirrors the JSON from `hyprctl -j monitors`.
 type Monitor struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	Focused   bool   `json:"focused"`
-	ActiveWS  WsRef  `json:"activeWorkspace"`
-	SpecialWS WsRef  `json:"specialWorkspace"`
-	Reserved  [4]int `json:"reserved"`
+	ID        int     `json:"id"`
+	Name      string  `json:"name"`
+	Width     int     `json:"width"`
+	Height    int     `json:"height"`
+	Scale     float64 `json:"scale"`
+	Transform int     `json:"transform"`
+	MirrorOf  string  `json:"mirrorOf"`
+	X         int     `json:"x"`
+	Y         int     `json:"y"`
+	Focused   bool    `json:"focused"`
+	ActiveWS  WsRef   `json:"activeWorkspace"`
+	SpecialWS WsRef   `json:"specialWorkspace"`
+	Reserved  [4]int  `json:"reserved"`
+}
+
+func (m Monitor) LogicalSize() (w, h float64) {
+	w, h = float64(m.Width), float64(m.Height)
+	if m.Transform%2 == 1 {
+		w, h = h, w
+	}
+	return w / m.Scale, h / m.Scale
+}
+
+func (m Monitor) Area() (w, h float64) {
+	w, h = m.LogicalSize()
+	return w - float64(m.Reserved[0]+m.Reserved[2]), h - float64(m.Reserved[1]+m.Reserved[3])
 }
 
 // Monitors returns all monitors from `hyprctl -j monitors`.
@@ -187,8 +203,6 @@ func (c *Client) Monitors() ([]Monitor, error) {
 }
 
 // FocusedMonitor returns the focused monitor, falling back to monitors[0].
-//
-// Browser URL routing uses this only when active-window workspace data is unavailable.
 func (c *Client) FocusedMonitor() (*Monitor, error) {
 	monitors, err := c.Monitors()
 	if err != nil {

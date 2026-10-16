@@ -12,6 +12,7 @@ import (
 
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 )
 
 const browserQAMarker = "--opencode-browser-qa"
@@ -118,7 +119,10 @@ func (e *EventLoop) placeBrowserQA(window hypr.Window, workspace string, newAssi
 		}
 		changed = true
 	}
-	w, h := e.state.GetConfig().MonocleSize()
+	w, h, err := windows.MonocleSize(e.hypr, e.state)
+	if err != nil {
+		return fmt.Errorf("size %s: %w", window.Address, err)
+	}
 	if window.Size != [2]int{w, h} {
 		if err := e.hypr.ResizeWindowExact(window.Address, w, h); err != nil {
 			return fmt.Errorf("resize %s: %w", window.Address, err)

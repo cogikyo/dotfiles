@@ -260,9 +260,11 @@ func (l *Layout) applyMonocle(wsID int) error {
 		return err
 	}
 
-	cfg := l.state.GetConfig()
-	w, h := cfg.MonocleSize()
-	ox, oy := cfg.MonocleOffset()
+	w, h, err := windows.MonocleSize(l.hypr, l.state)
+	if err != nil {
+		return fmt.Errorf("apply monocle: size: %w", err)
+	}
+	ox, oy := l.state.GetConfig().MonocleOffset()
 	if err := l.hypr.ToggleFloatActive(); err != nil {
 		return fmt.Errorf("apply monocle: toggle floating: %w", err)
 	}

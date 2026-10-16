@@ -25,7 +25,8 @@ Load [`converge`](../config/opencode/skills/principles/converge/SKILL.md) before
 
 - Keep hyprd verbs aligned across `cmd/hyprd/{main,daemon}.go` and `../config/hypr/binds.lua`.
 - Keep `../system/etc/greetd/config.toml` → `--locked-cmd "hyprd lock client"` aligned with the local `hyprd lock client` verb in `cmd/hyprd/main.go`.
-- Names in `config/ewwd.yaml` → `windows` must match `defwindow` names under `../config/eww/yuck/`.
+- Names in `config/ewwd.yaml` → `windows.{full,compact}` must match `defwindow` names under `../config/eww/yuck/`.
+- Hyprd's `query display` selects ewwd's window set using `config/hyprd.yaml` → `windows.compact_below`; hyprd requests `ewwd relayout` when the selected layout or monitor changes.
 - `internal/dctl/binaries/` → `Names` drives ISO builds, installer placement, and CLI updates.
 - Register setup stages in execution order in `internal/dctl/cli/setup.go`; consecutive root stages share one sudo child, and background work must finish before later root work or stages that need sudo.
 - `luks.Needs` is computed from the non-optional phase-1 catalog; keep lock stages after phase 1 in `internal/dctl/cli/setup.go`.

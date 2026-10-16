@@ -1,9 +1,12 @@
 windows:
-  - today
-  - workspaces
-  - computer
-  - music
-  - player
+  full:
+    - today
+    - workspaces
+    - computer
+    - music
+    - player
+  compact:
+    - bar
 weather:
   api_key_file: "~/.local/.owm_api_key"
   poll_interval: 1h

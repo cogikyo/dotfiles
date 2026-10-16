@@ -5,13 +5,25 @@ import "time"
 
 // EwwConfig holds settings for every ewwd provider.
 type EwwConfig struct {
-	Windows []string      `yaml:"windows"` // eww window names to open on startup
+	Windows WindowSets    `yaml:"windows"`
 	Weather WeatherConfig `yaml:"weather"`
 	Timer   TimerConfig   `yaml:"timer"`
 	Audio   AudioConfig   `yaml:"audio"`
 	Date    DateConfig    `yaml:"date"`
 	Network NetworkConfig `yaml:"network"`
 	Music   MusicConfig   `yaml:"music"`
+}
+
+type WindowSets struct {
+	Full    []string `yaml:"full"`
+	Compact []string `yaml:"compact"`
+}
+
+func (w WindowSets) For(layout Layout) (show, hide []string) {
+	if layout == LayoutCompact {
+		return w.Compact, w.Full
+	}
+	return w.Full, w.Compact
 }
 
 // MusicConfig configures the music provider's Spotify Canvas integration.
@@ -56,7 +68,10 @@ type NetworkConfig struct {
 // DefaultEww returns ewwd defaults.
 func DefaultEww() EwwConfig {
 	return EwwConfig{
-		Windows: []string{"today", "workspaces", "computer", "music", "player"},
+		Windows: WindowSets{
+			Full:    []string{"today", "workspaces", "computer", "music", "player"},
+			Compact: []string{"bar"},
+		},
 		Weather: WeatherConfig{
 			APIKeyFile:   "~/.local/.owm_api_key",
 			PollInterval: time.Hour,

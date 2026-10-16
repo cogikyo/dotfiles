@@ -1,7 +1,6 @@
 package session
 
 import (
-	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
@@ -13,16 +12,15 @@ import (
 	"time"
 )
 
-// Share owns screen-share mode: quiet notifications, close widgets, stop GLava, and tighten gaps.
+// Share serializes display and screen-share changes to outer gaps.
 type Share struct {
-	hypr    *hypr.Client
-	state   *state.State
-	gapsOut func() config.GapsOutConfig
-	mu      sync.Mutex
+	hypr  *hypr.Client
+	state *state.State
+	mu    sync.Mutex
 }
 
-func NewShare(h *hypr.Client, s *state.State, gapsOut func() config.GapsOutConfig) *Share {
-	return &Share{hypr: h, state: s, gapsOut: gapsOut}
+func NewShare(h *hypr.Client, s *state.State) *Share {
+	return &Share{hypr: h, state: s}
 }
 
 // Execute toggles screen-share mode by default, with explicit on/off/status verbs for scripts.
@@ -54,10 +52,9 @@ func (s *Share) Execute(arg string) (string, error) {
 }
 
 func (s *Share) enter() (string, error) {
-	if err := s.setGaps(s.gaps().Share); err != nil {
+	if err := s.switchGaps(true); err != nil {
 		return "", err
 	}
-	s.state.SetScreenShare(true)
 	splitErr := s.retuneSplit()
 
 	runCommand("dunstctl", "close-all")
@@ -69,10 +66,9 @@ func (s *Share) enter() (string, error) {
 }
 
 func (s *Share) exit() (string, error) {
-	if err := s.setGaps(s.gaps().Normal); err != nil {
+	if err := s.switchGaps(false); err != nil {
 		return "", err
 	}
-	s.state.SetScreenShare(false)
 	splitErr := s.retuneSplit()
 
 	startDetached("ewwd", "restore")
@@ -109,32 +105,19 @@ func (s *Share) active() bool {
 	if s.state.GetScreenShare() {
 		return true
 	}
-	normal := s.gaps().Normal
 	resp, err := s.hypr.Request("getoption general:gaps_out")
 	if err != nil {
 		return false
 	}
-	return !strings.Contains(string(resp), normal.OptionValue())
+	return !strings.Contains(string(resp), s.state.OuterGaps().OptionValue())
 }
 
-func (s *Share) gaps() config.GapsOutConfig {
-	if s.gapsOut == nil {
-		return config.DefaultGapsOutConfig()
-	}
-	return s.gapsOut().WithDefaults()
-}
-
-func (s *Share) setGaps(gaps config.OuterGaps) error {
-	var top, right, bottom, left int
-	n, err := fmt.Sscanf(gaps.OptionValue(), "%d %d %d %d", &top, &right, &bottom, &left)
-	if err != nil {
-		return fmt.Errorf("share: parse gaps_out %q: %w", gaps.OptionValue(), err)
-	}
-	if n != 4 {
-		return fmt.Errorf("share: parse gaps_out %q: got %d values", gaps.OptionValue(), n)
-	}
-	if err := s.hypr.SetOuterGaps(top, right, bottom, left); err != nil {
-		return fmt.Errorf("share: set gaps_out: %w", err)
+func (s *Share) switchGaps(on bool) error {
+	prev := s.state.GetScreenShare()
+	s.state.SetScreenShare(on)
+	if err := setGaps(s.hypr, s.state.OuterGaps()); err != nil {
+		s.state.SetScreenShare(prev)
+		return fmt.Errorf("share: %w", err)
 	}
 	return nil
 }

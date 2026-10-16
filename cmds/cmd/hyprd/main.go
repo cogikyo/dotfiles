@@ -459,7 +459,7 @@ Browser:
   hyprd browser restore <name> [--force] [--dry-run]
 
 Query/Subscribe (for eww):
-  hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)
+  hyprd query [topic]    Get state (workspace|hidden|split|display|three-body|all)
   hyprd subscribe [...]  Stream events (workspace split)
 
 Screenshot:
