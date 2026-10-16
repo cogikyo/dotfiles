@@ -311,7 +311,8 @@ func TestPluginPromptAbortSkipsPhrase(t *testing.T) {
 	sealed, err := Seal([]byte("key"), f.recipients(t))
 	must(t, err)
 	k := &Keys{u: f.u, wrapped: f.root.Secrets("missing.age"), piv: inserted{"1"}}
-	k.plugins = []yubikey{{prompting{clientUI(f.u, &k.stop, &k.gone)}, "1"}}
+	p := new(pinCache)
+	k.plugins = []yubikey{{prompting{clientUI(f.u, &k.stop, &k.gone, p)}, "1", p}}
 	if _, err := k.Open(sealed); !aborted(err) {
 		t.Fatalf("got %v, want an aborted prompt", err)
 	}

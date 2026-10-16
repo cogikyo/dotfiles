@@ -644,6 +644,7 @@ name:~/target/path:0600[:staged]
 
 Age tries plugin identities first, then offers the recovery phrase on failure.
 Cancelling a plugin prompt stops without offering the phrase.
+Dctl asks for each YubiKey's PIV PIN once per run, reusing it only after a successful decrypt; a failed decrypt clears the cached PIN.
 
 - Mutations through sync, rekey, key enrollment/removal take an exclusive checkout lock.
 - Decrypt/sync/rekey/verify-phrase refuse `AGEDEBUG`, which can expose PINs and keys.

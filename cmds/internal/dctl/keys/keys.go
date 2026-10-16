@@ -34,6 +34,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err != nil {
 		return err
 	}
+	secrets.ForgetPIN(serial)
 	u.Section("YubiKey "+serial, "wait for each prompt before typing; early input is discarded")
 	pins, err := pinSteps(ctx, run, serial)
 	if err != nil {

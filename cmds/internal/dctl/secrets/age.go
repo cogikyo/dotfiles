@@ -76,7 +76,7 @@ func parseRecipient(line string, u *ui.UI) (age.Recipient, error) {
 	if r, err := age.ParseX25519Recipient(line); err == nil {
 		return r, nil
 	}
-	return plugin.NewRecipient(line, clientUI(u, new(error), new(bool)))
+	return plugin.NewRecipient(line, clientUI(u, new(error), new(bool), new(pinCache)))
 }
 
 func Seal(plaintext []byte, recipients []age.Recipient) ([]byte, error) {
@@ -147,6 +147,41 @@ type Keys struct {
 type yubikey struct {
 	id     age.Identity
 	serial string
+	pin    *pinCache
+}
+
+type pinCache struct {
+	held, typed string
+	asks        int
+}
+
+var pins = map[string]*pinCache{}
+
+func ForgetPIN(serial string) {
+	if p := pins[serial]; p != nil {
+		p.held = ""
+	}
+}
+
+func (p *pinCache) ask(u *ui.UI, prompt string) (string, error) {
+	p.asks++
+	if p.asks == 1 && p.held != "" {
+		return p.held, nil
+	}
+	p.held = ""
+	value, err := u.Secret(prompt)
+	p.typed = value
+	return value, err
+}
+
+func (p *pinCache) settle(ok bool) {
+	switch {
+	case !ok:
+		p.held = ""
+	case p.typed != "":
+		p.held = p.typed
+	}
+	p.typed, p.asks = "", 0
 }
 
 func stubSerial(stub string) string {
@@ -202,11 +237,17 @@ func LoadKeys(u *ui.UI, root paths.Root) (*Keys, error) {
 		if !strings.HasPrefix(stub, "AGE-PLUGIN-") {
 			return nil, errors.New("secrets/identities: only plugin identity stubs belong here")
 		}
-		id, err := plugin.NewIdentity(stub, clientUI(u, &k.stop, &k.gone))
+		serial := stubSerial(stub)
+		pin := pins[serial]
+		if pin == nil {
+			pin = new(pinCache)
+			pins[serial] = pin
+		}
+		id, err := plugin.NewIdentity(stub, clientUI(u, &k.stop, &k.gone, pin))
 		if err != nil {
 			return nil, fmt.Errorf("secrets/identities: %w", err)
 		}
-		k.plugins = append(k.plugins, yubikey{id, stubSerial(stub)})
+		k.plugins = append(k.plugins, yubikey{id, serial, pin})
 	}
 	return k, nil
 }
@@ -249,17 +290,24 @@ const (
 
 func (k *Keys) unlock(ciphertext []byte) ([]byte, bool, error) {
 	for tried := false; ; tried = true {
-		ids, serials, err := k.inserted()
-		if err == nil && len(ids) > 0 {
+		keys, err := k.inserted()
+		if err == nil && len(keys) > 0 {
+			ids := make([]age.Identity, len(keys))
+			for i, y := range keys {
+				ids[i] = y.id
+			}
 			var data []byte
 			data, err = open(ciphertext, ids...)
+			for _, y := range keys {
+				y.pin.settle(err == nil)
+			}
 			switch {
 			case err == nil:
 				return data, false, nil
 			case k.stop != nil:
 				return nil, false, fmt.Errorf("%w: %w", k.stop, err)
 			case k.gone:
-				k.gone, ids, err = false, nil, nil
+				k.gone, err = false, nil
 			}
 		}
 		title, retry := "", ""
@@ -270,7 +318,7 @@ func (k *Keys) unlock(ciphertext []byte) ([]byte, bool, error) {
 				title = "No enrolled YubiKey detected; insert one"
 			}
 		case wrongPIN(err):
-			left, blocked := k.tries(serials)
+			left, blocked := k.tries(keys)
 			err = fmt.Errorf("PIV PIN rejected · %s", left)
 			if !blocked {
 				retry = "Retry PIV PIN"
@@ -292,20 +340,18 @@ func (k *Keys) unlock(ciphertext []byte) ([]byte, bool, error) {
 	}
 }
 
-func (k *Keys) inserted() ([]age.Identity, []string, error) {
+func (k *Keys) inserted() ([]yubikey, error) {
 	have, err := k.piv.Serials()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	var ids []age.Identity
-	var serials []string
+	var keys []yubikey
 	for _, p := range k.plugins {
 		if slices.Contains(have, p.serial) {
-			ids = append(ids, p.id)
-			serials = append(serials, p.serial)
+			keys = append(keys, p)
 		}
 	}
-	return ids, serials, nil
+	return keys, nil
 }
 
 func wrongPIN(err error) bool {
@@ -315,27 +361,27 @@ func wrongPIN(err error) bool {
 	})
 }
 
-func (k *Keys) tries(serials []string) (string, bool) {
+func (k *Keys) tries(keys []yubikey) (string, bool) {
 	var parts []string
 	blocked := 0
-	for _, serial := range serials {
+	for _, y := range keys {
 		left := "PIV PIN tries unknown"
-		if n, err := k.piv.Tries(serial); err == nil {
+		if n, err := k.piv.Tries(y.serial); err == nil {
 			left = fmt.Sprintf("%d PIV PIN tries left", n)
 			if n == 0 {
 				left = "PIV PIN blocked"
 				blocked++
 			}
 		}
-		if len(serials) > 1 {
-			left = serial + ": " + left
+		if len(keys) > 1 {
+			left = y.serial + ": " + left
 		}
 		parts = append(parts, left)
 	}
 	if len(parts) == 0 {
 		return "PIV PIN tries unknown", false
 	}
-	return strings.Join(parts, ", "), blocked == len(serials)
+	return strings.Join(parts, ", "), blocked == len(keys)
 }
 
 func (k *Keys) decide(reason error, title, retry string) (int, error) {
@@ -375,7 +421,7 @@ func (k *Keys) phrase() (*age.X25519Identity, error) {
 	}
 }
 
-func clientUI(u *ui.UI, stop *error, gone *bool) *plugin.ClientUI {
+func clientUI(u *ui.UI, stop *error, gone *bool, pin *pinCache) *plugin.ClientUI {
 	note := func(err error) error {
 		if aborted(err) {
 			*stop = err
@@ -389,7 +435,7 @@ func clientUI(u *ui.UI, stop *error, gone *bool) *plugin.ClientUI {
 		},
 		RequestValue: func(name, prompt string, secret bool) (string, error) {
 			if secret {
-				value, err := u.Secret(prompt)
+				value, err := pin.ask(u, prompt)
 				return value, note(err)
 			}
 			value, err := u.Text(prompt, "")
