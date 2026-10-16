@@ -232,6 +232,7 @@ The summary also lists phase-1 stages that did not run.
 - Ctrl+C stops the run and exits 130; canceled or interrupted stages show `WARN` in the summary.
 - A full run records its next action under `$XDG_STATE_HOME/dctl/next`.
   - Default: `~/.local/state/dctl/next`; zsh prints it as `dctl · …`.
+  - Hyprd shows **Finish setting up** at each login while setup is pending; click it to run `dctl setup` in kitty.
 
 ### First-login details
 

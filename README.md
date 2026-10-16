@@ -191,6 +191,7 @@ The installer creates the encrypted system and desktop from bundled packages.
 ### 5. First login
 
 Unlock with the passphrase, log in, and connect Ethernet or join Wi-Fi with `nmcli --ask device wifi connect <SSID>` before setup.
+Click the **Finish setting up** login notification to run `dctl setup` in kitty.
 Secrets can use a YubiKey or the age recovery phrase.
 
 ```sh

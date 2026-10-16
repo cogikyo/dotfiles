@@ -364,6 +364,27 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	return nil
 }
 
+// Prompt blocks until the persistent critical notification closes and reports whether its action was chosen.
+func (n *Notifier) Prompt(app, title, body, label string) (bool, error) {
+	urgency := "critical"
+	spec := notificationSpec{
+		App:     app,
+		Title:   title,
+		Body:    body,
+		Action:  label,
+		Tag:     app,
+		Urgency: &urgency,
+		Timeout: new(0),
+	}
+	out, err := exec.Command("dunstify", n.buildDunstArgs(spec, nil, n.style(""))...).Output()
+	if err != nil {
+		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
+			return false, fmt.Errorf("dunstify: %w", err)
+		}
+	}
+	return strings.TrimSpace(string(out)) == "default", nil
+}
+
 // buildDunstArgs assembles the dunstify argv; non-nil spec fields override style defaults.
 func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, style config.ResolvedStyle) []string {
 	app := strings.TrimSpace(spec.App)
@@ -417,6 +438,12 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	}
 	if spec.FocusAction && paneNotificationID(ctx) > 0 {
 		args = append(args, "-A", "focus,Focus")
+	}
+	if spec.Action != "" {
+		args = append(args, "-A", "default,"+spec.Action)
+	}
+	if spec.Tag != "" {
+		args = append(args, "-h", "string:x-dunst-stack-tag:"+spec.Tag)
 	}
 	args = append(args, spec.Title, spec.Body)
 	return args

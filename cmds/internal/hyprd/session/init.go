@@ -3,16 +3,22 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"html"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/browser"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/notify"
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
@@ -83,7 +89,6 @@ func connectBluetooth(device string) {
 	}()
 }
 
-// NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
 type NotifyFunc func(app, urgency, title, body string)
 
 // Init manages session startup and delays widgets, browsers, and sessions until the full lock is released.
@@ -115,15 +120,24 @@ func (i *Init) Execute() (string, error) {
 	}
 	fmt.Println("hyprd init: background ready")
 
+	next := setupNext()
+	online := true
 	if init.NetworkTimeout > 0 {
-		if ok := i.waitNetwork(init.NetworkTimeout); ok {
+		online = i.waitNetwork(init.NetworkTimeout)
+		if online {
 			fmt.Println("hyprd init: network ready")
+		} else if next == "" && i.notify != nil {
+			i.notify("attention", "critical", "Network", fmt.Sprintf("Failed to connect after %ds", init.NetworkTimeout))
 		}
 	}
 
 	if i.lock.Locked() {
 		fmt.Println("hyprd init: waiting for unlock")
 		i.lock.Wait()
+	}
+
+	if next != "" {
+		go i.promptSetup(next, online)
 	}
 
 	restoreEwwWidgets(true)
@@ -202,8 +216,50 @@ func (i *Init) waitNetwork(timeout int) bool {
 		}
 		time.Sleep(time.Second)
 	}
-	if i.notify != nil {
-		i.notify("attention", "critical", "Network", fmt.Sprintf("Failed to connect after %ds", timeout))
-	}
 	return false
+}
+
+func setupNext() string {
+	dir := os.Getenv("XDG_STATE_HOME")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd init: setup marker: %v\n", err)
+			return ""
+		}
+		dir = filepath.Join(home, ".local", "state")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "dctl", "next"))
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "hyprd init: setup marker: %v\n", err)
+		}
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func (i *Init) promptSetup(next string, online bool) {
+	body := next
+	if !online {
+		body = "Plug in Ethernet or join Wi-Fi: nmcli --ask device wifi connect <SSID>\n" + next
+	}
+	notifier := notify.NewNotifier(i.hypr, i.state, i.state.GetConfig(), nil)
+	run, err := notifier.Prompt("dctl", "Finish setting up", html.EscapeString(body), "Run setup")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: setup prompt: %v\n", err)
+		return
+	}
+	if !run {
+		return
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: setup prompt: %v\n", err)
+		return
+	}
+	cmd := "kitty --title terminalfloat --hold -e " + filepath.Join(home, ".local", "bin", "dctl") + " setup"
+	if err := i.hypr.Exec(cmd); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: exec %q: %v\n", cmd, err)
+	}
 }

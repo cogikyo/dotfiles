@@ -40,6 +40,8 @@ type notificationSpec struct {
 	Delay        time.Duration
 	NoReplace    bool
 	FocusAction  bool
+	Action       string
+	Tag          string
 	Urgency      *string
 	Timeout      *int
 	Birth        uint64
