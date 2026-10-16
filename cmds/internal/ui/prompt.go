@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -321,6 +322,7 @@ func (m *checklist) View() tea.View {
 type input struct {
 	lead, label    string
 	secret, blink  bool
+	reveal         bool
 	field          textinput.Model
 	done, canceled bool
 }
@@ -332,7 +334,7 @@ func newInput(lead, label string, secret, blink bool) *input {
 	styles.Cursor.Blink = blink
 	field.SetStyles(styles)
 	if secret {
-		field.EchoMode = textinput.EchoNone
+		field.EchoMode = textinput.EchoPassword
 	}
 	field.Focus()
 	return &input{lead: lead, label: label, secret: secret, blink: blink, field: field}
@@ -354,8 +356,16 @@ func (m *input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.done = true
 		return m, tea.Quit
 	}
+	pos := m.field.Position()
 	var cmd tea.Cmd
 	m.field, cmd = m.field.Update(msg)
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		r := []rune(msg.Text)
+		m.reveal = len(r) == 1 && unicode.IsPrint(r[0]) && m.field.Position() == pos+1
+	case tea.PasteMsg:
+		m.reveal = false
+	}
 	return m, cmd
 }
 
@@ -375,5 +385,20 @@ func (m *input) View() tea.View {
 	if m.done || m.canceled {
 		return tea.NewView("")
 	}
-	return tea.NewView(m.lead + m.label + " " + m.field.View())
+	if !m.secret {
+		return tea.NewView(m.lead + m.label + " " + m.field.View())
+	}
+	return tea.NewView(m.lead + m.label + " " + m.masked())
+}
+
+func (m *input) masked() string {
+	r := []rune(m.field.Value())
+	mask := []rune(strings.Repeat("*", len(r)))
+	if pos := m.field.Position(); m.reveal && pos > 0 {
+		mask[pos-1] = r[pos-1]
+	}
+	view := m.field
+	view.EchoMode = textinput.EchoNormal
+	view.SetValue(string(mask))
+	return view.View()
 }
