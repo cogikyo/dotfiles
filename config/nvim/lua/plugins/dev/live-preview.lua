@@ -28,6 +28,7 @@ return {
 		)
 		file:close()
 
+		-- Private template hook: callouts.js must intercept window.markdownit before live-preview creates its renderer.
 		local template = require("livepreview.template")
 		local md2html = template.md2html
 		template.md2html = function(md)

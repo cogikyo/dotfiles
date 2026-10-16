@@ -203,6 +203,7 @@ export default Plugin.define({
             if (event.type === "session.execution.succeeded") live.set(event.data.sessionID, "idle");
             if (event.type === "session.execution.failed") live.set(event.data.sessionID, "error");
             if (event.type === "session.execution.interrupted") live.set(event.data.sessionID, "interrupted");
+            // The preload synthetic must not release the starting guard before the user brief is enqueued.
             if (event.type === "session.inbox.enqueued" && event.data.item.type === "user") {
               const key = prompting.get(event.data.sessionID);
               if (key !== undefined) creating.delete(key);
