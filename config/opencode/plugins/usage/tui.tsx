@@ -200,6 +200,7 @@ function Header(props: {
   onToggle: () => void;
 }) {
   const theme = () => props.context.theme;
+  const heading = () => props.provider.label.match(/^(.*?) (\[[^\]]+\])$/);
   const labelColor = () => (props.refreshing || props.active ? colors.orange : theme().text.base);
   const [hovered, setHovered] = createSignal(false);
   const frame = spinner(() => props.refreshing);
@@ -210,7 +211,7 @@ function Header(props: {
   return (
     <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh()}>
       <text selectable={false} fg={labelColor()}>
-        <b>{props.provider.label}</b>
+        <b>{heading()?.[1] ?? props.provider.label}</b>
       </text>
       <Show when={props.refreshing}>
         <text selectable={false} fg={colors.orange}>{` ${frame()}`}</text>
@@ -219,6 +220,11 @@ function Header(props: {
         <text selectable={false} fg={noteColor(props.context, props.provider)}>{` ${props.provider.note}`}</text>
       </Show>
       <box flexGrow={1} minWidth={1} />
+      <Show when={heading()?.[2]}>
+        <text selectable={false} fg={labelColor()} flexShrink={0}>
+          <b>{`${heading()?.[2]} `}</b>
+        </text>
+      </Show>
       <text
         selectable={false}
         fg={hovered() ? hover : theme().text.muted}
