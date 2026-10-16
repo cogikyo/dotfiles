@@ -45,53 +45,60 @@
     :onhoverlost "eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false ws-h6=false"
     :onrightclick "hyprctl dispatch workspace previous"
     :tooltip "  󰮫 󰳾 previous workspace  "
-    (box
+    (workspace-list
       :class "tr-a workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
-      :halign "center" :space-evenly false
       :orientation "vertical"
-      (workspace :num "1" :hover ws-h1 :desc "󰭹 chat"
-        :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
-                 matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
-                 matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""} ${
-                 matches(workspace-info.arrival ?: "", "grok-bot") ? "ws-from-grok" :
-                 matches(workspace-info.arrival ?: "", "slack") ? "ws-from-slack" :
-                 matches(workspace-info.arrival ?: "", "firefox") ? "ws-from-firefox" : ""}"
-        (overlay
-          (ws-icon :name "network-edge-1")
-          (ws-icon :name "network-edge-2")
-          (ws-icon :name "network-edge-3")
-          (ws-icon :name "network-edge-4")
-          (ws-icon :name "network-edge-5")
-          (ws-icon :name "network-hub")
-          (ws-icon :name "network-node-1")
-          (ws-icon :name "network-node-2")
-          (ws-icon :name "network-node-3")
-          (ws-icon :name "network-node-4")
-          (ws-icon :name "network-node-5")
-        )
-      )
-      (workspace :num "2" :hover ws-h2 :desc " misc"
-        (ws-icon :name "learn"))
-      (workspace :num "3" :hover ws-h3 :desc "󰃖 work"
-        (overlay
-          (ws-icon :name "leadpier-left")
-          (ws-icon :name "leadpier-right")
-          (ws-icon :name "leadpier-left-rim")
-          (ws-icon :name "leadpier-right-rim")
-        )
-      )
-      (workspace :num "4" :hover ws-h4 :desc "󰀄 personal"
-        (ws-icon :name "dna"))
-      (workspace :num "5" :hover ws-h5 :desc " dotfiles"
-        (overlay
-          (ws-icon :name "dotfiles-cog")
-          (ws-icon :name "dotfiles-gear")
-          (ws-icon :name "dotfiles-lens")
-        )
-      )
-      (workspace :num "6" :hover ws-h6 :desc " music"
-        :state {pctl.playing ? "ws-playing" : ""}
-        (ws-icon :name "music"))
     )
+  )
+)
+
+(defwidget workspace-list [class orientation]
+  (box
+    :class class
+    :halign "center" :space-evenly false
+    :orientation orientation
+    (workspace :num "1" :hover ws-h1 :desc "󰭹 chat"
+      :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
+               matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
+               matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""} ${
+               matches(workspace-info.arrival ?: "", "grok-bot") ? "ws-from-grok" :
+               matches(workspace-info.arrival ?: "", "slack") ? "ws-from-slack" :
+               matches(workspace-info.arrival ?: "", "firefox") ? "ws-from-firefox" : ""}"
+      (overlay
+        (ws-icon :name "network-edge-1")
+        (ws-icon :name "network-edge-2")
+        (ws-icon :name "network-edge-3")
+        (ws-icon :name "network-edge-4")
+        (ws-icon :name "network-edge-5")
+        (ws-icon :name "network-hub")
+        (ws-icon :name "network-node-1")
+        (ws-icon :name "network-node-2")
+        (ws-icon :name "network-node-3")
+        (ws-icon :name "network-node-4")
+        (ws-icon :name "network-node-5")
+      )
+    )
+    (workspace :num "2" :hover ws-h2 :desc " misc"
+      (ws-icon :name "learn"))
+    (workspace :num "3" :hover ws-h3 :desc "󰃖 work"
+      (overlay
+        (ws-icon :name "leadpier-left")
+        (ws-icon :name "leadpier-right")
+        (ws-icon :name "leadpier-left-rim")
+        (ws-icon :name "leadpier-right-rim")
+      )
+    )
+    (workspace :num "4" :hover ws-h4 :desc "󰀄 personal"
+      (ws-icon :name "dna"))
+    (workspace :num "5" :hover ws-h5 :desc " dotfiles"
+      (overlay
+        (ws-icon :name "dotfiles-cog")
+        (ws-icon :name "dotfiles-gear")
+        (ws-icon :name "dotfiles-lens")
+      )
+    )
+    (workspace :num "6" :hover ws-h6 :desc " music"
+      :state {pctl.playing ? "ws-playing" : ""}
+      (ws-icon :name "music"))
   )
 )

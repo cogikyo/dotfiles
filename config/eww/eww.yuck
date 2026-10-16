@@ -4,3 +4,4 @@
 (include "./yuck/music.yuck")
 (include "./yuck/workspaces.yuck")
 (include "./yuck/picker.yuck")
+(include "./yuck/bar.yuck")

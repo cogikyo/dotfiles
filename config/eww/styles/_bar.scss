@@ -1,0 +1,44 @@
+.bar {
+  font-size: 14px;
+  padding: 3px 8px;
+
+  .music-progress-circle-icon {
+    font-size: 15px;
+    margin: 2px 3px;
+  }
+
+  .workspace {
+    min-width: 36px;
+    min-height: 0;
+
+    image {
+      padding: 0 2px;
+    }
+  }
+
+  eventbox:hover > .bar-segment {
+    border-color: $orn-3;
+    box-shadow: 0 1px 2px 0 rgba($rby-1, 0.42);
+  }
+
+  &-segment {
+    background: $bg;
+    border-bottom: 2px solid $blu-1;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px 0 rgba($blu-0, 0.42);
+    padding: 0 12px;
+  }
+
+  &-computer {
+    font-family: $font-mono;
+  }
+
+  &-workspaces {
+    padding: 0 6px;
+  }
+
+  &-time {
+    color: $blu-3;
+    font-weight: 600;
+  }
+}
