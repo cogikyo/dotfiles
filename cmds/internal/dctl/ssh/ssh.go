@@ -17,6 +17,7 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/setup"
+	"dotfiles/cmds/internal/ui"
 )
 
 var published = []string{
@@ -71,20 +72,20 @@ func (p probe) err() error {
 	return errors.New(p.detail)
 }
 
-func Stage(root paths.Root, run execx.Runner) setup.Stage {
+func Stage(u *ui.UI, root paths.Root, run execx.Runner) setup.Stage {
 	return setup.Stage{
 		Name:  "ssh",
 		About: "SSH access to GitHub",
 		Items: []setup.Item{{
 			Name:  "ssh-github",
-			Check: func(ctx context.Context) error { return check(ctx, root, run).err() },
+			Check: func(ctx context.Context) error { return check(ctx, u, root, run).err() },
 			Fix: func(ctx context.Context) error {
-				p := check(ctx, root, run)
+				p := check(ctx, u, root, run)
 				if p.kind == unknownHost {
 					if err := trust(root); err != nil {
 						return err
 					}
-					p = check(ctx, root, run)
+					p = check(ctx, u, root, run)
 				}
 				if p.kind != locked {
 					return nil
@@ -100,8 +101,14 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 	}
 }
 
-func check(ctx context.Context, root paths.Root, run execx.Runner) probe {
-	_, err := run.Output(ctx, "", "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-T", "git@github.com")
+func check(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) probe {
+	var err error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, err = run.Output(ctx, "", "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2", "-T", "git@github.com")
+	}()
+	u.Await("reaching GitHub over SSH · touch the YubiKey if it blinks", nil, done)
 	if err == nil {
 		return probe{kind: authed}
 	}

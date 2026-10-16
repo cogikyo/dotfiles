@@ -68,10 +68,11 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 		}
 	}()
 	shown := "~/" + rel
-	u.Line(ui.Info, s.Name, s.About+" · log "+shown)
+	note := s.About + " · log " + shown
+	u.Line(ui.Info, s.Name, note)
 	return func(ctx context.Context) (Report, error) {
 		defer stop()
-		u.Begin(s.Name, s.About)
+		u.Begin(s.Name, note)
 		go func() {
 			select {
 			case <-done:
