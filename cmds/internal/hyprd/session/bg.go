@@ -181,7 +181,7 @@ func (b *BG) spawn() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	opts := "--loop --hwdec=auto-safe --input-ipc-server=" + b.cfg.Socket
+	opts := "--loop --panscan=1 --hwdec=auto-safe --input-ipc-server=" + b.cfg.Socket
 	cmd := machine.Pooled("mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
