@@ -57,13 +57,47 @@ hl.monitor({
 	position = "auto",
 	scale = 1.00,
 })
+hl.monitor({
+	output = "eDP-1",
+	mode = "preferred",
+	position = "auto",
+	scale = "auto",
+})
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                 window rules                                  │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-local dialogSize = "1660 980"
-local floatSize = "2884 1876"
+local gaps = { top = 85, right = 90, bottom = 27, left = 124 } -- clearance for full-layout eww widgets
+local margin = { w = 2 * math.max(gaps.left, gaps.right), h = 2 * math.max(gaps.top, gaps.bottom) }
+
+local function relative(w, h)
+	return {
+		("rint(min(monitor_w*%g,monitor_w-%d))"):format(w / 100, margin.w),
+		("rint(min(monitor_h*%g,monitor_h-%d))"):format(h / 100, margin.h),
+	}
+end
+
+local function fit(monitor, w, h)
+	local r = monitor.reserved
+	local pw, ph = monitor.width, monitor.height
+	if monitor.transform % 2 == 1 then
+		pw, ph = ph, pw
+	end
+	local area = {
+		x = monitor.x + r.left,
+		y = monitor.y + r.top,
+		w = pw / monitor.scale - r.left - r.right,
+		h = ph / monitor.scale - r.top - r.bottom,
+	}
+	local fw = math.floor(math.min(area.w * w / 100, area.w - margin.w) + 0.5)
+	local fh = math.floor(math.min(area.h * h / 100, area.h - margin.h) + 0.5)
+	return fw, fh, area
+end
+
+local dialogSize = relative(43.23, 45.37)
+local floatSize = relative(75.1, 86.85)
+local monocle = { "(monitor_w-" .. floatSize[1] .. ")/2", "(monitor_h-" .. floatSize[2] .. ")/2+25" }
 
 hl.window_rule({
 	name = "spotify",
@@ -82,7 +116,7 @@ hl.window_rule({
 	match = { class = [[^(org\.pwmt\.zathura)$]] },
 	workspace = "2 silent",
 	float = true,
-	size = "1000 1475",
+	size = relative(26.04, 68.29),
 	center = true,
 })
 
@@ -143,8 +177,9 @@ end
 
 local function floatBitwarden(window)
 	local target = "address:" .. window.address
+	local w, h = fit(window.monitor or hl.get_active_monitor(), 23.44, 50.93)
 	hl.dispatch(hl.dsp.window.float({ action = "set", window = target }))
-	hl.dispatch(hl.dsp.window.resize({ x = 900, y = 1100, window = target }))
+	hl.dispatch(hl.dsp.window.resize({ x = w, y = h, window = target }))
 	hl.dispatch(hl.dsp.window.center({ window = target }))
 end
 
@@ -198,15 +233,16 @@ hl.window_rule({
 	float = true,
 	center = true,
 })
-local dropdown = { x = 960, y = -20, w = 1920, h = 1100 }
+local dropdown = { w = 50, h = 50.93, top = -20 }
+local dropdownSize = relative(dropdown.w, dropdown.h)
 
 hl.window_rule({
 	name = "drop-down-terminal",
 	match = { class = [[^(dropdown)$]] },
 	workspace = "special:dropdown",
 	float = true,
-	size = dropdown.w .. " " .. dropdown.h,
-	move = dropdown.x .. " " .. dropdown.y,
+	size = dropdownSize,
+	move = { "(monitor_w-" .. dropdownSize[1] .. ")/2", tostring(dropdown.top) },
 	rounding = 20,
 	animation = "slide top",
 })
@@ -215,10 +251,12 @@ hl.on("workspace.special_active", function(ws)
 	if not ws or ws.name ~= "special:dropdown" then
 		return
 	end
+	local w, h, area = fit(ws.monitor or hl.get_active_monitor(), dropdown.w, dropdown.h)
+	local x = math.floor(area.x + (area.w - w) / 2)
 	for _, window in ipairs(hl.get_workspace_windows("special:dropdown")) do
 		local target = "address:" .. window.address
-		hl.dispatch(hl.dsp.window.resize({ x = dropdown.w, y = dropdown.h, window = target }))
-		hl.dispatch(hl.dsp.window.move({ x = dropdown.x, y = dropdown.y, window = target }))
+		hl.dispatch(hl.dsp.window.resize({ x = w, y = h, window = target }))
+		hl.dispatch(hl.dsp.window.move({ x = x, y = area.y + dropdown.top, window = target }))
 	end
 end)
 hl.window_rule({
@@ -235,14 +273,14 @@ hl.window_rule({
 	match = { class = [[^(com\.gabm\.satty)$]] },
 	float = true,
 	size = floatSize,
-	move = "478 167",
+	move = monocle,
 })
 hl.window_rule({
 	name = "keymap",
 	match = { class = [[^(chrome-127\.0\.0\.1__-Default)$]] },
 	float = true,
 	size = floatSize,
-	move = "478 167",
+	move = monocle,
 })
 
 hl.window_rule({
@@ -279,7 +317,7 @@ hl.config({
 	general = {
 		border_size = 2,
 		gaps_in = 10,
-		gaps_out = { top = 85, right = 90, bottom = 27, left = 124 }, -- top, right, bottom, left — room for eww bar
+		gaps_out = gaps,
 		col = {
 			active_border = "rgb(f2a170)",
 			inactive_border = "rgb(7492ef)",
@@ -311,6 +349,9 @@ hl.config({
 		follow_mouse = 1,
 		sensitivity = 1,
 		float_switch_override_focus = 0,
+		touchpad = {
+			clickfinger_behavior = true,
+		},
 	},
 	cursor = {
 		no_hardware_cursors = true,
