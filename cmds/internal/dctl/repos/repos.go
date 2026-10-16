@@ -178,7 +178,7 @@ func clone(ctx context.Context, run execx.Runner, r Repo, dir string) (err error
 	}
 	defer func() { err = errors.Join(err, os.RemoveAll(stage)) }()
 	work := filepath.Join(stage, filepath.Base(dir))
-	if err := run.Run(ctx, "", "git", "clone", r.URL(), work); err != nil {
+	if err := execx.Remote(run).Run(ctx, "", "git", "clone", r.URL(), work); err != nil {
 		return err
 	}
 	c, err := inspect(ctx, run, work, r.URL())
@@ -273,6 +273,9 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 			failed = append(failed, r.Repo)
 		}
 		u.Row(res.level(), res.repo+": "+res.summary())
+		if errors.Is(err, execx.ErrStalled) {
+			return fmt.Errorf("%s stalled; skipped the remaining repos", r.Repo)
+		}
 	}
 	if len(missing) > 0 {
 		u.Warn("%d repos %s; run `dctl setup repos`", len(missing), Absent)
@@ -308,7 +311,7 @@ func update(ctx context.Context, run execx.Runner, dir, url string) (State, stri
 	} else if err != nil {
 		return "", "", err
 	}
-	if _, err := git("fetch", "--quiet"); err != nil {
+	if _, err := execx.Remote(run).Output(ctx, dir, "git", "fetch", "--quiet"); err != nil {
 		return "", "", err
 	}
 	counts, err := git("rev-list", "--left-right", "--count", "HEAD...@{upstream}")
@@ -388,7 +391,9 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 				case c.kind == broken:
 					moves = append(moves, r.Repo+": "+action(r, c.reason))
 				case c.kind == absent:
-					if err := clone(ctx, run, r, dir); err != nil {
+					if err := clone(ctx, run, r, dir); errors.Is(err, execx.ErrStalled) {
+						return errors.Join(append(errs, fmt.Errorf("%s: clone stalled; skipped the remaining repos: %w", r.Repo, err))...)
+					} else if err != nil {
 						errs = append(errs, fmt.Errorf("%s: clone: %w", r.Repo, err))
 					}
 				}
@@ -417,7 +422,7 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 			return nil
 		},
 		Fix: func(ctx context.Context) error {
-			fetch := execx.Reason(run, "fetch the history the ISO left out")
+			fetch := execx.Remote(execx.Reason(run, "fetch the history the ISO left out"))
 			return fetch.Run(ctx, root.Dotfiles, "git", "fetch", "--unshallow", "--progress")
 		},
 	}}}

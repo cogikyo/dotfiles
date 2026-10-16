@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
@@ -55,7 +56,7 @@ func (p probe) err() error {
 	case authed:
 		return nil
 	case offline:
-		return errors.New("cannot reach github.com over SSH; check the network")
+		return errors.New("cannot reach github.com over SSH; check the network and that outbound port 22 is open")
 	case unknownHost:
 		return errors.New("github.com host key not in known_hosts")
 	case changedHost:
@@ -106,7 +107,9 @@ func check(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) pro
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_, err = run.Output(ctx, "", "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2", "-T", "git@github.com")
+		ctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		_, err = execx.Remote(run).Output(ctx, "", "ssh", slices.Concat(execx.SSHOptions, []string{"-T", "git@github.com"})...)
 	}()
 	u.Await("reaching GitHub over SSH · touch the YubiKey if it blinks", nil, done)
 	if err == nil {
@@ -123,9 +126,9 @@ func check(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) pro
 		return probe{kind: changedHost}
 	case has("Host key verification failed", "host key is known"):
 		return probe{kind: unknownHost}
-	case has("Could not resolve hostname", "Network is unreachable", "No route to host", "timed out", "Connection refused", "Connection closed", "Connection reset", "kex_exchange_identification"):
+	case errors.Is(err, execx.ErrUnreachable):
 		return probe{kind: offline}
-	case has("Permission denied (publickey"):
+	case errors.Is(err, execx.ErrRejected):
 		return keys(ctx, root, run)
 	}
 	line, _, _ := strings.Cut(msg, "\n")

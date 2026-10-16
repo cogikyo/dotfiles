@@ -320,7 +320,7 @@ func (b *build) compile(ctx context.Context, src string, l packages.Lists) (stri
 	sources := map[string]string{}
 	for _, name := range l.AUR {
 		dir := filepath.Join(recipes, name)
-		if err := b.run.Run(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
+		if err := execx.Remote(b.run).Run(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
 			return "", err
 		}
 		if _, err := os.Stat(filepath.Join(dir, "PKGBUILD")); err != nil {

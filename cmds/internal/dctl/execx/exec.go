@@ -29,6 +29,7 @@ type OSRunner struct {
 	UI          *ui.UI
 	Reason      string
 	Interactive bool
+	Remote      bool
 }
 
 func Reason(run Runner, reason string) Runner {
@@ -74,10 +75,12 @@ func Logged(ctx context.Context, w io.Writer) context.Context {
 // Under Logged it writes both streams to the log writer and renders nothing.
 // An Interactive child inherits the terminal, so it stays in the foreground process group even with Group set.
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) error {
+	ctx, cancel := r.limit(ctx)
+	defer cancel()
 	cmd := r.command(ctx, dir, name, args)
 	if w, ok := ctx.Value(logKey{}).(io.Writer); ok {
 		cmd.Stdout, cmd.Stderr = w, w
-		return failed(ctx, cmd.Run(), name, args, "")
+		return failed(ctx, r.wait(ctx, cmd), name, args, "")
 	}
 	if cmd.Stdin == nil && (!r.Group || r.Interactive) {
 		cmd.Stdin = os.Stdin
@@ -125,6 +128,8 @@ func Shown(err error) bool {
 
 // Output returns trimmed stdout even on failure; errors wrap the cause and include up to 20 trailing stderr lines.
 func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
+	ctx, cancel := r.limit(ctx)
+	defer cancel()
 	var stdout, stderr bytes.Buffer
 	cmd := r.command(ctx, dir, name, args)
 	cmd.Stdout = &stdout
@@ -145,17 +150,38 @@ func (r OSRunner) command(ctx context.Context, dir string, name string, args []s
 		cmd = Grouped(ctx, append([]string{name}, args...))
 	}
 	cmd.Dir = dir
+	if r.Remote {
+		cmd.Env = append(os.Environ(), remoteEnv()...)
+	}
 	if r.Stdin != nil {
 		cmd.Stdin = bytes.NewReader(r.Stdin)
 	}
 	return cmd
 }
 
-func (r OSRunner) wait(ctx context.Context, cmd *exec.Cmd) error {
-	if r.Interrupt || ctx.Value(logKey{}) != nil {
-		return cmd.Run()
+func (r OSRunner) limit(ctx context.Context) (context.Context, context.CancelFunc) {
+	if !r.Remote {
+		return ctx, func() {}
 	}
-	return Reap(ctx, cmd)
+	return context.WithTimeout(ctx, RemoteTimeout)
+}
+
+func (r OSRunner) wait(ctx context.Context, cmd *exec.Cmd) error {
+	var stderr bytes.Buffer
+	if r.Remote {
+		cmd.Stderr = io.MultiWriter(cmd.Stderr, &stderr)
+	}
+	start := time.Now()
+	var err error
+	if r.Interrupt || ctx.Value(logKey{}) != nil {
+		err = cmd.Run()
+	} else {
+		err = Reap(ctx, cmd)
+	}
+	if r.Remote && err != nil {
+		return remote(ctx, err, stderr.String(), time.Since(start))
+	}
+	return err
 }
 
 func shell(name string, args []string) string {
