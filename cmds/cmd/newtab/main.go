@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -55,7 +56,6 @@ var suggestClient = &http.Client{Timeout: 5 * time.Second}
 
 type newtabConfig struct {
 	Addr         string
-	FirefoxDB    string
 	StaticDir    string
 	HistoryLimit int
 }
@@ -122,15 +122,6 @@ func resolveFirefoxDB() string {
 	return fallback
 }
 
-// dbPath returns a read-only immutable SQLite DSN so queries can run while Firefox owns the DB.
-func dbPath(cfg newtabConfig) string {
-	p := cfg.FirefoxDB
-	if !filepath.IsAbs(p) {
-		p = filepath.Join(homeDir, p)
-	}
-	return "file:" + p + "?mode=ro&immutable=1"
-}
-
 func staticPath(cfg newtabConfig) string {
 	return filepath.Join(homeDir, cfg.StaticDir)
 }
@@ -169,17 +160,11 @@ func main() {
 		Addr:         defaultAddr,
 		StaticDir:    defaultStaticDir,
 		HistoryLimit: defaultHistoryLimit,
-		FirefoxDB:    resolveFirefoxDB(),
-	}
-	if cfg.FirefoxDB == "" {
-		log.Print("warning: no Firefox places.sqlite found; bookmarks/history queries will fail until Firefox is run")
-	} else {
-		log.Printf("firefox places.sqlite: %s", cfg.FirefoxDB)
 	}
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/bookmarks", withJSON(handleBookmarks(cfg)))
+	mux.HandleFunc("/api/bookmarks", withJSON(handleBookmarks))
 	mux.HandleFunc("/api/history", withJSON(handleHistory(cfg)))
 	mux.HandleFunc("/api/suggest", withJSON(handleSuggest))
 	mux.Handle("/", http.FileServer(http.Dir(staticPath(cfg))))
@@ -220,8 +205,13 @@ func writeError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func openPlacesDB(cfg newtabConfig) (*sql.DB, error) {
-	return sql.Open("sqlite", dbPath(cfg))
+// openPlacesDB opens the current Firefox places.sqlite read-only and immutable so queries can run while Firefox owns the DB.
+func openPlacesDB() (*sql.DB, error) {
+	path := resolveFirefoxDB()
+	if path == "" {
+		return nil, errors.New("no Firefox places.sqlite found; run Firefox once")
+	}
+	return sql.Open("sqlite", "file:"+path+"?mode=ro&immutable=1")
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -232,16 +222,15 @@ func openPlacesDB(cfg newtabConfig) (*sql.DB, error) {
 //
 // Firefox stores tags as bookmarks under the top-level "tags" folder.
 // The query aggregates those tag bookmarks and excludes the folder itself.
-func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := openPlacesDB(cfg)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		defer db.Close()
+func handleBookmarks(w http.ResponseWriter, r *http.Request) {
+	db, err := openPlacesDB()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	defer db.Close()
 
-		rows, err := db.Query(`
+	rows, err := db.Query(`
 		SELECT
 			COALESCE(f.title, 'unsorted') as folder,
 			b.title as title,
@@ -264,27 +253,26 @@ func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 			AND (f.title IS NULL OR f.title != 'tags')
 		ORDER BY f.title, b.position
 	`)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		defer rows.Close()
-
-		bookmarks := []Bookmark{}
-		for rows.Next() {
-			var b Bookmark
-			if err := rows.Scan(&b.Folder, &b.Title, &b.URL, &b.Keyword, &b.Tags); err != nil {
-				continue
-			}
-			bookmarks = append(bookmarks, b)
-		}
-		if err := rows.Err(); err != nil {
-			writeError(w, err)
-			return
-		}
-
-		writeJSON(w, bookmarks)
+	if err != nil {
+		writeError(w, err)
+		return
 	}
+	defer rows.Close()
+
+	bookmarks := []Bookmark{}
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.Folder, &b.Title, &b.URL, &b.Keyword, &b.Tags); err != nil {
+			continue
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	if err := rows.Err(); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, bookmarks)
 }
 
 // handleHistory returns recent or query-matched places from moz_places.
@@ -293,7 +281,7 @@ func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 // With q, title/URL substring matches rank by visit count blended with recency.
 func handleHistory(cfg newtabConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := openPlacesDB(cfg)
+		db, err := openPlacesDB()
 		if err != nil {
 			writeError(w, err)
 			return

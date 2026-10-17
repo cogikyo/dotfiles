@@ -16,9 +16,9 @@ It also proxies Google suggestions for the search box.
 
 No config file.
 
-At startup, the server reads `profiles.ini` under `~/.mozilla/firefox` and `~/.config/mozilla/firefox` to find `places.sqlite`.
+On each bookmarks/history request, the server reads `profiles.ini` under `~/.mozilla/firefox` and `~/.config/mozilla/firefox` to find `places.sqlite`.
 It prefers a profile named `dev-edition-default`, then uses the first profile with an existing database.
-Run Firefox once before starting newtab so that the database exists.
+Run Firefox once to create the database; newtab finds it without a restart.
 
 Port, static directory, and history limit are constants in `main.go`.
 
