@@ -264,7 +264,7 @@ func (l *Layout) applyMonocle(wsID int) error {
 	if err != nil {
 		return fmt.Errorf("apply monocle: size: %w", err)
 	}
-	ox, oy := l.state.GetConfig().MonocleOffset()
+	offset := l.state.Profile().Monocle
 	if err := l.hypr.ToggleFloatActive(); err != nil {
 		return fmt.Errorf("apply monocle: toggle floating: %w", err)
 	}
@@ -274,7 +274,7 @@ func (l *Layout) applyMonocle(wsID int) error {
 	if err := l.hypr.CenterActive(); err != nil {
 		return fmt.Errorf("apply monocle: center active: %w", err)
 	}
-	if err := l.hypr.MoveActiveRelative(ox, oy); err != nil {
+	if err := l.hypr.MoveActiveRelative(offset.OffsetX, offset.OffsetY); err != nil {
 		return fmt.Errorf("apply monocle: move active: %w", err)
 	}
 	windows.CenterCursor(l.hypr)

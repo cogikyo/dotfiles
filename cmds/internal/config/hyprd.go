@@ -24,7 +24,7 @@ type HyprConfig struct {
 	Init       InitConfig            `yaml:"init"`
 	Notify     NotifyConfig          `yaml:"notify"`
 	VPN        VPNConfig             `yaml:"vpn"`
-	Windows    WindowsConfig         `yaml:"windows"`
+	Displays   DisplayProfiles       `yaml:"displays"`
 	Tabs       map[string]TabProfile `yaml:"tabs"`
 	Sessions   SessionsConfig        `yaml:"sessions"`
 }
@@ -72,8 +72,59 @@ type BackgroundConfig struct {
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ windows / layout                                                             │
+// │ display profiles                                                             │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// DisplayProfiles is ordered: the first profile whose match holds wins, and the last is the fallback.
+type DisplayProfiles []DisplayProfile
+
+type DisplayProfile struct {
+	Name     string        `yaml:"name"`
+	Match    DisplayMatch  `yaml:"match"`
+	Eww      Layout        `yaml:"eww"`
+	GLava    bool          `yaml:"glava"` // desktop visualizers while unlocked
+	FontSize float64       `yaml:"font_size"`
+	Split    SplitConfig   `yaml:"split"`
+	GapsOut  GapsOutConfig `yaml:"gaps_out"`
+	Monocle  MonocleConfig `yaml:"monocle"`
+}
+
+// DisplayMatch holds when every set field holds; an empty match holds for every screen.
+type DisplayMatch struct {
+	Description string  `yaml:"description"` // Hyprland monitor description, exact
+	MinWidth    int     `yaml:"min_width"`   // mode width in pixels
+	MinPPI      float64 `yaml:"min_ppi"`     // never holds for a screen without a usable physical size
+}
+
+func (m DisplayMatch) holds(description string, width int, ppi float64) bool {
+	return (m.Description == "" || m.Description == description) &&
+		width >= m.MinWidth &&
+		(m.MinPPI == 0 || ppi >= m.MinPPI)
+}
+
+func (p DisplayProfiles) Resolve(description string, width int, ppi float64) DisplayProfile {
+	for i, profile := range p {
+		if i < len(p)-1 && profile.Match.holds(description, width, ppi) {
+			return profile
+		}
+	}
+	return p.Fallback()
+}
+
+// Fallback returns the profile used for screens nothing else matches.
+func (p DisplayProfiles) Fallback() DisplayProfile {
+	if len(p) == 0 {
+		return DisplayProfile{}
+	}
+	return p[len(p)-1]
+}
+
+type Layout string
+
+const (
+	LayoutFull    Layout = "full"
+	LayoutCompact Layout = "compact"
+)
 
 // SplitConfig holds master split presets for normal and screen-share outer gaps.
 type SplitConfig struct {
@@ -89,7 +140,7 @@ type SplitPresets struct {
 	Mobile  string `yaml:"mobile"`
 }
 
-// Ratio resolves preset for the share mode; unknown presets resolve to "default".
+// Ratio resolves preset for the share mode; unknown or unset presets resolve to "default".
 func (c SplitConfig) Ratio(preset string, share bool) (name, mfact string) {
 	p := c.Normal
 	if share {
@@ -97,13 +148,78 @@ func (c SplitConfig) Ratio(preset string, share bool) (name, mfact string) {
 	}
 	switch preset {
 	case "narrow":
-		return preset, p.Narrow
+		mfact = p.Narrow
 	case "wide":
-		return preset, p.Wide
+		mfact = p.Wide
 	case "mobile":
-		return preset, p.Mobile
+		mfact = p.Mobile
 	}
-	return "default", p.Default
+	if mfact == "" {
+		return "default", p.Default
+	}
+	return preset, mfact
+}
+
+type GapsOutConfig struct {
+	Normal OuterGaps `yaml:"normal"`
+	Share  OuterGaps `yaml:"share"`
+}
+
+// OuterGaps is Hyprland's four-value outer gap shape: top, right, bottom, left.
+type OuterGaps struct {
+	values [4]int
+}
+
+// UnmarshalYAML decodes `[top, right, bottom, left]` and rejects partial tuples.
+func (g *OuterGaps) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == 0 || value.Tag == "!!null" {
+		*g = OuterGaps{}
+		return nil
+	}
+	if value.Kind != yaml.SequenceNode {
+		return fmt.Errorf("gaps_out values must be [top, right, bottom, left]")
+	}
+	if len(value.Content) != 4 {
+		return fmt.Errorf("gaps_out values must have 4 entries, got %d", len(value.Content))
+	}
+
+	var gaps [4]int
+	for i, node := range value.Content {
+		if err := node.Decode(&gaps[i]); err != nil {
+			return fmt.Errorf("gaps_out[%d]: %w", i, err)
+		}
+	}
+	*g = OuterGaps{values: gaps}
+	return nil
+}
+
+// KeywordValue formats gaps for `hyprctl keyword general:gaps_out`.
+func (g OuterGaps) KeywordValue() string {
+	return fmt.Sprintf("%d,%d,%d,%d", g.values[0], g.values[1], g.values[2], g.values[3])
+}
+
+// OptionValue formats gaps as Hyprland reports them from `getoption`.
+func (g OuterGaps) OptionValue() string {
+	return fmt.Sprintf("%d %d %d %d", g.values[0], g.values[1], g.values[2], g.values[3])
+}
+
+func (g OuterGaps) Sides() (top, right, bottom, left int) {
+	return g.values[0], g.values[1], g.values[2], g.values[3]
+}
+
+// MonocleConfig uses fractions of the usable monitor area and pixel offsets.
+type MonocleConfig struct {
+	Width   float64 `yaml:"width"`
+	Height  float64 `yaml:"height"`
+	OffsetX int     `yaml:"offset_x"`
+	OffsetY int     `yaml:"offset_y"`
+}
+
+func (c MonocleConfig) Size(width, height float64, gaps OuterGaps) (w, h int) {
+	top, right, bottom, left := gaps.Sides()
+	w = int(math.RoundToEven(min(width*c.Width, width-float64(2*max(left, right)))))
+	h = int(math.RoundToEven(min(height*c.Height, height-float64(2*max(top, bottom)))))
+	return w, h
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -182,125 +298,6 @@ func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
 		Foreground: visual.Foreground,
 		Frame:      visual.Frame,
 	}
-}
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ windows / workspaces                                                         │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
-// WindowsConfig controls tiling policy.
-type WindowsConfig struct {
-	Split        SplitConfig   `yaml:"split"`
-	GapsOut      GapsOutConfig `yaml:"gaps_out"`
-	Monocle      MonocleConfig `yaml:"monocle"`
-	CompactBelow int           `yaml:"compact_below"`
-}
-
-type Layout string
-
-const (
-	LayoutFull    Layout = "full"
-	LayoutCompact Layout = "compact"
-)
-
-// GapsOutConfig uses Hyprland's order: top, right, bottom, left.
-type GapsOutConfig struct {
-	Normal  OuterGaps `yaml:"normal"`
-	Compact OuterGaps `yaml:"compact"`
-	Share   OuterGaps `yaml:"share"`
-}
-
-func (c GapsOutConfig) For(layout Layout) OuterGaps {
-	if layout == LayoutCompact {
-		return c.Compact
-	}
-	return c.Normal
-}
-
-// OuterGaps is Hyprland's four-value outer gap shape: top, right, bottom, left.
-type OuterGaps struct {
-	values [4]int
-	set    bool
-}
-
-// DefaultGapsOutConfig returns the fallback gaps used when config omits the key.
-func DefaultGapsOutConfig() GapsOutConfig {
-	return GapsOutConfig{
-		Normal:  NewOuterGaps(85, 85, 30, 125),
-		Compact: NewOuterGaps(48, 8, 8, 8),
-		Share:   NewOuterGaps(12, 16, 12, 16),
-	}
-}
-
-// NewOuterGaps constructs a fully specified outer-gaps tuple.
-func NewOuterGaps(top, right, bottom, left int) OuterGaps {
-	return OuterGaps{values: [4]int{top, right, bottom, left}, set: true}
-}
-
-func (c GapsOutConfig) WithDefaults() GapsOutConfig {
-	defaults := DefaultGapsOutConfig()
-	if !c.Normal.set {
-		c.Normal = defaults.Normal
-	}
-	if !c.Compact.set {
-		c.Compact = defaults.Compact
-	}
-	if !c.Share.set {
-		c.Share = defaults.Share
-	}
-	return c
-}
-
-// UnmarshalYAML decodes `[top, right, bottom, left]` and rejects partial tuples.
-func (g *OuterGaps) UnmarshalYAML(value *yaml.Node) error {
-	if value.Kind == 0 || value.Tag == "!!null" {
-		*g = OuterGaps{}
-		return nil
-	}
-	if value.Kind != yaml.SequenceNode {
-		return fmt.Errorf("gaps_out values must be [top, right, bottom, left]")
-	}
-	if len(value.Content) != 4 {
-		return fmt.Errorf("gaps_out values must have 4 entries, got %d", len(value.Content))
-	}
-
-	var gaps [4]int
-	for i, node := range value.Content {
-		if err := node.Decode(&gaps[i]); err != nil {
-			return fmt.Errorf("gaps_out[%d]: %w", i, err)
-		}
-	}
-	*g = OuterGaps{values: gaps, set: true}
-	return nil
-}
-
-// KeywordValue formats gaps for `hyprctl keyword general:gaps_out`.
-func (g OuterGaps) KeywordValue() string {
-	return fmt.Sprintf("%d,%d,%d,%d", g.values[0], g.values[1], g.values[2], g.values[3])
-}
-
-// OptionValue formats gaps as Hyprland reports them from `getoption`.
-func (g OuterGaps) OptionValue() string {
-	return fmt.Sprintf("%d %d %d %d", g.values[0], g.values[1], g.values[2], g.values[3])
-}
-
-func (g OuterGaps) Sides() (top, right, bottom, left int) {
-	return g.values[0], g.values[1], g.values[2], g.values[3]
-}
-
-// MonocleConfig uses fractions of the usable monitor area and pixel offsets.
-type MonocleConfig struct {
-	Width   float64 `yaml:"width"`
-	Height  float64 `yaml:"height"`
-	OffsetX int     `yaml:"offset_x"`
-	OffsetY int     `yaml:"offset_y"`
-}
-
-func (c MonocleConfig) Size(width, height float64, gaps OuterGaps) (w, h int) {
-	top, right, bottom, left := gaps.Sides()
-	w = int(math.RoundToEven(min(width*c.Width, width-float64(2*max(left, right)))))
-	h = int(math.RoundToEven(min(height*c.Height, height-float64(2*max(top, bottom)))))
-	return w, h
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -544,9 +541,4 @@ func (b *BrowserConfig) AllURLs() []string {
 	}
 	urls = append(urls, b.URLs...)
 	return urls
-}
-
-// MonocleOffset returns the x/y offset (px) from monitor center.
-func (c *HyprConfig) MonocleOffset() (x, y int) {
-	return c.Windows.Monocle.OffsetX, c.Windows.Monocle.OffsetY
 }

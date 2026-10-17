@@ -160,19 +160,36 @@ func (c *Client) ActiveWindow() (*Window, error) {
 
 // Monitor mirrors the JSON from `hyprctl -j monitors`.
 type Monitor struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	Width     int     `json:"width"`
-	Height    int     `json:"height"`
-	Scale     float64 `json:"scale"`
-	Transform int     `json:"transform"`
-	MirrorOf  string  `json:"mirrorOf"`
-	X         int     `json:"x"`
-	Y         int     `json:"y"`
-	Focused   bool    `json:"focused"`
-	ActiveWS  WsRef   `json:"activeWorkspace"`
-	SpecialWS WsRef   `json:"specialWorkspace"`
-	Reserved  [4]int  `json:"reserved"`
+	ID            int     `json:"id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Width         int     `json:"width"`
+	Height        int     `json:"height"`
+	PhysicalWidth int     `json:"physicalWidth"`
+	Scale         float64 `json:"scale"`
+	Transform     int     `json:"transform"`
+	MirrorOf      string  `json:"mirrorOf"`
+	X             int     `json:"x"`
+	Y             int     `json:"y"`
+	Focused       bool    `json:"focused"`
+	ActiveWS      WsRef   `json:"activeWorkspace"`
+	SpecialWS     WsRef   `json:"specialWorkspace"`
+	Reserved      [4]int  `json:"reserved"`
+}
+
+// maxPPI is denser than any monitor; EDIDs that encode only an aspect ratio, as TVs often do, compute above it.
+const maxPPI = 400
+
+// PPI returns the mode's horizontal pixel density, or 0 when the EDID has no usable physical size.
+func (m Monitor) PPI() float64 {
+	if m.PhysicalWidth <= 0 {
+		return 0
+	}
+	ppi := float64(m.Width) / (float64(m.PhysicalWidth) / 25.4)
+	if ppi > maxPPI {
+		return 0
+	}
+	return ppi
 }
 
 func (m Monitor) LogicalSize() (w, h float64) {

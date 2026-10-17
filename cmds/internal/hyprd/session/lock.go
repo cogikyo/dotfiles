@@ -368,6 +368,7 @@ func (l *Lock) cover() {
 	if err := l.hypr.FocusWorkspace(coverWorkspace); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: switch to workspace %d: %v\n", coverWorkspace, err)
 	}
+	SyncGLava(l.state, true)
 	l.tagGLava("+" + glavaTag)
 	enterBlackout()
 }
@@ -620,6 +621,7 @@ func closeEwwWidgets() {
 func (l *Lock) exitBlackout(saved *lockState) error {
 	cfg := l.state.GetConfig()
 	l.tagGLava("-" + glavaTag)
+	SyncGLava(l.state, false)
 	if err := l.hypr.FocusWorkspace(saved.workspace); err != nil {
 		return fmt.Errorf("lock: restore workspace %d: %w", saved.workspace, err)
 	}

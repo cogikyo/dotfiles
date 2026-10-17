@@ -358,8 +358,8 @@ func (m *Monocle) activate(wsID int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("monocle size: %w", err)
 	}
-	ox, oy := m.state.GetConfig().MonocleOffset()
-	if err := m.hypr.Zoom(active.Address, parked, monoWorkspace(wsID), [2]int{w, h}, [2]int{ox, oy}); err != nil {
+	offset := m.state.Profile().Monocle
+	if err := m.hypr.Zoom(active.Address, parked, monoWorkspace(wsID), [2]int{w, h}, [2]int{offset.OffsetX, offset.OffsetY}); err != nil {
 		return "", fmt.Errorf("monocle zoom: %w", err)
 	}
 	windows.CenterCursor(m.hypr)

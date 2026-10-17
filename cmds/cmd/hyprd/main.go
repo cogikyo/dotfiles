@@ -418,8 +418,8 @@ Window commands:
   hyprd float            Toggle floating (centered at monocle size)
   hyprd swap             Toggle swap between master and slave
   hyprd cycle left|right Cycle monocle windows, otherwise focus left/right
-  hyprd split wide       Wide from default, mobile from wide, otherwise back to default
-  hyprd split narrow     Narrow from default, otherwise back to default
+  hyprd split wide       Wide from default, mobile (if set) from wide, otherwise default
+  hyprd split narrow     Narrow (if set) from default, otherwise default
   hyprd split default    Set default split ratio
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd ws up|down       Move active window between workspaces 1..6, skipping music (6)

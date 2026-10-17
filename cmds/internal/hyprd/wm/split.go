@@ -9,9 +9,9 @@ import (
 	"dotfiles/cmds/internal/hyprd/windows"
 )
 
-// Split controls the master/slave mfact ratio via named presets from cfg.Windows.Split.
+// Split controls the master/slave mfact ratio via named presets from the display profile.
 //
-// Each workspace keeps its own preset, marked with the share mode it was last applied in and refreshed when stale.
+// Each workspace keeps its own preset, marked with the mfact it was last applied at and refreshed when the profile or share mode changes it.
 // master.mfact follows the active workspace's preset, so master nodes Hyprland creates there start at it.
 type Split struct {
 	hypr  *hypr.Client
@@ -22,7 +22,7 @@ func NewSplit(h *hypr.Client, s *state.State) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute cycles "wide" through default, wide, and mobile, and "narrow" through default and narrow.
+// Execute cycles "wide" through default, wide, and mobile, and "narrow" through default and narrow, skipping presets the profile leaves unset.
 // Either flag returns other presets to default; Execute also accepts "default" and "reapply"/"-r".
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
@@ -68,12 +68,11 @@ func (s *Split) Apply(preset string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	share := s.state.GetScreenShare()
-	name, mfact := s.state.GetConfig().Windows.Split.Ratio(preset, share)
+	name, mfact := s.state.Profile().Split.Ratio(preset, s.state.GetScreenShare())
 	if err := s.hypr.LayoutMsg(fmt.Sprintf("mfact exact %s", mfact)); err != nil {
 		return "", fmt.Errorf("set mfact: %w", err)
 	}
-	s.state.SetSplitMark(ws, state.SplitMark{Preset: name, Share: share})
+	s.state.SetSplitMark(ws, state.SplitMark{Preset: name, MFact: mfact})
 	if err := s.seed(mfact); err != nil {
 		return "", err
 	}
@@ -94,8 +93,8 @@ func (s *Split) Reseed() error {
 // Monocle workspaces and floating or missing active windows are skipped and left stale.
 func (s *Split) Refresh() error {
 	ws := s.state.GetWorkspace()
-	preset, _ := s.ratio(ws)
-	want := state.SplitMark{Preset: preset, Share: s.state.GetScreenShare()}
+	preset, mfact := s.ratio(ws)
+	want := state.SplitMark{Preset: preset, MFact: mfact}
 	if s.state.GetSplitMark(ws) == want || s.state.GetMonocle(ws) != nil {
 		return nil
 	}
@@ -118,7 +117,7 @@ func (s *Split) Preset() string {
 
 // ratio resolves ws's preset, "default" when unmarked, and its mfact for the current share mode.
 func (s *Split) ratio(ws int) (name, mfact string) {
-	return s.state.GetConfig().Windows.Split.Ratio(s.state.GetSplitMark(ws).Preset, s.state.GetScreenShare())
+	return s.state.Profile().Split.Ratio(s.state.GetSplitMark(ws).Preset, s.state.GetScreenShare())
 }
 
 func (s *Split) seed(mfact string) error {

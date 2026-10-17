@@ -26,7 +26,7 @@ Apply `converge` before changing state-mutating commands or setup stages.
 - Keep hyprd verbs aligned across `cmd/hyprd/{main,daemon}.go` and `../config/hypr/binds.lua`.
 - Keep `../system/etc/greetd/config.toml` → `--locked-cmd "hyprd lock client"` aligned with the local `hyprd lock client` verb in `cmd/hyprd/main.go`.
 - Names in `config/ewwd.yaml` → `windows.{full,compact}` must match `defwindow` names under `../config/eww/yuck/`.
-- Hyprd's `query display` selects ewwd's window set using `config/hyprd.yaml` → `windows.compact_below`; hyprd requests `ewwd relayout` when the selected layout or monitor changes.
+- Hyprd's `query display` selects ewwd's window set from the `config/hyprd.yaml` → `displays` profile; hyprd requests `ewwd relayout` when the profile's `eww` layout or the monitor changes.
 - `internal/dctl/binaries/` → `Names` drives ISO builds, installer placement, and CLI updates.
 - Register setup stages in execution order in `internal/dctl/cli/setup.go`; consecutive root stages share one sudo child, and background work must finish before later root work or stages that need sudo.
 - `luks.Needs` is computed from the non-optional phase-1 catalog; keep lock stages after phase 1 in `internal/dctl/cli/setup.go`.
@@ -39,7 +39,8 @@ Apply `converge` before changing state-mutating commands or setup stages.
 - `../system/etc/initcpio/install/sd-totp` and `internal/dctl/secureboot/totp.go` share the boot-TOTP marker path and tpm2-totp error strings; keep them aligned.
 - `internal/gobuild/` owns build flags and environment for CLI updates, hyprd rebuilds, and ISO builds.
 - Keep `internal/config/hyprd.go` → `ThreeBody` launch titles/session paths aligned with `../config/kitty/sessions/`.
-- Keep `config/hyprd.yaml` → `windows.{split,gaps_out,monocle}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
+- Keep each `config/hyprd.yaml` → `displays` profile's `split`, `gaps_out`, and `monocle` fitted to Hyprland's gaps/ratios and Kitty's cell size at that profile's `font_size`.
+- `../config/kitty/kitty.conf` includes `~/.local/state/hyprd/kitty.conf` by literal path; `internal/hyprd/kitty/font.go` writes it.
 - `hyprd health investigate` in `cmd/hyprd/health.go` finds the `dotfiles` session and the agents profile's `learn` tab in `config/hyprd.yaml` by name; keep them aligned.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.
 - `internal/ui` sets `DOTFILES_TREE=open` to continue a parent's tree or `closed` to start separate sections after a blank line; `dctl setup` passes it through sudo.

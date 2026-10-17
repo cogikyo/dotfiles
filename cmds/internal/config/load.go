@@ -91,22 +91,44 @@ func warnMissing(cfg *HyprConfig) {
 	if cfg.Notify.Styles == nil {
 		warn("notify.styles")
 	}
-	if cfg.Windows.CompactBelow == 0 {
-		warn("windows.compact_below")
+	if len(cfg.Displays) == 0 {
+		warn("displays")
 	}
-	split := cfg.Windows.Split
-	for _, mode := range []struct {
-		name    string
-		presets SplitPresets
-	}{{"normal", split.Normal}, {"share", split.Share}} {
-		for _, preset := range []struct{ name, ratio string }{
-			{"narrow", mode.presets.Narrow},
-			{"default", mode.presets.Default},
-			{"wide", mode.presets.Wide},
-			{"mobile", mode.presets.Mobile},
-		} {
-			if f, err := strconv.ParseFloat(preset.ratio, 64); err != nil || f <= 0 || f >= 1 {
-				fmt.Fprintf(os.Stderr, "hyprd: warning: windows.split.%s.%s %q is not a ratio in (0, 1)\n", mode.name, preset.name, preset.ratio)
+	for i, profile := range cfg.Displays {
+		warnProfile := func(format string, args ...any) {
+			fmt.Fprintf(os.Stderr, "hyprd: warning: displays[%d] %q: "+format+"\n", append([]any{i, profile.Name}, args...)...)
+		}
+		if profile.Name == "" {
+			warnProfile("missing name")
+		}
+		if profile.Eww != LayoutFull && profile.Eww != LayoutCompact {
+			warnProfile("eww %q is not full or compact", profile.Eww)
+		}
+		if profile.FontSize <= 0 {
+			warnProfile("missing font_size")
+		}
+		if i == len(cfg.Displays)-1 && profile.Match != (DisplayMatch{}) {
+			warnProfile("is the fallback, so its match is ignored")
+		}
+		for _, mode := range []struct {
+			name    string
+			presets SplitPresets
+		}{{"normal", profile.Split.Normal}, {"share", profile.Split.Share}} {
+			for _, preset := range []struct {
+				name, ratio string
+				optional    bool
+			}{
+				{"narrow", mode.presets.Narrow, true},
+				{"default", mode.presets.Default, false},
+				{"wide", mode.presets.Wide, false},
+				{"mobile", mode.presets.Mobile, true},
+			} {
+				if preset.optional && preset.ratio == "" {
+					continue
+				}
+				if f, err := strconv.ParseFloat(preset.ratio, 64); err != nil || f <= 0 || f >= 1 {
+					warnProfile("split.%s.%s %q is not a ratio in (0, 1)", mode.name, preset.name, preset.ratio)
+				}
 			}
 		}
 	}

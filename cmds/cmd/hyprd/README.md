@@ -36,7 +36,7 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 `hyprd init` imports the Wayland environment into systemd and D-Bus, starts the session target and user services, waits for the daemon socket, and sends `init`.
 The daemon applies the saved wallpaper mode and optionally waits for the network.
 It waits for unlock before it restores eww widgets and the initial browser layouts, opens configured sessions, and selects the initial workspace.
-It also starts glava and Spotify and connects the configured Bluetooth device.
+It also starts Spotify, starts GLava when the display profile allows it, and connects the configured Bluetooth device.
 Boot apps open after the password unlocks the session.
 This prevents `misc:session_lock_xray` from showing new windows beneath a lock client that has not mapped yet.
 
@@ -67,8 +67,8 @@ Use a scratch build for build-only checks; `hyprd rebuild` changes the running d
 ```bash
 hyprd monocle                # toggle zoom and park the other layout members
 hyprd float                  # toggle floating, centered at monocle size
-hyprd split wide             # wide from default, mobile from wide, otherwise back to default
-hyprd split narrow           # narrow from default, otherwise back to default
+hyprd split wide             # wide from default, mobile (if set) from wide, otherwise default
+hyprd split narrow           # narrow (if set) from default, otherwise default
 hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions
@@ -83,8 +83,14 @@ hyprd bg static|video        # save and apply the wallpaper mode
 hyprd saves the mode in `$XDG_STATE_HOME/hyprd/bg` (default `~/.local/state/hyprd/bg`); a missing file means video.
 Init and lock release apply the saved mode.
 
+On a machine with a battery, video and lock-time desktop GLava run only on AC power, which hyprd reads from `/sys/class/power_supply`.
+It counts as on battery when a system battery reports `Discharging` and no Mains supply is `online`; USB supplies are ignored because a USB-C peripheral can report `online` while the battery drains.
+The daemon polls that every 2 seconds and converges on each change and at startup, so `hyprd rebuild` also stops a video or GLava that the current power state forbids.
+On battery the wallpaper stays static while the saved mode stays `video`, so plugging in restores it.
+Unlocked GLava follows the display profile's `glava` and stops in share mode.
+
 Monocle zooms the focused tiled window and parks its peers, including any shadow, as floats at the same size on `special:mono<n>`.
-Its size uses `windows.monocle` fractions of the focused monitor's usable area, capped by the active outer gaps.
+Its size uses the display profile's `monocle` fractions of the focused monitor's usable area, capped by the active outer gaps.
 `hyprd swap` and `hyprd shadow` change roles without leaving monocle; `hyprd three-body <name>` and notification focus zoom an existing monocle member in place.
 The left/right focus keys (`hyprd cycle left|right`) cycle through the entry order without changing roles.
 Run monocle again to restore the tiled layout with the current master/shadow roles.
@@ -159,10 +165,10 @@ Startup also relaunches a lock when the compositor is locked without a client, a
 `hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
 
 On the first launch, the desktop cover runs after hyprd enters `lockbarrier` and before the lock client starts, with 2-second timeouts on cover helper commands.
-It saves the workspace, switches to the empty workspace 7, tags GLava windows `lock`, pauses dunst, and closes eww widgets.
+It saves the workspace, switches to the empty workspace 7, stops desktop GLava when on battery, tags the remaining GLava windows `lock`, pauses dunst, and closes eww widgets.
 The `glava-lock` rule in `config/hypr/hyprland.lua` drops tagged desktop GLava windows to 0.01 opacity.
 The opacity stays above 0 because Hyprland skips drawing a window at 0, which stops its frame callbacks and would stall GLava.
-Release removes the tag, restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, and reconnects configured Bluetooth.
+Release removes the tag, restarts desktop GLava if the display profile wants it, restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, and reconnects configured Bluetooth.
 Lock and release do not touch Spotify or other media players.
 
 Hyprland's `misc:session_lock_xray` keeps the wallpaper layers rendering under the transparent lock surface, so the lock shows the live wallpaper in either mode.
@@ -280,8 +286,22 @@ hyprd query [topic]      # get state as JSON (workspace|hidden|split|display|thr
 hyprd subscribe [...]    # stream events (workspace split)
 ```
 
-`hyprd query display` returns `layout` (`full` or `compact`), `monitor` (the widest non-mirrored monitor's name), and `hidden` (share mode or full lock is active).
-The layout is compact when that monitor's logical width is below `windows.compact_below` in `cmds/config/hyprd.yaml`.
+`hyprd query display` returns the widest non-mirrored monitor's `monitor` name, `description`, and `ppi`, the resolved `profile` with its eww `layout` and `font_size`, and `hidden` (share mode or full lock is active).
+Copy `description` into a profile's `match` to pin a screen to it.
+
+### Display profiles
+
+`displays` in `cmds/config/hyprd.yaml` is an ordered list; the first profile whose `match` holds for the widest monitor wins, and the last profile is the fallback.
+A `match` holds when every field it sets holds: `description` equals Hyprland's monitor description, `min_width` is at most the mode width in pixels, and `min_ppi` is at most the horizontal pixel density.
+A monitor without a usable physical size has no density, so `min_ppi` never matches it; this covers EDIDs that report 0 or only an aspect ratio, as TVs often do.
+Each profile sets the eww window set (`eww`), unlocked GLava (`glava`), Kitty's `font_size`, `split` presets, `gaps_out`, and `monocle` sizing, each with normal and share variants where they apply.
+The `narrow` and `mobile` split presets are optional; an unset preset resolves to `default`.
+
+On a profile change, hyprd applies the gaps, reseeds and refreshes the split, and restarts eww if the window set or monitor changed.
+It writes the font size to `~/.local/state/hyprd/kitty.conf`, which `config/kitty/kitty.conf` includes, and runs `load-config` on every `/tmp/kitty-<pid>` socket.
+Reloading the config, unlike `set-font-size`, also moves the size that new OS windows and the font-size reset use.
+A Kitty that starts before hyprd has ever written the file logs the missing include and uses 17.
+Edits to `hyprd.yaml` apply live through the same path.
 
 eww integration:
 
@@ -297,7 +317,7 @@ eww integration:
 - `background` — mpvpaper display, video, and socket; `hyprd bg` owns the mode
 - `init` — network wait and initial workspace
 - `notify` — sounds, icons, per-style appearance
-- `windows` — split presets, per-layout/share gaps, compact threshold, monocle sizing
+- `displays` — [display profiles](#display-profiles)
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
 - `sessions` — layouts grouped by workspace and keyed by name; `init: true` launches on boot in workspace order (at most one per workspace); `after: <session>` opens right after that init session finishes opening
 

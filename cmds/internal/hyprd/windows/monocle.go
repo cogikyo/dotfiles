@@ -16,6 +16,6 @@ func MonocleSize(h *hypr.Client, s *state.State) (w, ht int, err error) {
 		return 0, 0, errors.New("no monitor")
 	}
 	width, height := m.Area()
-	w, ht = s.GetConfig().Windows.Monocle.Size(width, height, s.OuterGaps())
+	w, ht = s.Profile().Monocle.Size(width, height, s.OuterGaps())
 	return w, ht, nil
 }

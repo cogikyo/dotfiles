@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"dotfiles/cmds/internal/config"
@@ -55,10 +56,19 @@ func (b *BG) Execute(arg string) (string, error) {
 	return b.apply(mode)
 }
 
+var bgMu sync.Mutex
+
+// apply holds video back while unplugged; the saved mode stays video so plugging in restores it.
 func (b *BG) apply(mode Mode) (string, error) {
+	bgMu.Lock()
+	defer bgMu.Unlock()
 	if mode == ModeStatic {
 		b.killAll()
 		return "bg: static", nil
+	}
+	if unplugged() {
+		b.killAll()
+		return "bg: static while on battery", nil
 	}
 	return b.ensure()
 }
@@ -240,7 +250,7 @@ func (b *BG) killAll() {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// EnsureBG applies the saved mode: static stops mpvpaper, and video spawns it if it is not running.
+// EnsureBG applies the saved mode: static stops mpvpaper, and video spawns it if it is not running and the machine is on AC.
 func EnsureBG(cfg *config.BackgroundConfig) error {
 	mode, err := loadMode()
 	if err != nil {

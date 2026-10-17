@@ -99,13 +99,13 @@ func (e *EventLoop) syncState() error {
 	}
 	e.notifyWorkspace()
 	e.resetAccent()
+	if _, _, err := e.share.SyncDisplay(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
+	}
 	e.state.LockLayout()
 	e.reseedSplit()
 	e.refit()
 	e.state.UnlockLayout()
-	if _, err := e.share.SyncDisplay(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
-	}
 
 	return nil
 }

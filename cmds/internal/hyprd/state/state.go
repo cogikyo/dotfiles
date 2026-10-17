@@ -91,10 +91,10 @@ func (s *State) GetOccupied() []int {
 	return slices.Clone(s.OccupiedWorkspaces)
 }
 
-// SplitMark records the split preset and share mode last applied to a workspace.
+// SplitMark records the split preset and mfact last applied to a workspace.
 type SplitMark struct {
 	Preset string `json:"preset"`
-	Share  bool   `json:"share"`
+	MFact  string `json:"mfact"`
 }
 
 func (s *State) SetSplitMark(ws int, mark SplitMark) {
@@ -127,17 +127,18 @@ func (s *State) GetScreenShare() bool {
 	return s.ScreenShare
 }
 
+// Display is the widest monitor and the profile resolved for it.
 type Display struct {
-	Layout  config.Layout `json:"layout"`
-	Monitor string        `json:"monitor"`
+	Monitor     string
+	Description string
+	PPI         float64
+	Profile     config.DisplayProfile
 }
 
-func (s *State) SetDisplay(d Display) (changed bool) {
+func (s *State) SetDisplay(d Display) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	changed = s.display != d
 	s.display = d
-	return changed
 }
 
 func (s *State) GetDisplay() Display {
@@ -146,14 +147,27 @@ func (s *State) GetDisplay() Display {
 	return s.display
 }
 
+// Profile returns the active display profile, or the fallback before any monitor has been resolved.
+func (s *State) Profile() config.DisplayProfile {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.profile()
+}
+
+func (s *State) profile() config.DisplayProfile {
+	if s.display.Monitor == "" {
+		return s.config.Displays.Fallback()
+	}
+	return s.display.Profile
+}
+
 func (s *State) OuterGaps() config.OuterGaps {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	gaps := s.config.Windows.GapsOut.WithDefaults()
 	if s.ScreenShare {
-		return gaps.Share
+		return s.profile().GapsOut.Share
 	}
-	return gaps.For(s.display.Layout)
+	return s.profile().GapsOut.Normal
 }
 
 // BrowserQAWindow identifies one marked browser window and its dedicated workspace.

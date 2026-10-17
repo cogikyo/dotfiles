@@ -21,12 +21,6 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
-var glavaExecs = []string{
-	"glava -e bars_rc.glsl",
-	"glava -e bars_r_rc.glsl",
-	"glava -e radial_rc.glsl",
-}
-
 var startupExecs = []string{
 	"spotify-launcher",
 }
@@ -40,7 +34,6 @@ const (
 
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
 func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
-	dispatchGLava(h)
 	for _, cmd := range startupExecs {
 		if err := h.Exec(cmd); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
@@ -48,14 +41,6 @@ func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
 	}
 	if bt.Enabled && bt.Device != "" {
 		connectBluetooth(bt.Device)
-	}
-}
-
-func dispatchGLava(h *hypr.Client) {
-	for _, cmd := range glavaExecs {
-		if err := h.Exec(cmd); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
-		}
 	}
 }
 
@@ -140,7 +125,7 @@ func (i *Init) Execute() (string, error) {
 		go i.promptSetup(next, online)
 	}
 
-	if _, err := i.share.SyncDisplay(); err != nil {
+	if _, _, err := i.share.SyncDisplay(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd init: display: %v\n", err)
 	}
 	restoreEwwWidgets(true)
@@ -161,6 +146,7 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 
+	SyncGLava(i.state, i.lock.Locked())
 	dispatchStartup(i.hypr, cfg.Bluetooth)
 
 	if init.Workspace > 0 {

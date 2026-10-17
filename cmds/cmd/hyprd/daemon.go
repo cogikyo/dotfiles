@@ -17,6 +17,7 @@ import (
 	"dotfiles/cmds/internal/machine"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -88,7 +89,7 @@ func New() (*Daemon, error) {
 			fmt.Fprintf(os.Stderr, "hyprd opencode notify: %v\n", err)
 		}
 	})
-	d.shareCtl = session.NewShare(hyprClient, stateStore)
+	d.shareCtl = session.NewShare(hyprClient, stateStore, lockCtl)
 	if d.health, err = health.New(d.healthOpened); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd health: %v\n", err)
 	}
@@ -120,6 +121,7 @@ func (d *Daemon) Run() error {
 	}()
 
 	go d.watchConfig(d.server.Done())
+	go session.WatchPower(d.server.Done(), d.state, d.lockCtl)
 	stopHealth := d.startHealth()
 
 	sigCh := make(chan os.Signal, 1)
@@ -694,6 +696,9 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 				d.state.ReloadConfig(&cfg)
 				d.config.Store(&cfg)
 				fmt.Printf("hyprd: config reloaded\n")
+				if err := d.shareCtl.Relayout(); err != nil {
+					fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
+				}
 			})
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -723,10 +728,20 @@ func (d *Daemon) query(topic string) (string, error) {
 		return fmt.Sprintf(`"%s"`, wm.NewSplit(d.hypr, d.state).Preset()), nil
 
 	case "display":
+		display, profile := d.state.GetDisplay(), d.state.Profile()
 		jsonData, err := json.Marshal(struct {
-			state.Display
-			Hidden bool `json:"hidden"`
-		}{d.state.GetDisplay(), d.state.GetScreenShare() || d.lockCtl.Locked()})
+			Monitor     string        `json:"monitor"`
+			Description string        `json:"description"`
+			PPI         float64       `json:"ppi"`
+			Profile     string        `json:"profile"`
+			Layout      config.Layout `json:"layout"`
+			FontSize    float64       `json:"font_size"`
+			Hidden      bool          `json:"hidden"`
+		}{
+			display.Monitor, display.Description, math.Round(display.PPI*10) / 10,
+			profile.Name, profile.Eww, profile.FontSize,
+			d.state.GetScreenShare() || d.lockCtl.Locked(),
+		})
 		return string(jsonData), err
 
 	case "three-body":

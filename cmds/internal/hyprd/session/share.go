@@ -16,11 +16,12 @@ import (
 type Share struct {
 	hypr  *hypr.Client
 	state *state.State
+	lock  *Lock
 	mu    sync.Mutex
 }
 
-func NewShare(h *hypr.Client, s *state.State) *Share {
-	return &Share{hypr: h, state: s}
+func NewShare(h *hypr.Client, s *state.State, lock *Lock) *Share {
+	return &Share{hypr: h, state: s, lock: lock}
 }
 
 // Execute toggles screen-share mode by default, with explicit on/off/status verbs for scripts.
@@ -60,7 +61,7 @@ func (s *Share) enter() (string, error) {
 	runCommand("dunstctl", "close-all")
 	runCommand("dunstctl", "set-paused", "true")
 	startDetached("ewwd", "close")
-	runCommand("killall", "glava")
+	SyncGLava(s.state, s.lock.Locked())
 
 	return withSplitErr("share: on", splitErr), nil
 }
@@ -72,7 +73,7 @@ func (s *Share) exit() (string, error) {
 	splitErr := s.retuneSplit()
 
 	startDetached("ewwd", "restore")
-	dispatchGLava(s.hypr)
+	SyncGLava(s.state, s.lock.Locked())
 	time.AfterFunc(time.Second, func() {
 		runCommand("dunstctl", "set-paused", "false")
 	})
