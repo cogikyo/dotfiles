@@ -50,7 +50,6 @@ func Stage(run execx.Runner) setup.Stage {
 	}}}
 }
 
-// operator returns the user who invoked dctl, so Check as the user and Fix under sudo agree.
 func operator() string {
 	if name := os.Getenv("SUDO_USER"); name != "" {
 		return name
