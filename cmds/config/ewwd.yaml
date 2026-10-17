@@ -20,10 +20,10 @@ audio:
   volume_step: 10
   default_sink_volume: 69
   default_source_volume: 100
-  fallback_sink: alsa_output.pci-0000_74_00.1.hdmi-stereo-extra1
+  fallback_sink: LG TV SSCR2
   name_mappings:
     AirPodsHiRes: AirPods Max
-    alsa_output.pci-0000_74_00.1.hdmi-stereo-extra1: LG TV
+    "LG TV SSCR2": LG TV
     alsa_input.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.HiFi__Mic1__source: Scarlett
     alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.HiFi__Line__sink: Scarlett
 date:

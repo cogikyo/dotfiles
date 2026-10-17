@@ -135,7 +135,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 		if headphones == "" {
 			return
 		}
-		found, err := a.setDefaultSink(ctx, func(name string) bool { return strings.HasPrefix(name, headphones) })
+		found, err := a.setDefaultSink(ctx, func(n audioNode) bool { return strings.HasPrefix(n.Name, headphones) })
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ewwd: audio: select headphones: %v\n", err)
 			return
@@ -291,7 +291,7 @@ func (a *Audio) readDevice(ctx context.Context, deviceType string) (audioDevice,
 		return audioDevice{}, false
 	}
 
-	stableName, displayName, ok := parseAudioIdentity(inspect)
+	name, nick, displayName, ok := parseAudioIdentity(inspect)
 	if !ok {
 		return audioDevice{}, false
 	}
@@ -299,13 +299,16 @@ func (a *Audio) readDevice(ctx context.Context, deviceType string) (audioDevice,
 	if !ok {
 		return audioDevice{}, false
 	}
-	if alias, exists := a.config.NameMappings[stableName]; exists {
-		displayName = alias
+	for _, key := range []string{nick, name} {
+		if alias, exists := a.config.NameMappings[key]; exists && key != "" {
+			displayName = alias
+			break
+		}
 	}
 	return audioDevice{volume: percent, name: displayName, muted: muted}, true
 }
 
-func parseAudioIdentity(output string) (stableName, displayName string, ok bool) {
+func parseAudioIdentity(output string) (name, nick, displayName string, ok bool) {
 	properties := make(map[string]string)
 	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "*"))
@@ -321,16 +324,17 @@ func parseAudioIdentity(output string) (stableName, displayName string, ok bool)
 		properties[key] = value
 	}
 
-	stableName = properties["node.name"]
-	if stableName == "" {
-		return "", "", false
+	name = properties["node.name"]
+	if name == "" {
+		return "", "", "", false
 	}
+	nick = properties["node.nick"]
 	for _, key := range []string{"node.description", "node.nick", "node.name"} {
 		if properties[key] != "" {
-			return stableName, properties[key], true
+			return name, nick, properties[key], true
 		}
 	}
-	return "", "", false
+	return "", "", "", false
 }
 
 func parseAudioVolume(output string) (percent int, muted bool, ok bool) {
@@ -509,7 +513,7 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 	if err != nil {
 		return fmt.Errorf("inspect default %s: %w", deviceType, err)
 	}
-	current, _, ok := parseAudioIdentity(inspect)
+	current, _, _, ok := parseAudioIdentity(inspect)
 	if !ok {
 		return fmt.Errorf("default %s has no node name", deviceType)
 	}
@@ -527,7 +531,9 @@ func (a *Audio) selectFallback(ctx context.Context) {
 		fmt.Fprintln(os.Stderr, "ewwd: audio: headphones removed but audio.fallback_sink is unset")
 		return
 	}
-	found, err := a.setDefaultSink(ctx, func(candidate string) bool { return candidate == name })
+	found, err := a.setDefaultSink(ctx, func(n audioNode) bool {
+		return n.Properties["node.nick"] == name || n.Name == name
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: audio: select fallback sink: %v\n", err)
 		return
@@ -537,12 +543,12 @@ func (a *Audio) selectFallback(ctx context.Context) {
 	}
 }
 
-func (a *Audio) setDefaultSink(ctx context.Context, match func(name string) bool) (bool, error) {
+func (a *Audio) setDefaultSink(ctx context.Context, match func(audioNode) bool) (bool, error) {
 	nodes, err := listAudioNodes(ctx, "sink")
 	if err != nil {
 		return false, err
 	}
-	index := slices.IndexFunc(nodes, func(n audioNode) bool { return match(n.Name) })
+	index := slices.IndexFunc(nodes, match)
 	if index < 0 {
 		return false, nil
 	}
