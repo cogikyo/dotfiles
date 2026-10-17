@@ -1,6 +1,6 @@
 ---
 name: design
-description: Use when building or reviewing product interfaces, visual design, or copy; owns the attention budget, shared deletion test, and routing to copy, hierarchy, color, and motion.
+description: Use when building or reviewing product interfaces, visual design, or copy; owns the attention budget, shared deletion test, and routing to copy, hierarchy, balance, color, and motion.
 ---
 
 # Design
@@ -45,6 +45,7 @@ Load this parent before any subskill; combine only those the change touches.
 
 - **`copy`** (`copy/SKILL.md`): words, labels, claims, messages, and repeated text on any product surface.
 - **`hierarchy`** (`hierarchy/SKILL.md`): size, weight, relative contrast, position, spacing, grouping, and structural chrome.
+- **`balance`** (`balance/SKILL.md`): rendered rounds, one move each, whenever a dense view must fit all its content.
 - **`color`** (`color/SKILL.md`): palette, accents, saturation, color meaning, and accessible color use.
 - **`motion`** (`motion/SKILL.md`): animation, transitions, activity indicators, and repeated movement.
 
