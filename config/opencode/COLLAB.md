@@ -160,6 +160,7 @@ Git authority lives here: you plan and run approved Git work, and other children
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
   - Trash new untracked files; for committed work, use `git revert` or `git reset --soft` first.
   - Avoid `reset --hard`, `checkout`, `restore`, and a piped `git apply -R`, because they overwrite edits made after review.
+- Run the target repository's lint and typecheck through `verify/test` before a **`build/git` launch**, and commit only on a pass, because `build/git` may run only Git commands.
 - Before each **`build/git` launch**, give a short heads-up: repository and worktree, branch and refs, mutations, destructive effects, checks, and stop conditions.
   - Put the full plan in its brief with exact paths, expected OIDs, conflict authority, and exclusions.
   - A reviewer denial is a blocker or a reason to choose a permitted action, never a reason to bypass the permission.
