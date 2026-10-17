@@ -7,7 +7,7 @@ import { refresh } from "./poll.ts";
 import { Schema } from "effect";
 import { Definition, Snapshot } from "./rpc.ts";
 import { renderUsageStatus } from "./status.ts";
-import type { Credentials, ProviderAdapter } from "./types.ts";
+import type { Credentials, ProviderAdapter, StoredCredentials } from "./types.ts";
 import { xaiUsage } from "./xai.ts";
 
 const POLL_MS = 60_000;
@@ -20,8 +20,20 @@ export default Plugin.define({
       if (!connection) return undefined;
       return ctx.integration.connection.resolve(connection);
     };
+    const stored: StoredCredentials = async function* (integrationID) {
+      const { data } = await ctx.integration.get({ integrationID });
+      const failures: unknown[] = [];
+      for (const connection of data.connections) {
+        const credential = await ctx.integration.connection.resolve(connection).catch((error: unknown) => {
+          failures.push(error);
+          return undefined;
+        });
+        if (credential) yield credential;
+      }
+      if (failures.length > 0) throw new AggregateError(failures);
+    };
     const adapters: ProviderAdapter[] = [
-      openaiUsage(credentials),
+      openaiUsage(stored),
       anthropicUsage,
       anthropicPersonalUsage,
       xaiUsage,

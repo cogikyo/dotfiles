@@ -22,6 +22,8 @@ export type Credential =
 
 export type Credentials = (integrationID: string) => Promise<Credential | undefined>;
 
+export type StoredCredentials = (integrationID: string) => AsyncIterable<Credential>;
+
 export type ProviderAdapter = {
   id: string;
   label: string;
