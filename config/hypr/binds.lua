@@ -120,8 +120,8 @@ hl.gesture({ fingers = 3, direction = "left",  action = swipe(1, true) })
 hl.gesture({ fingers = 3, direction = "right", action = swipe(-1, true) })
 hl.gesture({ fingers = 3, direction = "up",    action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws 1")) end })
 hl.gesture({ fingers = 3, direction = "down",  action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws " .. last)) end })
-hl.gesture({ fingers = 3, direction = "up",    mods = "SUPER", action = swipe(-1, false) })
-hl.gesture({ fingers = 3, direction = "down",  mods = "SUPER", action = swipe(1, false) })
+hl.gesture({ fingers = 3, direction = "left",  mods = "SUPER", action = swipe(1, false) })
+hl.gesture({ fingers = 3, direction = "right", mods = "SUPER", action = swipe(-1, false) })
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ launchers                                                                     │
