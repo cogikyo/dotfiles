@@ -394,6 +394,8 @@ hl.config({
 	},
 })
 
+hl.device({ name = "ven_04f3:00-04f3:32aa-touchpad", sensitivity = 0.69 })
+
 hl.animation({ leaf = "windows", enabled = true, speed = 2, bezier = "default", style = "popin" })
 hl.animation({ leaf = "windowsOut", enabled = true, speed = 2, bezier = "default" })
 hl.animation({ leaf = "windowsMove", enabled = true, speed = 1.5, bezier = "default", style = "slidefade" })

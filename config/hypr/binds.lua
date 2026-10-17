@@ -82,6 +82,36 @@ super("Down",  "Move window down",    hl.dsp.window.move({ direction = "down" })
 super("Home",  "Move workspace down", "hyprd ws down")
 super("End",   "Move workspace up",   "hyprd ws up")
 
+-- ├┤ touchpad ├───────────────────────────────────────────────────────────────────┤
+local last = 6
+
+local function swipe(step, skip_empty)
+	return function()
+		local active = hl.get_active_workspace()
+		if not active then
+			return
+		end
+		local id = active.id + step
+		while skip_empty and id >= 1 and id <= last do
+			local ws = hl.get_workspace(id)
+			if ws and ws.windows > 0 then
+				break
+			end
+			id = id + step
+		end
+		if id >= 1 and id <= last then
+			hl.dispatch(hl.dsp.exec_cmd("hyprd ws " .. id))
+		end
+	end
+end
+
+hl.gesture({ fingers = 3, direction = "left",  action = swipe(1, false) })
+hl.gesture({ fingers = 3, direction = "right", action = swipe(-1, false) })
+hl.gesture({ fingers = 3, direction = "left",  mods = "SUPER", action = swipe(1, true) })
+hl.gesture({ fingers = 3, direction = "right", mods = "SUPER", action = swipe(-1, true) })
+hl.gesture({ fingers = 3, direction = "up",    action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws 1")) end })
+hl.gesture({ fingers = 3, direction = "down",  action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws " .. last)) end })
+
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
