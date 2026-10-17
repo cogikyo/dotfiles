@@ -9,7 +9,14 @@ local svalboard = {
 		"svalboard-lightly-consumer-control",
 	},
 }
-local corne = { inclusive = false, list = svalboard.list }
+local laptop = { list = { "at-translated-set-2-keyboard" } }
+local split = { inclusive = false, list = laptop.list }
+local corne = { inclusive = false, list = {} }
+for _, scope in ipairs({ laptop, svalboard }) do
+	for _, name in ipairs(scope.list) do
+		table.insert(corne.list, name)
+	end
+end
 
 local function describe(description)
 	if device == corne then
@@ -45,21 +52,25 @@ end
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
-alt("A", "Editor",  "hyprd three-body editor")
-alt("C", "Agents",  "hyprd three-body agents")
-alt("R", "Browser", "hyprd three-body browser")
-alt("X", "Dismiss", "dunstctl close")
+keyboard(split, function()
+	alt("A", "Editor",  "hyprd three-body editor")
+	alt("C", "Agents",  "hyprd three-body agents")
+	alt("R", "Browser", "hyprd three-body browser")
+	alt("X", "Dismiss", "dunstctl close")
+end)
 
 -- ├┤ tabs ├───────────────────────────────────────────────────────────────────────┤
-super("Y", "Tab 1", "hyprd tab 1")
-super("N", "Tab 2", "hyprd tab 2")
-super("I", "Tab 3", "hyprd tab 3")
-super("O", "Tab 4", "hyprd tab 4")
-super("L", "Tab 5", "hyprd tab 5")
+keyboard(split, function()
+	super("Y", "Tab 1", "hyprd tab 1")
+	super("N", "Tab 2", "hyprd tab 2")
+	super("I", "Tab 3", "hyprd tab 3")
+	super("O", "Tab 4", "hyprd tab 4")
+	super("L", "Tab 5", "hyprd tab 5")
 
-super("SHIFT + N", "Toggle tab group 1", "hyprd tab 1 group")
-super("SHIFT + I", "Toggle tab group 2", "hyprd tab 2 group")
-super("SHIFT + O", "Toggle tab group 3", "hyprd tab 3 group")
+	super("SHIFT + N", "Toggle tab group 1", "hyprd tab 1 group")
+	super("SHIFT + I", "Toggle tab group 2", "hyprd tab 2 group")
+	super("SHIFT + O", "Toggle tab group 3", "hyprd tab 3 group")
+end)
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ window management                                                             │
@@ -105,19 +116,33 @@ local function swipe(step, skip_empty)
 	end
 end
 
-hl.gesture({ fingers = 3, direction = "left",  action = swipe(1, false) })
-hl.gesture({ fingers = 3, direction = "right", action = swipe(-1, false) })
-hl.gesture({ fingers = 3, direction = "left",  mods = "SUPER", action = swipe(1, true) })
-hl.gesture({ fingers = 3, direction = "right", mods = "SUPER", action = swipe(-1, true) })
+hl.gesture({ fingers = 3, direction = "left",  action = swipe(1, true) })
+hl.gesture({ fingers = 3, direction = "right", action = swipe(-1, true) })
 hl.gesture({ fingers = 3, direction = "up",    action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws 1")) end })
 hl.gesture({ fingers = 3, direction = "down",  action = function() hl.dispatch(hl.dsp.exec_cmd("hyprd ws " .. last)) end })
+hl.gesture({ fingers = 3, direction = "up",    mods = "SUPER", action = swipe(-1, false) })
+hl.gesture({ fingers = 3, direction = "down",  mods = "SUPER", action = swipe(1, false) })
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("P",     "App Launcher",       "pkill -x rofi || rofi -show drun")
+local launcher = "pkill -x rofi || rofi -show drun"
+
+keyboard(split, function()
+	super("P", "App Launcher", launcher)
+end)
 super("Space", "Drop-down terminal", hl.dsp.workspace.toggle_special("dropdown"))
+
+local function keymap()
+	for _, window in ipairs(hl.get_windows()) do
+		if window.class == "chrome-127.0.0.1__-Default" then
+			hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
+			return
+		end
+	end
+	hl.dispatch(hl.dsp.exec_cmd("chromium --app=http://127.0.0.1:42070/"))
+end
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")
@@ -260,15 +285,56 @@ keyboard(svalboard, function()
 
 	super("SHIFT + X", "Force kill window", "hyprctl kill")
 	super("J",         "Layout Launcher",   "hyprd picker open")
-	super("H",         "Keymap viewer", function()
-		for _, window in ipairs(hl.get_windows()) do
-			if window.class == "chrome-127.0.0.1__-Default" then
-				hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
-				return
-			end
-		end
-		hl.dispatch(hl.dsp.exec_cmd("chromium --app=http://127.0.0.1:42070/"))
-	end)
+	super("H",         "Keymap viewer",     keymap)
+end)
+
+-- ╭───────────────────────────────────────────────────────────────────────────────╮
+-- │ laptop                                                                        │
+-- ╰───────────────────────────────────────────────────────────────────────────────╯
+
+keyboard(laptop, function()
+	super("1", "Workspace 1 (chat)",     "hyprd ws 1")
+	super("2", "Workspace 2 (misc)",     "hyprd ws 2")
+	super("3", "Workspace 3 (work)",     "hyprd ws 3")
+	super("4", "Workspace 4 (personal)", "hyprd ws 4")
+	super("5", "Workspace 5 (dotfiles)", "hyprd ws 5")
+	super("6", "Workspace 6 (music)",    "hyprd ws 6")
+	super("SHIFT + J", "Move workspace down", "hyprd ws down")
+	super("SHIFT + K", "Move workspace up",   "hyprd ws up")
+
+	super("Y", "Tab 1", "hyprd tab 1")
+	super("U", "Tab 2", "hyprd tab 2")
+	super("I", "Tab 3", "hyprd tab 3")
+	super("O", "Tab 4", "hyprd tab 4")
+	super("P", "Tab 5", "hyprd tab 5")
+
+	super("SHIFT + Y", "Toggle tab group 1", "hyprd tab 1 group")
+	super("SHIFT + U", "Toggle tab group 2", "hyprd tab 2 group")
+	super("SHIFT + I", "Toggle tab group 3", "hyprd tab 3 group")
+
+	super("C", "Editor",  "hyprd three-body editor")
+	super("A", "Agents",  "hyprd three-body agents")
+	super("B", "Browser", "hyprd three-body browser")
+	super("N", "Dismiss", "dunstctl close")
+
+	super("H",         "Focus left",        "hyprd cycle left")
+	super("L",         "Focus right",       "hyprd cycle right")
+	super("SHIFT + H", "Move window left",  hl.dsp.window.move({ direction = "left" }))
+	super("SHIFT + L", "Move window right", hl.dsp.window.move({ direction = "right" }))
+
+	super("S",      "Toggle shadow",  "hyprd shadow")
+	super("Return", "Swap master",    "hyprd swap")
+	super("M",      "Toggle monocle", "hyprd monocle")
+	super("Period", "Split wide",     "hyprd split wide")
+
+	super("SHIFT + X", "Force kill window",  "hyprctl kill")
+	super("SHIFT + F", "Toggle full screen", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+
+	super("D",         "App Launcher",            launcher)
+	super("Tab",       "Layout Launcher",         "hyprd picker open")
+	super("slash",     "Keymap viewer",           keymap)
+	super("SHIFT + S", "Screenshot to clipboard", "hyprd screenshot")
+	super("SHIFT + A", "Screenshot + annotate",   "hyprd screenshot annotate")
 end)
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
