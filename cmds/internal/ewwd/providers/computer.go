@@ -26,6 +26,7 @@ type Computer struct {
 	done      chan struct{}
 	active    bool
 	tempBase  string
+	tempMax   int64
 	last      ComputerState
 	published bool
 }
@@ -110,45 +111,57 @@ func readRAM() (int, bool) {
 
 func (c *Computer) readTemperature() (current, percent int, maxTemp float64, available bool) {
 	if c.tempBase == "" {
-		c.tempBase = findNVMeComposite()
+		c.tempBase, c.tempMax = findCPUTemp()
 	}
 	if c.tempBase == "" {
 		return 0, 0, 0, false
 	}
 
-	input, inputErr := readMillidegrees(c.tempBase + "_input")
-	minimum, minErr := readMillidegrees(c.tempBase + "_min")
-	maximum, maxErr := readMillidegrees(c.tempBase + "_max")
-	if inputErr != nil || minErr != nil || maxErr != nil || minimum+maximum == 0 {
+	input, err := readMillidegrees(c.tempBase + "_input")
+	if err != nil {
 		c.tempBase = ""
 		return 0, 0, 0, false
 	}
 
 	current = int(math.Round(float64(input) / 1000))
-	// Preserve the widget's established input / (minimum + maximum) ramp scale.
-	percent = int(math.Round(float64(input) / float64(minimum+maximum) * 100))
-	maxTemp = float64(maximum) / 1000
+	percent = int(math.Round(float64(input) / float64(c.tempMax) * 100))
+	maxTemp = float64(c.tempMax) / 1000
 	return current, percent, maxTemp, true
 }
 
-func findNVMeComposite() string {
+// fallbackTjMax scales sensors that expose no limit, such as k10temp.
+// TODO: set TjMax per machine; Ryzen desktops throttle at 90–95°C, Strix Halo at 100°C.
+const fallbackTjMax = 95_000
+
+func findCPUTemp() (base string, maximum int64) {
 	dirs, err := os.ReadDir(hwmonRoot)
 	if err != nil {
-		return ""
+		return "", 0
 	}
 	for _, dir := range dirs {
-		if !strings.HasPrefix(dir.Name(), "hwmon") {
-			continue
-		}
 		path := filepath.Join(hwmonRoot, dir.Name())
-		if strings.TrimSpace(readFile(filepath.Join(path, "name"))) != "nvme" {
-			continue
-		}
-		labels, _ := filepath.Glob(filepath.Join(path, "temp*_label"))
-		for _, label := range labels {
-			if strings.TrimSpace(readFile(label)) == "Composite" {
-				return strings.TrimSuffix(label, "_label")
+		switch strings.TrimSpace(readFile(filepath.Join(path, "name"))) {
+		case "k10temp":
+			if base := findTempLabel(path, "Tctl"); base != "" {
+				return base, fallbackTjMax
 			}
+		case "coretemp":
+			if base := findTempLabel(path, "Package id 0"); base != "" {
+				if crit, err := readMillidegrees(base + "_crit"); err == nil && crit > 0 {
+					return base, crit
+				}
+				return base, fallbackTjMax
+			}
+		}
+	}
+	return "", 0
+}
+
+func findTempLabel(hwmon, want string) string {
+	labels, _ := filepath.Glob(filepath.Join(hwmon, "temp*_label"))
+	for _, label := range labels {
+		if strings.TrimSpace(readFile(label)) == want {
+			return strings.TrimSuffix(label, "_label")
 		}
 	}
 	return ""
