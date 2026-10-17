@@ -59,8 +59,9 @@
 ;; ----------------------------------------------------------------------------
 ;; helpers
 
-(defwidget num-to-block [load]
+(defwidget num-to-block [load angle]
   (label
+    :angle angle
     :text {
       load < 12.5  ? "▁" :
       load < 25    ? "▂" :
@@ -146,7 +147,8 @@
 ;; ----------------------------------------------------------------------------
 ;; cpu
 
-(defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(deflisten cpu-columns :initial "[]"
+  'jq -nc "[range($(( $(nproc --all) / 2 )))]"')
 
 (defwidget cpu []
   (eventbox
@@ -170,9 +172,16 @@
         :percent {EWW_CPU.avg}
         :bool {hover == "cpu"}
       )
-      (box :space-evenly false :spacing 2
-        (for num in cores
-          (num-to-block :load {EWW_CPU.cores[num].usage})
+      (overlay
+        (box :space-evenly false :spacing 2
+          (for n in cpu-columns
+            (num-to-block :load {EWW_CPU.cores[n].usage} :angle 0)
+          )
+        )
+        (box :space-evenly false :spacing 2
+          (for n in cpu-columns
+            (num-to-block :load {EWW_CPU.cores[n + arraylength(cpu-columns)].usage} :angle 180)
+          )
         )
       )
     )
