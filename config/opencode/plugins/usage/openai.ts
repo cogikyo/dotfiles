@@ -54,6 +54,7 @@ async function load(credentials: StoredCredentials): Promise<ProviderUsage> {
 }
 
 async function codexCredential(credentials: StoredCredentials) {
+  // OpenAI rejects token-sharing tokens at wham/usage, so use a stored Codex login even if inactive.
   for await (const credential of credentials("openai")) {
     if (credential.type === "oauth" && CODEX_METHODS.has(credential.methodID)) return credential;
   }

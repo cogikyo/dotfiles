@@ -23,6 +23,7 @@ export default Plugin.define({
     const stored: StoredCredentials = async function* (integrationID) {
       const { data } = await ctx.integration.get({ integrationID });
       const failures: unknown[] = [];
+      // Connections lack methodID; resolve one at a time so a Codex match leaves the remaining credentials untouched.
       for (const connection of data.connections) {
         const credential = await ctx.integration.connection.resolve(connection).catch((error: unknown) => {
           failures.push(error);
