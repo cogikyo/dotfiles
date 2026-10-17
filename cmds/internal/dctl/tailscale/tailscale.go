@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"dotfiles/cmds/internal/dctl/execx"
@@ -12,8 +13,9 @@ import (
 )
 
 type state struct {
-	backend string
-	ssh     bool
+	backend  string
+	ssh      bool
+	operator string
 }
 
 func Stage(run execx.Runner) setup.Stage {
@@ -30,21 +32,30 @@ func Stage(run execx.Runner) setup.Stage {
 				return fmt.Errorf("tailscale is %s, want Running", s.backend)
 			case !s.ssh:
 				return errors.New("Tailscale SSH is off")
+			case s.operator != operator():
+				return fmt.Errorf("Tailscale operator is %q, want %q", s.operator, operator())
 			}
 			return nil
 		},
 		Fix: func(ctx context.Context) error {
 			s, err := read(ctx, run)
-			args := []string{"up", "--ssh", "--qr"}
-			if err == nil && s.backend == "Running" {
-				args = []string{"set", "--ssh=true"}
+			if err != nil {
+				return err
 			}
-			if args[0] == "up" {
-				return execx.Interactive(execx.Reason(run, "scan the QR code with a phone that's logged in to Tailscale")).Run(ctx, "", "tailscale", args...)
+			if s.backend == "Running" {
+				return run.Run(ctx, "", "tailscale", "set", "--ssh", "--operator="+operator())
 			}
-			return run.Run(ctx, "", "tailscale", args...)
+			return execx.Interactive(execx.Reason(run, "scan the QR code with a phone that's logged in to Tailscale")).Run(ctx, "", "tailscale", "up", "--ssh", "--qr", "--operator="+operator())
 		},
 	}}}
+}
+
+// operator returns the user who invoked dctl, so Check as the user and Fix under sudo agree.
+func operator() string {
+	if name := os.Getenv("SUDO_USER"); name != "" {
+		return name
+	}
+	return os.Getenv("USER")
 }
 
 func read(ctx context.Context, run execx.Runner) (state, error) {
@@ -52,7 +63,10 @@ func read(ctx context.Context, run execx.Runner) (state, error) {
 		return state{}, setup.Manual("tailscale not found; run dctl setup packages")
 	}
 	var status struct{ BackendState string }
-	var prefs struct{ RunSSH bool }
+	var prefs struct {
+		RunSSH       bool
+		OperatorUser string
+	}
 	for _, q := range []struct {
 		args []string
 		into any
@@ -65,5 +79,5 @@ func read(ctx context.Context, run execx.Runner) (state, error) {
 			return state{}, fmt.Errorf("parse tailscale %v: %w", q.args, err)
 		}
 	}
-	return state{status.BackendState, prefs.RunSSH}, nil
+	return state{status.BackendState, prefs.RunSSH, prefs.OperatorUser}, nil
 }
