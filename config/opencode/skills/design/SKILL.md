@@ -8,6 +8,7 @@ description: Use when building or reviewing product interfaces, visual design, o
 Work within the product's intent and existing visual language.
 Read the project's design guide first: **`DESIGN.md` overrides this family's defaults**.
 Apply a project copy guide to words as well.
+Keep user-named forms and layouts; offer reviewer alternatives as notes, not rebuilds.
 
 > [!INFO] Attention
 >
@@ -48,6 +49,7 @@ Load this parent before any subskill; combine only those the change touches.
 - **`motion`** (`motion/SKILL.md`): animation, transitions, activity indicators, and repeated movement.
 
 Stay within the approved scope; a copy pass does not authorize a layout or behavior change.
+Describe visual changes in words, never ASCII mockups; change one thing per round for the user to judge.
 When evidence or scope is missing, return the question instead of inventing intent.
 
 Credits: [NN/g progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/), [Impeccable](https://impeccable.style/anti-patterns), and [Linear's calmer interface](https://linear.app/now/behind-the-latest-design-refresh).
