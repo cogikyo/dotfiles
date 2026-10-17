@@ -28,15 +28,27 @@ function window(value: unknown) {
   return { percent, resetsAt };
 }
 
+async function authHeaders(credentials: Credentials): Promise<Record<string, string> | undefined> {
+  // Console sign-in authenticates Go; Go API keys are the older service-account path.
+  const signIn = await credentials("opencode");
+  if (signIn?.type === "oauth") {
+    const orgID = str(signIn.metadata?.orgID);
+    return { Authorization: `Bearer ${signIn.access}`, ...(orgID ? { "x-org-id": orgID } : {}) };
+  }
+  const goKey = await credentials(id);
+  if (goKey?.type === "key" && goKey.key) return { Authorization: `Bearer ${goKey.key}` };
+  return undefined;
+}
+
 async function load(credentials: Credentials): Promise<ProviderUsage> {
-  const credential = await credentials(id);
-  if (credential?.type !== "key" || !credential.key) return note("no auth", "warn");
+  const auth = await authHeaders(credentials);
+  if (!auth) return note("no auth", "warn");
 
   let response: Response;
   try {
     response = await fetch("https://opencode.ai/zen/go/v1/usage", {
       headers: {
-        Authorization: `Bearer ${credential.key}`,
+        ...auth,
         Accept: "application/json",
       },
       redirect: "error",
@@ -46,7 +58,7 @@ async function load(credentials: Credentials): Promise<ProviderUsage> {
     return note("request failed");
   }
 
-  if (response.status === 401) return note("invalid key");
+  if (response.status === 401) return note("invalid auth");
   if (response.status === 429) return note("429");
   if (!response.ok) return note(`HTTP ${response.status}`);
 
