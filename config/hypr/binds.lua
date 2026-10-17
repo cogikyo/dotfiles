@@ -52,12 +52,10 @@ end
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
-keyboard(split, function()
-	alt("A", "Editor",  "hyprd three-body editor")
-	alt("C", "Agents",  "hyprd three-body agents")
-	alt("R", "Browser", "hyprd three-body browser")
-	alt("X", "Dismiss", "dunstctl close")
-end)
+alt("A", "Editor",  "hyprd three-body editor")
+alt("C", "Agents",  "hyprd three-body agents")
+alt("R", "Browser", "hyprd three-body browser")
+alt("X", "Dismiss", "dunstctl close")
 
 -- ├┤ tabs ├───────────────────────────────────────────────────────────────────────┤
 keyboard(split, function()
@@ -127,11 +125,7 @@ hl.gesture({ fingers = 3, direction = "right", mods = "SUPER", action = swipe(-1
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-local launcher = "pkill -x rofi || rofi -show drun"
-
-keyboard(split, function()
-	super("P", "App Launcher", launcher)
-end)
+super("P",     "App Launcher",       "pkill -x rofi || rofi -show drun")
 super("Space", "Drop-down terminal", hl.dsp.workspace.toggle_special("dropdown"))
 
 local function keymap()
@@ -289,7 +283,7 @@ keyboard(svalboard, function()
 end)
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
--- │ laptop                                                                        │
+-- │ laptop qwerty                                                                 │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 keyboard(laptop, function()
@@ -306,16 +300,10 @@ keyboard(laptop, function()
 	super("U", "Tab 2", "hyprd tab 2")
 	super("I", "Tab 3", "hyprd tab 3")
 	super("O", "Tab 4", "hyprd tab 4")
-	super("P", "Tab 5", "hyprd tab 5")
 
 	super("SHIFT + Y", "Toggle tab group 1", "hyprd tab 1 group")
 	super("SHIFT + U", "Toggle tab group 2", "hyprd tab 2 group")
 	super("SHIFT + I", "Toggle tab group 3", "hyprd tab 3 group")
-
-	super("C", "Editor",  "hyprd three-body editor")
-	super("A", "Agents",  "hyprd three-body agents")
-	super("B", "Browser", "hyprd three-body browser")
-	super("N", "Dismiss", "dunstctl close")
 
 	super("H",         "Focus left",        "hyprd cycle left")
 	super("L",         "Focus right",       "hyprd cycle right")
@@ -330,8 +318,7 @@ keyboard(laptop, function()
 	super("SHIFT + X", "Force kill window",  "hyprctl kill")
 	super("SHIFT + F", "Toggle full screen", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 
-	super("D",         "App Launcher",            launcher)
-	super("Tab",       "Layout Launcher",         "hyprd picker open")
+	super("SHIFT + P", "Layout Launcher",         "hyprd picker open")
 	super("slash",     "Keymap viewer",           keymap)
 	super("SHIFT + S", "Screenshot to clipboard", "hyprd screenshot")
 	super("SHIFT + A", "Screenshot + annotate",   "hyprd screenshot annotate")
