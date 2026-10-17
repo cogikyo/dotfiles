@@ -65,6 +65,7 @@
   ],
   "session": {
     "verbosity": "low",
-    "thinking": "hide"
+    "thinking": "hide",
+    "sidebar": "auto"
   }
 }
