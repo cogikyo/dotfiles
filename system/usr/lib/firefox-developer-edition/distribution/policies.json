@@ -1,0 +1,13 @@
+{
+  "policies": {
+    "3rdparty": {
+      "Extensions": {
+        "newtaboverride@agenedia.com": {
+          "type": "custom_url",
+          "url": "http://localhost:42069",
+          "focus_website": true
+        }
+      }
+    }
+  }
+}

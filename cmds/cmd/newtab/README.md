@@ -24,9 +24,8 @@ Port, static directory, and history limit are constants in `main.go`.
 
 Set Firefox to use it:
 
-1. `about:config` → `browser.newtabpage.enabled` = `false`
-2. Install [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/)
-3. Set custom URL to `http://localhost:42069`
+- `dctl setup firefox` sets the new-tab preference; `dctl setup system` sets the URL and search focus after a Firefox restart.
+- Install [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/) or restore it through Firefox Sync.
 
 ## Install
 
