@@ -48,8 +48,6 @@ sessions:
       class: chromium
       browser: type
 
-    tableplus:
-      command: tableplus
     inkscape:
       command: inkscape
     obs:
