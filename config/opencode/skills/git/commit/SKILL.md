@@ -87,25 +87,24 @@ Use `verb(scope/context): short summary`.
 - Avoid vague `update`.
 - Use `improve` or `adjust` only when a more precise verb does not fit.
 
-| Verb       | Use                                                           |
-| ---------- | ------------------------------------------------------------- |
-| `feat`     | Major new functionality or an entirely new feature.           |
-| `add`      | A new file, option, component, or small addition.             |
-| `extend`   | An existing feature gains a capability.                       |
-| `improve`  | A general quality improvement lacks a more precise verb.      |
-| `adjust`   | A small behavior, permission, ordering, or threshold changes. |
-| `edit`     | Static content or values change.                              |
-| `fix`      | A defect is corrected.                                        |
-| `ui`       | Visual presentation, layout, styling, or components change.   |
-| `ux`       | User flow, interaction, copy, affordance, or feel changes.    |
-| `dx`       | Developer workflow, tooling, ergonomics, or clarity changes.  |
-| `refactor` | Internal structure changes while behavior stays the same.     |
-| `reorg`    | Files, directories, modules, or ownership move.               |
-| `style`    | Formatting or whitespace changes only.                        |
-| `docs`     | Human-facing documentation changes.                           |
-| `test`     | Tests or test artifacts change.                               |
-| `chore`    | Build, dependency, or configuration maintenance changes.      |
-| `ci`       | CI or deployment automation changes.                          |
+| Verb      | Use                                                           |
+| --------- | ------------------------------------------------------------- |
+| `feat`    | Major new functionality or an entirely new feature.           |
+| `add`     | A new file, option, component, or small addition.             |
+| `extend`  | An existing feature gains a capability.                       |
+| `improve` | A general quality improvement lacks a more precise verb.      |
+| `adjust`  | A small behavior, permission, ordering, or threshold changes. |
+| `edit`    | Static content or values change.                              |
+| `fix`     | A defect is corrected.                                        |
+| `ui`      | Visual presentation, layout, styling, or components change.   |
+| `ux`      | User flow, interaction, copy, affordance, or feel changes.    |
+| `dx`      | Developer workflow, tooling, ergonomics, or clarity changes.  |
+| `reorg`   | Code or file organization changes; behavior stays the same.   |
+| `style`   | Formatting or whitespace changes only.                        |
+| `docs`    | Human-facing documentation changes.                           |
+| `test`    | Tests or test artifacts change.                               |
+| `chore`   | Build, dependency, or configuration maintenance changes.      |
+| `ci`      | CI or deployment automation changes.                          |
 
 ### Shape
 
