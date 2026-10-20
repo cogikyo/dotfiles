@@ -177,9 +177,9 @@ func (e *EventLoop) handleEvent(line string) {
 		e.state.UnlockLayout()
 
 	case "activespecial":
-		if name, _, _ := strings.Cut(data, ","); name == windows.ShadowWorkspace {
+		if name, _, _ := strings.Cut(data, ","); name == windows.ShadowWorkspace || wm.IsMonoWorkspace(name) {
 			e.state.LockLayout()
-			e.closeShadow()
+			e.closeSpecial(name)
 			e.state.UnlockLayout()
 		}
 
@@ -278,30 +278,34 @@ func (e *EventLoop) resetAccent() {
 	}
 }
 
-// closeShadow keeps the shadow workspace from ever being on screen.
-//
-// Focusing a parked window makes Hyprland open its special workspace over the current one, so the window that took focus is shown in its own workspace instead.
-func (e *EventLoop) closeShadow() {
+// closeSpecial closes a parking overlay and shows its focused window at home.
+// A focus request can open the special workspace before this event is handled.
+func (e *EventLoop) closeSpecial(name string) {
 	active, err := e.hypr.ActiveWindow()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd shadow: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hyprd %s: %v\n", name, err)
 		return
 	}
 	monitors, err := e.hypr.Monitors()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd shadow: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hyprd %s: %v\n", name, err)
 		return
 	}
-	if slices.ContainsFunc(monitors, func(m hypr.Monitor) bool { return m.Focused && m.SpecialWS.Name == windows.ShadowWorkspace }) {
-		if err := e.hypr.ToggleSpecialWorkspace(strings.TrimPrefix(windows.ShadowWorkspace, "special:")); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd shadow: close: %v\n", err)
+	if slices.ContainsFunc(monitors, func(m hypr.Monitor) bool { return m.Focused && m.SpecialWS.Name == name }) {
+		if err := e.hypr.ToggleSpecialWorkspace(strings.TrimPrefix(name, "special:")); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd %s: close: %v\n", name, err)
 		}
 	}
-	if active == nil || active.Workspace.Name != windows.ShadowWorkspace {
+	if active == nil || active.Workspace.Name != name {
 		return
 	}
-	if err := wm.NewThreeBody(e.hypr, e.state).Show(active.Address, 0); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd shadow: show %s: %v\n", active.Address, err)
+	if name == windows.ShadowWorkspace {
+		err = wm.NewThreeBody(e.hypr, e.state).Show(active.Address, 0)
+	} else {
+		_, err = wm.NewMonocle(e.hypr, e.state).Show(active.Address)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd %s: show %s: %v\n", name, active.Address, err)
 	}
 }
 
@@ -382,17 +386,9 @@ func hexAddress(addr string) string {
 	return "0x" + addr
 }
 
-// handleMonocleClose restores displaced windows when the focused monocle window closes.
 func (e *EventLoop) handleMonocleClose(addr string) {
-	for ws, ms := range e.state.AllMonocle() {
-		if ms.Focused != addr {
-			continue
-		}
-		for _, mw := range ms.Windows {
-			e.hypr.MoveWindowToWorkspace(mw.Address, strconv.Itoa(mw.OriginWS), false)
-		}
-		e.state.ClearMonocle(ws)
-		return
+	if err := wm.NewMonocle(e.hypr, e.state).Closed(addr); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd monocle: %v\n", err)
 	}
 }
 

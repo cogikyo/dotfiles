@@ -150,7 +150,7 @@ func (d *Daemon) handleCommand(command string) string {
 	arg = strings.TrimSpace(arg)
 
 	switch cmd {
-	case "split", "hide", "float", "swap", "ws", "focus", "edit", "three-body", "shadow":
+	case "split", "hide", "float", "swap", "cycle", "ws", "focus", "edit", "three-body", "shadow":
 		d.state.LockLayout()
 		defer d.state.UnlockLayout()
 	}
@@ -188,6 +188,14 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "float":
+		monoResult, monoErr := wm.NewMonocle(d.hypr, d.state).DeactivateIfActive()
+		if monoErr != nil {
+			return fmt.Sprintf("error: %v", monoErr)
+		}
+		if monoResult != "" {
+			d.notifyWorkspace()
+			return monoResult
+		}
 		float := wm.NewFloat(d.hypr, d.state)
 		result, err := float.Execute()
 		if err != nil {
@@ -195,9 +203,13 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "swap":
-		monocle := wm.NewMonocle(d.hypr, d.state)
-		if _, err := monocle.DeactivateIfActive(); err != nil {
-			return fmt.Sprintf("error: %v", err)
+		monoResult, monoErr := wm.NewMonocle(d.hypr, d.state).Swap()
+		if monoErr != nil {
+			return fmt.Sprintf("error: %v", monoErr)
+		}
+		if monoResult != "" {
+			d.notifyWorkspace()
+			return monoResult
 		}
 		tb := wm.NewThreeBody(d.hypr, d.state)
 		tbResult, tbErr := tb.SwapMaster()
@@ -213,6 +225,28 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "cycle":
+		step := 0
+		switch arg {
+		case "left":
+			step = -1
+		case "right":
+			step = 1
+		default:
+			return "error: cycle direction must be left or right"
+		}
+		result, err := wm.NewMonocle(d.hypr, d.state).Cycle(step)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		if result != "" {
+			d.notifyWorkspace()
+			return result
+		}
+		if err := d.hypr.FocusDirection(arg); err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return "focus " + arg
 	case "ws":
 		if arg == "" {
 			return "error: workspace target required"
@@ -339,8 +373,13 @@ func (d *Daemon) handleShadow(arg string) string {
 
 	switch strings.TrimSpace(arg) {
 	case "":
-		if _, err := wm.NewMonocle(d.hypr, d.state).DeactivateIfActive(); err != nil {
+		monoResult, err := wm.NewMonocle(d.hypr, d.state).Shadow()
+		if err != nil {
 			return fmt.Sprintf("error: %v", err)
+		}
+		if monoResult != "" {
+			d.notifyWorkspace()
+			return monoResult
 		}
 		result, err := wm.NewThreeBody(d.hypr, d.state).Toggle()
 		if err != nil {
@@ -404,6 +443,14 @@ func (d *Daemon) handleThreeBody(arg string) string {
 		}
 	}
 	monocle := wm.NewMonocle(d.hypr, d.state)
+	monoResult, err := monocle.Focus(name)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	if monoResult != "" {
+		d.notifyWorkspace()
+		return monoResult
+	}
 	if _, err := monocle.DeactivateIfActive(); err != nil {
 		return fmt.Sprintf("error: %v", err)
 	}

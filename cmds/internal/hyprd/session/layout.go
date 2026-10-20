@@ -280,6 +280,7 @@ func (l *Layout) applyMonocle(wsID int) error {
 	windows.CenterCursor(l.hypr)
 
 	l.state.SetMonocle(wsID, &state.MonocleState{
+		Order:   []string{active.Address},
 		Focused: active.Address,
 		Master:  active.Address,
 	})

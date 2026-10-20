@@ -3,6 +3,7 @@ package state
 
 import (
 	"encoding/json"
+	"maps"
 	"slices"
 	"sync"
 	"time"
@@ -209,6 +210,7 @@ func (s *State) Restore(data []byte) error {
 		s.ProjectPaths = snap.ProjectPaths
 	}
 	if snap.Monocle != nil {
+		maps.DeleteFunc(snap.Monocle, func(_ int, ms *MonocleState) bool { return ms == nil || !ms.Valid() })
 		s.Monocle = snap.Monocle
 	}
 	if snap.SplitMarks != nil {

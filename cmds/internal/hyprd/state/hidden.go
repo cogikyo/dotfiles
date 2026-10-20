@@ -1,5 +1,7 @@
 package state
 
+import "slices"
+
 // HiddenState records a window stashed on the special workspace, with enough context to restore its layout position.
 type HiddenState struct {
 	Address    string `json:"address"`
@@ -19,17 +21,45 @@ func (t *ThreeBodyState) Has(address string) bool {
 	return t != nil && address != "" && (t.Master == address || t.Active == address || t.Shadow == address)
 }
 
-type MonocleWindow struct {
-	Address  string `json:"address"`
-	OriginWS int    `json:"origin_ws"`
-}
-
-// MonocleState holds the per-workspace monocle snapshot, optionally preserving a three-body layout for restore on exit.
+// MonocleState tracks entry order and mutable roles for restore on exit.
 type MonocleState struct {
+	Order          []string        `json:"order"` // Entry-time cycle order.
 	Focused        string          `json:"focused"`
 	Master         string          `json:"master"`
-	Windows        []MonocleWindow `json:"windows"`
 	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"`
+}
+
+// Valid reports whether the zoomed window is in the cycle order.
+func (ms MonocleState) Valid() bool {
+	return slices.Contains(ms.Order, ms.Focused)
+}
+
+// Parked checks recorded membership, not the window's live workspace.
+func (ms MonocleState) Parked(address string) bool {
+	return address != ms.Focused && slices.Contains(ms.Order, address)
+}
+
+// Drop returns state without address, advancing focus in cycle order if needed.
+// Losing a three-body member discards the saved three-body roles.
+func (ms MonocleState) Drop(address string) MonocleState {
+	i := slices.Index(ms.Order, address)
+	if i < 0 {
+		return ms
+	}
+	ms.Order = slices.Delete(slices.Clone(ms.Order), i, i+1)
+	if len(ms.Order) == 0 {
+		return MonocleState{}
+	}
+	if ms.Focused == address {
+		ms.Focused = ms.Order[i%len(ms.Order)]
+	}
+	if ms.Master == address {
+		ms.Master = ms.Order[0]
+	}
+	if ms.SavedThreeBody.Has(address) {
+		ms.SavedThreeBody = nil
+	}
+	return ms
 }
 
 // GetHidden returns a deep copy of the hidden-window map.

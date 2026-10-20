@@ -65,13 +65,14 @@ Use a scratch build for build-only checks; `hyprd rebuild` changes the running d
 ### Window management
 
 ```bash
-hyprd monocle                # float focused window in place and park tiled siblings
+hyprd monocle                # toggle zoom and park the other layout members
 hyprd float                  # toggle floating, centered at monocle size
 hyprd split wide             # wide from default, mobile from wide, otherwise back to default
 hyprd split narrow           # narrow from default, otherwise back to default
 hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions
+hyprd cycle left|right       # cycle monocle windows, otherwise focus left/right
 hyprd ws <n>                 # switch workspace with its transition animation
 hyprd ws up|down             # move active window between workspaces 1..6, skipping music (6)
 hyprd focus <class> [title]  # focus window by class, unhide if needed
@@ -82,9 +83,11 @@ hyprd bg static|video        # save and apply the wallpaper mode
 hyprd saves the mode in `$XDG_STATE_HOME/hyprd/bg` (default `~/.local/state/hyprd/bg`); a missing file means video.
 Init and lock release apply the saved mode.
 
-Monocle keeps the focused window on its workspace and parks the other tiled windows on `special:mono<n>`.
+Monocle zooms the focused tiled window and parks its peers, including any shadow, as floats at the same size on `special:mono<n>`.
 Its size uses `windows.monocle` fractions of the focused monitor's usable area, capped by the active outer gaps.
-Run it again to restore the parked windows.
+`hyprd swap` and `hyprd shadow` change roles without leaving monocle; `hyprd three-body <name>` and notification focus zoom an existing monocle member in place.
+The left/right focus keys (`hyprd cycle left|right`) cycle through the entry order without changing roles.
+Run monocle again to restore the tiled layout with the current master/shadow roles.
 
 ### Three-body & shadow
 
@@ -100,7 +103,7 @@ Each workspace has a master, one visible slave, and at most one shadow parked on
 The shadow floats at its workspace's slave size, so a toggle or `hyprd swap` trades slots without resizing the app.
 A third tiled window opening on workspaces 1–5 parks the previous slave as the shadow; further windows tile normally.
 `special:shadow` is never shown.
-Focusing a parked window swaps it into its own workspace's slave slot instead, and an unowned one tiles on the target or active workspace.
+Outside monocle, focusing a parked window swaps it into its own workspace's slave slot instead, and an unowned one tiles on the target or active workspace.
 
 ### Sessions & layouts
 

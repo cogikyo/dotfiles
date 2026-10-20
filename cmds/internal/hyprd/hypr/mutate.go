@@ -151,6 +151,65 @@ func (c *Client) SwapSlot(incoming, outgoing string) error {
 	))
 }
 
+// Rezoom swaps two monocle floats and focuses incoming at unchanged geometry.
+// The zero relative resize wakes incoming as in [Client.SwapSlot].
+func (c *Client) Rezoom(incoming, outgoing string) error {
+	w := luaQuote(windowAddress(incoming))
+	return c.eval("Rezoom", fmt.Sprintf(
+		`if hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })).ok then hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s })); hl.dispatch(hl.dsp.focus({ window = %s })) end`,
+		w, luaQuote(windowAddress(outgoing)), w, w,
+	))
+}
+
+// Zoom floats active and parked at the same monocle size and offset.
+// Only parked windows move to workspace; active keeps its workspace.
+func (c *Client) Zoom(active string, parked []Window, workspace string, size, offset [2]int) error {
+	var b strings.Builder
+	box := func(w string) {
+		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.center({ window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, relative = true, window = %s })); `,
+			size[0], size[1], w, w, offset[0], offset[1], w)
+	}
+	a := luaQuote(windowAddress(active))
+	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); `, a)
+	box(a)
+	for _, p := range parked {
+		w := luaQuote(windowAddress(p.Address))
+		if !p.Floating {
+			fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s })); `,
+				w, p.Size[0], p.Size[1], w, p.At[0], p.At[1], w)
+		}
+		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); `, luaQuote(workspace), w)
+		box(w)
+	}
+	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, a)
+	return c.eval("Zoom", b.String())
+}
+
+// Unzoom moves each supplied address to workspace and tiles it in order, then focuses zoomed.
+func (c *Client) Unzoom(workspace, zoomed string, tile []string) error {
+	var b strings.Builder
+	for _, addr := range tile {
+		w := luaQuote(windowAddress(addr))
+		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.float({ action = "disable", window = %s })); `, luaQuote(workspace), w, w)
+	}
+	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, luaQuote(windowAddress(zoomed)))
+	return c.eval("Unzoom", b.String())
+}
+
+// Present brings a parked float to workspace without changing its geometry.
+func (c *Client) Present(address, workspace string) error {
+	w := luaQuote(windowAddress(address))
+	return c.eval("Present", fmt.Sprintf(
+		`hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s }))`,
+		luaQuote(workspace), w, w,
+	))
+}
+
+// FocusDirection delegates directional focus to Hyprland without monocle handling.
+func (c *Client) FocusDirection(dir string) error {
+	return c.eval("FocusDirection", fmt.Sprintf("hl.dispatch(hl.dsp.focus({ direction = %s }))", luaQuote(dir)))
+}
+
 // ResizeWindowExact resizes the addressed window to exact pixel size w×h.
 func (c *Client) ResizeWindowExact(address string, w, h int) error {
 	return c.eval("ResizeWindowExact", fmt.Sprintf(

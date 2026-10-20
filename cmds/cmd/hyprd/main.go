@@ -45,6 +45,8 @@ func main() {
 		cmdFloat()
 	case "swap":
 		cmdSwap()
+	case "cycle":
+		cmdCycle()
 	case "ws":
 		cmdWS()
 	case "focus":
@@ -224,6 +226,7 @@ func cmdShare() { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery() { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()    { sendCommand("bg " + requireArg("usage: hyprd bg {static|video}")) }
 func cmdWS()    { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
+func cmdCycle() { sendCommand("cycle " + requireArg("usage: hyprd cycle <left|right>")) }
 func cmdEdit() {
 	_ = requireArg("usage: hyprd edit <file>")
 	sendCommand("edit " + strings.Join(os.Args[2:], " "))
@@ -403,6 +406,7 @@ Window commands:
   hyprd monocle          Toggle monocle (isolate focused window)
   hyprd float            Toggle floating (centered at monocle size)
   hyprd swap             Toggle swap between master and slave
+  hyprd cycle left|right Cycle monocle windows, otherwise focus left/right
   hyprd split wide       Wide from default, mobile from wide, otherwise back to default
   hyprd split narrow     Narrow from default, otherwise back to default
   hyprd split default    Set default split ratio

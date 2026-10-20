@@ -62,9 +62,13 @@ func ignoreBodyOnWorkspace(name string, wsID int) bool {
 
 // Show focuses a window without ever exposing the shadow workspace.
 //
+// A monocle member is zoomed in place without leaving monocle.
 // A parked three-body member swaps into its own workspace's slave slot.
 // A parked orphan moves to home, or to the active workspace when home is 0, where it tiles as a slave, or as master on an empty workspace.
 func (tb *ThreeBody) Show(address string, home int) error {
+	if result, err := NewMonocle(tb.hypr, tb.state).Show(address); err != nil || result != "" {
+		return err
+	}
 	clients, err := tb.hypr.Clients()
 	if err != nil {
 		return err

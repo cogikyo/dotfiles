@@ -2,7 +2,8 @@ package state
 
 import "slices"
 
-// GetMonocle returns a deep copy of the workspace's monocle state, or nil if inactive.
+// GetMonocle copies the workspace's monocle state, or returns nil if inactive.
+// Order is cloned; SavedThreeBody remains shared.
 func (s *State) GetMonocle(ws int) *MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -11,7 +12,7 @@ func (s *State) GetMonocle(ws int) *MonocleState {
 		return nil
 	}
 	copied := *ms
-	copied.Windows = slices.Clone(ms.Windows)
+	copied.Order = slices.Clone(ms.Order)
 	return &copied
 }
 
@@ -27,14 +28,15 @@ func (s *State) ClearMonocle(ws int) {
 	delete(s.Monocle, ws)
 }
 
-// AllMonocle returns a deep copy of every active monocle state keyed by workspace.
+// AllMonocle copies every active monocle state, keyed by workspace.
+// Each Order is cloned; SavedThreeBody pointers remain shared.
 func (s *State) AllMonocle() map[int]*MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make(map[int]*MonocleState, len(s.Monocle))
 	for k, v := range s.Monocle {
 		copied := *v
-		copied.Windows = slices.Clone(v.Windows)
+		copied.Order = slices.Clone(v.Order)
 		out[k] = &copied
 	}
 	return out
@@ -63,15 +65,15 @@ func (s *State) ClearWindowState(addr string) *ThreeBodyState {
 	}
 
 	for ws, ms := range s.Monocle {
-		for i, mw := range ms.Windows {
-			if mw.Address == addr {
-				ms.Windows = slices.Delete(ms.Windows, i, i+1)
-				if len(ms.Windows) == 0 {
-					delete(s.Monocle, ws)
-				}
-				return nil
-			}
+		if !slices.Contains(ms.Order, addr) {
+			continue
 		}
+		if next := ms.Drop(addr); next.Valid() {
+			s.Monocle[ws] = &next
+		} else {
+			delete(s.Monocle, ws)
+		}
+		return nil
 	}
 
 	return nil
