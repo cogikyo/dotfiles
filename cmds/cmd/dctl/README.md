@@ -278,6 +278,7 @@ Missing AUR and local base packages need manual installation.
   ```
 
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
+  - Its `extra-docker` items enable `docker.socket` and add you to the `docker` group, which takes effect at your next login.
   - Its `extra-bun` item runs `bun install --frozen-lockfile --ignore-scripts` when a locked OpenCode dependency for this platform is missing or has the wrong version.
   - Output: `~/.local/state/dctl/extra.log`; failures show up to eight recent lines with progress output and terminal codes removed.
   - An interrupted install shows `WARN` with `interrupted`, without a log tail.

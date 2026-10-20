@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os/user"
 	"slices"
 	"strings"
 
@@ -59,6 +60,30 @@ func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 			},
 			Fix: func(ctx context.Context) error {
 				return run.Run(ctx, "", "sudo", "-n", "systemctl", "enable", "docker.socket")
+			},
+		},
+		{
+			Name: "extra-docker-group",
+			Check: func(ctx context.Context) error {
+				u, err := user.Current()
+				if err != nil {
+					return err
+				}
+				groups, err := run.Output(ctx, "", "id", "-nG", u.Username)
+				if err != nil {
+					return fmt.Errorf("id -nG %s: %w", u.Username, err)
+				}
+				if slices.Contains(strings.Fields(groups), "docker") {
+					return nil
+				}
+				return fmt.Errorf("%s is not in the docker group", u.Username)
+			},
+			Fix: func(ctx context.Context) error {
+				u, err := user.Current()
+				if err != nil {
+					return err
+				}
+				return run.Run(ctx, "", "sudo", "-n", "usermod", "-aG", "docker", u.Username)
 			},
 		},
 		{
