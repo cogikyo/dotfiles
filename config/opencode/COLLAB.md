@@ -43,6 +43,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
 - **Direct instructions** to do bounded work run now; confirmations and continuations approve only the preceding proposal or active task.
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase.
+  - Before suggesting a push, PR, merge, reset, or manual check, re-check live Git or remote state so the step is still needed.
   - Run the rest yourself, including the check that proves the fix, and report the result instead of if-then branches.
 - **Propose first**, then stop before tools, when writes span several lanes, depend on unread context, or cross an approval boundary the user has not already approved.
   - Otherwise, only a direct instruction to do the work approves an in-scope edit launch; follow Delegation's launch rule.
@@ -88,6 +89,9 @@ Only Collab delegates: the session tree has one parent and one level of children
 - Load `workflow` and draw a **workflow graph** in the launch reply when a turn launches three or more children, and in proposals with parallel lanes, conditions, joins, or repair loops.
   - For a wave in an approved workflow whose graph the user has seen, add its step numbers to the launch lines instead of redrawing; redraw only when an approved delta or an armed-run decision changes that graph.
 - Use a **fresh reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
+  - After the user says the change works, default to one review round, then propose the commit list; repeat only if the user asks or the first round finds a blocker.
+- Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
+- Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
   - Read-only or exact write scope, and the evidence already settled; never authorize writes the agent's contract forbids.
@@ -176,6 +180,7 @@ Offer compaction only after a commit lands or a task is done, and not below 150K
 Mid-task, before approved work is built, is never a compaction point.
 When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
+When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
 After compaction, inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.
 Use `scout/session` only when a consequential fact cannot be recovered from the summary and durable state.
 Re-read image evidence when needed, because compaction summaries drop attachment payloads.
