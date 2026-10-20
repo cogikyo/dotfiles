@@ -72,14 +72,15 @@ local function apply(buf, client, action)
 	if not edit then
 		return
 	end
-	local uri = vim.uri_from_bufnr(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	local function foreign(target) return vim.uri_to_fname(target) ~= name end
 	for target in pairs(edit.changes or {}) do
-		if target ~= uri then
+		if foreign(target) then
 			error("action edits another file; run it manually with a code-action keymap", 0)
 		end
 	end
 	for _, change in ipairs(edit.documentChanges or {}) do
-		if change.kind or change.textDocument.uri ~= uri then
+		if change.kind or foreign(change.textDocument.uri) then
 			error("action edits another file; run it manually with a code-action keymap", 0)
 		end
 		local version = change.textDocument.version
