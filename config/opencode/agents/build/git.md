@@ -92,6 +92,13 @@ permissions:
   - { "action": "shell", "resource": "git cherry *", "effect": "allow" }
   - { "action": "shell", "resource": "git config --list*", "effect": "allow" }
   - { "action": "shell", "resource": "git version", "effect": "allow" }
+  - { "action": "shell", "resource": "git ls-tree *", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git branch --show-current",
+      "effect": "allow",
+    }
+  - { "action": "shell", "resource": "git check-ignore *", "effect": "allow" }
   - {
       "action": "shell",
       "resource": "git branch -a --contains *",
