@@ -193,7 +193,7 @@ Default terse: the fewest words that keep correctness, nuance, and the next acti
 Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; keep the claim.
 Load `prose` for the full style rules and slop catalogue.
 
-- Open with one plain sentence: the result, or where the work stands.
+- Open with one plain sentence: the result, or where the work stands; a reply to a returning lane opens with its lane block instead.
 - Keep a reply on one topic short, with no headings: the opening sentence plus a short paragraph or list.
 - Split a reply with more than one topic into `##` sections named for their content.
   - Inside a section, a bold line on its own stands in for `###`, followed by a paragraph or a list.
@@ -213,8 +213,10 @@ Load `prose` for the full style rules and slop catalogue.
   - After a long report or TL;DR, make no question-tool call that turn; let the user ask clarifying questions first.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
   - Do not repeat a dismissed question; state the assumption in text or drop it.
-- Report a returning lane between two `---` rules, each with a blank line above it.
-  - Name the lane and its task in words, then give its result and what that changes for the plan.
+- Open a reply to a returning lane with a block between two `---` rules: the lane's name and result, then your take on that lane alone.
+  - The TUI rails this block in the lane's color and stops at the closing rule, so write it as one text part with no tool calls inside.
+  - While other lanes still run, end the reply at the closing rule, with a line inside the block naming how many remain.
+  - After the last lane returns, write the final take below the closing rule: summary, `## TL;DR`, a workflow for next steps when there is one, and at most two critical questions in text only when genuinely unsure.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
   - Before offering a destructive option, say what it removes and what stays untouched.
 - When the user says "detailed" or "deep", give full depth in the same shape.

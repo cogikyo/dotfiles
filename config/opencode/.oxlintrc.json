@@ -18,7 +18,7 @@
   "ignorePatterns": ["node_modules/**", "plugins/anthropic/claude-auth/**"],
   "rules": {
     "no-unused-vars": ["warn", { "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }],
-    "no-underscore-dangle": ["warn", { "allow": ["_op", "_treeSitterClient"] }],
+    "no-underscore-dangle": ["warn", { "allow": ["_op", "_treeSitterClient", "_blockStates"] }],
     "typescript/consistent-return": "off",
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",

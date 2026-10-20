@@ -7,6 +7,7 @@ import {
   TextRenderable,
   Yoga,
   type CliRenderer,
+  type MarkdownRenderable,
   type Renderable,
 } from "@opentui/core";
 import type { Plugin } from "@opencode/plugin/tui";
@@ -18,7 +19,7 @@ type Scroll = Renderable & { readonly content: Renderable };
 type Undo = () => void;
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string };
-type Mark = { tone: RGBA; top: number };
+type Mark = { tone: RGBA; top: number; bottom: number };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; info: RGBA };
 
 const separator = " · ";
@@ -159,29 +160,63 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
   const rows = scroll.content.getChildren();
   // Retained rows preserve tone when the completion notice leaves the mounted window.
   let tone = spans.get(rows[0]);
+  let pending: Renderable[] = [];
+  const settle = (mark?: Mark) => {
+    for (const row of pending) rail(row, mark && { ...mark, bottom: 0 }, ledger, renderer);
+    pending = [];
+  };
+  const asked = (row: Renderable) =>
+    sessionID !== undefined && context.data.session.message.get(sessionID, row.id)?.type === "user";
   for (const row of rows) {
     const box = native(row).at(-1);
     const edge = box && boundary(box, scan);
-    if (edge) tone = edge.tone;
-    if (sessionID && context.data.session.message.get(sessionID, row.id)?.type === "user") tone = undefined;
-    rail(row, box && tone ? { tone, top: edge?.top ?? -1 } : undefined, ledger, renderer);
+    const user = asked(row);
+    if (edge || user) {
+      settle();
+      tone = user ? undefined : edge?.tone;
+    }
     spans.set(row, tone);
+    if (!box || !tone) {
+      rail(row, undefined, ledger, renderer);
+      continue;
+    }
+    if (edge) {
+      rail(row, { tone, top: 0, bottom: 0 }, ledger, renderer);
+      continue;
+    }
+    const report = closing(row, box);
+    if (!report) {
+      pending.push(row);
+      continue;
+    }
+    const mark = report.bottom === undefined ? undefined : { tone, top: -1, bottom: report.bottom };
+    settle(mark);
+    rail(row, mark, ledger, renderer);
+    tone = undefined;
   }
+  settle();
 }
 
-function boundary(box: Renderable, scan: Scan): { tone?: RGBA; top: number } | undefined {
+function boundary(box: Renderable, scan: Scan): { tone?: RGBA } | undefined {
   const [text, ...extra] = native(box);
   if (extra.length > 0 || !textual(text)) return;
   if (byline(text, scan.names, scan.ledger)) {
     rule(box, scan.width - Bun.stringWidth(read(text)), scan.ledger, scan.renderer);
-    return { top: -1 };
+    return {};
   }
   const done = completion(text);
   if (done) {
     notice(done, text, scan.ledger, scan.info);
-    return { tone: done.tone, top: 0 };
+    return { tone: done.tone };
   }
-  if (turned(text)) return { top: -1 };
+  if (turned(text)) return {};
+}
+
+function closing(row: Renderable, box: Renderable): { bottom?: number } | undefined {
+  const [body, ...extra] = native(box);
+  if (extra.length > 0 || !marked(body)) return;
+  const end = body._blockStates.filter((block) => block.token.type === "hr")[1]?.renderable;
+  return { bottom: end && row.height - (end.y - row.y) - 1 };
 }
 
 function byline(text: Text, names: Names, ledger: Ledger) {
@@ -268,6 +303,7 @@ function rail(row: Renderable, mark: Mark | undefined, ledger: Ledger, renderer:
   owned.add(bar);
   if (!bar.borderColor.equals(mark.tone)) bar.borderColor = mark.tone;
   if (bar.top !== mark.top) bar.top = mark.top;
+  if (bar.bottom !== mark.bottom) bar.bottom = mark.bottom;
   ledger.mount(row, bar);
 }
 
@@ -333,6 +369,10 @@ function read(node: Text) {
 
 function textual(node: Renderable | undefined): node is Text {
   return node !== undefined && "textNode" in node;
+}
+
+function marked(node: Renderable | undefined): node is MarkdownRenderable {
+  return node !== undefined && "_blockStates" in node;
 }
 
 function scroller(node: Renderable | null | undefined, depth: number): Scroll | undefined {
