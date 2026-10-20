@@ -52,7 +52,7 @@ Synthesize after the leaves return; report failed or incomplete leaves as eviden
 
 Deduplicate the triage and leaf findings, preserving distinct evidence and open questions.
 Promote findings that recur across independent sessions using epistemology's evidence bar.
-Batch the leaves' open questions to the user; discard single-session findings unless the user confirms the reusable lesson.
+Ask the leaves' open questions one or two at a time and hold the rest; discard single-session findings unless the user confirms the reusable lesson.
 State problems and their evidence without proposing fixes.
 End Find with a confirmed problem list.
 

@@ -47,7 +47,7 @@ In past mode, mark every finding **unconfirmed** and include the question the us
 ## Converse
 
 In live mode, first show a short list of candidate issues with minimal evidence.
-Batch a few focused questions about which corrections are general, what the user wants next time, and tool pain Collab missed.
+Ask one or two focused questions at a time about which corrections are general, what the user wants next time, and tool pain Collab missed; hold the rest.
 Keep the exchange short and let the user steer or add issues.
 Confirm the reusable lesson before proposing a change.
 Past mode returns findings and open questions to the parent without this exchange.

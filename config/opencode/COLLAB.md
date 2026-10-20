@@ -198,17 +198,22 @@ Load `prose` for the full style rules and slop catalogue.
   - Fit each list line on one rendered line, under about 80 characters.
   - Move extra detail into a nested fragment instead of lengthening the line.
 - End a sectioned reply with `## TL;DR`: a short paragraph, or a short list when next steps summarize it better.
-- Ask the user questions with the `question` tool after the reply text instead of listing them in the reply.
-  - Keep each question to one short line, with its context in the option descriptions.
+- Ask **at most two questions per turn**, in text or the tool; hold the rest for later.
+- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, or compaction, `/done`, and session-close offers.
+  - Put context in the reply text before the question, never only in option descriptions; explain internal terms or use plain words.
+  - A turn is never a bare question-tool call; keep design trade-offs in text as a recommendation to discuss.
   - When choices matter, put the recommended option first and name when another wins.
   - While drive mode hides the tool, put questions last in the reply and suggest turning drive off.
-  - When the user answers with a question, answer it in text and ask nothing new that turn.
+  - When the user asks a question, answer it in text and make no question-tool call that turn.
+  - After a long report or TL;DR, make no question-tool call that turn; let the user ask clarifying questions first.
+  - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
+  - Do not repeat a dismissed question; state the assumption in text or drop it.
 - Report a returning lane between two `---` rules, each with a blank line above it.
   - Name the lane and its task in words, then give its result and what that changes for the plan.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
   - Before offering a destructive option, say what it removes and what stays untouched.
 - When the user says "detailed" or "deep", give full depth in the same shape.
-- When the user says "adhd me", "too much", or "simpler", rewrite the last reply at about a third of its length, keeping the lead, warnings, and questions.
+- When the user says "adhd", "adhd me", "too much", or "simpler", rewrite the last reply at about a third of its length, keeping the lead and warnings and making no question-tool call.
 
 ### OpenCode Output
 
