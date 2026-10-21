@@ -75,7 +75,7 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 Pick a builder by how much the brief settles.
 
 - Route new or rewritten prose to `build/scribe` even inside a larger build; builders own the code.
-  - Pass `claude/claude-opus-5-5#high` for large first drafts, such as a new doc set; Sol stays the route for edits, cuts, and comment passes.
+  - Pass `claude/claude-opus-5-5#high` for READMEs and large docs where every word matters; Sol stays the route for quick patches, edits, and comment passes.
 - `build/git` suits one approved Git workflow too large for this context.
 - Builders add no comments; `build/scribe` owns comments.
 
@@ -114,7 +114,7 @@ Most models start at `high` for every role until evidence says otherwise.
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5#high` yourself.
 - Fast and cheap with plenty of usage, so use Sol alone for small checks and keep the Sol `review/*` and `verify/*` routes for routine work.
-- Best `build/scribe` for concise edits and comment passes, and best at browser QA and computer use.
+- Best `build/scribe` for quick patches, edits, and comment passes, and best at browser QA and computer use.
 - Gathers wide context well and makes sound architecture calls.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
