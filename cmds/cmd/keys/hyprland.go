@@ -37,7 +37,7 @@ func hyprland() App {
 		return app
 	}
 	for _, b := range raw {
-		if b.Submap != "" {
+		if b.Submap != "" || strings.HasPrefix(b.Description, "Corne: ") {
 			continue
 		}
 		var m mods

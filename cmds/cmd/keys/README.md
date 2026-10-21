@@ -8,7 +8,7 @@ Read-only Svalboard keymap viewer with app bind overlays.
 
 - Board definition: `share/keyboards/svalboard.json`, the Vial definition with matrix positions and custom keycodes.
 - Keymap: `share/keyboards/svalboard.vil`, the Vial export with layers, layout options, and tap dances.
-- Hyprland: live compositor binds from IPC, excluding submaps.
+- Hyprland: live compositor binds from IPC, excluding submaps and Corne binds.
 - kitty: its config loader, including defaults, `kitty.conf`, and included files.
 - Neovim: headless Neovim loading the user config; global normal-mode maps only, without buffer-local maps.
 - OpenCode: defaults and scopes from the installed binary, literal plugin `bind` values (including id-less inline binds) in `opencode/plugins/**/*.ts{,x}`, and command-ID overrides from the user config's `opencode/cli.json`.

@@ -1,12 +1,29 @@
 -- stylua: ignore start
 local device
 
+local svalboard = {
+	list = {
+		"svalboard-lightly",
+		"svalboard-lightly-keyboard",
+		"svalboard-lightly-system-control",
+		"svalboard-lightly-consumer-control",
+	},
+}
+local corne = { inclusive = false, list = svalboard.list }
+
+local function describe(description)
+	if device == corne then
+		return "Corne: " .. (description or "")
+	end
+	return description
+end
+
 local function bind(keys, description, action)
 	if type(action) == "string" then
 		action = hl.dsp.exec_cmd(action)
 	end
 
-	hl.bind(keys, action, { description = description, device = device })
+	hl.bind(keys, action, { description = describe(description), device = device })
 end
 
 local function super(keys, description, action)
@@ -22,16 +39,6 @@ local function keyboard(scope, binds)
 	binds()
 	device = nil
 end
-
-local svalboard = {
-	list = {
-		"svalboard-lightly",
-		"svalboard-lightly-keyboard",
-		"svalboard-lightly-system-control",
-		"svalboard-lightly-consumer-control",
-	},
-}
-local corne = { inclusive = false, list = svalboard.list }
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ hyprd focus control                                                           │
@@ -114,7 +121,7 @@ local function display(vcp, percent)
 end
 
 local function locked(keys, command)
-	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true, device = device })
+	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true, description = describe(), device = device })
 end
 
 locked("XF86AudioPlay",                  player .. " play-pause")
