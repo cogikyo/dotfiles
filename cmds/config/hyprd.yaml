@@ -176,6 +176,13 @@ tabs:
     prefix: "lp-"
     focus: frontend
     tabs:
+      - name: leadpier
+        title: "« 󰠳  »"
+        cwd: "~/LeadPier"
+        command: nvim
+        executables: [nvim]
+        actions:
+          nvim: {}
       - name: frontend
         title: "«   »"
         command: nvim
@@ -188,13 +195,6 @@ tabs:
         command: nvim
         executables: [nvim]
         cwd: "~/LeadPier/backend/services"
-        actions:
-          nvim: {}
-      - name: leadpier
-        title: "« 󰠳  »"
-        cwd: "~/LeadPier"
-        command: nvim
-        executables: [nvim]
         actions:
           nvim: {}
       - name: frontend-term
