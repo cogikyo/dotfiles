@@ -69,7 +69,7 @@ func (sc scope) mark(s Stage, r Report, marks map[string]mark, gate bool) row {
 	case s.Optional && !sc.named[s.Name] && r.State != Done:
 		w.mark, w.text = optMark, fmt.Sprintf("`dctl setup %s`", s.Name)
 		return w
-	case r.State == Done && !w.force:
+	case r.State == Done && (!w.force || s.Lock):
 		w.mark, w.text = okMark, s.About
 		return w
 	case r.State == LaterState && (!w.force || deferred(r)):
@@ -80,13 +80,17 @@ func (sc scope) mark(s Stage, r Report, marks map[string]mark, gate bool) row {
 		w.mark, w.text = waitMark, "after every required stage is OK"
 		return w
 	}
+	head, rest := s.About, ""
+	if s.Lock && r.State == Pending {
+		head, rest = headline(r, Pending)
+	}
 	for _, need := range s.Needs {
 		m, ok := marks[need]
 		if !ok || m == okMark {
 			continue
 		}
 		if m == todoMark {
-			w.mark, w.text = todoMark, about(s, "after "+need)
+			w.mark, w.text, w.more = todoMark, about(head, "after "+need), rest
 			return w
 		}
 		w.mark, w.text = waitMark, "after "+need
@@ -94,7 +98,7 @@ func (sc scope) mark(s Stage, r Report, marks map[string]mark, gate bool) row {
 	}
 	switch {
 	case r.State == Pending || w.force:
-		w.mark, w.text = todoMark, about(s, sc.pulled[s.Name])
+		w.mark, w.text, w.more = todoMark, about(head, sc.pulled[s.Name]), rest
 		if r.State == Unknown || r.State == Failed {
 			w.more, _ = headline(r, r.State)
 		}
@@ -108,14 +112,14 @@ func (sc scope) mark(s Stage, r Report, marks map[string]mark, gate bool) row {
 	return w
 }
 
-func about(s Stage, note string) string {
+func about(head, note string) string {
 	switch {
 	case note == "":
-		return s.About
-	case s.About == "":
+		return head
+	case head == "":
 		return note
 	}
-	return s.About + " · " + note
+	return head + " · " + note
 }
 
 func deferred(r Report) bool {

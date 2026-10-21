@@ -147,6 +147,7 @@ For non-lock stages, each need pulls in its own needs only when it is not OK, re
 - Omit stage names to show the full plan and apply pending work.
 - Name stages to redo them.
 - Use `--from <name>` to redo that stage and later ones; optional stages need names.
+- Lock stages whose checks pass show OK and are not redone, even when named or reached by `--from`.
 - Use `--yes` to accept the plan; rerun without it for lock work.
   - Without a terminal, the plan prompt requires `--yes`.
 - Use `--status` for a read-only check; pending, failed, or blocked work exits 1.
