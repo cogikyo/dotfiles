@@ -31,18 +31,16 @@ type Token struct {
 	Touch bool     `json:"touch"`
 }
 
-func (t Token) unattended() bool { return t.PIN && !t.Touch }
-
 type Header struct {
 	Device   string  `json:"device"`
 	Fido2    []Token `json:"fido2_tokens"`
 	Recovery bool    `json:"recovery"`
 }
 
-func (h Header) Unattended() int {
+func (h Header) Pinned() int {
 	n := 0
 	for _, t := range h.Fido2 {
-		if t.unattended() {
+		if t.PIN {
 			n++
 		}
 	}
@@ -209,12 +207,12 @@ func Required(root string) (int, error) {
 }
 
 func checkTokens(h Header, want int) error {
-	if n := h.Unattended(); n < want {
-		return fmt.Errorf("%d of %d PIN-required, no-touch FIDO2 tokens enrolled", n, want)
+	if n := h.Pinned(); n < want {
+		return fmt.Errorf("%d of %d PIN-required FIDO2 tokens enrolled", n, want)
 	}
 	for _, t := range h.Fido2 {
-		if !t.unattended() {
-			return setup.Manual("token %[1]s requires touch or does not require a PIN; insert only its YubiKey and enroll a replacement with sudo systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no %[3]s; then remove the old slots with sudo systemd-cryptenroll --wipe-slot=%[2]s %[3]s", t.ID, strings.Join(t.Slots, ","), h.Device)
+		if !t.PIN {
+			return setup.Manual("token %[1]s does not require a PIN; insert only its YubiKey and enroll a replacement with sudo systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no %[3]s; then remove the old slots with sudo systemd-cryptenroll --wipe-slot=%[2]s %[3]s", t.ID, strings.Join(t.Slots, ","), h.Device)
 		}
 	}
 	return nil
@@ -223,7 +221,7 @@ func checkTokens(h Header, want int) error {
 var errSkip = errors.New("skipped")
 
 func enrollTokens(ctx context.Context, u *ui.UI, run execx.Runner, h Header, ledger string, want int) error {
-	for n := h.Unattended(); n < want; n++ {
+	for n := h.Pinned(); n < want; n++ {
 		u.Section(fmt.Sprintf("YubiKey %d of %d for %s", n+1, want, h.Device), "insert a YubiKey not yet enrolled for this disk")
 		serial, err := insert(ctx, u, run, ledger)
 		if errors.Is(err, errSkip) {

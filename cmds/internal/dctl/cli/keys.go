@@ -17,7 +17,7 @@ import (
 
 type KeysCmd struct {
 	Enroll keysEnroll `cmd:"" help:"Enroll the inserted YubiKey: PINs, age identity, rekey, release-signing key."`
-	Luks   keysLuks   `cmd:"" help:"Enroll the machine profile's YubiKeys (PIN, no touch) and a recovery key in the root LUKS2 header (root)."`
+	Luks   keysLuks   `cmd:"" help:"Enroll the machine profile's PIN-required YubiKeys and a recovery key in the root LUKS2 header (root)."`
 	Remove keysRemove `cmd:"" help:"Remove the age recipient and release signer, then rekey; LUKS tokens remain."`
 	Status keysStatus `cmd:"" help:"Show enrolled and inserted YubiKeys and LUKS tokens."`
 	Totp   keysTotp   `cmd:"" name:"totp" help:"Seal a new boot TOTP secret, show it once, and check the authenticator code (root, Secure Boot enforced)."`
@@ -99,10 +99,10 @@ func (keysStatus) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	case r.Luks != nil:
 		want, err := keys.Required("/")
 		level := ui.OK
-		if err != nil || r.Luks.Unattended() < want || !r.Luks.Recovery {
+		if err != nil || r.Luks.Pinned() < want || !r.Luks.Recovery {
 			level = ui.Warn
 		}
-		u.Node(level, r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, %d with PIN and no touch, recovery key %s", len(r.Luks.Fido2), r.Luks.Unattended(), yes(r.Luks.Recovery)))
+		u.Node(level, r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, %d with PIN, recovery key %s", len(r.Luks.Fido2), r.Luks.Pinned(), yes(r.Luks.Recovery)))
 		if err != nil {
 			u.Node(ui.Warn, "machine", err.Error())
 		}

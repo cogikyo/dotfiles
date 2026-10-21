@@ -297,12 +297,12 @@ func TestLuksTokens(t *testing.T) {
 		state  setup.State
 		detail string
 	}{
-		"fresh":     {`{"9":` + paper + `}`, setup.Pending, "0 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
-		"one":       {`{"0":` + fmt.Sprintf(good, 1) + `,"9":` + paper + `}`, setup.Pending, "1 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
-		"touch":     {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + touch + `}`, setup.Pending, "1 of 2 PIN-required, no-touch FIDO2 tokens enrolled"},
+		"fresh":     {`{"9":` + paper + `}`, setup.Pending, "0 of 2 PIN-required FIDO2 tokens enrolled"},
+		"one":       {`{"0":` + fmt.Sprintf(good, 1) + `,"9":` + paper + `}`, setup.Pending, "1 of 2 PIN-required FIDO2 tokens enrolled"},
+		"touch":     {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + touch + `}`, setup.Done, ""},
 		"two":       {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `}`, setup.Done, ""},
-		"two+touch": {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + touch + `}`, setup.ManualState, "--wipe-slot=3 /dev/nvme0n1p2"},
-		"two+old":   {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + old + `}`, setup.ManualState, "--wipe-slot=3"},
+		"two+touch": {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + touch + `}`, setup.Done, ""},
+		"two+old":   {`{"0":` + fmt.Sprintf(good, 1) + `,"1":` + fmt.Sprintf(good, 2) + `,"2":` + old + `}`, setup.ManualState, "--wipe-slot=3 /dev/nvme0n1p2"},
 	} {
 		dump := `{"keyslots":{},"tokens":` + tc.tokens + `}`
 		out := func() map[string][]string {

@@ -697,7 +697,7 @@ Later failures do not undo earlier changes to the key or checkout.
 
 ### Enroll disk tokens and recovery
 
-Disk enrollment keeps the passphrase and adds the profile's 0–2 PIN-required, no-touch tokens.
+Disk enrollment keeps the passphrase and adds the profile's 0–2 PIN-required tokens, which also require touch when the key does.
 The recovery key is an independent disk-unlock method.
 With `yubikeys=0`, `luks` still requires confirmed paper recovery and permits Secure Boot and boot-TOTP setup.
 
@@ -746,7 +746,7 @@ Retain a tested passphrase or recovery key before deleting disk slots.
 For token unlock, insert the YubiKey before boot; unlock does not wait for a late insertion.
 Token errors fall back to the passphrase or recovery-key prompt.
 
-- Dctl-enrolled tokens ask once for **LUKS2 token PIN**, without touch.
+- Dctl-enrolled tokens ask once for **LUKS2 token PIN**, plus touch when the key requires it.
 - The `luks` stage removes legacy `fido2-device=auto` boot options to restore fallback.
 
 ## Porkbun DNS
@@ -857,7 +857,7 @@ The VM cannot prove hardware enrollment, boot-code stability, or recovery access
    ```
 
 4. Compare boot TOTP with the authenticator across two reboots.
-5. For each configured YubiKey, insert it before boot and check for one PIN prompt without touch.
+5. For each configured YubiKey, insert it before boot and check for one PIN prompt, plus touch when the key requires it.
 6. With all YubiKeys removed, test both passphrase and paper recovery unlock.
 7. Decrypt secrets with each configured age identity, then rehearse phrase recovery with all keys removed.
 8. Check network and Bluetooth devices:
