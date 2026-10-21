@@ -249,7 +249,7 @@ hyprd vpn list             # list NetworkManager VPN connections
 ```
 
 Configured VPN profile paths live in `cmds/config/hyprd.yaml` under `vpn.connections`.
-`hyprd vpn install` loads a complete staged profile into NetworkManager; an incomplete profile requires an existing connection.
+`hyprd vpn install` copies a complete staged profile to `/etc/NetworkManager/system-connections/<name>.nmconnection` as root-owned mode 600, loads it, and checks that NetworkManager knows its UUID; an incomplete profile requires an existing connection.
 It prompts for a missing VPN password or IPsec PSK, stores and verifies the secrets in NetworkManager, then deletes the staged copy after success.
 
 ### Query and subscribe

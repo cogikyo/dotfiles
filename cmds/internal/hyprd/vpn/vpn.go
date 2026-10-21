@@ -20,6 +20,8 @@ const (
 	nmSettingsPath = "/org/freedesktop/NetworkManager/Settings"
 	nmConnection   = "org.freedesktop.NetworkManager.Settings.Connection"
 	nmUpdateToDisk = 0x1
+
+	systemConnections = "/etc/NetworkManager/system-connections"
 )
 
 // VPN dispatches VPN subcommands against NetworkManager.
@@ -290,16 +292,35 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		return "", fmt.Errorf("connection already exists: %s", conn.Name)
 	}
 
+	system := filepath.Join(systemConnections, conn.Name+".nmconnection")
+	loaded := false
 	undo := func(err error) error {
-		if completeProfile && !exists {
-			return errors.Join(err, sudoNMCLI("connection", "delete", "id", conn.Name))
+		if !completeProfile || exists {
+			return err
 		}
-		return err
+		var deleteErr error
+		if loaded {
+			_, deleteErr = sudo("nmcli", "connection", "delete", "uuid", uuid)
+		}
+		_, removeErr := sudo("rm", "-f", system)
+		return errors.Join(err, deleteErr, removeErr)
 	}
 	if completeProfile {
-		if err := sudoNMCLI("connection", "load", conn.Profile); err != nil {
-			return "", err
+		if _, err := sudo("install", "-m", "600", "-o", "root", "-g", "root", conn.Profile, system); err != nil {
+			return "", undo(err)
 		}
+		out, err := sudo("nmcli", "connection", "load", system)
+		if err != nil {
+			return "", undo(err)
+		}
+		if _, err := nmcliOutput("-g", "connection.uuid", "connection", "show", "uuid", uuid); err != nil {
+			msg := strings.TrimSpace(out)
+			if msg == "" {
+				msg = err.Error()
+			}
+			return "", undo(fmt.Errorf("NetworkManager did not load %s as connection %s: %s (see journalctl -u NetworkManager)", system, uuid, msg))
+		}
+		loaded = true
 	}
 	if uuid == "" {
 		out, err := nmcliOutput("-g", "connection.uuid", "connection", "show", "id", conn.Name)
@@ -312,7 +333,7 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	var lines []string
 	lines = append(lines, fmt.Sprintf("vpn installed: %s from %s", conn.Name, conn.Profile))
 	if completeProfile {
-		lines = append(lines, "profile loaded")
+		lines = append(lines, "profile loaded from "+system)
 	} else {
 		lines = append(lines, "profile incomplete; using installed NetworkManager connection as base")
 	}
@@ -569,17 +590,17 @@ func runNMCLI(args ...string) error {
 	return nil
 }
 
-func sudoNMCLI(args ...string) error {
-	cmd := exec.Command("sudo", append([]string{"nmcli"}, args...)...)
+func sudo(args ...string) (string, error) {
+	cmd := exec.Command("sudo", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg == "" {
 			msg = err.Error()
 		}
-		return fmt.Errorf("sudo nmcli %s: %s", strings.Join(args, " "), msg)
+		return "", fmt.Errorf("sudo %s: %s", strings.Join(args, " "), msg)
 	}
-	return nil
+	return string(out), nil
 }
 
 func nmcliOutput(args ...string) (string, error) {
