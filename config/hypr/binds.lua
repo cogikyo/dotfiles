@@ -43,18 +43,16 @@ alt("C", "Agents",  "hyprd three-body agents")
 alt("R", "Browser", "hyprd three-body browser")
 alt("X", "Dismiss", "dunstctl close")
 
-super("Comma", "Split narrow", "hyprd split narrow")
+-- ├┤ tabs ├───────────────────────────────────────────────────────────────────────┤
+super("Y", "Tab 1", "hyprd tab 1")
+super("N", "Tab 2", "hyprd tab 2")
+super("I", "Tab 3", "hyprd tab 3")
+super("O", "Tab 4", "hyprd tab 4")
+super("L", "Tab 5", "hyprd tab 5")
 
--- ├┤ right window tabs ├──────────────────────────────────────────────────────────┤
-super("Y", "Right tab 1", "hyprd tab right:1")
-super("N", "Right tab 2", "hyprd tab right:2")
-super("I", "Right tab 3", "hyprd tab right:3")
-super("O", "Right tab 4", "hyprd tab right:4")
-super("L", "Right tab 5", "hyprd tab right:5")
-
-super("SHIFT + N", "Toggle right group 1", "hyprd tab right:1 group")
-super("SHIFT + I", "Toggle right group 2", "hyprd tab right:2 group")
-super("SHIFT + O", "Toggle right group 3", "hyprd tab right:3 group")
+super("SHIFT + N", "Toggle tab group 1", "hyprd tab 1 group")
+super("SHIFT + I", "Toggle tab group 2", "hyprd tab 2 group")
+super("SHIFT + O", "Toggle tab group 3", "hyprd tab 3 group")
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ window management                                                             │
@@ -149,8 +147,8 @@ super("Print", "Screenshot + annotate",   "hyprd screenshot annotate")
 -- │ lock                                                                          │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("Z",         "Lock screen",    "hyprd lock full")
-super("SHIFT + Z", "Wake displays", function()
+super("Q",         "Lock screen",    "hyprd lock full")
+super("SHIFT + Q", "Wake displays", function()
 	hl.dispatch(hl.dsp.dpms({ action = "off" }))
 	hl.timer(function()
 		hl.dispatch(hl.dsp.dpms({ action = "on" }))
@@ -195,12 +193,12 @@ end)
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 keyboard(svalboard, function()
-	super("B", "Workspace 1 (chat)",     "hyprd ws 1")
-	super("C", "Workspace 2 (misc)",     "hyprd ws 2")
-	super("D", "Workspace 3 (work)",     "hyprd ws 3")
-	super("H", "Workspace 4 (personal)", "hyprd ws 4")
-	super("M", "Workspace 5 (dotfiles)", "hyprd ws 5")
-	super("K", "Workspace 6 (music)",    "hyprd ws 6")
+	super("S", "Workspace 1 (chat)",     "hyprd ws 1")
+	super("E", "Workspace 2 (misc)",     "hyprd ws 2")
+	super("T", "Workspace 3 (work)",     "hyprd ws 3")
+	super("C", "Workspace 4 (personal)", "hyprd ws 4")
+	super("D", "Workspace 5 (dotfiles)", "hyprd ws 5")
+	super("G", "Workspace 6 (music)",    "hyprd ws 6")
 
 	super("equal",     "Focus right", "hyprd cycle right")
 	super("backslash", "Focus left",  "hyprd cycle left")
@@ -208,15 +206,10 @@ keyboard(svalboard, function()
 	super("slash",     "Focus right", "hyprd cycle right")
 
 	super("Backspace",     "Toggle shadow",  "hyprd shadow")
-	super("Period",        "Swap master",    "hyprd swap")
-	super("Return",        "Toggle monocle", "hyprd monocle")
-	super("SHIFT + Comma", "Split wide",     "hyprd split wide")
-
-	super("A", "Left tab 1", "hyprd tab left:1")
-	super("S", "Left tab 2", "hyprd tab left:2")
-	super("E", "Left tab 3", "hyprd tab left:3")
-	super("T", "Left tab 4", "hyprd tab left:4")
-	super("G", "Left tab 5", "hyprd tab left:5")
+	super("M",             "Swap master",    "hyprd swap")
+	super("B",             "Toggle monocle", "hyprd monocle")
+	super("K",             "Split narrow",   "hyprd split narrow")
+	super("U",             "Split wide",     "hyprd split wide")
 
 	for _, key in ipairs({ "A", "S", "E", "T", "G" }) do
 		bind("CTRL + SHIFT + " .. key, nil, function()
@@ -230,7 +223,7 @@ keyboard(svalboard, function()
 
 	super("SHIFT + X", "Force kill window", "hyprctl kill")
 	super("J",         "Layout Launcher",   "hyprd picker open")
-	super("U",         "Keymap viewer", function()
+	super("H",         "Keymap viewer", function()
 		for _, window in ipairs(hl.get_windows()) do
 			if window.class == "chrome-127.0.0.1__-Default" then
 				hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
@@ -259,6 +252,7 @@ keyboard(corne, function()
 	alt("Backspace",              "Toggle shadow",  "hyprd shadow")
 	alt("Z",                      "Swap master",    "hyprd swap")
 	alt("SHIFT + Z",              "Split wide",     "hyprd split wide")
+	super("Comma",                "Split narrow",   "hyprd split narrow")
 	bind("CTRL + SHIFT + Escape", "Toggle monocle", "hyprd monocle")
 
 	super("K", "Force kill window", "hyprctl kill")

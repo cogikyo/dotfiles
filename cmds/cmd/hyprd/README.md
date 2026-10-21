@@ -122,8 +122,8 @@ hyprd project <args>             # project path management
 
 ```bash
 hyprd edit <file>                # focus workspace nvim and open file
-hyprd tab <left|right>:<1..8>    # focus master (left) or top slave (right), select tab (Firefox skips closed groups)
-hyprd tab <left|right>:<n> group # open or close Firefox tab group n
+hyprd tab <1..8>                 # select tab in the focused window (Firefox skips closed groups)
+hyprd tab <1..8> group           # open or close Firefox tab group n in the focused window
 hyprd tabs init <profile> <pid>  # launch configured tabs and close the launcher tab
 hyprd tabs refresh <name> <pid>  # close and recreate the selected tab
 ```
