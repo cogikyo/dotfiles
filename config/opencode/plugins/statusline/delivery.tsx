@@ -2,7 +2,7 @@ import { usePlugin, type Plugin } from "@opencode/plugin/tui";
 import type { OptimizedBuffer, Renderable } from "@opentui/core";
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { colors } from "./palette.ts";
-import { cell, hook, locate, type Prompt } from "./prompt.ts";
+import { cell, locate, overlay, type Prompt } from "./prompt.ts";
 
 type Context = Plugin.Context;
 
@@ -45,7 +45,7 @@ export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }
     if (!prompt) return;
     setEditor(prompt.editor);
     onCleanup(
-      hook(prompt.row, (buffer) => {
+      overlay(context, prompt.row, (buffer) => {
         if (props.sessionID) tip(context, buffer, prompt.editor);
       }),
     );

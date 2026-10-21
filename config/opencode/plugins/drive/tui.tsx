@@ -4,7 +4,7 @@ import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { edge } from "../statusline/delivery.tsx";
 import { colors } from "../statusline/palette.ts";
-import { cell, hook, locate } from "../statusline/prompt.ts";
+import { cell, locate, overlay } from "../statusline/prompt.ts";
 import { api, type Entry } from "./rpc.ts";
 import { glyph, title } from "./title.ts";
 
@@ -182,7 +182,7 @@ function Mark(props: { armed: boolean }) {
     const prompt = host && locate(host);
     if (!prompt) return;
     onCleanup(
-      hook(prompt.row, (buffer) => {
+      overlay(context, prompt.row, (buffer) => {
         if (props.armed) stamp(buffer, prompt.editor);
       }),
     );

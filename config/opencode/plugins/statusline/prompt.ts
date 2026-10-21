@@ -1,8 +1,11 @@
+import type { Plugin } from "@opencode/plugin/tui";
 import type { OptimizedBuffer, RGBA, Renderable } from "@opentui/core";
 
 type Frame = Renderable & { readonly border: unknown; readonly borderColor: RGBA };
 type Draw = (this: Renderable, buffer: OptimizedBuffer, deltaTime: number) => void;
 type Editor = Renderable & { readonly plainText: string };
+
+const covers = new Set(["modal", "menu"]);
 
 export type Prompt = {
   readonly frame: Frame;
@@ -28,6 +31,22 @@ export function hook(node: Renderable, draw: (buffer: OptimizedBuffer) => void) 
   node.renderAfter = after;
   return () => {
     if (node.renderAfter === after) node.renderAfter = previous;
+  };
+}
+
+export function overlay(context: Plugin.Context, node: Renderable, draw: (buffer: OptimizedBuffer) => void) {
+  let painted = false;
+  const unhook = hook(node, () => {
+    painted = true;
+  });
+  const post = (buffer: OptimizedBuffer) => {
+    if (painted && !covers.has(context.keymap.mode.current())) draw(buffer);
+    painted = false;
+  };
+  context.renderer.addPostProcessFn(post);
+  return () => {
+    unhook();
+    context.renderer.removePostProcessFn(post);
   };
 }
 
