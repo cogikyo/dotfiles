@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -277,6 +278,50 @@ func tools(ctx context.Context, u *ui.UI, run execx.Runner) error {
 	}
 	if len(local) > 0 {
 		u.Info("skipped, no module checksum: %s", strings.Join(local, ", "))
+	}
+	return errors.Join(errs...)
+}
+
+func rust(ctx context.Context, u *ui.UI, run execx.Runner) error {
+	if _, err := exec.LookPath("rustup"); err != nil {
+		u.Info("skipped: rustup is not installed")
+		return nil
+	}
+	args := []string{"-q", "update"}
+	if _, err := run.Output(ctx, "", "rustup", "default"); err != nil {
+		args = []string{"-q", "default", "stable"}
+	}
+	if err := run.Run(ctx, "", "rustup", args...); err != nil {
+		return drawn(err)
+	}
+	list, err := run.Output(ctx, "", "cargo", "install", "--list")
+	if err != nil {
+		return err
+	}
+	var errs []error
+	var local []string
+	for l := range strings.Lines(list) {
+		if strings.HasPrefix(l, " ") {
+			continue
+		}
+		name, version, _ := strings.Cut(strings.TrimSpace(l), " ")
+		if strings.Contains(version, "(") {
+			local = append(local, name)
+			continue
+		}
+		err := u.Spin(ctx, "cargo install --locked "+name, func(ctx context.Context) error {
+			_, err := run.Output(ctx, "", "cargo", "install", "--locked", name)
+			return err
+		})
+		if errors.Is(err, ui.ErrCanceled) {
+			return err
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", name, err))
+		}
+	}
+	if len(local) > 0 {
+		u.Info("skipped, not from crates.io: %s", strings.Join(local, ", "))
 	}
 	return errors.Join(errs...)
 }

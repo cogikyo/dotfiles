@@ -444,7 +444,7 @@ Named steps omit that prompt and retain this order.
 5. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
 6. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
 7. `go`: update eligible module-release tools.
-8. `rust`: run `rustup update`, or skip if rustup is absent.
+8. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
 
 - `--all` or global `--yes` skips step/recipe prompts and passes `--noconfirm`.
   - It never installs or removes package-list drift.
@@ -466,6 +466,8 @@ Ewwd, newtab, and keys restart only when replaced.
   - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
 - **Go tools** need module-proxy checksum metadata; locally built tools are skipped.
   - Scans `GOBIN`, or the first GOPATH's `bin`; installs eligible tools at `@latest`.
+- **Cargo crates** from `cargo install --list` are reinstalled with `cargo install --locked`; path, git, and other-registry installs are skipped.
+  - Cargo skips a crate already at its latest version, but rebuilds one installed with custom features or profile using the defaults.
 
 ### Package reconciliation
 

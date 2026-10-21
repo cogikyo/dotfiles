@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
 
@@ -92,12 +91,9 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 		},
 		{
 			Name: "rust",
+			Plan: "rustup toolchains, then crates installed from crates.io",
 			Run: func(ctx context.Context) error {
-				if _, err := exec.LookPath("rustup"); err != nil {
-					u.Info("skipped: rustup is not installed")
-					return nil
-				}
-				return drawn(run.Run(ctx, "", "rustup", "update"))
+				return rust(ctx, u, run)
 			},
 		},
 	}
