@@ -14,7 +14,7 @@ export default Plugin.define({
   id: "code-blocks",
   setup(context) {
     const languages = scan();
-    const vagari = load();
+    const vagari = load(context.renderer.nativeScene);
     const parsers = languages.flatMap((language) => (language.parser ? [language.parser] : []));
     addDefaultParsers(parsers);
     const client = getTreeSitterClient();
@@ -34,6 +34,6 @@ export default Plugin.define({
       for (const name of [language.name, ...language.aliases]) renderers.set(fence(name), render);
     }
     for (const [name, render] of renderers) context.markdown.registerCodeBlockRenderer(name, render);
-    return () => vagari.destroy();
+    return () => context.renderer.idle().then(() => vagari.destroy());
   },
 });

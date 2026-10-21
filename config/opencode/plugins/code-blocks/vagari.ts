@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { RGBA, SyntaxStyle, type StyleDefinitionInput } from "@opentui/core";
+import { RGBA, SyntaxStyle, type NativeResourceOwner, type StyleDefinitionInput } from "@opentui/core";
 import { root } from "./parsers.ts";
 
 type Table = Record<string, StyleDefinitionInput>;
@@ -28,7 +28,7 @@ export function mix(color: string, alpha: number, background: RGBA): RGBA {
   return RGBA.fromInts(channel(r, br), channel(g, bg), channel(b, bb));
 }
 
-export function load(): Vagari {
+export function load(owner: NativeResourceOwner): Vagari {
   const data: File = JSON.parse(readFileSync(path.join(root, "vagari.json"), "utf8"));
   const styles = new Map<string, SyntaxStyle>();
   return {
@@ -37,7 +37,7 @@ export function load(): Vagari {
       const key = Object.hasOwn(data.languages, name) ? name : "";
       let style = styles.get(key);
       if (!style) {
-        style = SyntaxStyle.fromStyles({ default: data.default, ...data.base, ...data.languages[key] });
+        style = SyntaxStyle.fromStyles({ default: data.default, ...data.base, ...data.languages[key] }, owner);
         styles.set(key, style);
       }
       return style;
