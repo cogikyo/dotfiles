@@ -25,6 +25,7 @@ Port, static directory, and history limit are constants in `main.go`.
 Set Firefox to use it:
 
 - `dctl setup firefox` sets the new-tab preference; `dctl setup system` sets the URL and search focus after a Firefox restart.
+- `dctl update` also reapplies drifted items in both stages; restart Firefox afterward.
 - Install [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/) or restore it through Firefox Sync.
 
 ## Install

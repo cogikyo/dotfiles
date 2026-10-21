@@ -20,7 +20,7 @@ type Step struct {
 	Run  func(context.Context) error
 }
 
-func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []string) []Step {
+func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []string, setup func(context.Context) error) []Step {
 	noconfirm := func(args ...string) []string {
 		if all {
 			return append(args, "--noconfirm")
@@ -59,6 +59,18 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			Plan: "reconcile package lists and installed packages",
 			Run: func(ctx context.Context) error {
 				return packages.Reconcile(ctx, u, root.Packages(), run, all)
+			},
+		},
+		{
+			Name: "setup",
+			Plan: "reapply drifted system, home, and firefox setup stages",
+			Run: func(ctx context.Context) error {
+				err := setup(ctx)
+				if err == nil || errors.Is(err, ui.ErrCanceled) || ctx.Err() != nil {
+					return err
+				}
+				u.End(ui.Err, "%s", err)
+				return drawn(err)
 			},
 		},
 		{

@@ -28,6 +28,7 @@ type Request struct {
 	Names  []string
 	From   string
 	Status bool
+	Accept bool // Accept the plan, not the separate lock confirmation.
 }
 
 func lockQuestion() string {
@@ -77,16 +78,18 @@ func (f *Flow) Run(ctx context.Context, req Request) error {
 		if steps == 1 {
 			question = "Run 1 step?"
 		}
-		ok, err := u.Proceed(question)
-		if errors.Is(err, ui.ErrNoTTY) {
-			return fmt.Errorf("%w: pass --yes to accept the plan", err)
-		}
-		if err != nil {
-			return err
-		}
-		if !ok {
-			u.End(ui.Info, "nothing changed")
-			return nil
+		if !req.Accept {
+			ok, err := u.Proceed(question)
+			if errors.Is(err, ui.ErrNoTTY) {
+				return fmt.Errorf("%w: pass --yes to accept the plan", err)
+			}
+			if err != nil {
+				return err
+			}
+			if !ok {
+				u.End(ui.Info, "nothing changed")
+				return nil
+			}
 		}
 		u.End(ui.Info, "")
 	}
@@ -561,7 +564,7 @@ func (e *execution) summary(ctx context.Context, req Request) error {
 		rows = append(rows, w)
 	}
 	level, outcome, next := ui.OK, "complete", ""
-	if e.scope.full {
+	if e.scope.full && slices.ContainsFunc(e.flow.Stages, func(s Stage) bool { return s.Lock }) {
 		next = "Everything is set up and locked down."
 	}
 	switch {

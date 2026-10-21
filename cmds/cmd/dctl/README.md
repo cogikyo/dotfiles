@@ -417,7 +417,7 @@ These files and the machine profile are under `/etc/dctl/`.
 
 ## Update
 
-Update runs attended upgrades and rebuilds from the current checkout.
+Update runs attended upgrades, configuration checks, and rebuilds from the current checkout.
 Failed steps are reported; later steps continue and the summary gives a retry command.
 
 ```sh
@@ -440,17 +440,22 @@ Named steps omit that prompt and retain this order.
 1. `pacman`: upgrade official packages.
 2. `aur`: upgrade AUR packages, excluding local recipes.
 3. `packages`: reconcile installed packages with the lists.
-4. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
-5. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
-6. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
-7. `go`: update eligible module-release tools.
-8. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
+4. `setup`: reapply drifted `system`, `home`, and `firefox` setup stages.
+5. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
+6. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
+7. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
+8. `go`: update eligible module-release tools.
+9. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
 
-- `--all` or global `--yes` skips step/recipe prompts and passes `--noconfirm`.
+- `--all` or global `--yes` skips step/recipe prompts, accepts the setup plan, and passes `--noconfirm`.
   - It never installs or removes package-list drift.
   - Building uncommitted `cmds/` still needs `--dirty`.
 - `--only NAME,...` limits `cmd` to named commands or local recipes.
   - With no step names it selects `cmd`; explicit step names must include `cmd`.
+
+`setup` uses live checks and fixes only pending items, without pulling in other setup stages.
+It checks `system` as the user first and uses sudo when needed to check or reapply changed `system/` files, including Firefox policies.
+Restart Firefox after policy or profile configuration changes; update does not restart it.
 
 ### Command and tool rebuilds
 

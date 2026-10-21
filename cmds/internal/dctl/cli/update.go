@@ -12,6 +12,7 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/update"
 	"dotfiles/cmds/internal/ui"
 )
@@ -20,7 +21,7 @@ type UpdateCmd struct {
 	All   bool     `help:"Run every step without asking and pass --noconfirm to pacman, yay, and makepkg; never installs or removes drifted packages."`
 	Dirty bool     `help:"Build dotfiles commands from uncommitted cmds/ without asking."`
 	Only  []string `placeholder:"NAME" help:"Limit the cmd step to these dotfiles commands or packages/ recipes; implies cmd."`
-	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, repos, cmd, bun, go, rust (default: all, asking for each)."`
+	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, setup, repos, cmd, bun, go, rust (default: all, asking for each)."`
 }
 
 func (c *UpdateCmd) Help() string {
@@ -33,17 +34,41 @@ func (c *UpdateCmd) Help() string {
 
 func (c *UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if os.Geteuid() == 0 {
-		return errors.New("run dctl update as your user; it elevates only the pacman transaction")
+		return errors.New("run dctl update as your user; steps elevate with sudo only where they need root")
 	}
 	if err := c.only(root); err != nil {
 		return err
 	}
 	all := c.All || u.Yes()
-	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{UI: u}, all, c.Dirty, c.Only), c.Steps)
+	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{UI: u}, all, c.Dirty, c.Only, reapply(u, root, all)), c.Steps)
 	if err != nil {
 		return err
 	}
 	return update.Run(ctx, u, steps, !all && len(c.Steps) == 0)
+}
+
+var reapplied = []string{"system", "home", "firefox"}
+
+func reapply(u *ui.UI, root paths.Root, accept bool) func(context.Context) error {
+	return func(ctx context.Context) error {
+		stages, err := setup.Select(catalog(u, root), reapplied)
+		if err != nil {
+			return err
+		}
+		// Reapplying configuration does not pull in first-setup prerequisites.
+		for i, s := range stages {
+			stages[i].Needs = slices.DeleteFunc(slices.Clone(s.Needs), func(n string) bool { return !slices.Contains(reapplied, n) })
+		}
+		flow := setup.Flow{
+			UI:     u,
+			Stages: stages,
+			Home:   root.Home,
+			Elevate: func(ctx context.Context, stages []setup.Stage, mode setup.Mode, quiet bool) ([]setup.Report, error) {
+				return elevate(ctx, u, root, stages, mode, quiet)
+			},
+		}
+		return flow.Run(ctx, setup.Request{Accept: accept})
+	}
 }
 
 func (c *UpdateCmd) only(root paths.Root) error {

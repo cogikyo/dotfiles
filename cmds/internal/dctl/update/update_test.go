@@ -57,12 +57,12 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 func quiet() *ui.UI { return ui.New(ui.Options{JSON: true}) }
 
 func TestSteps(t *testing.T) {
-	steps := Steps(quiet(), paths.Root{}, &fake{t: t}, false, false, nil)
+	steps := Steps(quiet(), paths.Root{}, &fake{t: t}, false, false, nil, nil)
 	var names []string
 	for _, s := range steps {
 		names = append(names, s.Name)
 	}
-	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "bun", "go", "rust"}; !slices.Equal(names, want) {
+	if want := []string{"pacman", "aur", "packages", "setup", "repos", "cmd", "bun", "go", "rust"}; !slices.Equal(names, want) {
 		t.Fatalf("steps %v, want %v", names, want)
 	}
 	got, err := Select(steps, []string{"rust", "aur"})
@@ -87,7 +87,7 @@ func TestNoconfirm(t *testing.T) {
 	}
 	for _, all := range []bool{false, true} {
 		f := &fake{t: t}
-		steps, _ := Select(Steps(quiet(), root, f, all, false, nil), []string{"aur"})
+		steps, _ := Select(Steps(quiet(), root, f, all, false, nil, nil), []string{"aur"})
 		if err := steps[0].Run(t.Context()); err != nil {
 			t.Fatal(err)
 		}
