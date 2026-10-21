@@ -237,14 +237,13 @@ function byline(text: Text, names: Names, ledger: Ledger) {
 
 function rule(box: Renderable, room: number, ledger: Ledger, renderer: CliRenderer) {
   if (room < 4) return ledger.restore(box);
-  const node = box.getLayoutNode();
-  ledger.adjust(box, "direction", Yoga.FlexDirection.Row, {
-    get: () => node.getFlexDirection(),
-    set: (value) => node.setFlexDirection(value),
+  ledger.adjust(box, "direction", "row", {
+    get: () => box.primaryAxis,
+    set: (value) => (box.flexDirection = value),
   });
   ledger.adjust(box, "padding", 0, {
-    get: () => node.getPadding(Yoga.Edge.Left).value,
-    set: (value) => node.setPadding(Yoga.Edge.Left, value),
+    get: () => box.getPadding(Yoga.Edge.Left).value,
+    set: (value) => (box.paddingLeft = value),
   });
   const [left, right] = sides(box, renderer);
   ledger.mount(box, left, 0);
