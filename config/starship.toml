@@ -170,7 +170,7 @@ format = "[ ╼╾](blu_2) [$output]($style)"
 
 
 [custom.golang]
-command = 'go version | grep -oP "\d+\.\d+\.\d+"'
+command = 'go version | grep -oE "[0-9]+\.[0-9]+\.[0-9]+"'
 detect_files = ["go.mod", "go.sum", "go.work"]
 detect_extensions = ["go"]
 symbol = ""
