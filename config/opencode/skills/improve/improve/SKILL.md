@@ -36,6 +36,7 @@ Report the sampled top-level count and oldest-to-newest `time_updated` span once
 Load `papercuts` and `epistemology` and use their relevant methods with this skill's scope defaults.
 Classify failed shell calls and subagent errors over the window with papercuts, carrying its diagnoses forward.
 Scan user-role text for corrections and preferences with epistemology's candidate-reading method.
+Watch Collab reply shape as an open question: which replies needed `##` sections or a TL;DR, and which short ones were enough, judged by the user's re-asks, "adhd", or "too much".
 Do not write a full epistemology report; triage selects sessions and preserves their evidence and diagnosis.
 Pick at most 5 sessions with the densest useful signal unless the user's instructions change the session count.
 When evidence is spread thin across many sessions, such as one small correction in each, send it straight to synthesis.
