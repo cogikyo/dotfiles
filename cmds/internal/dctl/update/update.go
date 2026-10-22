@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -170,12 +173,25 @@ func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
 	if len(skipped) > 0 {
 		u.Info("skipped: %s", strings.Join(skipped, ", "))
 	}
+	if release, replaced := kernelReplaced(); replaced {
+		u.Warn("reboot required: running kernel %s was replaced; soft-reboot keeps the old kernel", release)
+	}
 	if len(failed) > 0 {
 		u.Info("retry: `dctl update %s`", strings.Join(failed, " "))
 		return errors.New("update failed: " + strings.Join(failed, ", "))
 	}
 	u.End(ui.OK, "")
 	return nil
+}
+
+func kernelReplaced() (string, bool) {
+	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		return "", false
+	}
+	release := strings.TrimSpace(string(data))
+	_, err = os.Stat(filepath.Join("/usr/lib/modules", release))
+	return release, errors.Is(err, fs.ErrNotExist)
 }
 
 type shown struct{ error }
