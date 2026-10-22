@@ -44,9 +44,12 @@ sessions:
         agents: agents-all
 
     type:
-      command: chromium --new-window https://vial.rocks/
-      class: chromium
-      browser: type
+      init: true
+      after: leadpier
+      command: sh -c 'Vial & exec firefox-developer-edition --new-window https://monkeytype.com/'
+      class: Vial
+      layout:
+        slave: firefox-developer-edition
 
     inkscape:
       command: inkscape
@@ -68,12 +71,6 @@ sessions:
 
     vagari.firefox:
       project: vagari/firefox
-      body:
-        - editor
-        - agents
-
-    cogikyo:
-      project: cogikyo/cogikyo
       body:
         - editor
         - agents
@@ -103,14 +100,9 @@ sessions:
         - editor
         - agents
 
-    # cogikyo:
-    #   project: cogikyo/cogikyo
-    #   body:
-    #     - editor
-    #     - agents
-
-    alrodriguez.studio:
-      project: cogikyo/alrodriguez.studio
+    cogikyo:
+      init: true
+      project: cogikyo/cogikyo
       body:
         - editor
         - agents
