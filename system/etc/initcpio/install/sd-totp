@@ -20,14 +20,14 @@ build() {
         'say() { printf "\n%s\n\n" "$1"; printf "%s\n" "$1" >&2; : >/run/boot-totp.shown; }' \
         'show() {' \
         '    : >/run/boot-totp.rc' \
-        '    { timeout -k 1 3 tpm2-totp -T device:/dev/tpmrm0 show >/run/boot-totp.code 2>/run/boot-totp.err; echo $? >/run/boot-totp.rc; } 2>/dev/null &' \
+        '    { timeout -k 1 3 tpm2-totp -T device:/dev/tpmrm0 calculate >/run/boot-totp.code 2>/run/boot-totp.err; echo $? >/run/boot-totp.rc; } 2>/dev/null &' \
         '    for _ in {1..45}; do [[ -s /run/boot-totp.rc ]] && break; sleep 0.1; done' \
         '    rc=$(</run/boot-totp.rc)' \
         '    rc=${rc:-124}' \
         '    code=$(</run/boot-totp.code)' \
         '    if (( rc != 0 )) || [[ ! -e /etc/dctl/boot-totp ]]; then' \
         '        err=$(</run/boot-totp.err)' \
-        '        (( rc == 124 || rc == 137 )) && err="tpm2-totp show timed out after 3s${err:+: $err}"' \
+        '        (( rc == 124 || rc == 137 )) && err="tpm2-totp calculate timed out after 3s${err:+: $err}"' \
         '        [[ -n $err ]] && printf "%s\n" "$err" >&2' \
         '        if [[ ! -e /etc/dctl/boot-totp && $err != *"The system state has changed"* ]]; then' \
         '            say "Boot TOTP not set up yet · run dctl setup after login"' \

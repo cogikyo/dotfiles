@@ -93,7 +93,7 @@ func sealed(ctx context.Context, run execx.Runner, root string) error {
 	if err != nil {
 		return err
 	}
-	_, err = run.Output(ctx, "", "tpm2-totp", totp("show")...)
+	_, err = run.Output(ctx, "", "tpm2-totp", totp("calculate")...)
 	switch {
 	case err == nil && !was:
 		return errUnmarked
@@ -113,9 +113,9 @@ func sealed(ctx context.Context, run execx.Runner, root string) error {
 	case strings.Contains(err.Error(), changed):
 		return setup.Manual("NO BOOT TOTP: PCR 0 or 7 changed; investigate before resealing; reseal only after a known firmware or Secure Boot change, with sudo dctl keys totp")
 	case strings.Contains(err.Error(), lockout):
-		return setup.Manual("TPM in lockout; do not clear it; wait, then check with sudo tpm2-totp -T %s show", tcti)
+		return setup.Manual("TPM in lockout; do not clear it; wait, then check with sudo tpm2-totp -T %s calculate", tcti)
 	}
-	return setup.Manual("tpm2-totp cannot unseal (%s); check with sudo tpm2-totp -T %s show", last(err), tcti)
+	return setup.Manual("tpm2-totp cannot unseal (%s); check with sudo tpm2-totp -T %s calculate", last(err), tcti)
 }
 func last(err error) string {
 	lines := strings.Split(strings.TrimSpace(err.Error()), "\n")
@@ -137,13 +137,13 @@ func Seal(ctx context.Context, u *ui.UI, run execx.Runner, root string) error {
 	if err := unmark(root); err != nil {
 		return err
 	}
-	init := execx.Reason(execx.Interactive(run), "seal a new TOTP secret to PCRs 0 and 7")
+	generate := execx.Reason(execx.Interactive(run), "seal a new TOTP secret to PCRs 0 and 7")
 	for {
 		if _, err := run.Output(ctx, "", "tpm2-totp", totp("clean")...); err != nil && !strings.Contains(err.Error(), empty) {
 			return fmt.Errorf("could not remove old TOTP secret: %w", err)
 		}
 		u.Section("Boot TOTP", "add the QR code or secret= value to your authenticator; shown once")
-		if err := init.Run(ctx, "", "tpm2-totp", totp("--pcrs", "0,7", "--banks", "SHA256", "--label", host, "init")...); err != nil {
+		if err := generate.Run(ctx, "", "tpm2-totp", totp("--pcrs", "0,7", "--banks", "SHA256", "--label", host, "generate")...); err != nil {
 			return discard(ctx, run, root, had, err)
 		}
 		ok, err := matches(ctx, u, run)
@@ -201,7 +201,7 @@ func rebuild(ctx context.Context, run execx.Runner, root string) error {
 
 func matches(ctx context.Context, u *ui.UI, run execx.Runner) (bool, error) {
 	for {
-		before, err := run.Output(ctx, "", "tpm2-totp", totp("show")...)
+		before, err := run.Output(ctx, "", "tpm2-totp", totp("calculate")...)
 		if err != nil {
 			return false, err
 		}
@@ -209,7 +209,7 @@ func matches(ctx context.Context, u *ui.UI, run execx.Runner) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		after, err := run.Output(ctx, "", "tpm2-totp", totp("show")...)
+		after, err := run.Output(ctx, "", "tpm2-totp", totp("calculate")...)
 		if err != nil {
 			return false, err
 		}

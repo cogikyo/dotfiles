@@ -54,7 +54,7 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 func (f *fake) Output(_ context.Context, _ string, name string, args ...string) (string, error) {
 	f.calls = append(f.calls, strings.Join(append([]string{name}, args...), " "))
 	switch {
-	case name == "tpm2-totp" && args[len(args)-1] == "show":
+	case name == "tpm2-totp" && args[len(args)-1] == "calculate":
 		return "123456", f.totp
 	case name == "sbctl" && args[0] == "status":
 		return fmt.Sprintf(`{"installed": %t}`, f.keys), nil
@@ -320,7 +320,7 @@ func TestStillOffAfterReboot(t *testing.T) {
 }
 
 func TestSealed(t *testing.T) {
-	none := errors.New("tpm2-totp: exit status 1: No TOTP secret is currently stored, use 'init' to generate and store one.")
+	none := errors.New("tpm2-totp: exit status 1: No TOTP secret is currently stored, use 'generate' to generate one.")
 	for name, tc := range map[string]struct {
 		err    error
 		tpm    bool
@@ -335,7 +335,7 @@ func TestSealed(t *testing.T) {
 		"changed":         {errors.New("tpm2-totp: exit status 1: The system state has changed, no TOTP could be calculated."), true, false, nil, "NO BOOT TOTP: PCR 0 or 7 changed"},
 		"lockout":         {errors.New("tpm2-totp: exit status 1: The password has been entered wrongly too many times and the TPM is in lockout mode."), true, true, nil, "lockout"},
 		"no TPM":          {nil, false, true, nil, "no TPM at"},
-		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR in main: 0xa000a - tcti:IO failure"), true, true, nil, "IO failure"},
+		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR:tcti:src/tss2-tcti/tctildr.c:430:tctildr_init_context_data() Failed to instantiate TCTI \nERROR in main (src/tpm2-totp.c:397): 0xa000a - tcti:IO failure"), true, true, nil, "IO failure"},
 	} {
 		f := rig(t)
 		efivar(t, f.root, "SetupMode", 0)
@@ -376,7 +376,7 @@ func TestMarkerRepair(t *testing.T) {
 	if stamp, err := os.ReadFile(filepath.Join(f.root, built)); err != nil || string(stamp) != "label=test\n" || !slices.Contains(f.calls, "limine-update") {
 		t.Errorf("stamp %q %v, calls %q", stamp, err, f.calls)
 	}
-	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, " init") || strings.Contains(c, " clean") }) {
+	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, " generate") || strings.Contains(c, " clean") }) {
 		t.Errorf("rebuilding the images resealed: %q", f.calls)
 	}
 }
