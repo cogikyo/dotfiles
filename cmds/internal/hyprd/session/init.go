@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -147,15 +146,7 @@ func (i *Init) Execute() (string, error) {
 	restoreEwwWidgets(true)
 
 	layout := NewLayout(i.hypr, i.state)
-	var initSessions []config.Session
-	for _, s := range cfg.Sessions {
-		if s.Init {
-			initSessions = append(initSessions, s)
-		}
-	}
-	sort.Slice(initSessions, func(a, b int) bool {
-		return initSessions[a].Workspace < initSessions[b].Workspace
-	})
+	initSessions := cfg.Sessions.InitSessions()
 
 	if err := layout.restoreInitBrowsers(initSessions); err != nil {
 		return "", fmt.Errorf("browser restore: %w", err)

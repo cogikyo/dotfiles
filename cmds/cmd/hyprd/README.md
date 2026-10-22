@@ -280,6 +280,6 @@ eww integration:
 - `notify` — sounds, icons, per-style appearance
 - `windows` — split presets, per-layout/share gaps, compact threshold, monocle sizing
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
-- `sessions` — layouts grouped by workspace, then keyed by session name; `init: true` launches on boot (at most one per workspace)
+- `sessions` — layouts grouped by workspace and keyed by name; `init: true` launches on boot in workspace order (at most one per workspace); `after: <session>` opens right after that init session finishes opening
 
 The window roles referenced by session bodies come from the compiled `ThreeBody` map in `cmds/internal/config/hyprd.go`.

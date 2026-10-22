@@ -3,8 +3,10 @@ package config
 // hyprd.go declares hyprd's window, session, and notification configuration.
 
 import (
+	"cmp"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -429,10 +431,47 @@ func (s *SessionsConfig) UnmarshalYAML(value *yaml.Node) error {
 			}
 			initPerWS[session.Workspace] = name
 		}
+		if session.After == "" {
+			continue
+		}
+		target, ok := out[session.After]
+		switch {
+		case !session.Init:
+			return fmt.Errorf("sessions[%q]: after requires init: true", name)
+		case !ok || !target.Init:
+			return fmt.Errorf("sessions[%q]: after %q must name an init session", name, session.After)
+		case target.After != "":
+			return fmt.Errorf("sessions[%q]: after %q must name a session without its own after", name, session.After)
+		}
 	}
 
 	*s = out
 	return nil
+}
+
+// InitSessions orders by workspace, placing After sessions right after targets.
+func (s SessionsConfig) InitSessions() []Session {
+	var byWorkspace []Session
+	for _, session := range s {
+		if session.Init {
+			byWorkspace = append(byWorkspace, session)
+		}
+	}
+	slices.SortFunc(byWorkspace, func(a, b Session) int { return cmp.Compare(a.Workspace, b.Workspace) })
+
+	out := make([]Session, 0, len(byWorkspace))
+	for _, session := range byWorkspace {
+		if session.After != "" {
+			continue
+		}
+		out = append(out, session)
+		for _, follower := range byWorkspace {
+			if follower.After == session.Name {
+				out = append(out, follower)
+			}
+		}
+	}
+	return out
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
@@ -440,6 +479,7 @@ type Session struct {
 	Name      string            `yaml:"-" json:"name"`      // derived from the session map key
 	Workspace int               `yaml:"-" json:"workspace"` // derived from the enclosing workspace key
 	Init      bool              `yaml:"init" json:"init"`   // spawn on boot; at most one per workspace
+	After     string            `yaml:"after" json:"after"` // init session to finish opening first
 	Project   string            `yaml:"project" json:"project"`
 	Body      []string          `yaml:"body" json:"body"` // three-body member order
 	Layout    SessionLayout     `yaml:"layout" json:"layout"`
