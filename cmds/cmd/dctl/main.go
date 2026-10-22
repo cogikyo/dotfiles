@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"dotfiles/cmds/internal/dctl/cli"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/ui"
 
@@ -16,7 +15,7 @@ import (
 )
 
 func main() {
-	var root cli.CLI
+	var root CLI
 	parser, err := kong.New(&root,
 		kong.Name("dctl"),
 		kong.Description("Install and maintain this machine."),

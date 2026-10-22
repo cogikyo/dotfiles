@@ -2,6 +2,7 @@
 
 `dctl` installs and maintains this single-user Arch Linux system.
 It builds the offline ISO, applies configuration, and runs attended updates.
+On a Mac, it sets up and syncs Homebrew packages and shell configs; see [macOS](#macos).
 
 - Detects AMD/Intel hardware and records a machine profile, with a preset for a recognized Framework Desktop.
 - Installs the `cullyn` account with the chosen hostname.
@@ -430,6 +431,7 @@ dctl update --dirty --only dctl
 
 - Run as the normal user; root execution is refused.
 - Update never pulls `~/dotfiles` or the `DOTFILES` checkout; manage it separately.
+  - macOS update does pull it; see [macOS](#macos).
 - Any failed step makes the final result nonzero.
 - Ctrl+C can interrupt pacman; update has no setup-style protected wait.
 
@@ -835,6 +837,50 @@ dctl update repos
   - Untracked files are excluded from the dirty check.
 - Missing repositories need setup; broken checkouts need manual repair.
   - Move a broken checkout aside, then rerun `dctl setup repos`.
+
+## macOS
+
+On macOS, dctl has only `setup` and `update`, and they work on a smaller catalog.
+The darwin build selects it at compile time, and the Linux commands are not compiled in.
+The Mac clones the public repository read-only and pulls from it; pushes happen elsewhere.
+
+### Bootstrap
+
+Install Homebrew, which also installs the Xcode Command Line Tools, then build dctl from a fresh clone:
+
+```sh
+NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install go
+git clone https://github.com/cogikyo/dotfiles ~/dotfiles
+(cd ~/dotfiles/cmds && go build -o ~/.local/bin/dctl ./cmd/dctl)
+~/.local/bin/dctl setup
+```
+
+- The Homebrew installer uses sudo; without passwordless sudo, drop `NONINTERACTIVE=1` and answer its prompts.
+- Open a new shell after setup; the linked shell config puts Homebrew and `~/.local/bin` on `PATH`.
+
+### Stages and steps
+
+| Stage    | Needs    | Work                                        |
+| -------- | -------- | ------------------------------------------- |
+| packages | —        | Install missing `packages/brew.lst` entries |
+| home     | packages | Link the shell and terminal-tool configs    |
+
+- `home` links `~/.zshrc`, `~/.zshenv`, and the `config/` entries listed in `cmds/internal/dctl/home/mac.go`.
+  - lazygit links into `~/Library/Application Support/lazygit`, where it looks on macOS.
+- `packages` installs missing formulae and casks; it never removes unlisted ones.
+
+Update steps run in this order, with the same consent and retry behavior as on Linux:
+
+1. `dotfiles`: fast-forward `~/dotfiles` with `git pull --ff-only --no-rebase`.
+2. `brew`: run `brew update` and `brew upgrade`.
+3. `setup`: reapply drifted `packages` and `home` stages.
+4. `cmd`: rebuild `~/.local/bin/dctl` when its bytes differ.
+
+- Link changes in `mac.go` take effect on the run after `cmd` rebuilds dctl.
+- The linked `zshenv` loads Homebrew's environment, so `ssh <mac> 'dctl update --all'` works without an interactive shell.
+- `zshrc` loads it again because macOS's `/etc/zprofile` moves system paths ahead of Homebrew in login shells.
 
 ## Environment
 

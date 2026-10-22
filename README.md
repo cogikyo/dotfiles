@@ -234,3 +234,10 @@ dctl update --only {scope}
 ```
 
 > _See [Update](cmds/cmd/dctl/README.md#update) for upgrades and package reconciliation._
+
+### macOS
+
+A Mac uses the same branch with a smaller setup: Homebrew packages from `packages/brew.lst` and the shell, git, Neovim, starship, atuin, lazygit, btop, and xplr configs.
+Install Homebrew and Go, clone this repository, build dctl, and run `dctl setup`; `dctl update` pulls the checkout and reapplies both.
+
+> _See [macOS](cmds/cmd/dctl/README.md#macos) for the bootstrap commands and update steps._

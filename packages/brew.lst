@@ -1,0 +1,30 @@
+# cli
+atuin
+bat
+btop
+calc
+erdtree
+fzf
+jq
+lsd
+ncdu
+ouch
+rsync
+sd
+starship
+tlrc
+tree
+xplr
+yq
+zoxide
+
+# development
+fd
+git
+go
+just
+lazygit
+neovim
+node
+ripgrep
+tree-sitter-cli

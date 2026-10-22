@@ -64,18 +64,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 				return packages.Reconcile(ctx, u, root.Packages(), run, all)
 			},
 		},
-		{
-			Name: "setup",
-			Plan: "reapply drifted system, home, and firefox setup stages",
-			Run: func(ctx context.Context) error {
-				err := setup(ctx)
-				if err == nil || errors.Is(err, ui.ErrCanceled) || ctx.Err() != nil {
-					return err
-				}
-				u.End(ui.Err, "%s", err)
-				return drawn(err)
-			},
-		},
+		reapply(u, "reapply drifted system, home, and firefox setup stages", setup),
 		{
 			Name: "repos",
 			Plan: "fast-forward clean checkouts from packages/repos.lst, except ~/dotfiles",
@@ -110,6 +99,51 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			Run: func(ctx context.Context) error {
 				return rust(ctx, u, run)
 			},
+		},
+	}
+}
+
+func Mac(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, setup func(context.Context) error) []Step {
+	return []Step{
+		{
+			Name: "dotfiles",
+			Plan: "fast-forward ~/dotfiles",
+			Run: func(ctx context.Context) error {
+				return drawn(execx.Remote(run).Run(ctx, root.Dotfiles, "git", "pull", "--ff-only", "--no-rebase"))
+			},
+		},
+		{
+			Name: "brew",
+			Plan: "Homebrew formulae and casks",
+			Run: func(ctx context.Context) error {
+				if err := run.Run(ctx, "", "brew", "update"); err != nil {
+					return drawn(err)
+				}
+				return drawn(run.Run(ctx, "", "brew", "upgrade"))
+			},
+		},
+		reapply(u, "reapply drifted packages and home setup stages", setup),
+		{
+			Name: "cmd",
+			Plan: "build dctl",
+			Run: func(ctx context.Context) error {
+				return commands(ctx, u, root, run, all, dirty, []string{"dctl"})
+			},
+		},
+	}
+}
+
+func reapply(u *ui.UI, plan string, setup func(context.Context) error) Step {
+	return Step{
+		Name: "setup",
+		Plan: plan,
+		Run: func(ctx context.Context) error {
+			err := setup(ctx)
+			if err == nil || errors.Is(err, ui.ErrCanceled) || ctx.Err() != nil {
+				return err
+			}
+			u.End(ui.Err, "%s", err)
+			return drawn(err)
 		},
 	}
 }

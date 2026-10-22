@@ -1,6 +1,6 @@
 # Dotfiles
 
-Arch Linux + Hyprland environment, Go commands, and an offline UEFI installer with AMD/Intel machine profiles and a Framework Desktop preset.
+Arch Linux + Hyprland environment, Go commands, and an offline UEFI installer with AMD/Intel machine profiles and a Framework Desktop preset, plus a macOS shell-and-Homebrew subset that `dctl` sets up on the same branch.
 Edits to linked `config/` files change what applications read; see [setup](./README.md) for how changes reach the system.
 
 > [!WARNING]
@@ -13,7 +13,7 @@ Edits to linked `config/` files change what applications read; see [setup](./REA
 | `config/`          | Application settings                                         | Home/Firefox setup links        |
 | `cmds/`            | [Go commands](cmds/README.md)                                | Installer or targeted builds    |
 | `system/`          | Rootfs overlay                                               | `dctl setup system` copies      |
-| `packages/`        | Curated lists, PKGBUILDs, repo catalog                       | ISO and dctl setup              |
+| `packages/`        | Curated lists, PKGBUILDs, repo catalog, `brew.lst`           | ISO and dctl setup              |
 | `secrets/`         | Age ciphertext and manifest                                  | `dctl secrets decrypt`          |
 | `iso/`             | Archiso profile                                              | `sudo dctl iso build`           |
 | `share/`           | Fonts and assets                                             | Setup or application references |
@@ -61,6 +61,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
 - Run `dctl setup` and `dctl update` as the user; setup checks non-lock root stages as the user before batching needed root work through sudo.
 - When a change adds something that needs updates, make sure `dctl update` covers it; extend dctl if needed.
+- Configs in the macOS link subset (`cmds/internal/dctl/home/mac.go`) must also work on macOS; guard Linux-only shell lines with `$OSTYPE`.
 - Install and restart routine changes yourself once they build and pass checks; the user gives standing approval for these.
   - Routine: `hyprd rebuild`, `dctl update --dirty --only <cmd>`, and user stages such as `dctl --yes setup home`.
   - Ask first for package upgrades, root or lock stages, secrets, and startup, lock, or boot changes that could leave the session unusable.

@@ -19,8 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"golang.org/x/sys/unix"
 )
 
 type Repo struct {
@@ -189,7 +187,7 @@ func clone(ctx context.Context, run execx.Runner, r Repo, dir string) (err error
 	case c.kind != usable:
 		return fmt.Errorf("fresh clone is %s (%s)", Broken, c.reason)
 	}
-	if err := unix.Renameat2(unix.AT_FDCWD, work, unix.AT_FDCWD, dir, unix.RENAME_NOREPLACE); err != nil {
+	if err := renameNoReplace(work, dir); err != nil {
 		return &os.LinkError{Op: "rename", Old: work, New: dir, Err: err}
 	}
 	return nil

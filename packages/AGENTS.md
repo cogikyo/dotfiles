@@ -12,12 +12,14 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 | `aur.lst`              | AUR offline payload recipes       |
 | `extra.lst`            | Online `dctl setup extra`         |
 | `repos.lst`            | Repository clone catalog          |
+| `brew.lst`             | macOS Homebrew formulae and casks |
 | `<pkg>/PKGBUILD`       | Local offline payload recipe      |
 
 ## Rules
 
 - Package lists use one package name per line; `#` starts a comment and blank lines are ignored.
 - `repos.lst` uses `owner/name path` per line, with a `~/` or absolute destination and the same comment rules.
+- `brew.lst` lists canonical Homebrew formula names and `cask:<token>` casks; macOS `dctl setup` installs missing entries and never removes unlisted ones.
 - Name local recipe directories after the package; the loader uses directory names as package names.
 - Ship keys for `validpgpkeys` under `<pkg>/keys/pgp/*.asc`; ISO builds fail before building if a required fingerprint is absent from the build keyring.
 - ISO builds require the base, vendor, AUR, and extra lists; base, both vendor sets, AUR, and local packages enter the offline payload.
