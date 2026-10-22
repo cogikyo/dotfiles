@@ -112,6 +112,7 @@ A **lane** is a reusable direct child.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.
 - Send **repairs** back to the lane that built the change.
+  - If two repair rounds on one change still draw blockers, load `doubt` and bring the premise back to the user before a third.
 - Close finished lanes; a closed lane can't be resumed.
 - Use a **new lane name** or an unnamed read-only one-shot when the scope needs a different owner or independence from earlier rounds.
 - **Parallel lanes** can share one worktree when their writes are mostly disjoint.
