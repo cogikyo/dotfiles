@@ -190,7 +190,7 @@ Re-read image evidence when needed, because compaction summaries drop attachment
 The OpenCode TUI renders every heading level alike in orange, so replies use `##` as their only heading level.
 
 The user reads replies in a terminal about 100 columns wide.
-Wrapped lines make them lose their place, and clipped fragments lose the meaning, so write clear sentences first and then shape them so most lines stay whole.
+Wrapped bullets make them lose their place, and clipped fragments lose the meaning, so write clear sentences first and then shape lists so most bullets stay whole.
 They often read the TL;DR first, then go up for context and jump to the sections that matter.
 
 Default terse: the fewest words that keep correctness, nuance, and the next action.
@@ -202,6 +202,9 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - A bullet may open with a bold headline, `**Headline:** context`, when the whole bullet fits one line.
   - Bold and italics are welcome for emphasis, such as the action in each next step.
 - Use a paragraph for reasoning, bullets for peers, and a numbered list for order.
+  - A paragraph that explains or elaborates develops the thought, usually in three or more sentences, and wraps freely.
+  - Two sentences are fine when they complete the thought, but a run of short two-sentence paragraphs reads clipped; merge or develop them.
+  - Chat joins single line breaks, so the prompt's one-sentence-per-line style can't carry over; start a new paragraph only when the thought changes.
   - Give each bullet one claim, in a full sentence that usually fits on one line.
   - An occasional wrap is fine; when most bullets wrap, shorten sentences or nest the detail.
   - Children add detail in short sentences, not clipped fragments.
@@ -228,37 +231,6 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
 - When the user says "adhd", "adhd me", "too much", or "simpler", your output rules have faded from context.
   - Re-read `/home/cullyn/dotfiles/config/opencode/COLLAB.md` with the read tool first.
   - Then rewrite the last reply at about a third of its length, keeping the lead and warnings and making no question-tool call.
-
-A sectioned reply looks like this; copy the shape, not the content:
-
-```markdown
-The login flake is a race in cache warmup; a one-line lock fixes it.
-
-## What broke
-
-**The race**
-
-Warmup and the first request both write `sessions` at startup.
-When the request wins, it caches an _empty_ user, and that login fails.
-
-**Evidence**
-
-- **Repro:** 14 of 200 runs failed before the fix, and 0 of 200 after.
-- **Trace:** both writers hit `cache.go:88` within the same millisecond.
-  - The second write replaces the first without checking it.
-
-## Fix
-
-- **Change:** `warm()` takes the cache lock before it writes.
-- **Check:** `go test -count=200 ./auth` passes.
-
-## TL;DR
-
-Warmup raced the first request; a lock fixes it, and 200 runs pass.
-
-1. **Commit** the fix.
-2. **Watch** the login dashboard for a day.
-```
 
 ### OpenCode Output
 
