@@ -1,12 +1,15 @@
 package secureboot
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,7 +21,8 @@ import (
 const (
 	tcti    = "device:/dev/tpmrm0"
 	marker  = "etc/dctl/boot-totp"       // Copied into the initramfs by sd-totp after authenticator verification.
-	built   = "etc/dctl/boot-totp.built" // Matches the marker only after a verified boot-image rebuild.
+	built   = "etc/dctl/boot-totp.built" // Records the marker and hook hash only after a verified boot-image rebuild.
+	hook    = "etc/initcpio/install/sd-totp"
 	empty   = "No TOTP secret is currently stored"
 	changed = "The system state has changed"
 	lockout = "lockout mode"
@@ -27,7 +31,7 @@ const (
 var (
 	errUnsealed = errors.New("boot TOTP not sealed")
 	errUnmarked = errors.New("TOTP secret sealed; /" + marker + " marker missing")
-	errUnbuilt  = errors.New("boot images not rebuilt since the boot TOTP marker changed")
+	errUnbuilt  = errors.New("boot images not rebuilt since the boot TOTP marker or sd-totp hook changed")
 	errStopped  = errors.New("stopped before authenticator verification")
 )
 
@@ -52,16 +56,44 @@ func marked(root string) (bool, error) {
 	return err == nil, err
 }
 
-func rebuilt(root string) (bool, error) {
+func stamp(root string) ([]byte, error) {
 	note, err := os.ReadFile(filepath.Join(root, marker))
+	if err != nil {
+		return nil, err
+	}
+	script, err := os.ReadFile(filepath.Join(root, hook))
+	if err != nil {
+		return nil, err
+	}
+	return fmt.Appendf(note, "hook=%x\n", sha256.Sum256(script)), nil
+}
+
+func rebuilt(root string) (bool, error) {
+	want, err := stamp(root)
 	if err != nil {
 		return false, err
 	}
-	stamp, err := os.ReadFile(filepath.Join(root, built))
+	got, err := os.ReadFile(filepath.Join(root, built))
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
-	return err == nil && string(stamp) == string(note), err
+	return err == nil && bytes.Equal(got, want), err
+}
+
+func mtimes(root string) (map[string]time.Time, error) {
+	paths, err := images(root)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]time.Time, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, err
+		}
+		seen[path] = info.ModTime()
+	}
+	return seen, nil
 }
 
 func TOTP(u *ui.UI, run execx.Runner, root string) setup.Stage {
@@ -183,20 +215,47 @@ func unmark(root string) error {
 }
 
 func rebuild(ctx context.Context, run execx.Runner, root string) error {
+	was, err := marked(root)
+	if err != nil {
+		return err
+	}
+	var want []byte
+	if was {
+		if want, err = stamp(root); err != nil {
+			return err
+		}
+	}
+	if err := os.Remove(filepath.Join(root, built)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	before, err := mtimes(root)
+	if err != nil {
+		return err
+	}
 	if err := run.Run(ctx, "", "limine-update"); err != nil {
 		return fmt.Errorf("limine-update failed; boot images may not match /%s: %w", marker, err)
+	}
+	after, err := mtimes(root)
+	if err != nil {
+		return err
+	}
+	var kept []string
+	for path, at := range after {
+		if old, ok := before[path]; ok && old.Equal(at) {
+			kept = append(kept, filepath.Base(path))
+		}
+	}
+	if len(kept) > 0 {
+		slices.Sort(kept)
+		return fmt.Errorf("limine-update left %s unchanged, so mkinitcpio likely failed and boot images may not match /%s and /%s; do not reboot until dctl setup passes", strings.Join(kept, ", "), marker, hook)
 	}
 	if err := verify(ctx, run, root); err != nil {
 		return fmt.Errorf("boot-image verification failed after limine-update; do not reboot until dctl setup secureboot passes: %w", err)
 	}
-	note, err := os.ReadFile(filepath.Join(root, marker))
-	if errors.Is(err, fs.ErrNotExist) {
+	if !was {
 		return nil
 	}
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(root, built), note, 0o644)
+	return os.WriteFile(filepath.Join(root, built), want, 0o644)
 }
 
 func matches(ctx context.Context, u *ui.UI, run execx.Runner) (bool, error) {

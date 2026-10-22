@@ -305,7 +305,7 @@ func verify(ctx context.Context, run execx.Runner, root string) error {
 			return fmt.Errorf("%s lacks %s", limine, want)
 		}
 	}
-	ukis, err := filepath.Glob(filepath.Join(esp, "EFI", "Linux", "*.efi"))
+	ukis, err := images(root)
 	if err != nil {
 		return err
 	}
@@ -342,6 +342,10 @@ func verify(ctx context.Context, run execx.Runner, root string) error {
 		errs = append(errs, fmt.Errorf("not signed by the sbctl db key: %s", strings.Join(bad, ", ")))
 	}
 	return errors.Join(errs...)
+}
+
+func images(root string) ([]string, error) {
+	return filepath.Glob(filepath.Join(root, "boot", "EFI", "Linux", "*.efi"))
 }
 
 func entries(root, esp string, ukis []string) error {

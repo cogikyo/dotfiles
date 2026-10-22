@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
@@ -26,6 +27,8 @@ type fake struct {
 	unsigned bool
 	conf     string
 	totp     error
+	swallow  bool
+	builds   int
 	calls    []string
 }
 
@@ -39,7 +42,15 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 		f.keys = true
 		put(f.t, filepath.Join(f.root, sbctlPK), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("own PK")}))
 	case "limine-update":
-		writeUKI(f.t, filepath.Join(f.root, "boot", "EFI", "Linux", "linux.efi"))
+		if !f.swallow {
+			uki := filepath.Join(f.root, "boot", "EFI", "Linux", "linux.efi")
+			writeUKI(f.t, uki)
+			f.builds++
+			at := time.Unix(int64(f.builds), 0)
+			if err := os.Chtimes(uki, at, at); err != nil {
+				f.t.Fatal(err)
+			}
+		}
 		put(f.t, filepath.Join(f.root, "boot", "EFI", "limine", "limine_x64.efi"), []byte("limine"))
 		if f.conf != "" {
 			put(f.t, filepath.Join(f.root, "boot", "limine.conf"), []byte(f.conf))
@@ -71,6 +82,15 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 		return string(out), err
 	}
 	return "", errors.New("unexpected command " + name)
+}
+
+func current(t *testing.T, root string) []byte {
+	t.Helper()
+	want, err := stamp(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return want
 }
 
 func put(t *testing.T, path string, data []byte) {
@@ -113,6 +133,7 @@ func rig(t *testing.T) *fake {
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
 	put(t, filepath.Join(f.root, "dev", "nvme0n1p2"), nil)
 	put(t, filepath.Join(f.root, "dev", "tpmrm0"), nil)
+	put(t, filepath.Join(f.root, hook), []byte("hook v1\n"))
 	put(t, filepath.Join(f.root, measured), synthetic(0, false))
 	put(t, filepath.Join(f.root, "sys", "class", "block", "nvme0n1p2", "holders", "dm-0", "dm", "name"), []byte("root\n"))
 	if err := os.MkdirAll(filepath.Join(f.root, "dev", "disk", "by-uuid"), 0o755); err != nil {
@@ -175,7 +196,7 @@ func TestFixEnrolls(t *testing.T) {
 
 	efivar(t, f.root, "SecureBoot", 1)
 	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
-	put(t, filepath.Join(f.root, built), []byte("label=test\n"))
+	put(t, filepath.Join(f.root, built), current(t, f.root))
 	for name, r := range run(t, f, false) {
 		if r.State != setup.Done {
 			t.Errorf("after reboot %s = %+v", name, r)
@@ -241,7 +262,7 @@ func TestSignedRepairs(t *testing.T) {
 	efivar(t, f.root, "SecureBoot", 1)
 	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
 	put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
-	put(t, filepath.Join(f.root, built), []byte("label=test\n"))
+	put(t, filepath.Join(f.root, built), current(t, f.root))
 	if r := run(t, f, false)[Signed]; r.State != setup.Pending || !strings.Contains(r.Detail, "fallback") {
 		t.Fatalf("drifted %s = %+v, want pending", Signed, r)
 	}
@@ -327,15 +348,19 @@ func TestSealed(t *testing.T) {
 		marked bool
 		want   error
 		text   string
+		drift  string
 	}{
-		"sealed":          {nil, true, true, nil, ""},
-		"sealed unmarked": {nil, true, false, errUnmarked, ""},
-		"unsealed":        {none, true, false, errUnsealed, ""},
-		"gone":            {none, true, true, nil, "NO BOOT TOTP: sealed secret missing"},
-		"changed":         {errors.New("tpm2-totp: exit status 1: The system state has changed, no TOTP could be calculated."), true, false, nil, "NO BOOT TOTP: PCR 0 or 7 changed"},
-		"lockout":         {errors.New("tpm2-totp: exit status 1: The password has been entered wrongly too many times and the TPM is in lockout mode."), true, true, nil, "lockout"},
-		"no TPM":          {nil, false, true, nil, "no TPM at"},
-		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR:tcti:src/tss2-tcti/tctildr.c:430:tctildr_init_context_data() Failed to instantiate TCTI \nERROR in main (src/tpm2-totp.c:397): 0xa000a - tcti:IO failure"), true, true, nil, "IO failure"},
+		"sealed":          {nil, true, true, nil, "", ""},
+		"sealed unmarked": {nil, true, false, errUnmarked, "", ""},
+		"old stamp":       {nil, true, true, errUnbuilt, "", built},
+		"hook changed":    {nil, true, true, errUnbuilt, "", hook},
+		"marker changed":  {nil, true, true, errUnbuilt, "", marker},
+		"unsealed":        {none, true, false, errUnsealed, "", ""},
+		"gone":            {none, true, true, nil, "NO BOOT TOTP: sealed secret missing", ""},
+		"changed":         {errors.New("tpm2-totp: exit status 1: The system state has changed, no TOTP could be calculated."), true, false, nil, "NO BOOT TOTP: PCR 0 or 7 changed", ""},
+		"lockout":         {errors.New("tpm2-totp: exit status 1: The password has been entered wrongly too many times and the TPM is in lockout mode."), true, true, nil, "lockout", ""},
+		"no TPM":          {nil, false, true, nil, "no TPM at", ""},
+		"tcti fail":       {errors.New("tpm2-totp: exit status 1: ERROR:tcti:src/tss2-tcti/tctildr.c:430:tctildr_init_context_data() Failed to instantiate TCTI \nERROR in main (src/tpm2-totp.c:397): 0xa000a - tcti:IO failure"), true, true, nil, "IO failure", ""},
 	} {
 		f := rig(t)
 		efivar(t, f.root, "SetupMode", 0)
@@ -345,7 +370,15 @@ func TestSealed(t *testing.T) {
 		}
 		if tc.marked {
 			put(t, filepath.Join(f.root, marker), []byte("label=test\n"))
+			put(t, filepath.Join(f.root, built), current(t, f.root))
+		}
+		switch tc.drift {
+		case built:
 			put(t, filepath.Join(f.root, built), []byte("label=test\n"))
+		case hook:
+			put(t, filepath.Join(f.root, hook), []byte("hook v2\n"))
+		case marker:
+			put(t, filepath.Join(f.root, marker), []byte("label=other\n"))
 		}
 		f.totp = tc.err
 		err := sealed(t.Context(), f, f.root)
@@ -369,11 +402,19 @@ func TestMarkerRepair(t *testing.T) {
 	if r := run(t, f, false)["totp-sealed"]; r.State != setup.Pending {
 		t.Fatalf("totp-sealed with stale images = %+v, want pending", r)
 	}
+	f.swallow = true
+	if r := run(t, f, true)["totp-sealed"]; r.State != setup.Failed || !strings.Contains(r.Detail, "linux.efi unchanged") || !strings.Contains(r.Detail, "do not reboot") {
+		t.Fatalf("totp-sealed after a swallowed mkinitcpio failure = %+v, want a refusal", r)
+	}
+	if _, err := os.Stat(filepath.Join(f.root, built)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stamp after a swallowed mkinitcpio failure: %v, want none", err)
+	}
+	f.swallow = false
 	f.calls = nil
 	if r := run(t, f, true)["totp-sealed"]; r.State != setup.Done {
 		t.Fatalf("totp-sealed = %+v, want the images rebuilt", r)
 	}
-	if stamp, err := os.ReadFile(filepath.Join(f.root, built)); err != nil || string(stamp) != "label=test\n" || !slices.Contains(f.calls, "limine-update") {
+	if stamp, err := os.ReadFile(filepath.Join(f.root, built)); err != nil || !bytes.Equal(stamp, current(t, f.root)) || !slices.Contains(f.calls, "limine-update") {
 		t.Errorf("stamp %q %v, calls %q", stamp, err, f.calls)
 	}
 	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.Contains(c, " generate") || strings.Contains(c, " clean") }) {
