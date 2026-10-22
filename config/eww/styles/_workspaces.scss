@@ -54,8 +54,11 @@ $ws-confirmed: $emr-2;
   border-width: 0 0 2px 2px;
   border-radius: 100px;
   box-shadow: 0 0 5px 1px rgba($blu-1, 0.32);
-  padding: 14px 4px 10px 2px;
+  padding: 14px 6px 10px 2px;
   margin: -10px -2px 20px 18px;
+  transition:
+    border-color 0.25s $ease-out-snap,
+    box-shadow 0.25s $ease-out-snap;
 
   &-hover {
     border-color: $orn-3;

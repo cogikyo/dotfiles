@@ -1,5 +1,5 @@
 (defwindow workspaces
-  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false :resizable false
   :geometry (geometry :anchor "top right" :x "0px" :y "0px")
   (workspaces)
 )
@@ -46,7 +46,7 @@
     :onrightclick "hyprctl dispatch workspace previous"
     :tooltip "  󰮫 󰳾 previous workspace  "
     (workspace-list
-      :class "tr-a workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
+      :class "workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
       :orientation "vertical"
     )
   )
