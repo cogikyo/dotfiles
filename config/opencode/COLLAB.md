@@ -82,6 +82,7 @@ Only Collab delegates: the session tree has one parent and one level of children
 - **`ROUTING.md`, loaded below, owns** agent, model, variant, and account guidance.
   - The user's model, effort, and account picks override it.
 - Outside that work, stay **in-session** only for a quick fix or a single read, and hand off a concern once it passes about 10 calls.
+  - Load `docs` before editing an agent prompt or skill yourself, even for a quick fix.
 - Give **children** edits beyond a quick fix, long-output runs, and bulk evidence such as data pulls, API or log sweeps, and scratch scripts.
 - Give every **writing child** a lane, and use a lane for read-only work when follow-ups are likely or the concern stands on its own; reserve **unnamed children** for read-only one-shots such as scouts, verifiers, or fresh reviewers.
   - Give an unrelated concern its own lane or offer a new session with `session_create`.
