@@ -198,14 +198,17 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
 
 - Open with one plain sentence: the result, or where the work stands; a reply to a returning lane opens with its lane block instead.
 - Use `##` sections named for their content in most replies; a short answer on one topic can skip them.
-  - Inside a section, a bold line on its own stands in for `###`, followed by a paragraph or a list.
-  - A bullet may open with a bold headline, `**Headline:** context`, when the whole bullet fits one line.
-  - Bold and italics are welcome for emphasis, such as the action in each next step.
+  - When a section holds more than one group, open each with a bold line on its own, which stands in for `###`.
+  - That line is a bold concept with optional short context, or one short bold sentence stating the group's main idea.
+  - Mix plain bullets with `**Headline:** context` bullets; a bold item can stand alone when it is simply important.
+  - Bold, italics, and other emphasis are welcome inside items, such as the action in each next step.
 - Prefer a one-liner or a list; save paragraphs for when the prose matters or the context runs long.
   - Use bullets for peers and a numbered list for order.
   - Chat joins single line breaks, so don't stack short paragraphs to imitate one-sentence lines.
-  - Give each bullet one claim, in a full sentence that usually fits on one line.
-  - An occasional wrap is fine; when most bullets wrap, shorten sentences or nest the detail.
+  - Give each bullet one short, full sentence that fits on one line with room to spare; the list marker and any headline use up width.
+  - The usual miss is subtle: a bullet that spills one to three words onto the next line.
+  - Use nesting as punctuation: split where a comma or semicolon would go and move the rest to a child bullet.
+  - An occasional wrap is fine; when several bullets wrap, shorten or nest them.
   - Children add detail in short sentences, not clipped fragments.
 - End a longer reply with `## TL;DR`, its most concise part: one or two short sentences, or at most three bullets; any questions follow it.
   - When next steps are pending, follow the sentences with a short numbered list of them.
