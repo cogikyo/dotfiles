@@ -2,7 +2,10 @@
 # Shared env vars sourced by zshenv (and any POSIX shell).
 
 export PATH="$HOME/.config/opencode/clipboard:$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
-export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+case $OSTYPE in
+darwin*) eval "$(/opt/homebrew/bin/brew shellenv)" ;;
+*) export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ;;
+esac
 export GOPRIVATE="git.linecode.dev/*"
 
 export PAGER=less
