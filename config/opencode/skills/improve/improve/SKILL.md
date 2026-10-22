@@ -5,7 +5,7 @@ description: Use when the user invokes /improve or asks for an improvement sweep
 
 # Improve
 
-Load [`mechanize`](../principles/mechanize/SKILL.md) in Solve before proposing enforcement for a recurring correction.
+Load [`mechanize`](../../principles/mechanize/SKILL.md) in Solve before proposing enforcement for a recurring correction.
 
 ## Authority
 

@@ -43,11 +43,11 @@ Presence itself signals importance; adding emphasis increases that claim.
 
 Load this parent before any subskill; combine only those the change touches.
 
-- **`copy`** (`copy/SKILL.md`): words, labels, claims, messages, and repeated text on any product surface.
-- **`hierarchy`** (`hierarchy/SKILL.md`): size, weight, relative contrast, position, spacing, grouping, and structural chrome.
-- **`balance`** (`balance/SKILL.md`): rendered rounds, one move each, whenever a dense view must fit all its content.
-- **`color`** (`color/SKILL.md`): palette, accents, saturation, color meaning, and accessible color use.
-- **`motion`** (`motion/SKILL.md`): animation, transitions, activity indicators, and repeated movement.
+- **`copy`** (`design/copy/SKILL.md`): words, labels, claims, messages, and repeated text on any product surface.
+- **`hierarchy`** (`design/hierarchy/SKILL.md`): size, weight, relative contrast, position, spacing, grouping, and structural chrome.
+- **`balance`** (`design/balance/SKILL.md`): rendered rounds, one move each, whenever a dense view must fit all its content.
+- **`color`** (`design/color/SKILL.md`): palette, accents, saturation, color meaning, and accessible color use.
+- **`motion`** (`design/motion/SKILL.md`): animation, transitions, activity indicators, and repeated movement.
 
 Stay within the approved scope; a copy pass does not authorize a layout or behavior change.
 Describe visual changes in words, never ASCII mockups; change one thing per round for the user to judge.
