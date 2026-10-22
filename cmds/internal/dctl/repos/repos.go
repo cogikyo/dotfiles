@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/sys/unix"
 )
@@ -246,36 +247,41 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 			checkouts = append(checkouts, st)
 		}
 	}
-	var missing, failed []string
-	for _, r := range repos {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		dir := r.Dir(root.Home)
-		res := result{repo: r.Repo}
-		st, err := os.Stat(dir)
-		if err == nil && slices.ContainsFunc(checkouts, func(c os.FileInfo) bool { return os.SameFile(c, st) }) {
-			res.state = Skipped
-		} else {
-			res.state, res.detail, err = update(ctx, run, dir, r.URL())
-			switch {
-			case err != nil:
-				res.state, res.detail = Failed, err.Error()
-			case res.state == Broken:
-				res.detail = action(r, res.detail)
+	results := make([]result, len(repos))
+	var wg sync.WaitGroup
+	for i, r := range repos {
+		wg.Go(func() {
+			dir := r.Dir(root.Home)
+			res := result{repo: r.Repo}
+			st, err := os.Stat(dir)
+			if err == nil && slices.ContainsFunc(checkouts, func(c os.FileInfo) bool { return os.SameFile(c, st) }) {
+				res.state = Skipped
+			} else {
+				res.state, res.detail, err = update(ctx, run, dir, r.URL())
+				switch {
+				case err != nil:
+					res.state, res.detail = Failed, err.Error()
+				case res.state == Broken:
+					res.detail = action(r, res.detail)
+				}
 			}
-		}
+			results[i] = res
+		})
+	}
+	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	var missing, failed []string
+	for _, res := range results {
 		switch res.state {
 		case Absent:
-			missing = append(missing, r.Repo)
+			missing = append(missing, res.repo)
 			continue
 		case Broken, Failed:
-			failed = append(failed, r.Repo)
+			failed = append(failed, res.repo)
 		}
 		u.Row(res.level(), res.repo+": "+res.summary())
-		if errors.Is(err, execx.ErrStalled) {
-			return fmt.Errorf("%s stalled; skipped the remaining repos", r.Repo)
-		}
 	}
 	if len(missing) > 0 {
 		u.Warn("%d repos %s; run `dctl setup repos`", len(missing), Absent)
