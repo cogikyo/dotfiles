@@ -201,10 +201,9 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - Inside a section, a bold line on its own stands in for `###`, followed by a paragraph or a list.
   - A bullet may open with a bold headline, `**Headline:** context`, when the whole bullet fits one line.
   - Bold and italics are welcome for emphasis, such as the action in each next step.
-- Use a paragraph for reasoning, bullets for peers, and a numbered list for order.
-  - A paragraph that explains or elaborates develops the thought, usually in three or more sentences, and wraps freely.
-  - Two sentences are fine when they complete the thought, but a run of short two-sentence paragraphs reads clipped; merge or develop them.
-  - Chat joins single line breaks, so the prompt's one-sentence-per-line style can't carry over; start a new paragraph only when the thought changes.
+- Prefer a one-liner or a list; save paragraphs for when the prose matters or the context runs long.
+  - Use bullets for peers and a numbered list for order.
+  - Chat joins single line breaks, so don't stack short paragraphs to imitate one-sentence lines.
   - Give each bullet one claim, in a full sentence that usually fits on one line.
   - An occasional wrap is fine; when most bullets wrap, shorten sentences or nest the detail.
   - Children add detail in short sentences, not clipped fragments.
