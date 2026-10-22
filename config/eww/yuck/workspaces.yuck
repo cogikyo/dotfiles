@@ -1,4 +1,5 @@
 (defwindow workspaces
+  ; Disable resizing so GTK can shrink the window after CSS reloads.
   :monitor 0 :stacking "bottom" :exclusive false :focusable false :resizable false
   :geometry (geometry :anchor "top right" :x "0px" :y "0px")
   (workspaces)
