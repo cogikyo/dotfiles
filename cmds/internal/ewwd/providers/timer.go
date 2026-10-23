@@ -425,7 +425,7 @@ func (t *Timer) notifyDunst(appName, message string, timeoutMs int, urgency stri
 	if urgency != "" {
 		args = append(args, "-u", urgency)
 	}
-	args = append(args, message)
+	args = append(args, "--", message)
 
 	if err := exec.Command("dunstify", args...).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: dunstify error: %v\n", err)
