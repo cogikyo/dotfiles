@@ -5,6 +5,7 @@ import path from "node:path";
 
 export const home = homedir();
 export const scratch = path.join(home, ".local/state/opencode/scratch");
+export const temp = "/tmp/opencode";
 
 const stores = [".local/share", ".local/state"].map((store) => path.join(home, store));
 const opencodeSecret = /^(?:auth\.json|account\.json|opencode\.db(?:-wal|-shm)?|service(?:-[\w.-]+)?\.json)$/u;
@@ -105,7 +106,14 @@ function canonical(target: string) {
   }
 }
 
-function within(child: string, parent: string) {
+export function located(target: string): string {
+  const real = canonical(target);
+  if (real !== undefined) return real;
+  const parent = path.dirname(target);
+  return parent === target ? target : path.join(located(parent), path.basename(target));
+}
+
+export function within(child: string, parent: string) {
   return child === parent || child.startsWith(parent === "/" ? "/" : `${parent}/`);
 }
 

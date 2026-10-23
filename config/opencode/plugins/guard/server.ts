@@ -150,7 +150,7 @@ export default Plugin.define({
         Effect.sync(() => {
           if (event.action !== "shell") return;
           for (const resource of event.resources) {
-            const message = denial(resource);
+            const message = denial(resource, event.agent);
             if (!message) continue;
             event.effect = "deny";
             event.message = message;

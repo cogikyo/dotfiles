@@ -226,7 +226,6 @@
     { "action": "shell", "resource": "*gh api *--field*", "effect": "deny" },
     { "action": "shell", "resource": "*gh api *--raw-field*", "effect": "deny" },
     { "action": "shell", "resource": "*gh api *--input*", "effect": "deny" },
-    { "action": "shell", "resource": "rm *", "effect": "deny" },
     { "action": "shell", "resource": "sudo rm*", "effect": "deny" },
     { "action": "shell", "resource": "trash *", "effect": "allow" },
     { "action": "shell", "resource": "trash-put *", "effect": "allow" },

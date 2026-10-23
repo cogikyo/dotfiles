@@ -1,4 +1,6 @@
-import { launches } from "./shell.ts";
+import path from "node:path";
+import { located, temp, within } from "./paths.ts";
+import { type Command, launches } from "./shell.ts";
 
 export function readOnly(agent: string | undefined) {
   if (!agent) return false;
@@ -23,9 +25,37 @@ function unresolved(name: string) {
   return name !== "[" && name !== "[[" && /[$`*?[]|\{[^}]*,/u.test(name);
 }
 
-export function denial(resource: string) {
+function operands(args: string[]) {
+  const end = args.indexOf("--");
+  const flagged = end < 0 ? args : args.slice(0, end);
+  const rest = end < 0 ? [] : args.slice(end + 1);
+  return [...flagged.filter((arg) => arg === "-" || !arg.startsWith("-")), ...rest];
+}
+
+function removable(operand: string) {
+  if (!path.isAbsolute(operand) || /[$`]/u.test(operand) || operand.endsWith("/")) return false;
+  if (operand.includes("..") || operand.split("/").includes(".")) return false;
+  const dir = path.dirname(operand);
+  if (/[*?[{]/u.test(dir)) return false;
+  try {
+    const real = located(dir);
+    return within(real, temp) && !(real === temp && /[*?[{]/u.test(path.basename(operand)));
+  } catch {
+    return false;
+  }
+}
+
+function removal([, ...args]: Command) {
+  const targets = operands(args);
+  return targets.length > 0 && targets.every(removable);
+}
+
+export function denial(resource: string, agent: string | undefined) {
   const commands = launches(resource);
-  if (commands.some(([name]) => name === "rm")) return "rm is disabled; move files to trash with `trash -- <path>`";
+  // Cage already confines read-only deletion to scratch tmp/ and cache/.
+  if (!readOnly(agent) && commands.some((command) => command[0] === "rm" && !removal(command))) {
+    return `rm takes only literal absolute paths inside ${temp}/, without variables, \`..\`, a trailing slash, or a top-level glob; move anything else to trash with \`trash -- <path>\``;
+  }
   if (commands.some(([name]) => name === "grok")) return "grok is disabled in the shell; use the `x` tool for X search";
   if (commands.some(([name, ...args]) => (name === "opencode" || name === "opencode-v2") && args.includes("api"))) {
     return "agents must not call the OpenCode server API; `opencode api` is disabled in the shell; to create a session the user asked for, call `tools.opencode.session_create` through `execute`";
