@@ -9,6 +9,7 @@ package browser
 
 import (
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"errors"
@@ -101,7 +102,7 @@ func (b *Browser) executeOpen(args []string) (string, error) {
 	} else {
 		cmd = append(cmd, "--new-window", url)
 	}
-	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
+	if err := detach.Start(exec.Command(cmd[0], cmd[1:]...)); err != nil {
 		return "", err
 	}
 
@@ -381,7 +382,7 @@ func (b *Browser) executeLaunch(args []string) (string, error) {
 			return "", err
 		}
 	} else {
-		if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
+		if err := detach.Start(exec.Command(cmd[0], cmd[1:]...)); err != nil {
 			return "", err
 		}
 	}

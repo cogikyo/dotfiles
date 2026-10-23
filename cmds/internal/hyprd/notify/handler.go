@@ -4,6 +4,7 @@ package notify
 
 import (
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/detach"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -324,7 +325,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	args := n.buildDunstArgs(spec, ctx, style)
 
 	if !spec.FocusAction || paneNotificationID(ctx) == 0 {
-		return runDetached("dunstify", args...)
+		return detach.Start(exec.Command("dunstify", args...))
 	}
 
 	key, token, tracked := globalPaneNotifications.Begin(ctx, spec.Style, spec.Birth)
@@ -607,7 +608,7 @@ func closeDunstNotification(id int) {
 	if id <= 0 {
 		return
 	}
-	_ = runDetached("dunstctl", "close", strconv.Itoa(id))
+	_ = detach.Start(exec.Command("dunstctl", "close", strconv.Itoa(id)))
 }
 
 // fromHyprd reports whether hyprd sent this notification itself.

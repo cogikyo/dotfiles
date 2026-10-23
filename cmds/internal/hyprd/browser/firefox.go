@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
@@ -134,7 +135,7 @@ func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
 	if b.hypr != nil {
 		return b.hypr.Exec(shellQuoteCommand(cmd))
 	}
-	return exec.Command(cmd[0], cmd[1:]...).Start()
+	return detach.Start(exec.Command(cmd[0], cmd[1:]...))
 }
 
 // clearSessionStore removes Firefox sessionstore files so normal browser launches don't inherit exact restores.

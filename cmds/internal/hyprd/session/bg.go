@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/machine"
 )
 
@@ -182,18 +183,11 @@ func (b *BG) spawn() (string, error) {
 		return "", err
 	}
 	opts := "--loop --panscan=1 --hwdec=auto-safe --input-ipc-server=" + b.cfg.Socket
-	cmd := machine.Pooled("mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
-	if err := cmd.Start(); err != nil {
+	// Keep mpvpaper ahead of preferred development processes in OOM victim selection.
+	cmd := machine.Pooled("choom", "-n", backgroundOOMScoreAdj, "--", "mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
+	if err := detach.Start(cmd); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
 	}
-	// Keep mpvpaper ahead of preferred development processes in OOM victim selection.
-	scorePath := fmt.Sprintf("/proc/%d/oom_score_adj", cmd.Process.Pid)
-	if err := os.WriteFile(scorePath, []byte(backgroundOOMScoreAdj), 0); err != nil {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		return "", fmt.Errorf("set mpvpaper OOM priority: %w", err)
-	}
-	go cmd.Wait()
 	return display, nil
 }
 

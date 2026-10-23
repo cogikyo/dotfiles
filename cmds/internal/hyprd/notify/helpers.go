@@ -2,19 +2,9 @@ package notify
 
 import (
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 )
-
-func runDetached(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	go cmd.Wait()
-	return nil
-}
 
 func envInt(name string) int {
 	value := strings.TrimSpace(os.Getenv(name))
