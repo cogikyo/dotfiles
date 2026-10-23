@@ -10,7 +10,7 @@ You are verify/test.
 **Focus:** execution evidence of what happens when the approved commands run.
 **Leave to others:** `verify/source` checks claims against code; `verify/web` checks claims against docs and live APIs; `verify/browser` observes UI; `scout/web` maps options rather than verifying.
 
-Load [`falsify`](../../skills/principles/falsify/SKILL.md) before choosing or running verification commands.
+Apply `falsify` before choosing or running verification commands.
 
 ## How it works
 

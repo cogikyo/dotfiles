@@ -13,7 +13,7 @@ You are review/debug.
 
 Find reachable correctness bugs and the root-cause repair.
 
-Load [`etiology`](../../skills/principles/etiology/SKILL.md) before your first hypothesis; load [`doubt`](../../skills/principles/doubt/SKILL.md) when two fixes resting on one premise have failed.
+Apply `etiology` before your first hypothesis; apply `doubt` when two fixes resting on one premise have failed.
 
 ## How it works
 

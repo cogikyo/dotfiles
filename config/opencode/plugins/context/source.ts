@@ -6,7 +6,7 @@ export const configRoot = path.resolve(import.meta.dirname, "..", "..");
 const rootFiles = ["AGENTS.md", "COLLAB.md", "ROUTING.md"];
 const maxLabel = 36;
 
-export type Kind = "readme" | "agents" | "agent" | "principle" | "skill" | "command" | "partial" | "markdown";
+export type Kind = "readme" | "agents" | "agent" | "skill" | "command" | "partial" | "markdown";
 
 export function isMarkdown(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0]);
@@ -17,7 +17,7 @@ export function kindOf(filePath: string): Kind {
   const leaf = path.basename(normalized).toLowerCase();
   if (leaf === "readme.md") return "readme";
   if (leaf === "agents.md" || isRootFile(normalized)) return "agents";
-  if (leaf === "skill.md") return isPrinciple(normalized) ? "principle" : "skill";
+  if (leaf === "skill.md") return "skill";
   if (segmentsAfter(normalized, "agents", "agent")) return "agent";
   if (segmentsAfter(normalized, "commands", "command")) return "command";
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalized))) return "partial";
@@ -65,7 +65,6 @@ export function label(roots: readonly string[], filePath: string, kind: Kind) {
 
 function rawLabel(roots: readonly string[], filePath: string, kind: Kind) {
   if (kind === "agent") return agentLabel(filePath);
-  if (kind === "principle") return path.basename(path.dirname(filePath));
   if (kind === "skill") return ownedLabel(roots, filePath, skillName(filePath), "skills", "skill");
   if (kind === "command") return ownedLabel(roots, filePath, commandName(filePath), "commands", "command");
   const relative = relativePath(roots, filePath);
@@ -80,11 +79,6 @@ function rawLabel(roots: readonly string[], filePath: string, kind: Kind) {
 function isRootFile(filePath: string) {
   const id = identity(filePath);
   return rootFiles.some((file) => id === identity(path.join(configRoot, file)));
-}
-
-function isPrinciple(filePath: string) {
-  const parts = filePath.split(path.sep);
-  return parts.at(-3) === "principles" && parts.at(-4) === "skills";
 }
 
 function segmentsAfter(filePath: string, ...names: string[]) {

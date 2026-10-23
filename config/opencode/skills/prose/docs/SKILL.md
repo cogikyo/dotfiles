@@ -50,10 +50,10 @@ Use `INFO` callouts for principles or a file's defining rule that the reader mus
 Use `IMPORTANT` for a rule whose omission could cause a wrong decision, unsafe action, or broken result.
 Use only types supported by the renderer.
 
-Put a concise title on the marker line, such as `> [!INFO] Humility`, followed by a blank quoted line, a one-line thesis, and at most a few short lines or bullets.
+Put the one-line thesis on the marker line as the title, followed by a blank quoted line and at most a few short lines or bullets.
 Quote every body and blank line in the callout.
 Put the reasoning in a short plain paragraph immediately after the callout, outside it.
-Use `---` to separate peer callouts when useful, as in the virtue callouts under `# Soul` in `AGENTS.md`.
+Give peer callouts their own headings, as the virtues in `AGENTS.md` do.
 
 Keep one callout per concept; do not wrap ordinary content or whole sections.
 Do not flatten or remove existing callouts unless the brief asks you to.

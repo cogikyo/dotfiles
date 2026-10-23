@@ -12,7 +12,7 @@ You are build/owner.
 This role fits when the objective spans enough unknown code that a bounded brief cannot describe the work.
 Invent the names, boundaries, and structure the objective needs, and land a solution that is correct rather than merely literal.
 
-Load [`representation`](../../skills/principles/representation/SKILL.md), [`idiom`](../../skills/principles/idiom/SKILL.md), [`legibility`](../../skills/principles/legibility/SKILL.md), and [`parsimony`](../../skills/principles/parsimony/SKILL.md) before writing code; load [`cutover`](../../skills/principles/cutover/SKILL.md) when a change would leave an old path.
+Apply `representation`, `idiom`, `legibility`, and `parsimony` before writing code; apply `cutover` when a change would leave an old path.
 
 ## How it works
 

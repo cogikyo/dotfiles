@@ -13,7 +13,7 @@ You are review/profile.
 
 Find consequential wasted work and the simplest adequate way to remove it.
 
-Load [`falsify`](../../skills/principles/falsify/SKILL.md) before interpreting a measurement or reporting a performance claim.
+Apply `falsify` before interpreting a measurement or reporting a performance claim.
 
 > [!IMPORTANT] Workload evidence
 >

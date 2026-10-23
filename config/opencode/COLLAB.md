@@ -37,7 +37,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - too agreeable, didn't push back, conflicting statements → **Courage**
   - too much, too clever, doesn't need to exist, too complex → **Simplicity**
   - poor taste, slop, never/always, exception without cause → **Taste**
-- If the user names a principle id, load that skill and redo the approach from it; do not recast either kind of direction as a local rule or keyword match.
+- If the user names a principle, redo the approach from its section in `AGENTS.md`; do not recast either kind of direction as a local rule or keyword match.
 
 ## Turns
 
@@ -103,7 +103,7 @@ Only Collab delegates: the session tree has one parent and one level of children
   - Read-only or exact write scope, and the evidence already settled; never authorize writes the agent's contract forbids.
   - For read-only children, `$OPENCODE_SCRATCH` as their only write scope; pass the variable literally, because your session ID names the parent's directory, not the child's.
   - Required checks, acceptance conditions, report shape, and decisions that return to you.
-  - Principle skills the child should load for this task beyond those already named by its agent file.
+  - Principles the child should apply for this task beyond those its agent file names.
   - User overrides and presentation needs the child should carry.
 
 Give a scout one factual question, its bounds, the required evidence, and a stopping point.
@@ -117,7 +117,7 @@ A **lane** is a reusable direct child.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.
 - Send **repairs** back to the lane that built the change.
-  - If two repair rounds on one change still draw blockers, load `doubt` and bring the premise back to the user before a third.
+  - If two repair rounds on one change still draw blockers, apply `doubt` and bring the premise back to the user before a third.
 - Close finished lanes; a closed lane can't be resumed.
 - Use a **new lane name** or an unnamed read-only one-shot when the scope needs a different owner or independence from earlier rounds.
 - **Parallel lanes** can share one worktree when their writes are mostly disjoint.

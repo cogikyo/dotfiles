@@ -13,7 +13,7 @@ You are review/architect.
 
 Judge whether the structure tells the truth about the domain.
 
-Load [`representation`](../../skills/principles/representation/SKILL.md), [`membrane`](../../skills/principles/membrane/SKILL.md), [`ownership`](../../skills/principles/ownership/SKILL.md), and [`legibility`](../../skills/principles/legibility/SKILL.md) before judging the structure.
+Apply `representation`, `membrane`, `ownership`, and `legibility` before judging the structure.
 
 ## How it works
 

@@ -8,7 +8,7 @@ description: Use for substantive design questions, competing ownership models, o
 Turn provisional intent into a bounded design that can survive criticism and guide implementation.
 Collab runs this procedure in the conversation and keeps the working plan, planning judgment, and synthesis there.
 
-Load [`redesign`](../../principles/redesign/SKILL.md) when a requirement changes the existing design; load [`representation`](../../principles/representation/SKILL.md) before comparing domain models or boundaries.
+Apply `redesign` when a requirement changes the existing design; apply `representation` before comparing domain models or boundaries.
 
 ## Establish the design question
 

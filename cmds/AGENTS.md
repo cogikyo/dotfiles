@@ -15,7 +15,7 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 
 ## Working here
 
-Load [`converge`](../config/opencode/skills/principles/converge/SKILL.md) before changing state-mutating commands or setup stages.
+Apply `converge` before changing state-mutating commands or setup stages.
 
 - Run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` from `cmds/` after non-trivial edits.
 - Verify with a scratch build into `/tmp/opencode/bin/`, then install per the root [Working here](../AGENTS.md#working-here) rules; never copy a `/tmp` binary into place.
