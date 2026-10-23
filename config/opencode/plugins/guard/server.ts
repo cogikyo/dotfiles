@@ -62,7 +62,10 @@ function describe(event: { agent: string; tools: Record<string, { description: s
     const shell = event.tools.shell;
     if (!shell) return;
     shell.description = `${shell.description} Set the working directory with \`workdir\`; commands that run \`cd\`, \`pushd\`, or \`popd\` are rejected.`;
-    if (!readOnly(event.agent)) return;
+    if (!readOnly(event.agent)) {
+      shell.description = `${shell.description} The shell is zsh: an unquoted \`$var\` expands to one word, so pass lists as arrays.`;
+      return;
+    }
     shell.description = `${shell.description} Commands run offline in a sandbox; write only under \`$OPENCODE_SCRATCH\`, where \`tmp/\` and \`cache/\` are mutable and files at the root cannot be deleted.`;
   });
 }

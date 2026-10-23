@@ -96,6 +96,7 @@ Use `trash -- <path>` for deletion, `x` for X search, `sessions` for history, an
 Set the shell tool's `workdir` parameter; use absolute paths, `git -C`, or a separate call for other directories.
 V2 resolves each `cd` argument against `workdir`, so chained relative changes can cause false external-directory prompts.
 The `context`, `compaction`, and `generate` hooks add this rule to the shell tool's description for each request.
+Agents outside the read-only set also learn that the shell is zsh, where an unquoted `$var` does not word-split; read-only commands run under `bash -c` in cage.
 
 For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, and `diagram`; agent permissions can restrict these further.
 Code Mode `execute` is excluded, and `verify/web` denies all shell calls.
