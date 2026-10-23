@@ -4,6 +4,7 @@ enable earlyoom.service
 enable fstrim.timer
 enable greetd.service
 enable nftables.service
+enable nix-daemon.socket
 enable pcscd.socket
 enable snapper-cleanup.timer
 enable snapper-timeline.timer

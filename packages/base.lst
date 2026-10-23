@@ -148,6 +148,7 @@ lazygit
 lua51
 luarocks
 neovim
+nix
 pkgconf
 python-pillow
 python-pip
