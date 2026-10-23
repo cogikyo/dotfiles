@@ -125,8 +125,8 @@ dctl --json setup --status
 machine ─▶ system ─▶ network ─▶ packages ─▶ home ─▶ extra (background)
   ┌─────────────────────────────────────────────────────┘
   ▼
-secrets ─▶ ssh ─▶ repos ─▶ firefox ─▶ certs
-  ┌─────────────────────────────────────┘
+secrets ─▶ bridge ─▶ ssh ─▶ repos ─▶ firefox ─▶ certs
+  ┌───────────────────────────────────────────────┘
   ▼
 All required phase-1 stages OK
   │
@@ -168,6 +168,7 @@ The optional stages do not gate security enrollment.
 | home       | packages                    | Links and fonts                   |
 | extra      | home, network               | Background apps                   |
 | secrets    | system                      | Restore private files             |
+| bridge     | network, extra, secrets     | Pinned Cursor bridge and service  |
 | ssh        | secrets, network            | GitHub access                     |
 | repos      | ssh                         | Clone and fetch history           |
 | firefox    | packages                    | Profile and config                |
@@ -287,6 +288,8 @@ Missing AUR and local base packages need manual installation.
   - Setup waits before later root work, before `certs`, and at the end.
 - First Ctrl+C stops new stages and waits for `extra`; a second sends SIGINT.
   - Setup never sends SIGTERM or SIGKILL to pacman.
+- `bridge` installs the pinned, patched checkout at `~/.local/share/cursor-sdk-bridge` from `packages/cursor-sdk-bridge/` and runs `npm ci --omit=dev`.
+  - It restarts `cursor-bridge.service` after checkout or dependency changes, or if inactive.
 
 > _See [Package reconciliation](#package-reconciliation) for interactive selection._
 
@@ -447,8 +450,9 @@ Named steps omit that prompt and retain this order.
 5. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
 6. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
 7. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
-8. `go`: update eligible module-release tools.
-9. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
+8. `bridge`: repair the checkout and service as in `setup bridge`.
+9. `go`: update eligible module-release tools.
+10. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
 
 - `--all` or global `--yes` skips step/recipe prompts, accepts the setup plan, and passes `--noconfirm`.
   - It never installs or removes package-list drift.

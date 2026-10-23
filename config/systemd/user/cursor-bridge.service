@@ -1,10 +1,12 @@
 [Unit]
 Description=Cursor SDK bridge for OpenCode
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 # Requires a Cursor user API key at ~/.local/share/dotfiles/cursor-api-key (Team Admin keys are rejected).
 # Restore it with `secrets decrypt` (secrets/cursor-api-key.age).
-# Requires the u-u-z/cursor-sdk-bridge checkout, with its `-fast` model-suffix patch, at ~/.local/share/cursor-sdk-bridge.
+# `dctl setup bridge` provides the patched checkout.
 # OpenCode's `cursor` provider sends a placeholder apiKey; this service handles Cursor auth.
 ExecStart=/usr/bin/bwrap \
   --unshare-all --share-net --die-with-parent --new-session \

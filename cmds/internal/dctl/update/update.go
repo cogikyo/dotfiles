@@ -87,6 +87,17 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			},
 		},
 		{
+			Name: "bridge",
+			Plan: "Cursor SDK bridge checkout from packages/cursor-sdk-bridge",
+			Run: func(ctx context.Context) error {
+				err := packages.NewBridge(root, run).Fix(ctx)
+				if execx.Shown(err) {
+					return drawn(err)
+				}
+				return err
+			},
+		},
+		{
 			Name: "go",
 			Plan: "Go tools installed from module releases",
 			Run: func(ctx context.Context) error {

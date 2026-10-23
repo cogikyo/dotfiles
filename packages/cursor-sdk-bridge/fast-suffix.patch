@@ -1,0 +1,42 @@
+diff --git a/src/routes.ts b/src/routes.ts
+index 814b8cb..929b1c7 100644
+--- a/src/routes.ts
++++ b/src/routes.ts
+@@ -24,7 +24,7 @@
+ 
+ import type { ServerResponse } from "node:http";
+ import { randomUUID } from "node:crypto";
+-import type { Run, TokenUsage } from "@cursor/sdk";
++import type { ModelSelection, Run, TokenUsage } from "@cursor/sdk";
+ import type { AppState } from "./index.ts";
+ import type { SessionHandle } from "./sessions.ts";
+ import type {
+@@ -38,6 +38,7 @@ import {
+ import { buildUnaryBody, sendChunk, sendSSEError, type RunOutcome } from "./sse.ts";
+ 
+ const ID_PREFIX = "chatcmpl-bridge";
++const FAST_SUFFIX = "-fast";
+ const VALID_ROLES = new Set(["system", "user", "assistant", "tool"]);
+ 
+ export async function runChatCompletion(
+@@ -192,6 +193,11 @@ function buildCustomTools(tools: OpenAITool[], handle: SessionHandle): Record<st
+   return customTools;
+ }
+ 
++function modelSelection(model: string): ModelSelection {
++  if (!model.endsWith(FAST_SUFFIX)) return { id: model };
++  return { id: model.slice(0, -FAST_SUFFIX.length), params: [{ id: "fast", value: "true" }] };
++}
++
+ function validateChatRequest(raw: unknown): OpenAIChatRequest {
+   if (typeof raw !== "object" || raw === null) throw new Error("body must be a JSON object");
+   const b = raw as OpenAIChatRequest;
+@@ -232,7 +238,7 @@ async function collectRunOutcome(
+   let usage: TokenUsage | undefined;
+ 
+   const run = await handle.agent.send(prompt, {
+-    model: { id: model },
++    model: modelSelection(model),
+     mode: "agent",
+     local: { customTools: customTools as never } as never,
+   } as never);

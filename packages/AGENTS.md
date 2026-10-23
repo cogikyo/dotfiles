@@ -14,6 +14,9 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 | `repos.lst`            | Repository clone catalog          |
 | `brew.lst`             | macOS Homebrew formulae and casks |
 | `<pkg>/PKGBUILD`       | Local offline payload recipe      |
+| `cursor-sdk-bridge/`   | Bridge pin and patch for dctl     |
+
+- Generate `cursor-sdk-bridge/fast-suffix.patch` with plain `git diff` defaults (3 context lines, myers) so dctl's patch-ID check matches.
 
 ## Rules
 

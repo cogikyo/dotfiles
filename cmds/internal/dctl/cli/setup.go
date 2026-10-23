@@ -101,6 +101,7 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 		stage(home.Stage(root, run), "links and fonts", "packages"),
 		stage(packages.Extra(root.Packages(), root.Config("opencode"), run), apps, "packages", "home", "network"),
 		stage(secrets.Stage(u, root), "PIV PIN or recovery phrase", "system"),
+		stage(packages.NewBridge(root, run).Stage(), "Cursor bridge for OpenCode", "network", "extra", "secrets"),
 		stage(ssh.Stage(u, root, run), "SSH access to GitHub", "secrets", "network"),
 		stage(repos.Stage(root, run), "clone your repos", "ssh"),
 		stage(home.Firefox(root, run), "profile and config", "packages"),

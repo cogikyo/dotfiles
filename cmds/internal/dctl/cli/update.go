@@ -21,7 +21,7 @@ type UpdateCmd struct {
 	All   bool     `help:"Run every step without asking and pass --noconfirm to pacman, yay, and makepkg; never installs or removes drifted packages."`
 	Dirty bool     `help:"Build dotfiles commands from uncommitted cmds/ without asking."`
 	Only  []string `placeholder:"NAME" help:"Limit the cmd step to these dotfiles commands or packages/ recipes; implies cmd."`
-	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, setup, repos, cmd, bun, go, rust (default: all, asking for each)."`
+	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, setup, repos, cmd, bun, bridge, go, rust (default: all, asking for each)."`
 }
 
 func (c *UpdateCmd) Help() string {
