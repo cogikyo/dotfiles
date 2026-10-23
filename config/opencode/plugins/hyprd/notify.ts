@@ -50,7 +50,7 @@ const line = (text: string) =>
     text
       .split("\n")
       .map((part) => part.trim())
-      .find(Boolean) ?? "",
+      .find((part) => /[\p{L}\p{N}]/u.test(part)) ?? "",
   )
     .slice(0, LINE_MAX)
     .join("");
@@ -175,6 +175,18 @@ function reply(data: Data, id: string) {
   );
 }
 
+// Completed lanes already sent notices; their root wake turn needs no duplicate.
+function woke(data: Data, event: { id: string; data: { sessionID: string } }) {
+  const all = data.session.message.list(event.data.sessionID);
+  const end = all.findIndex((message) => message.id === event.id.replace(/^evt_/, "msg_"));
+  const messages = end < 0 ? all : all.slice(0, end);
+  const start = messages.findLastIndex((message) => message.type === "idle");
+  const turn = messages.slice(start + 1);
+  if (start < 0 || turn.some((message) => message.type === "user")) return false;
+  const notices = turn.filter((message) => message.type === "synthetic" && message.metadata?.source === "subagent");
+  return notices.length > 0 && notices.every((message) => message.metadata?.state === "completed");
+}
+
 export default Plugin.define({
   id: "notify",
   setup(context) {
@@ -206,17 +218,18 @@ export default Plugin.define({
       if (!abort.signal.aborted && !quiet(top)) send(kind, { message: `${title(top)}: ${label}` });
     };
 
-    const finish = async (sessionID: string, outcome: "succeeded" | "failed", error = "") => {
+    const finish = async (sessionID: string, outcome: "succeeded" | "woke" | "failed", error = "") => {
       if (ended.has(sessionID)) return;
       ended.add(sessionID);
       const top = await root(sessionID);
       if (abort.signal.aborted || quiet(top)) return;
       if (top !== sessionID) {
         const child = data.session.get(sessionID);
-        if (child && outcome === "succeeded") send("lane", { message: `${lane(child)}: ${title(sessionID)}` });
+        if (child && outcome !== "failed") send("lane", { message: `${lane(child)} done` });
         return;
       }
       if (outcome === "failed") return send("error", { message: `${title(top)}: ${error}` });
+      if (outcome === "woke") return;
       send("complete", { message: title(top), last_assistant_message: reply(data, top) ?? title(top) });
     };
 
@@ -246,7 +259,8 @@ export default Plugin.define({
       data.on("form.cancelled", (event) => seen.delete(event.data.id)),
       data.on("session.execution.started", (event) => ended.delete(event.data.sessionID)),
       data.on("session.execution.succeeded", (event) => {
-        void finish(event.data.sessionID, "succeeded");
+        // Read before any await: later events in the host batch can change the store.
+        void finish(event.data.sessionID, woke(data, event) ? "woke" : "succeeded");
       }),
       data.on("session.execution.failed", (event) => {
         const sessionID = event.data.sessionID;

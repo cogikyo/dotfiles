@@ -144,7 +144,10 @@ If a V2 update breaks that lookup, the plugin shows one warning toast and the ke
 `hyprd/tui.ts` loads the notification and pane-context plugins together.
 `hyprd/notify.ts` sends permission, question, complete, idle, error, lane, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
 It needs `KITTY_PID` and `KITTY_WINDOW_ID`, follows child requests to their root, and sends desktop notices for open sessions outside the focused view.
-Successful children send a `lane` notice instead of a root completion notice.
+Successful children send a `lane` notice with `<lane> done`; one-shot children use their agent name, such as `verify/test done`.
+Root turns skip completion notices when no user message started the turn and all lane notices that woke it report `completed`, because each lane already sent its own notice; if the TUI has not loaded the start of the turn, the notice is sent anyway.
+User turns, turns woken by failed or cancelled lanes, and turns woken only by other notices still send completion notices.
+Notice text uses the first line containing a letter or digit, skipping Markdown rules such as `---`.
 Notification deduplication and timers live in memory.
 
 Every 60 seconds, the plugin checks the displayed root and its lanes for pending requests.
