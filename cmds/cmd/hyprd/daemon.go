@@ -5,6 +5,7 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/gobuild"
 	"dotfiles/cmds/internal/hyprd/browser"
+	"dotfiles/cmds/internal/hyprd/health"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
@@ -48,6 +49,7 @@ type Daemon struct {
 	pickerCtl *session.Picker
 	accentCtl *Accent
 	opencode  *opencodepkg.Controller
+	health    *health.Monitor
 	restartCh chan struct{}
 }
 
@@ -87,6 +89,9 @@ func New() (*Daemon, error) {
 		}
 	})
 	d.shareCtl = session.NewShare(hyprClient, stateStore)
+	if d.health, err = health.New(d.healthOpened); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd health: %v\n", err)
+	}
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
@@ -115,6 +120,7 @@ func (d *Daemon) Run() error {
 	}()
 
 	go d.watchConfig(d.server.Done())
+	stopHealth := d.startHealth()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -123,11 +129,13 @@ func (d *Daemon) Run() error {
 	select {
 	case sig := <-sigCh:
 		fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
+		stopHealth()
 		d.server.Shutdown()
 		return nil
 	case <-d.restartCh:
 		time.Sleep(50 * time.Millisecond)
 		fmt.Println("hyprd: restarting...")
+		stopHealth()
 		d.server.Shutdown()
 		return d.execSelf()
 	}
@@ -361,6 +369,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "opencode":
 		return d.opencode.Handle(arg)
+	case "health":
+		return d.handleHealth(arg)
 	case "rebuild":
 		return d.handleRebuild()
 	default:
@@ -442,24 +452,27 @@ func (d *Daemon) handleThreeBody(arg string) string {
 			return result
 		}
 	}
-	monocle := wm.NewMonocle(d.hypr, d.state)
-	monoResult, err := monocle.Focus(name)
-	if err != nil {
-		return fmt.Sprintf("error: %v", err)
-	}
-	if monoResult != "" {
-		d.notifyWorkspace()
-		return monoResult
-	}
-	if _, err := monocle.DeactivateIfActive(); err != nil {
-		return fmt.Sprintf("error: %v", err)
-	}
-	tb := wm.NewThreeBody(d.hypr, d.state)
-	result, err := tb.Execute(name)
+	result, err := d.focusBody(name)
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
 	}
 	return result
+}
+
+func (d *Daemon) focusBody(name string) (string, error) {
+	monocle := wm.NewMonocle(d.hypr, d.state)
+	monoResult, err := monocle.Focus(name)
+	if err != nil {
+		return "", err
+	}
+	if monoResult != "" {
+		d.notifyWorkspace()
+		return monoResult, nil
+	}
+	if _, err := monocle.DeactivateIfActive(); err != nil {
+		return "", err
+	}
+	return wm.NewThreeBody(d.hypr, d.state).Execute(name)
 }
 
 func (d *Daemon) handleBrowser(arg string) string {

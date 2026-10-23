@@ -145,6 +145,12 @@ func (k *Client) launchID(args ...string) (int, error) {
 	return id, nil
 }
 
+func (k *Client) LaunchOverlay(windowID int, cwd string, argv ...string) (int, error) {
+	// Without --match, kitty ignores --next-to for a window outside the active tab.
+	args := []string{"--type=overlay", "--match=window_id:" + strconv.Itoa(windowID), "--next-to=id:" + strconv.Itoa(windowID), "--cwd=" + cwd}
+	return k.launchID(append(args, argv...)...)
+}
+
 func (k *Client) gotoLayout(tabID, layout string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()

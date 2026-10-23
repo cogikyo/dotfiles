@@ -89,6 +89,8 @@ func main() {
 		cli.VPN()
 	case "screenshot":
 		cli.Screenshot()
+	case "health":
+		cmdHealth()
 	case "rebuild":
 		cmdRebuild()
 	case "help", "-h", "--help":
@@ -265,6 +267,7 @@ func cmdTabs() {
 func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
 func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
+func cmdHealth()  { sendCommand(strings.TrimSpace("health " + strings.Join(os.Args[2:], " "))) }
 
 func cmdOpenCode() {
 	if len(os.Args) < 3 {
@@ -399,6 +402,8 @@ Usage:
   hyprd status           Check if daemon is running
   hyprd status --json    Return full state as JSON
   hyprd rebuild          Rebuild binary and hot-restart (preserves state)
+  hyprd health [--window <d>]  Sample and evaluate system health now; print open findings
+  hyprd health investigate [--dry-run] [id...]  Open OpenCode on the findings as an overlay on the agents kitty's learn tab (default: all open)
 
 Window commands:
   hyprd bg static|video  Save and apply the wallpaper mode (still or video)

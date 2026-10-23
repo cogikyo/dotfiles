@@ -40,6 +40,7 @@ Load [`converge`](../config/opencode/skills/principles/converge/SKILL.md) before
 - `internal/gobuild/` owns build flags and environment for CLI updates, hyprd rebuilds, and ISO builds.
 - Keep `internal/config/hyprd.go` → `ThreeBody` launch titles/session paths aligned with `../config/kitty/sessions/`.
 - Keep `config/hyprd.yaml` → `windows.{split,gaps_out,monocle}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
+- `hyprd health investigate` in `cmd/hyprd/health.go` finds the `dotfiles` session and the agents profile's `learn` tab in `config/hyprd.yaml` by name; keep them aligned.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.
 - `internal/ui` sets `DOTFILES_TREE=open` to continue a parent's tree or `closed` to start separate sections after a blank line; `dctl setup` passes it through sudo.
 - `dctl update cmd` parses raw `hyprd rebuild` output, so hyprd socket verbs stay plain text; only `hyprd vpn` and `hyprd opencode now|recycle` render trees.

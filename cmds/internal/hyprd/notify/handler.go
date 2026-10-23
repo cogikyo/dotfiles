@@ -367,7 +367,16 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 
 // Prompt blocks until the persistent critical notification closes and reports whether its action was chosen.
 func (n *Notifier) Prompt(app, title, body, label string) (bool, error) {
-	urgency := "critical"
+	out, err := exec.Command("dunstify", n.PromptArgs(app, "critical", title, body, label)...).Output()
+	if err != nil {
+		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
+			return false, fmt.Errorf("dunstify: %w", err)
+		}
+	}
+	return strings.TrimSpace(string(out)) == "default", nil
+}
+
+func (n *Notifier) PromptArgs(app, urgency, title, body, label string) []string {
 	spec := notificationSpec{
 		App:     app,
 		Title:   title,
@@ -377,13 +386,7 @@ func (n *Notifier) Prompt(app, title, body, label string) (bool, error) {
 		Urgency: &urgency,
 		Timeout: new(0),
 	}
-	out, err := exec.Command("dunstify", n.buildDunstArgs(spec, nil, n.style(""))...).Output()
-	if err != nil {
-		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
-			return false, fmt.Errorf("dunstify: %w", err)
-		}
-	}
-	return strings.TrimSpace(string(out)) == "default", nil
+	return n.buildDunstArgs(spec, nil, n.style(""))
 }
 
 // buildDunstArgs assembles the dunstify argv; non-nil spec fields override style defaults.

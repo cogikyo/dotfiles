@@ -233,6 +233,24 @@ The configured `lane` event shows a green 2.5-second toast and plays `civ6-notif
 Hyprd tags OpenCode notices with desktop-entry `opencode` and dispatches notifications and sounds while locked.
 The [TUI plugin](../../../config/opencode/plugins/README.md#hyprd) owns reminder timing; hyprd applies no idle backoff.
 
+### System health
+
+The daemon samples processes and systemd units every minute and evaluates health hourly.
+It watches CPU use grouped by executable and working directory, steady memory growth, restart loops, failed system and user units, zombies, and journal noise.
+
+```bash
+hyprd health                                       # evaluate now and print open findings
+hyprd health investigate [--dry-run] [id...]       # investigate selected findings (default: all open)
+```
+
+Findings and evidence are logged as `open` and `resolve` events in `$XDG_STATE_HOME/hyprd/health/findings.jsonl` (default `~/.local/state/hyprd/health/findings.jsonl`).
+`--dry-run` prints the investigation route and prompt without opening it.
+
+The monitor only reports; it does not apply fixes.
+Only newly opened findings trigger a notification with an **Investigate** action.
+Choose it to focus the dotfiles workspace and open OpenCode with the findings as an overlay on the agents kitty's `learn` tab.
+Quitting OpenCode closes the overlay.
+
 ### VPN
 
 ```bash

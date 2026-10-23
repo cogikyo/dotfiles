@@ -5,9 +5,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -93,6 +95,55 @@ func (t *Manager) init(args []string) (string, error) {
 	kitty.FocusTab(focusID)
 
 	return fmt.Sprintf("tabs init: %s (%d tabs)", profileName, created), nil
+}
+
+func (t *Manager) EnsureTab(pid int, profileName, tabName, cwd string) (string, error) {
+	profile, err := t.getProfile(profileName)
+	if err != nil {
+		return "", err
+	}
+	tab := t.findTab(profile, tabName)
+	if tab == nil {
+		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)
+	}
+	kitty := NewClient(pid)
+	var windows []OSWindow
+	// Never launch while tabs init runs; it would create the tab a second time.
+	for deadline := time.Now().Add(initTimeout); ; time.Sleep(200 * time.Millisecond) {
+		if windows, err = kitty.FullState(); err != nil {
+			return "", fmt.Errorf("kitty state: %w", err)
+		}
+		if len(windows) == 0 {
+			return "", fmt.Errorf("no kitty windows")
+		}
+		if !initRunning(windows[0]) {
+			break
+		}
+		if time.Now().After(deadline) {
+			return "", fmt.Errorf("tabs init still running after %s", initTimeout)
+		}
+	}
+
+	tabID := fmt.Sprintf("%d-%s%s", windows[0].ID, profile.Prefix, tab.Name)
+	if slices.ContainsFunc(windows[0].Tabs, func(t Tab) bool { return tabHasID(t, tabID) }) {
+		return tabID, nil
+	}
+	cwd = t.resolveCWD(*tab, cwd)
+	if !t.checkRequires(tab.Requires, cwd) {
+		return "", fmt.Errorf("tab %s requires %s in %s", tab.Name, tab.Requires, cwd)
+	}
+	return tabID, t.launchLocalTab(kitty, profile, *tab, windows[0].ID, cwd)
+}
+
+const initTimeout = 15 * time.Second
+
+// initRunning matches the launcher line in config/kitty/sessions/*.conf.
+func initRunning(win OSWindow) bool {
+	return slices.ContainsFunc(win.Tabs, func(tab Tab) bool {
+		return slices.ContainsFunc(tab.Windows, func(pane Pane) bool {
+			return strings.Contains(strings.Join(pane.Cmdline, " "), "hyprd tabs init")
+		})
+	})
 }
 
 func (t *Manager) refresh(args []string) (string, error) {
