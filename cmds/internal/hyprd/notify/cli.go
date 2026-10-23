@@ -40,7 +40,7 @@ func CmdNotify(client *daemon.Client, args []string) {
 
 func parseNotifyArgs(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
-		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify {hook|dunst|kitty-finish|send}")
+		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify {hook|dunst|kitty-finish|send|pane}")
 	}
 
 	switch args[0] {

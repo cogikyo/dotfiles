@@ -485,12 +485,16 @@ func (d *Daemon) handleBrowser(arg string) string {
 }
 
 func (d *Daemon) handleNotify(arg string) string {
+	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
+	if pane, ok := strings.CutPrefix(arg, "pane "); ok {
+		return notifier.Pane(pane)
+	}
+
 	var req notifypkg.NotifyRequest
 	if err := json.Unmarshal([]byte(arg), &req); err != nil {
 		return fmt.Sprintf("error: parse notify request: %v", err)
 	}
 
-	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 	req = notifier.Prepare(req)
 	if !notifier.CanDispatch(req) {
 		return "missing-context"

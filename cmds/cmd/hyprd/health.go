@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/health"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/kitty"
@@ -13,9 +14,9 @@ import (
 	"fmt"
 	"html"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -120,17 +121,25 @@ func (d *Daemon) healthOpened(ctx context.Context, found []health.Finding) {
 		lines[i] = html.EscapeString(f.Summary)
 	}
 	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
-	// systemd-run owns the prompt so its click survives a hyprd rebuild.
-	// Finding text is process-controlled, so systemd must not expand $ in it.
-	script := `if [ "$(dunstify "$@")" = default ]; then exec hyprd health investigate ` + strings.Join(findingIDs(found), " ") + "; fi"
-	args := append([]string{"--user", "--collect", "--quiet", "--expand-environment=no", "--", "sh", "-c", script, "health-prompt"},
+	ids := findingIDs(found)
+	args := append(append([]string{strconv.Itoa(len(ids))}, ids...),
 		notifier.PromptArgs("health", "normal", title, strings.Join(lines, "\n"), "Investigate")...)
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if out, err := exec.CommandContext(ctx, "systemd-run", args...).CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd health: notify: %v: %s\n", err, strings.TrimSpace(string(out)))
+	if err := detach.Unit(ctx, "health-prompt", healthPrompt, args...); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd health: notify: %v\n", err)
 	}
 }
+
+// healthPrompt takes n, n finding IDs, then dunstify args; the loop keeps only the IDs.
+const healthPrompt = `n=$1
+shift
+[ "$(shift "$n"; dunstify "$@")" = default ] || exit 0
+i=0
+for arg do
+	shift
+	if [ "$i" -lt "$n" ]; then set -- "$@" "$arg"; fi
+	i=$((i + 1))
+done
+exec hyprd health investigate "$@"`
 
 type investigation struct {
 	workspace int

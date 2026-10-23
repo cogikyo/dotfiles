@@ -3,6 +3,7 @@
 package notify
 
 import (
+	"context"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/detach"
 	"errors"
@@ -21,6 +22,19 @@ const (
 	dunstDeliveryLimit = 1024
 )
 
+// paneWaiter re-shows the notification after any close but a Focus click, dismissal included.
+// It stops when hyprd reports the pane viewed or superseded, or after n re-shows.
+const paneWaiter = `p=$1 w=$2 g=$3 t=$4 n=$5
+shift 5
+i=0
+while [ "$(dunstify "$@")" != focus ]; do
+	if [ "$i" -ge "$n" ]; then exec hyprd notify pane end "$p" "$w" "$g" "$t"; fi
+	sleep 1
+	[ "$(hyprd notify pane rearm "$p" "$w" "$g" "$t")" = rearm ] || exit 0
+	i=$((i + 1))
+done
+exec hyprd notify pane focus "$p" "$w" "$g" "$t"`
+
 var opencodePaneAckGroups = []string{
 	"start",
 	"complete",
@@ -32,9 +46,9 @@ var opencodePaneAckGroups = []string{
 }
 
 var globalPaneNotifications = &paneNotificationRegistry{
-	active:   make(map[paneNotificationKey]uint64),
-	canceled: make(map[paneNotificationKey]map[uint64]struct{}),
-	ack:      make(map[paneNotificationKey]uint64),
+	next:   uint64(time.Now().UnixNano()),
+	active: make(map[paneNotificationKey]uint64),
+	ack:    make(map[paneNotificationKey]uint64),
 }
 
 var globalDunstDeliveries = &dunstDeliveryRegistry{
@@ -55,11 +69,10 @@ type paneNotificationKey struct {
 }
 
 type paneNotificationRegistry struct {
-	mu       sync.Mutex
-	next     uint64
-	active   map[paneNotificationKey]uint64
-	canceled map[paneNotificationKey]map[uint64]struct{}
-	ack      map[paneNotificationKey]uint64
+	mu     sync.Mutex
+	next   uint64
+	active map[paneNotificationKey]uint64
+	ack    map[paneNotificationKey]uint64
 }
 
 type dunstDeliveryContent struct {
@@ -312,7 +325,7 @@ func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	return n.sendDunst(spec, ctx)
 }
 
-// sendDunst invokes dunstify, re-arming focus-action notifications on timeout until dismissed.
+// sendDunst invokes dunstify, handing pane focus-action notifications to [paneWaiter].
 func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	style := n.style(spec.Style)
 
@@ -320,7 +333,6 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	if spec.Timeout != nil {
 		timeout = *spec.Timeout
 	}
-	persistent := timeout == 0
 
 	args := n.buildDunstArgs(spec, ctx, style)
 
@@ -328,41 +340,61 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 		return detach.Start(exec.Command("dunstify", args...))
 	}
 
-	key, token, tracked := globalPaneNotifications.Begin(ctx, spec.Style, spec.Birth)
-	if tracked {
-		defer globalPaneNotifications.End(key, token)
+	key, token := globalPaneNotifications.Begin(ctx, spec.Style, spec.Birth)
+	if !globalPaneNotifications.Live(key, token) {
+		globalPaneNotifications.End(key, token)
+		return nil
 	}
 
-	const maxPersistentRetries = 600 // ~10 min at 1s cadence
-	for i := range maxPersistentRetries + 1 {
-		if tracked && globalPaneNotifications.Canceled(key, token) {
-			return nil
-		}
-
-		cmd := exec.Command("dunstify", args...)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			if _, ok := errors.AsType[*exec.ExitError](err); !ok {
-				return fmt.Errorf("dunstify: %w", err)
-			}
-		}
-
-		action := strings.TrimSpace(string(out))
-		if action == "focus" {
-			n.state.LockLayout()
-			n.focusContext(ctx)
-			n.state.UnlockLayout()
-			return nil
-		}
-		if !persistent || i >= maxPersistentRetries {
-			return nil
-		}
-		if tracked && globalPaneNotifications.Canceled(key, token) {
-			return nil
-		}
-		time.Sleep(time.Second)
+	const maxPersistentRetries = 600 // one per close; ~10 min only if dunstify fails at once
+	retries := 0
+	if timeout == 0 {
+		retries = maxPersistentRetries
+	}
+	args = append([]string{strconv.Itoa(key.PID), strconv.Itoa(key.WindowID), key.Group, strconv.FormatUint(token, 10), strconv.Itoa(retries)}, args...)
+	if err := detach.Unit(context.Background(), "hyprd-pane", paneWaiter, args...); err != nil {
+		globalPaneNotifications.End(key, token)
+		return err
 	}
 	return nil
+}
+
+// Pane answers [paneWaiter] callbacks; the waiter re-shows only on the reply "rearm".
+func (n *Notifier) Pane(arg string) string {
+	const usage = "error: usage: notify pane {focus|rearm|end} <pid> <window> <group> <token>"
+	fields := strings.Fields(arg)
+	if len(fields) != 5 {
+		return usage
+	}
+	pid, pidErr := strconv.Atoi(fields[1])
+	window, windowErr := strconv.Atoi(fields[2])
+	token, tokenErr := strconv.ParseUint(fields[4], 10, 64)
+	ctx := &kittyContext{PID: pid, WindowID: window}
+	key, ok := notificationKey(ctx, fields[3])
+	if errors.Join(pidErr, windowErr, tokenErr) != nil || !ok {
+		return usage
+	}
+
+	switch fields[0] {
+	case "focus":
+		ctx.TabID, _ = n.tabContext(pid, window)
+		n.state.LockLayout()
+		n.focusContext(ctx)
+		n.state.UnlockLayout()
+		globalPaneNotifications.End(key, token)
+		return "focused"
+	case "rearm":
+		if globalPaneNotifications.Live(key, token) {
+			return "rearm"
+		}
+		globalPaneNotifications.End(key, token)
+		return "done"
+	case "end":
+		globalPaneNotifications.End(key, token)
+		return "done"
+	default:
+		return usage
+	}
 }
 
 // Prompt blocks until the persistent critical notification closes and reports whether its action was chosen.
@@ -449,7 +481,8 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	if spec.Tag != "" {
 		args = append(args, "-h", "string:x-dunst-stack-tag:"+spec.Tag)
 	}
-	args = append(args, spec.Title, spec.Body)
+	// Agent text such as "- item" would otherwise parse as an option, and nothing would show.
+	args = append(args, "--", spec.Title, spec.Body)
 	return args
 }
 
@@ -487,10 +520,10 @@ func (n *Notifier) acknowledgePane(ctx *kittyContext) {
 	}
 }
 
-func (r *paneNotificationRegistry) Begin(ctx *kittyContext, group string, birth uint64) (paneNotificationKey, uint64, bool) {
+func (r *paneNotificationRegistry) Begin(ctx *kittyContext, group string, birth uint64) (paneNotificationKey, uint64) {
 	key, ok := notificationKey(ctx, group)
 	if !ok {
-		return paneNotificationKey{}, 0, false
+		return paneNotificationKey{}, 0
 	}
 
 	r.mu.Lock()
@@ -499,14 +532,8 @@ func (r *paneNotificationRegistry) Begin(ctx *kittyContext, group string, birth 
 	if birth == 0 {
 		birth = r.nextLocked()
 	}
-	if token, active := r.active[key]; active {
-		r.cancelLocked(key, token)
-	}
 	r.active[key] = birth
-	if birth <= r.ack[key] {
-		r.cancelLocked(key, birth)
-	}
-	return key, birth, true
+	return key, birth
 }
 
 func (r *paneNotificationRegistry) Cancel(ctx *kittyContext, groups []string) {
@@ -520,9 +547,6 @@ func (r *paneNotificationRegistry) Cancel(ctx *kittyContext, groups []string) {
 			continue
 		}
 		r.ack[key] = epoch
-		if token, active := r.active[key]; active {
-			r.cancelLocked(key, token)
-		}
 	}
 }
 
@@ -532,7 +556,7 @@ func (r *paneNotificationRegistry) Next() uint64 {
 	return r.nextLocked()
 }
 
-// NewestActive returns the pane context owned by the newest uncanceled dunstify call.
+// NewestActive returns the pane context owned by the newest live waiter.
 func (r *paneNotificationRegistry) NewestActive() *kittyContext {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -540,8 +564,7 @@ func (r *paneNotificationRegistry) NewestActive() *kittyContext {
 	var newest paneNotificationKey
 	var newestToken uint64
 	for key, token := range r.active {
-		_, canceled := r.canceled[key][token]
-		if token == 0 || token <= r.ack[key] || canceled {
+		if token <= r.ack[key] {
 			continue
 		}
 		if token > newestToken {
@@ -555,11 +578,10 @@ func (r *paneNotificationRegistry) NewestActive() *kittyContext {
 	return &kittyContext{PID: newest.PID, WindowID: newest.WindowID}
 }
 
-func (r *paneNotificationRegistry) Canceled(key paneNotificationKey, token uint64) bool {
+func (r *paneNotificationRegistry) Live(key paneNotificationKey, token uint64) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	_, canceled := r.canceled[key][token]
-	return token != 0 && canceled
+	return r.active[key] == token && token > r.ack[key]
 }
 
 func (r *paneNotificationRegistry) End(key paneNotificationKey, token uint64) {
@@ -569,27 +591,11 @@ func (r *paneNotificationRegistry) End(key paneNotificationKey, token uint64) {
 	if r.active[key] == token {
 		delete(r.active, key)
 	}
-	if tokens := r.canceled[key]; tokens != nil {
-		delete(tokens, token)
-		if len(tokens) == 0 {
-			delete(r.canceled, key)
-		}
-	}
 }
 
 func (r *paneNotificationRegistry) nextLocked() uint64 {
 	r.next++
 	return r.next
-}
-
-func (r *paneNotificationRegistry) cancelLocked(key paneNotificationKey, token uint64) {
-	if token == 0 {
-		return
-	}
-	if r.canceled[key] == nil {
-		r.canceled[key] = make(map[uint64]struct{})
-	}
-	r.canceled[key][token] = struct{}{}
 }
 
 func notificationKey(ctx *kittyContext, group string) (paneNotificationKey, bool) {

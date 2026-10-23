@@ -226,6 +226,7 @@ hyprd screenshot annotate     # region screenshot → satty annotation → clipb
 hyprd notify hook opencode            # read OpenCode notify JSON from argv/stdin
 hyprd notify dunst                    # handle Dunst script callbacks
 hyprd notify kitty-finish <command>   # emit kitty command-finish notification
+hyprd notify pane focus|rearm|end ... # handle pane notification waiter callbacks
 ```
 
 OpenCode events are `start`, `complete`, `lane`, `idle`, `permission`, `question`, `error`, and `viewed`; `viewed` clears the pane's notices.

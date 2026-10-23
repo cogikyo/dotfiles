@@ -264,7 +264,13 @@ func cmdTabs() {
 	_ = requireArg("usage: hyprd tabs init <profile> <pid> | tabs refresh <position|name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
-func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
+func cmdNotify() {
+	if len(os.Args) > 2 && os.Args[2] == "pane" {
+		sendCommand("notify " + strings.Join(os.Args[2:], " "))
+		return
+	}
+	notifypkg.CmdNotify(client, os.Args[2:])
+}
 func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
 func cmdHealth()  { sendCommand(strings.TrimSpace("health " + strings.Join(os.Args[2:], " "))) }
@@ -485,5 +491,6 @@ VPN:
 Notifications:
   hyprd notify hook opencode           Read OpenCode notify JSON from argv/stdin
 	  hyprd notify dunst                   Handle Dunst script callbacks
-  hyprd notify kitty-finish <command>  Emit kitty command-finish notification`)
+  hyprd notify kitty-finish <command>  Emit kitty command-finish notification
+  hyprd notify pane focus|rearm|end <pid> <window> <group> <token>  Handle pane notification waiter callbacks`)
 }
