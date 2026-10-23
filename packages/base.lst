@@ -29,6 +29,7 @@ brightnessctl
 ddcutil
 earlyoom
 mesa
+nut
 nvtop
 tuned
 usbutils
