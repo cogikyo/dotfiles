@@ -182,7 +182,7 @@ ShellRoot {
         }
         xhr.open("GET", registration.url + path)
         if (registration.password)
-            xhr.setRequestHeader("Authorization", "Basic " + Qt.btoa("opencode:" + registration.password))
+            xhr.setRequestHeader("Authorization", "Basic " + Qt.btoa(Array.from(unescape(encodeURIComponent("opencode:" + registration.password)))))
         xhr.send()
     }
 
