@@ -195,6 +195,7 @@
     { "action": "skill", "resource": "grok-bot", "effect": "deny" },
     { "action": "skill", "resource": "improve", "effect": "deny" },
     { "action": "skill", "resource": "papercuts", "effect": "deny" },
+    { "action": "skill", "resource": "recommended", "effect": "deny" },
     { "action": "skill", "resource": "report", "effect": "deny" },
     { "action": "skill", "resource": "retro", "effect": "deny" },
     { "action": "skill", "resource": "review", "effect": "deny" },
