@@ -150,10 +150,12 @@ User turns, turns woken by failed or cancelled lanes, and turns woken only by ot
 Notice text uses the first line containing a letter or digit, skipping Markdown rules such as `---`.
 Notification deduplication and timers live in memory.
 
-Every 60 seconds, the plugin checks the displayed root and its lanes for pending requests.
-Permission and question reminders repeat every ten minutes.
-An idle root gets reminders every 15 minutes unless its title starts with `[CLOSED] ` or its tree has running work or pending non-synthetic items.
-Reminder clocks pause while Hyprland reports the screen locked and reset while the TUI is focused on that root.
+Every 60 seconds, the plugin checks each open root and its lanes for pending requests, with a separate reminder clock per root.
+With tabs enabled, open roots are the roots of tab sessions; without tabs, only the displayed root is open.
+Permission and question reminders repeat every five minutes on any open root until answered.
+Only the displayed root gets idle reminders every 15 minutes, unless its title starts with `[CLOSED] ` or its tree has running work or pending non-synthetic items.
+Each root's clock pauses while Hyprland reports the screen locked and resets while the TUI is focused on that root, leaving other roots' clocks unchanged.
+Clocks are dropped when their roots are no longer open.
 
 `hyprd/context.ts` publishes the displayed root session to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json` once per second when the selection changes.
 It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records `session` or `null` with the process `start` time from `/proc/self/stat`, and removes the file on disposal.

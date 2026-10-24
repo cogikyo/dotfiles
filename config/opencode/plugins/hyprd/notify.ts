@@ -11,7 +11,7 @@ type Asks = {
 
 const SOCKET = "/tmp/hyprd.sock";
 const TICK_MS = 60_000;
-const ASK_MS = 10 * 60_000;
+const ASK_MS = 5 * 60_000;
 const IDLE_MS = 15 * 60_000;
 const REQUEST_MS = 2_000;
 const SYNC_MS = 10_000;
@@ -90,7 +90,7 @@ function lane(session: Session) {
 
 const family = (data: Data, id: string) => [...new Set([id, ...data.session.family(id)])];
 
-function reminder(data: Data, id: string, { permissions, forms }: Asks) {
+function reminder(data: Data, id: string, { permissions, forms }: Asks, shown: boolean) {
   const info = data.session.get(id);
   const title = info?.title ?? "OpenCode";
   const members = family(data, id);
@@ -106,48 +106,50 @@ function reminder(data: Data, id: string, { permissions, forms }: Asks) {
       data.session.status(member) === "running" ||
       data.session.pending.list(member).some((item) => item.type !== "synthetic"),
   );
-  if (busy || info?.time.idle === undefined || title.startsWith("[CLOSED] ")) return { key };
+  if (!shown || busy || info?.time.idle === undefined || title.startsWith("[CLOSED] ")) return { key };
   return { key, kind: "idle" as const, after: IDLE_MS, message: title };
 }
 
-// Interrupted permissions can disappear on the server without an event, leaving stale store entries.
-// Read directly because syncing the store can overwrite newer live events.
-async function asked(client: Client, members: string[], signal: AbortSignal): Promise<Asks> {
+// Read the server: after a TUI restart, the store lacks background tabs' lane asks.
+async function asked(client: Client, directories: string[], signal: AbortSignal): Promise<Asks | undefined> {
   const options = { signal: AbortSignal.any([AbortSignal.timeout(SYNC_MS), signal]) };
-  const [permissions, forms] = await Promise.all([
-    Promise.all(members.map(async (sessionID) => client.permission.list({ sessionID }, options))),
-    Promise.all(members.map(async (sessionID) => client.session.form.list({ sessionID }, options))),
-  ]);
-  return { permissions: permissions.flat(), forms: forms.flat() };
+  const pages = await Promise.allSettled(
+    directories.map(async (directory) =>
+      Promise.all([
+        client.permission.request.list({ location: { directory } }, options),
+        client.form.list({ location: { directory } }, options),
+      ]),
+    ),
+  );
+  const read = pages.flatMap((page) => (page.status === "fulfilled" ? [page.value] : []));
+  if (!read.length) return undefined;
+  return {
+    permissions: read.flatMap(([permissions]) => permissions.data),
+    forms: read.flatMap(([, forms]) => forms.data),
+  };
 }
 
 function reminders(
-  { data, client }: Plugin.Context,
+  { data, client, ui }: Plugin.Context,
   signal: AbortSignal,
   shown: () => string | undefined,
   quiet: (id: string) => boolean,
 ) {
-  const clock = { root: undefined as string | undefined, key: undefined as string | undefined, elapsed: 0 };
-  const tick = async () => {
+  const clocks = new Map<string, { key?: string; elapsed: number }>();
+  const roots = () => {
+    if (ui.tabs.enabled()) return [...new Set(ui.tabs.list().map((tab) => data.session.root(tab.sessionID)))];
     const id = shown();
-    if (id !== clock.root) Object.assign(clock, { root: id, key: undefined, elapsed: 0 });
-    if (!id) return;
-    const members = family(data, id);
-    const stored = members.some(
-      (member) => !!data.session.permission.list(member)?.length || !!data.session.form.list(member)?.length,
-    );
-    let asks: Asks = { permissions: [], forms: [] };
-    if (stored) {
-      try {
-        asks = await asked(client, members, signal);
-      } catch {
-        return;
-      }
-      if (signal.aborted) return;
-    }
-    const paused = await locked();
-    if (signal.aborted || shown() !== id) return;
-    const due = reminder(data, id, asks);
+    return id ? [id] : [];
+  };
+  const check = (id: string, paused: boolean, { permissions, forms }: Asks) => {
+    const clock = clocks.get(id);
+    if (!clock) return;
+    const members = new Set(family(data, id));
+    const asks = {
+      permissions: permissions.filter((ask) => members.has(ask.sessionID)),
+      forms: forms.filter((ask) => members.has(ask.sessionID)),
+    };
+    const due = reminder(data, id, asks, shown() === id);
     if (due.key !== clock.key || !due.kind || quiet(id)) {
       clock.key = due.key;
       clock.elapsed = 0;
@@ -158,10 +160,26 @@ function reminders(
     clock.elapsed = 0;
     send(due.kind, { message: due.message });
   };
+  const tick = async () => {
+    const open = roots();
+    for (const id of clocks.keys()) if (!open.includes(id)) clocks.delete(id);
+    for (const id of open) if (!clocks.has(id)) clocks.set(id, { elapsed: 0 });
+    const directories = open.flatMap((id) =>
+      family(data, id).flatMap((member) => data.session.get(member)?.location.directory ?? []),
+    );
+    if (!directories.length) return;
+    const [paused, asks] = await Promise.all([locked(), asked(client, [...new Set(directories)], signal)]);
+    if (signal.aborted || !asks) return;
+    for (const id of open) check(id, paused, asks);
+  };
   const timer = setInterval(() => void tick(), TICK_MS);
   signal.addEventListener("abort", () => clearInterval(timer));
 
-  return () => (clock.elapsed = 0);
+  return () => {
+    const id = shown();
+    const clock = id ? clocks.get(id) : undefined;
+    if (clock) clock.elapsed = 0;
+  };
 }
 
 function reply(data: Data, id: string) {
