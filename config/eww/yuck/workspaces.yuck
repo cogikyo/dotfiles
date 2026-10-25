@@ -2,7 +2,7 @@
   ; Disable resizing so GTK can shrink the window after CSS reloads.
   :monitor 0 :stacking "bottom" :exclusive false :focusable false :resizable false
   :geometry (geometry :anchor "top right" :x "0px" :y "0px")
-  (workspaces)
+  (workspaces :compact false)
 )
 
 (defvar ws-h1 false)
@@ -11,95 +11,109 @@
 (defvar ws-h4 false)
 (defvar ws-h5 false)
 (defvar ws-h6 false)
+(defvar ws-dur "0ms")
 
 (deflisten workspace-info
   :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5","attention":[],"attention_str":"","arrival":""}'
   'hyprd subscribe workspace | jq --unbuffered -c ".data"'
 )
 
-(defwidget workspace [num desc hover ?state]
+(defwidget workspace [num hovered compact ?state]
   (eventbox
     :onhover "eww update ws-h${num}=true"
     :onhoverlost "eww update ws-h${num}=false"
     :onclick "hyprd ws ${num} & disown"
     :cursor "pointer"
     :onmiddleclick "hyprd ws ${num} & disown"
-    :tooltip "  ${desc} · 󰳽/ǂ switch  "
-    (box
-      :class "workspace ws-${num} ${
-                workspace-info.current_str == num ? "ws-current" :
-                matches(workspace-info.occupied_str, "${num}") ? "ws-occupied" :
-                "ws-empty"
-              } ${hover ? "ws-hover" : ""} ${state}"
-      (children)
+    (revealer
+      :transition "slideleft"
+      :duration {compact ? (hover == "workspaces" ? "500ms" : ws-dur) : "500ms"}
+      :reveal {!compact || workspace-info.current_str == num || hover == "workspaces"}
+      (box
+        :class "workspace ws-${num} ${
+                  workspace-info.current_str == num ? "ws-current" :
+                  matches(workspace-info.occupied_str, "${num}") ? "ws-occupied" :
+                  "ws-empty"
+                } ${hovered ? "ws-hover" : ""} ${state}"
+        (children)
+      )
     )
   )
 )
 
-(defwidget ws-icon [name]
-  (image :class name :icon "ws-${name}-symbolic" :icon-size "dnd")
+(defwidget ws-icon [name compact]
+  (image :class name :icon "ws-${name}-symbolic" :icon-size {compact ? "large-toolbar" : "dnd"})
 )
 
-(defwidget workspaces []
-  (eventbox
-    :onhover "eww update hover=workspaces"
-    :onhoverlost "eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false ws-h6=false"
-    :onrightclick "hyprctl dispatch workspace previous"
-    :tooltip "  󰮫 󰳾 previous workspace  "
-    (workspace-list
-      :class "workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
-      :orientation "vertical"
-    )
-  )
-)
-
-(defwidget workspace-list [class orientation]
-  (box
-    :class class
-    :halign "center" :space-evenly false
-    :orientation orientation
-    (workspace :num "1" :hover ws-h1 :desc "󰭹 chat"
-      :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
-               matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
-               matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""} ${
-               matches(workspace-info.arrival ?: "", "grok-bot") ? "ws-from-grok" :
-               matches(workspace-info.arrival ?: "", "slack") ? "ws-from-slack" :
-               matches(workspace-info.arrival ?: "", "firefox") ? "ws-from-firefox" : ""}"
-      (overlay
-        (ws-icon :name "network-edge-1")
-        (ws-icon :name "network-edge-2")
-        (ws-icon :name "network-edge-3")
-        (ws-icon :name "network-edge-4")
-        (ws-icon :name "network-edge-5")
-        (ws-icon :name "network-hub")
-        (ws-icon :name "network-node-1")
-        (ws-icon :name "network-node-2")
-        (ws-icon :name "network-node-3")
-        (ws-icon :name "network-node-4")
-        (ws-icon :name "network-node-5")
+(defwidget workspaces [compact]
+  (tip :compact compact :text "  󰮫 󰳾 previous workspace  "
+    (eventbox
+      :timeout {compact ? "1s" : "200ms"}
+      :onhover "eww update hover=workspaces${compact ? " ws-dur=0ms" : ""}"
+      :onhoverlost "${compact ? "eww update ws-dur=500ms; " : ""}eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false ws-h6=false${compact ? "; (sleep 0.6; eww update ws-dur=0ms) &" : ""}"
+      :onrightclick "hyprctl dispatch workspace previous"
+      (box
+        :class "${compact ? "tr-a computerbox bar-edge" : "workspacesbox"} ${
+                  hover != "workspaces" ? "" : compact ? "computerbox-hover" : "workspacesbox-hover"
+                }"
+        :halign "center" :space-evenly false
+        :orientation {compact ? "horizontal" : "vertical"}
+        (tip :compact compact :text "  󰭹 chat · 󰳽/ǂ switch  "
+          (workspace :num "1" :hovered ws-h1 :compact compact
+            :state "${matches(workspace-info.attention_str ?: "", "grok-bot") ? "ws-grok" : ""} ${
+                     matches(workspace-info.attention_str ?: "", "slack") ? "ws-slack" : ""} ${
+                     matches(workspace-info.attention_str ?: "", "firefox") ? "ws-firefox" : ""} ${
+                     matches(workspace-info.arrival ?: "", "grok-bot") ? "ws-from-grok" :
+                     matches(workspace-info.arrival ?: "", "slack") ? "ws-from-slack" :
+                     matches(workspace-info.arrival ?: "", "firefox") ? "ws-from-firefox" : ""}"
+            (overlay
+              (ws-icon :name "network-edge-1" :compact compact)
+              (ws-icon :name "network-edge-2" :compact compact)
+              (ws-icon :name "network-edge-3" :compact compact)
+              (ws-icon :name "network-edge-4" :compact compact)
+              (ws-icon :name "network-edge-5" :compact compact)
+              (ws-icon :name "network-hub" :compact compact)
+              (ws-icon :name "network-node-1" :compact compact)
+              (ws-icon :name "network-node-2" :compact compact)
+              (ws-icon :name "network-node-3" :compact compact)
+              (ws-icon :name "network-node-4" :compact compact)
+              (ws-icon :name "network-node-5" :compact compact)
+            )
+          )
+        )
+        (tip :compact compact :text "   misc · 󰳽/ǂ switch  "
+          (workspace :num "2" :hovered ws-h2 :compact compact
+            (ws-icon :name "learn" :compact compact))
+        )
+        (tip :compact compact :text "  󰃖 work · 󰳽/ǂ switch  "
+          (workspace :num "3" :hovered ws-h3 :compact compact
+            (overlay
+              (ws-icon :name "leadpier-left" :compact compact)
+              (ws-icon :name "leadpier-right" :compact compact)
+              (ws-icon :name "leadpier-left-rim" :compact compact)
+              (ws-icon :name "leadpier-right-rim" :compact compact)
+            )
+          )
+        )
+        (tip :compact compact :text "  󰀄 personal · 󰳽/ǂ switch  "
+          (workspace :num "4" :hovered ws-h4 :compact compact
+            (ws-icon :name "dna" :compact compact))
+        )
+        (tip :compact compact :text "   dotfiles · 󰳽/ǂ switch  "
+          (workspace :num "5" :hovered ws-h5 :compact compact
+            (overlay
+              (ws-icon :name "dotfiles-cog" :compact compact)
+              (ws-icon :name "dotfiles-gear" :compact compact)
+              (ws-icon :name "dotfiles-lens" :compact compact)
+            )
+          )
+        )
+        (tip :compact compact :text "   music · 󰳽/ǂ switch  "
+          (workspace :num "6" :hovered ws-h6 :compact compact
+            :state {pctl.playing ? "ws-playing" : ""}
+            (ws-icon :name "music" :compact compact))
+        )
       )
     )
-    (workspace :num "2" :hover ws-h2 :desc " misc"
-      (ws-icon :name "learn"))
-    (workspace :num "3" :hover ws-h3 :desc "󰃖 work"
-      (overlay
-        (ws-icon :name "leadpier-left")
-        (ws-icon :name "leadpier-right")
-        (ws-icon :name "leadpier-left-rim")
-        (ws-icon :name "leadpier-right-rim")
-      )
-    )
-    (workspace :num "4" :hover ws-h4 :desc "󰀄 personal"
-      (ws-icon :name "dna"))
-    (workspace :num "5" :hover ws-h5 :desc " dotfiles"
-      (overlay
-        (ws-icon :name "dotfiles-cog")
-        (ws-icon :name "dotfiles-gear")
-        (ws-icon :name "dotfiles-lens")
-      )
-    )
-    (workspace :num "6" :hover ws-h6 :desc " music"
-      :state {pctl.playing ? "ws-playing" : ""}
-      (ws-icon :name "music"))
   )
 )

@@ -1,44 +1,225 @@
-.bar {
-  font-size: 14px;
-  padding: 3px 8px;
+$bar-gap: 8px;
+$bar-gap-text: 5px;
+$bar-pill-gap: 16px;
 
-  .music-progress-circle-icon {
-    font-size: 15px;
-    margin: 2px 3px;
+@mixin bar-shadow($x, $color, $alpha: 0.31) {
+  box-shadow: $x 2px 2.5px 0.5px rgba($color, $alpha);
+}
+
+.bar {
+  font-size: 15px;
+  margin-top: -2px;
+
+  &-side {
+    min-height: 32px;
   }
 
-  .workspace {
-    min-width: 36px;
-    min-height: 0;
+  .gap {
+    margin-left: $bar-gap;
+  }
 
-    image {
-      padding: 0 2px;
+  .gap-trail {
+    margin-right: $bar-gap;
+  }
+
+  .gap-text {
+    margin-left: $bar-gap-text;
+  }
+
+  .weather,
+  .music-info,
+  .audio,
+  .date,
+  .computerbox {
+    margin: 1px ($bar-pill-gap * 0.5) 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .music-info,
+  .audio {
+    @include bar-shadow(-3px, $blu-0);
+
+    &-hover {
+      @include bar-shadow(-3px, $rby-1);
     }
   }
 
-  eventbox:hover > .bar-segment {
-    border-color: $orn-3;
-    box-shadow: 0 1px 2px 0 rgba($rby-1, 0.42);
+  .weather {
+    @include bar-shadow(-3px, $blu-0, 0.26);
+
+    &-hover {
+      @include bar-shadow(-3px, $rby-1, 0.26);
+    }
   }
 
-  &-segment {
-    background: $bg;
-    border-bottom: 2px solid $blu-1;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px 0 rgba($blu-0, 0.42);
-    padding: 0 12px;
+  .date,
+  .computerbox {
+    @include bar-shadow(3px, $blu-0);
+
+    &-hover {
+      @include bar-shadow(3px, $rby-1);
+    }
   }
 
-  &-computer {
-    font-family: $font-mono;
+  .music-info {
+    margin-left: 0;
+    padding-left: $bar-gap;
+    padding-right: $bar-gap + 4px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
   }
 
-  &-workspaces {
-    padding: 0 6px;
+  .music-progress-circle-icon {
+    font-size: 15px;
+    min-width: 9px;
+    margin: 4px 4px 3px 6px;
   }
 
-  &-time {
-    color: $blu-3;
-    font-weight: 600;
+  .music-progress-circle-icon-paused label {
+    padding-right: 2px;
   }
+
+  .music-title,
+  .music-single,
+  .music-inactive {
+    margin-bottom: 2px;
+  }
+
+  .music-title,
+  .music-single,
+  .music-inactive,
+  .music-artist,
+  .music-album {
+    font-size: 14px;
+  }
+
+  .music-volume {
+    &-muted,
+    &-high {
+      font-size: 15px;
+      margin: 4px 4px 2px;
+    }
+
+    &-low,
+    &-mid {
+      font-size: 16px;
+    }
+
+    &-low {
+      margin: 4px 7px 2px 6px;
+    }
+
+    &-mid {
+      margin: 4px 5px 2px;
+    }
+  }
+
+  .audio-source-icon,
+  .audio-sink-icon {
+    font-size: 12px;
+    margin: 4px 5px 3px 6px;
+
+    &-inactiveFix {
+      font-size: 11px;
+      margin: 4px 5px 3px 6px;
+    }
+  }
+
+  .audio-sink-icon {
+    margin: 4px 6px 2px 6px;
+  }
+
+  .audio .gap {
+    margin-left: $bar-gap + 2px;
+  }
+
+  .audio-source-text,
+  .audio-sink-text {
+    margin-left: $bar-gap-text;
+  }
+
+  .time {
+    border-width: 0 1px 2px;
+    margin: -4px ($bar-pill-gap * 0.5) 3px;
+    @include bar-shadow(0, $blu-0);
+
+    &-hover {
+      @include bar-shadow(0, $rby-1);
+    }
+
+    &-text {
+      font-size: 2.3em;
+      margin: -1px 0 -8px;
+    }
+
+    &-clockface .time-text {
+      font-size: 1.8em;
+      margin: 1px 0 0;
+    }
+
+    &-alarm,
+    &-timer {
+      margin-top: 2px;
+    }
+
+    &-alarm-icon {
+      font-size: 0.7em;
+    }
+
+    &-alarm-subtext,
+    &-timer-subtext {
+      font-size: 0.6em;
+    }
+  }
+
+  .time-battery {
+    margin: -4px ($bar-pill-gap * 0.5) 3px;
+    padding: 0 1px 2px;
+    border-radius: 27px 27px 69px 69px;
+    background-color: $glc-2;
+    transition: box-shadow 0.5s $ease-out-snap;
+    @include bar-shadow(0, $blu-0);
+
+    &.time-frame-hover {
+      color: $orn-3;
+      background-color: $orn-3;
+      @include bar-shadow(0, $rby-1);
+    }
+
+    .time {
+      margin: 0;
+      border-width: 0;
+      box-shadow: none;
+      color: inherit;
+    }
+
+    .time-hour-text,
+    .time-minute-text {
+      color: inherit;
+    }
+  }
+
+  .bar-edge {
+    margin-right: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 0 $bar-gap-text 4px ($bar-gap * 2);
+  }
+
+  .workspace {
+    min-width: 0;
+    min-height: 0;
+
+    image {
+      padding: 0 4px;
+    }
+  }
+}
+
+@include ws-motion(0.75, ".bar ", "-bar", 0.95);
+
+.tip {
+  font-size: 13px;
+  padding: 4px $bar-gap;
 }

@@ -30,7 +30,7 @@
   (box
     :halign "start" :space-evenly false :spacing 0
     :class "tr-m"
-    (music) (audio)
+    (music :compact false) (audio :compact false)
   )
 )
 
@@ -46,132 +46,162 @@
 
 (defvar playerctl-img `/home/cullyn/.config/eww/art/player.png`)
 
-(defwidget music []
+(defwidget music [compact]
   (eventbox
     :onhover "eww update hover=music"
     :onhoverlost "eww update hover=''"
     (box
       :class "music-info ${hover == "music" ? "music-info-hover" : ""}"
       :style "
-        padding-left: ${hover == "music" ? "1" : "0.8"}em;
-        padding-right: ${hover == "music" ? "1" : "0.6"}em;
+        ${compact ? "" : "padding-left: ${hover == "music" ? "1" : "0.8"}em;"}
+        ${compact ? "" : "padding-right: ${hover == "music" ? "1" : "0.6"}em;"}
         transition: padding 0.25s ease-out;
       "
       :space-evenly false
-      :spacing 16
+      :spacing {compact ? 0 : 16}
       (slide-n-fade :direction "left" :bool {hover == "music"}
-        (eventbox
-          :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
-          :cursor "pointer"
-          :onclick "ewwd action music previous"
-          :tooltip "  󰳽 previous track  "
-          (label :text "󰒮")
+        (tip :compact compact :text "  󰳽 previous track  "
+          (eventbox
+            :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
+            :cursor "pointer"
+            :onclick "ewwd action music previous"
+            (label :class "gap-trail" :text "󰒮")
+          )
         )
       )
-      (music-progress)
+      (music-progress :compact compact)
       (slide-n-fade :direction "right" :bool {hover == "music"}
-        (eventbox
-          :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
-          :cursor "pointer"
-          :onclick "ewwd action music next"
-          :tooltip "  󰳽 next track  "
-          (label :text "󰒭")
+        (tip :compact compact :text "  󰳽 next track  "
+          (eventbox
+            :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
+            :cursor "pointer"
+            :onclick "ewwd action music next"
+            (label :class "gap" :text "󰒭")
+          )
         )
       )
-      (label
-        :class "tr-c music-${pctl.playing ? "artist" : "inactive" }"
-        :text "󰠃 ${pctl.artist_short}"
-        :tooltip " 󰠃 ${pctl.artist} "
-        :style "margin-left: ${hover == "music" ? "-2" : "-12"}px;"
+      (box :space-evenly false :style {compact ? "" : "margin-left: ${hover == "music" ? "-2" : "-12"}px;"}
+        (slide-n-fade :direction "right" :bool {!compact || hover == "music"}
+          (box :space-evenly false :spacing {compact ? 0 : 16} :style {compact ? "" : "margin-right: 16px;"}
+            (tip :compact compact :text " 󰠃 ${pctl.artist} "
+              (label
+                :class "tr-c music-${pctl.playing ? "artist" : "inactive" } gap"
+                :text "󰠃 ${pctl.artist_short}"
+              )
+            )
+            (tip :compact compact :text " 󰀥 ${pctl.album} " :visible {!compact || !pctl.single_track}
+              (label
+                :class "tr-c music-${pctl.playing ? "album" : "inactive" } gap"
+                :text "󰀥 ${pctl.album_short}"
+                :style "${compact ? "" : pctl.single_track ? "margin-top: -100px; margin-left: -1000px;" : "margin-left: -6px;"}"
+              )
+            )
+          )
+        )
+        (tip :compact compact :text " 󰎆 ${pctl.title} " :visible {compact && !pctl.single_track}
+          (label
+            :class "tr-c music-${pctl.playing ? "title" : "inactive" } gap"
+            :text "󰎆"
+          )
+        )
+        (tip :compact compact :text " 󰎆 ${pctl.title} " :visible {!compact || !pctl.single_track}
+          (label
+            :class "tr-c music-${pctl.playing ? "title" : "inactive" } gap-text"
+            :text "${compact ? "" : " 󰎆 "}${pctl.title_short}"
+            :truncate compact
+            :style "${compact ? "" : pctl.single_track ? "margin-top: -100px; margin-left: -1000px;" : "margin-left: -6px; margin-right: -20px;"}"
+          )
+        )
       )
-      (label
-        :class "tr-c music-${pctl.playing ? "album" : "inactive" }"
-        :text "󰀥 ${pctl.album_short}"
-        :tooltip " 󰀥 ${pctl.album} "
-        :style "${pctl.single_track ? "margin-top: -100px; margin-left: -1000px;" : "margin-left: -6px;"}"
+      (tip :compact compact :text " 󰓏 ${pctl.album} " :visible {compact && pctl.single_track}
+        (label
+          :class "tr-c music-${pctl.playing ? "single" : "inactive" } gap"
+          :text "󰓏"
+        )
       )
-      (label
-        :class "tr-c music-${pctl.playing ? "title" : "inactive" }"
-        :text " 󰎆 ${pctl.title_short}"
-        :tooltip " 󰎆 ${pctl.title} "
-        :style "${pctl.single_track ? "margin-top: -100px; margin-left: -1000px;" : "margin-left: -6px; margin-right: -20px;"}"
-      )
-      (label
-        :class "tr-c music-${pctl.playing ? "single" : "inactive" }"
-        :text "󰓏 ${pctl.album_short}"
-        :tooltip " 󰓏 ${pctl.album} "
-        :style "${pctl.single_track ? "margin-left: -38px; margin-right: -6px;" : "margin-top: -100px; margin-left: -1000px;"}"
+      (tip :compact compact :text " 󰓏 ${pctl.album} " :visible {!compact || pctl.single_track}
+        (label
+          :class "tr-c music-${pctl.playing ? "single" : "inactive" } gap-text"
+          :text "${compact ? "" : "󰓏 "}${pctl.album_short}"
+          :style "${compact ? "" : pctl.single_track ? "margin-left: -38px; margin-right: -6px;" : "margin-top: -100px; margin-left: -1000px;"}"
+        )
       )
       (slide-n-fade
         :direction "left"
         :bool {hover == "music"}
-        (music-volume :value {pctl.volume_percent})
+        (box :class "gap" (music-volume :value {pctl.volume_percent} :compact compact))
       )
     )
   )
 )
 
-(defwidget music-progress []
+(defwidget music-progress [compact]
   (box :class "music-progress" :space-evenly false :spacing 0
-    :style "margin: 0 -9px;"
-    (circular-progress
-      :class "music-progress-circle${pctl.playing ? "" : "-paused" }"
-      :value {pctl.progress}
-      :start-at 75
-      :thickness 2
-      :clockwise true
-      (box :class "music-progress-circle-icon"
-        (eventbox
-          :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
-          :onclick "ewwd action music toggle"
-          :onscroll "ewwd action music seek {}"
-          :cursor "pointer"
-          :tooltip "  󰳽 play/pause · 󱕒 seek  "
-          (label :text "${pctl.playing ? "󰏦" : "󰐍"}")
+    :style {compact ? "" : "margin: 0 -9px;"}
+    (tip :compact compact :text {compact ? "  󰳽 play/pause · 󱕒 seek  " : ""}
+      (eventbox
+        :onclick {compact ? "ewwd action music toggle" : ""}
+        :onscroll {compact ? "ewwd action music seek {}" : ""}
+        :cursor {compact ? "pointer" : "default"}
+        (circular-progress
+          :class "music-progress-circle${pctl.playing ? "" : "-paused" }"
+          :value {pctl.progress}
+          :start-at 75
+          :thickness 2
+          :clockwise true
+          (box :class "music-progress-circle-icon"
+            (eventbox
+              :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
+              :onclick {compact ? "" : "ewwd action music toggle"}
+              :onscroll {compact ? "" : "ewwd action music seek {}"}
+              :cursor "pointer"
+              :tooltip {compact ? "" : "  󰳽 play/pause · 󱕒 seek  "}
+              (label :text {compact ? (pctl.playing ? "󰏤" : "󰐊") : (pctl.playing ? "󰏦" : "󰐍")})
+            )
+          )
         )
       )
     )
   )
 )
 
-(defwidget music-volume [value]
-  (eventbox
-    :onclick "ewwd action music volume set 1"
-    :onmiddleclick "ewwd action music volume set 0.01"
-    :onrightclick "ewwd action music volume set 0"
-    :onscroll "ewwd action music volume {} 0.1"
-    :cursor "pointer"
-    :tooltip "  󰳽 full · ǂ minimum · 󰳾 mute · 󱕒 adjust  "
-    (box :style "margin-right: 4px;" :class "tr-c ramp-${
-            value < 1   ? "1" :
-            value < 30  ? "2" :
-            value < 40  ? "3" :
-            value < 50  ? "4" :
-            value < 60  ? "5" :
-            value < 70  ? "6" :
-            value < 80  ? "7" :
-            value < 90  ? "8" :
-            value < 99  ? "9" : "10"
-          }"
-      (circular-progress
-        :class "tr-c music-progress-circle"
-        :value value
-        :start-at 75
-        :thickness 2
-        :clockwise false
-        (label
-          :text {
-            value == 0  ? "󰖁" :
-            value < 35  ? "󰕿" :
-            value < 65  ? "󰖀" : "󰕾"
-          }
-          :style "
-            font-size: ${value > 0 && value < 65 ? "22" : "20"}px;
-            margin: ${
-              value > 0 && value < 35 ? "8px 11px 7px 9px" :
-                value < 65 ? "6px 9px 4px 7px" : "6px 6px 5px 7px"
-            };
-          "
+(defwidget music-volume [value compact]
+  (tip :compact compact :text "  󰳽 full · ǂ minimum · 󰳾 mute · 󱕒 adjust  "
+    (eventbox
+      :onclick "ewwd action music volume set 1"
+      :onmiddleclick "ewwd action music volume set 0.01"
+      :onrightclick "ewwd action music volume set 0"
+      :onscroll "ewwd action music volume {} 0.1"
+      :cursor "pointer"
+      (box :style "margin-right: 4px;" :class "tr-c ramp-${
+              value < 1   ? "1" :
+              value < 30  ? "2" :
+              value < 40  ? "3" :
+              value < 50  ? "4" :
+              value < 60  ? "5" :
+              value < 70  ? "6" :
+              value < 80  ? "7" :
+              value < 90  ? "8" :
+              value < 99  ? "9" : "10"
+            }"
+        (circular-progress
+          :class "tr-c music-progress-circle"
+          :value value
+          :start-at 75
+          :thickness 2
+          :clockwise false
+          (label
+            :text {
+              value == 0  ? "󰖁" :
+              value < 35  ? "󰕿" :
+              value < 65  ? "󰖀" : "󰕾"
+            }
+            :class "music-volume-${
+              value == 0  ? "muted" :
+              value < 35  ? "low" :
+              value < 65  ? "mid" : "high"
+            }"
+          )
         )
       )
     )
@@ -191,15 +221,16 @@
   'ewwd subscribe bluetooth | jq --unbuffered -c ".data"'
 )
 
-(defwidget audio []
+(defwidget audio [compact]
   (eventbox
     :onhover "eww update hover=audio"
     :onhoverlost "eww update hover=''"
     (box
       :class "audio ${hover == "audio" ? "audio-hover" : ""}"
-      :space-evenly false :spacing 10
+      :space-evenly false :spacing {compact ? 0 : 10}
       (audio-control
         :content "source"
+        :compact compact
         :value {audio-info.source}
         :name {audio-info.source_name}
         :available {audio-info.source_available}
@@ -207,129 +238,140 @@
         :icon-muted ""
         :icon-on ""
       )
-      (audio-control
-        :content "sink"
-        :value {audio-info.sink}
-        :name {audio-info.sink_name}
-        :available {audio-info.sink_available}
-        :muted {audio-info.sink_muted}
-        :icon-on "󰓃"
-        :icon-muted "󰓄"
-      )
-      (headphones)
-    )
-  )
-)
-
-(defwidget audio-control [content value name available muted icon-muted icon-on]
-  (eventbox
-    :class "audio-${content}"
-    :onclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
-    :onmiddleclick {available ? "ewwd action audio cycle_device ${content}" : ""}
-    :onrightclick "${terminal} --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
-    :cursor "pointer"
-    :tooltip "  ${available ? "󰳽 mute · ǂ next device · 󰳾 mixer · 󱕒 adjust" : "${content} unavailable · 󰳾 mixer"}  "
-    (box
-      :space-evenly false :spacing 9
-      :class "tr-c audio-volume ${
-        !available ? "audio-unavailable" :
-        muted ? "audio-muted" :
-        "ramp-${
-          value < 1   ? "1" :
-          value <= 10 ? "2" :
-          value <= 30 ? "4" :
-          value <= 40 ? "5" :
-          value <= 50 ? "6" :
-          value <= 60 ? "8" :
-          value <= 70 ? "9" :
-          value <= 80 ? "10" :
-          value <= 90 ? "11" : "12"
-        }"
-      }"
-      (circular-progress
-        :class "music-progress-circle"
-        :value {available ? (value <= 100 ? value : 100) : 0}
-        :start-at 75
-        :thickness 2
-        :clockwise false
-        (label
-          :class "audio-${content}-icon${muted ? "-inactiveFix" : ""}"
-          :text {muted ? icon-muted : icon-on}
+      (box :class "gap"
+        (audio-control
+          :content "sink"
+          :compact compact
+          :value {audio-info.sink}
+          :name {audio-info.sink_name}
+          :available {audio-info.sink_available}
+          :muted {audio-info.sink_muted}
+          :icon-on "󰓃"
+          :icon-muted "󰓄"
         )
       )
-      (slide-n-fade :bool {hover == "audio" && available} :direction "right"
-        (label :class "audio-${content}-text" :text name)
+      (box :class "gap" (headphones :compact compact))
+    )
+  )
+)
+
+(defwidget audio-control [content value name available muted icon-muted icon-on compact]
+  (tip :compact compact :text "  ${available ? "󰳽 mute · ǂ next device · 󰳾 mixer · 󱕒 adjust" : "${content} unavailable · 󰳾 mixer"}  "
+    (eventbox
+      :class "audio-${content}"
+      :onclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
+      :onmiddleclick {available ? "ewwd action audio cycle_device ${content}" : ""}
+      :onrightclick "${terminal} --title='terminalfloat' -e pulsemixer & disown"
+      :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
+      :cursor "pointer"
+      (box
+        :space-evenly false :spacing {compact ? 0 : 9}
+        :class "tr-c audio-volume ${
+          !available ? "audio-unavailable" :
+          muted ? "audio-muted" :
+          "ramp-${
+            value < 1   ? "1" :
+            value <= 10 ? "2" :
+            value <= 30 ? "4" :
+            value <= 40 ? "5" :
+            value <= 50 ? "6" :
+            value <= 60 ? "8" :
+            value <= 70 ? "9" :
+            value <= 80 ? "10" :
+            value <= 90 ? "11" : "12"
+          }"
+        }"
+        (circular-progress
+          :class "music-progress-circle"
+          :value {available ? (value <= 100 ? value : 100) : 0}
+          :start-at 75
+          :thickness 2
+          :clockwise false
+          (label
+            :class "audio-${content}-icon${muted ? "-inactiveFix" : ""}"
+            :text {muted ? icon-muted : icon-on}
+          )
+        )
+        (slide-n-fade :bool {hover == "audio" && available} :direction "right"
+          (label
+            :class "audio-${content}-text"
+            :text name
+            :limit-width {compact ? 19 : 64}
+            :truncate-left true
+          )
+        )
       )
     )
   )
 )
 
-(defwidget headphones []
-  (eventbox
-    :onclick {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle up" : ""}
-    :onmiddleclick "ewwd action bluetooth toggle"
-    :onscroll {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle {}" : ""}
-    :cursor "pointer"
-    :tooltip "  ${bluetooth-info.noise_control_present ? "󰳽 cycle mode · 󱕒 cycle mode · " : ""}ǂ ${bluetooth-info.status == "connected" ? "disconnect" : "connect"}  "
-    (box
-      :space-evenly false :spacing 5
-      :class "audio-headphones audio-headphones-${
-        bluetooth-info.status == "unknown" ? "unknown" :
-        bluetooth-info.status == "disconnected" ? "disconnected" :
-        bluetooth-info.status == "connecting" ? "connecting" :
-        !bluetooth-info.battery_present ? "unknown" :
-        bluetooth-info.battery_percent < 20 ? "low" :
-        bluetooth-info.battery_percent < 40 ? "warm" : "healthy"
-      }"
-      (label
-        :class "audio-headphones-icon"
-        :text {
-          bluetooth-info.status == "unknown" ? "󰂳" :
-          bluetooth-info.status == "disconnected" ? "󰂲" :
-          bluetooth-info.status == "connecting" ? "󰂰" :
-          !bluetooth-info.battery_present ? "󰂑" :
-          bluetooth-info.battery_percent < 20 ? "󰂃" :
-          bluetooth-info.battery_percent < 30 ? "󰁻" :
-          bluetooth-info.battery_percent < 40 ? "󰁼" :
-          bluetooth-info.battery_percent < 50 ? "󰁽" :
-          bluetooth-info.battery_percent < 60 ? "󰁾" :
-          bluetooth-info.battery_percent < 70 ? "󰁿" :
-          bluetooth-info.battery_percent < 80 ? "󰂀" :
-          bluetooth-info.battery_percent < 90 ? "󰂁" :
-          bluetooth-info.battery_percent < 100 ? "󰂂" : "󰁹"
-        }
-      )
-      (label
-        :visible {bluetooth-info.status == "connected" && bluetooth-info.battery_present}
-        :class "audio-headphones-percent"
-        :text "${bluetooth-info.battery_percent}%"
-      )
-      (label
-        :visible {
-          bluetooth-info.status == "unknown" ||
-          bluetooth-info.status == "connecting" ||
-          (bluetooth-info.status == "connected" && !bluetooth-info.battery_present)
-        }
-        :class "audio-headphones-unknown"
-        :text "––"
-      )
-      (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected" && bluetooth-info.noise_control_present} :direction "right"
+(defwidget headphones [compact]
+  (tip :compact compact :text "  ${bluetooth-info.noise_control_present ? "󰳽 cycle mode · 󱕒 cycle mode · " : ""}ǂ ${bluetooth-info.status == "connected" ? "disconnect" : "connect"}  "
+    (eventbox
+      :onclick {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle up" : ""}
+      :onmiddleclick "ewwd action bluetooth toggle"
+      :onscroll {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle {}" : ""}
+      :cursor "pointer"
+      (box
+        :space-evenly false :spacing 5
+        :class "audio-headphones audio-headphones-${
+          bluetooth-info.status == "unknown" ? "unknown" :
+          bluetooth-info.status == "disconnected" ? "disconnected" :
+          bluetooth-info.status == "connecting" ? "connecting" :
+          !bluetooth-info.battery_present ? "unknown" :
+          bluetooth-info.battery_percent < 20 ? "low" :
+          bluetooth-info.battery_percent < 40 ? "warm" : "healthy"
+        }"
         (label
-          :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : bluetooth-info.noise_control == "" ? "audio-headphones-chip-unknown" : ""}"
+          :class "audio-headphones-icon"
           :text {
-            (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "" ? "󰘚" :
-            (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "󰩅" :
-            (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "󰟅" :
-            (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "󰕘" : "󰅖"
+            bluetooth-info.status == "unknown" ? "󰂳" :
+            bluetooth-info.status == "disconnected" ? "󰂲" :
+            bluetooth-info.status == "connecting" ? "󰂰" :
+            !bluetooth-info.battery_present ? "󰂑" :
+            bluetooth-info.battery_percent < 20 ? "󰂃" :
+            bluetooth-info.battery_percent < 30 ? "󰁻" :
+            bluetooth-info.battery_percent < 40 ? "󰁼" :
+            bluetooth-info.battery_percent < 50 ? "󰁽" :
+            bluetooth-info.battery_percent < 60 ? "󰁾" :
+            bluetooth-info.battery_percent < 70 ? "󰁿" :
+            bluetooth-info.battery_percent < 80 ? "󰂀" :
+            bluetooth-info.battery_percent < 90 ? "󰂁" :
+            bluetooth-info.battery_percent < 100 ? "󰂂" : "󰁹"
           }
         )
-      )
-      (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected" && bluetooth-info.wear_state == "not_worn"} :direction "right"
         (label
-          :class "audio-headphones-wear"
-          :tooltip "  Headphones are not worn  "
-          :text "󰋋"
+          :visible {bluetooth-info.status == "connected" && bluetooth-info.battery_present}
+          :class "audio-headphones-percent"
+          :text "${bluetooth-info.battery_percent}%"
+        )
+        (label
+          :visible {
+            bluetooth-info.status == "unknown" ||
+            bluetooth-info.status == "connecting" ||
+            (bluetooth-info.status == "connected" && !bluetooth-info.battery_present)
+          }
+          :class "audio-headphones-unknown"
+          :text "––"
+        )
+        (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected" && bluetooth-info.noise_control_present} :direction "right"
+          (label
+            :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : bluetooth-info.noise_control == "" ? "audio-headphones-chip-unknown" : ""}"
+            :text {
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "" ? "󰘚" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "󰩅" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "󰟅" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "󰕘" : "󰅖"
+            }
+          )
+        )
+        (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected" && bluetooth-info.wear_state == "not_worn"} :direction "right"
+          (tip :compact compact :text "  Headphones are not worn  "
+            (label
+              :class "audio-headphones-wear"
+              :text "󰋋"
+            )
+          )
         )
       )
     )

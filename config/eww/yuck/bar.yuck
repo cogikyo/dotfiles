@@ -2,106 +2,28 @@
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top center" :width "100%" :height "40px")
   (centerbox :class "bar"
-    (box :halign "start" :space-evenly false (bar-music))
-    (box :halign "center" :space-evenly false (bar-today))
-    (box :halign "end" :space-evenly false :spacing 8
-      (bar-computer) (bar-network) (bar-workspaces)
+    (box :class "bar-side" :valign "start" :space-evenly false
+      (music :compact true)
+      (audio :compact true)
+      (box :hexpand true :halign "end" (weather :compact true))
     )
-  )
-)
-
-(defwidget bar-music []
-  (box
-    :class "bar-segment"
-    :space-evenly false :spacing 14
-    (eventbox
-      :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
-      :cursor "pointer"
-      :onclick "ewwd action music previous"
-      :tooltip "  󰳽 previous track  "
-      (label :text "󰒮")
-    )
-    (music-progress)
-    (eventbox
-      :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
-      :cursor "pointer"
-      :onclick "ewwd action music next"
-      :tooltip "  󰳽 next track  "
-      (label :text "󰒭")
-    )
-    (label
-      :class "tr-c music-${pctl.playing ? "title" : "inactive" }"
-      :text "󰎆 ${pctl.title_short}"
-      :tooltip " 󰎆 ${pctl.title} "
-    )
-  )
-)
-
-(defwidget bar-today []
-  (box
-    :class "bar-segment"
-    :space-evenly false :spacing 12
-    (eventbox
-      :onclick "${browser} https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
-      :cursor "pointer"
-      :tooltip "  ${weather.icon}${weather.desc} · 󰈷 feels: ${weather.feels_like} · 󰳽 open windy  "
-      (label
-        :class "weather-${weather.night ? "night" : "day"}"
-        :markup "${weather.icon}${weather.temp}<sup> </sup>"
-      )
-    )
-    (eventbox
-      :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
-      :cursor "pointer"
-      :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} · 󰳽 open calendar  "
-      (box :space-evenly false :spacing 10
-        (label :class "bar-time" :text "${time.hour}:${time.minute}")
-        (label
-          :class "date-${cycle-6 == 0 ? date.weekday : "base"}"
-          :text "󰃭 ${date.weekday_short}, ${date.month_short} ${date.day}"
+    (time :compact true)
+    (box :class "bar-side" :valign "start" :space-evenly false
+      (date :compact true)
+      (box :hexpand true :halign "end" :space-evenly false
+        (eventbox
+          :onhover "eww update hover=computer"
+          :onhoverlost "eww update hover=''"
+          (box
+            :class "computerbox ${hover == "computer" ? "computerbox-hover" : ""}"
+            :space-evenly false
+            (network :compact true :key "computer")
+            (box :class "gap" (cpu :compact true :key "computer"))
+            (box :class "gap" (memory :compact true :key "computer"))
+          )
         )
+        (workspaces :compact true)
       )
     )
-  )
-)
-
-(defwidget bar-computer []
-  (eventbox
-    :onclick "${terminal} --title='terminalfloat' -e btop & disown"
-    :cursor "pointer"
-    :tooltip "   󰍛 󰳽 btop  "
-    (box
-      :class "bar-segment bar-computer"
-      :space-evenly false :spacing 12
-      (label-ramp :icon "" :percent {EWW_CPU.avg} :bool true)
-      (box :visible {computer-info.ram_available}
-        (label-ramp :icon "󰍛" :percent {computer-info.ram_used_percent} :bool true)
-      )
-    )
-  )
-)
-
-(defwidget bar-network []
-  (eventbox
-    :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
-    :onmiddleclick "hyprd vpn ${vpn-name}"
-    :cursor "pointer"
-    :tooltip "  ${net-info.icon} ${net-info.name} · 󰳽 nmtui · ǂ VPN  "
-    (box
-      :class "bar-segment"
-      :space-evenly false :spacing 6
-      (label :class "tr-c ramp-7" :visible {net-info.vpn} :text "󰖂")
-      (label :class "tr-c ramp-${net-info.link_ramp}" :text "${net-info.icon}")
-      (label :class "tr-c ramp-${net-info.link_ramp}" :markup "${net-info.name}")
-    )
-  )
-)
-
-(defwidget bar-workspaces []
-  (eventbox
-    :onhoverlost "eww update ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false ws-h6=false"
-    :onrightclick "hyprctl dispatch workspace previous"
-    :tooltip "  󰮫 󰳾 previous workspace  "
-    (workspace-list :class "bar-segment bar-workspaces" :orientation "horizontal")
   )
 )

@@ -7,7 +7,7 @@
   (box
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
-    (network) (cpu) (memory)
+    (network :compact false :key "network") (cpu :compact false :key "cpu") (memory :compact false :key "memory")
   )
 )
 
@@ -21,36 +21,41 @@
 
 (defvar vpn-name "Trend")
 
-(defwidget network []
-  (eventbox
-    :onhover "eww update hover=network"
-    :onhoverlost "eww update hover=''"
-    :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
-    :onmiddleclick "hyprd vpn ${vpn-name}"
-    :cursor "pointer"
-    :tooltip "  ${net-info.icon} ${net-info.name} · 󰳽 nmtui · ǂ VPN  "
-    (box
-      :class "computerbox ${hover == "network" ? "computerbox-hover" : "" }"
-      :space-evenly false :spacing "${hover == "network" ? "6" : "2" }"
-      (label
-        :class "tr-c ramp-7"
-        :visible {net-info.vpn}
-        :text "󰖂  "
-      )
-      (label
-        :class "tr-c ramp-${net-info.link_ramp}"
-        :text "${net-info.icon}${hover == "network" ? " ": "  "}"
-      )
-      (slide-n-fade :bool {hover == "network"} :direction "right"
-        (label :class "tr-c ramp-${net-info.link_ramp}" :markup "${net-info.name} ")
-      )
-      (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${hover == "network" ? "": " "}")
-      (slide-n-fade :bool {hover == "network"} :direction "right"
-        (label :class "tr-c ramp-${net-info.down_ramp}" :markup "<small>${net-info.down_fmt}</small>")
-      )
-      (label :class "tr-c ramp-${net-info.up_ramp}" :text "󰁞")
-      (slide-n-fade :bool {hover == "network"} :direction "right"
-        (label :class "tr-c ramp-${net-info.up_ramp}" :markup "<small>${net-info.up_fmt}</small>")
+(defwidget network [compact key]
+  (tip :compact compact :text "  ${net-info.icon} ${net-info.name} · 󰳽 nmtui · ǂ VPN  "
+    (eventbox
+      :onhover {compact ? "" : "eww update hover=${key}"}
+      :onhoverlost {compact ? "" : "eww update hover=''"}
+      :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
+      :onmiddleclick "hyprd vpn ${vpn-name}"
+      :cursor "pointer"
+      (box
+        :class "${compact ? "" : "computerbox"} ${!compact && hover == key ? "computerbox-hover" : ""}"
+        :space-evenly false :spacing {hover == key ? 6 : compact ? 0 : 2}
+        (label
+          :class "tr-c ramp-7"
+          :visible {net-info.vpn}
+          :text "󰖂  "
+        )
+        (label
+          :class "tr-c ramp-${net-info.link_ramp}"
+          :text "${net-info.icon}${hover == key ? " " : compact ? "" : "  "}"
+        )
+        (slide-n-fade :bool {hover == key} :direction "right"
+          (label :class "tr-c ramp-${net-info.link_ramp}" :markup "${net-info.name} " :truncate compact)
+        )
+        (slide-n-fade :bool {!compact || hover == key} :direction "right"
+          (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${hover == key ? "": " "}")
+        )
+        (slide-n-fade :bool {hover == key} :direction "right"
+          (label :class "tr-c ramp-${net-info.down_ramp}" :markup "<small>${net-info.down_fmt}</small>")
+        )
+        (slide-n-fade :bool {!compact || hover == key} :direction "right"
+          (label :class "tr-c ramp-${net-info.up_ramp}" :text "󰁞")
+        )
+        (slide-n-fade :bool {hover == key} :direction "right"
+          (label :class "tr-c ramp-${net-info.up_ramp}" :markup "<small>${net-info.up_fmt}</small>")
+        )
       )
     )
   )
@@ -87,10 +92,9 @@
   )
 )
 
-(defwidget label-ramp [icon ?val percent bool ?direction]
+(defwidget label-ramp [icon percent bool ?direction]
   (box
     :space-evenly false
-    :spacing 5
     :class "tr-c ramp-${
       percent < 25  ? "3"  :
       percent < 35  ? "4"  :
@@ -104,9 +108,8 @@
     (label :markup icon)
     (slide-n-fade :bool bool :direction "right"
       (label
-        :markup {strlength(val) > 0 ? val :
-          "${"${round(percent,0)}" < 10 ? "0${round(percent,0)}" : round(percent,0) }<small>%</small>"
-        }
+        :style "margin-left: 5px;"
+        :markup "${"${round(percent,0)}" < 10 ? "0${round(percent,0)}" : round(percent,0) }<small>%</small>"
       )
     )
   )
@@ -116,7 +119,6 @@
   (box
     :visible available
     :space-evenly false
-    :spacing 6
     :class "tr-c ramp-${
       percent < 50  ? "3"  :
       percent < 56  ? "4"  :
@@ -138,6 +140,7 @@
     )
     (slide-n-fade :bool bool :direction {strlength(direction) > 0 ? "${direction}" : "right"}
       (label
+        :style "margin-left: 6px;"
         :markup "${current}<sup></sup>${extra}"
       )
     )
@@ -150,37 +153,47 @@
 (deflisten cpu-columns :initial "[]"
   'jq -nc "[range($(( $(nproc --all) / 2 )))]"')
 
-(defwidget cpu []
-  (eventbox
-    :onhover "eww update hover=cpu"
-    :onhoverlost "eww update hover=''"
-    :onclick "${terminal} --title='terminalfloat' -e btop & disown"
-    :cursor "pointer"
-    :tooltip "   󰳽 btop  "
-    (box
-      :class "computerbox ${hover == "cpu" ? "computerbox-hover" : "" }"
-      :space-evenly false :spacing "${hover == "cpu" ? "12" : "8" }"
-      (temp-ramp
-        :current {computer-info.temp_current}
-        :percent {computer-info.temp_percent}
-        :max {computer-info.temp_max}
-        :bool {hover == "cpu"}
-        :available {computer-info.temp_available}
-      )
-      (label-ramp
-        :icon ""
-        :percent {EWW_CPU.avg}
-        :bool {hover == "cpu"}
-      )
-      (overlay
-        (box :space-evenly false :spacing 2
-          (for n in cpu-columns
-            (num-to-block :load {EWW_CPU.cores[n].usage} :angle 0)
-          )
+(defwidget cpu [compact key]
+  (tip :compact compact :text "   󰳽 btop  "
+    (eventbox
+      :onhover {compact ? "" : "eww update hover=${key}"}
+      :onhoverlost {compact ? "" : "eww update hover=''"}
+      :onclick "${terminal} --title='terminalfloat' -e btop & disown"
+      :cursor "pointer"
+      (box
+        :class "${compact ? "" : "computerbox"} ${!compact && hover == key ? "computerbox-hover" : ""}"
+        :space-evenly false :spacing {compact ? 0 : hover == key ? 12 : 8}
+        (temp-ramp
+          :current {computer-info.temp_current}
+          :percent {computer-info.temp_percent}
+          :max {computer-info.temp_max}
+          :bool {hover == key}
+          :available {computer-info.temp_available}
         )
-        (box :space-evenly false :spacing 2
-          (for n in cpu-columns
-            (num-to-block :load {EWW_CPU.cores[n + arraylength(cpu-columns)].usage} :angle 180)
+        (box :class "gap" :space-evenly false
+          (label-ramp
+            :icon ""
+            :percent {EWW_CPU.avg}
+            :bool {hover == key}
+          )
+          (slide-n-fade :bool {compact && hover != key} :direction "right"
+            (box :class "gap-text" (level-bars :percent {EWW_CPU.avg} :steps range4))
+          )
+          (slide-n-fade :bool {!compact || hover == key} :direction "right"
+            (box :class "gap" :space-evenly false :style {compact ? "" : "margin-left: ${hover == key ? "12" : "8" }px;"}
+              (overlay
+                (box :space-evenly false :spacing 2
+                  (for n in cpu-columns
+                    (num-to-block :load {EWW_CPU.cores[n].usage} :angle 0)
+                  )
+                )
+                (box :space-evenly false :spacing 2
+                  (for n in cpu-columns
+                    (num-to-block :load {EWW_CPU.cores[n + arraylength(cpu-columns)].usage} :angle 180)
+                  )
+                )
+              )
+            )
           )
         )
       )
@@ -192,35 +205,47 @@
 ;; memory
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(defvar range4 "[0,1,2,3]")
 
-(defwidget memory []
-  (eventbox
-    :visible {computer-info.ram_available}
-    :onhover "eww update hover=memory"
-    :onhoverlost "eww update hover=''"
-    :onclick "${terminal} --title='terminalfloat' -e btop & disown"
-    :cursor "pointer"
-    :tooltip "  󰍛 󰳽 btop  "
-    (box
-      :class "computerbox ${hover == "memory" ? "computerbox-hover" : "" }"
-      :space-evenly false :spacing 8
-      (label-ramp
-        :icon "󰍛"
-        :percent {computer-info.ram_used_percent}
-        :bool {hover == "memory"}
-      )
-      (box :space-evenly false :spacing 3
-        (for n in range16
-          (label
-            :text "󰇝"
-            :style "font-size: 1.1em;"
-            :class "ramp-${
-              computer-info.ram_used_percent == 100 ? "12" : "${
-                computer-info.ram_used_percent < n * 95 / 15 ? "1" : "${
-                  round(n / 2.1, 0) + 4
-                }"
-              }"
+(defwidget level-bars [percent steps]
+  (box :space-evenly false :spacing 3
+    (for n in steps
+      (label
+        :text "󰇝"
+        :style "font-size: 1.1em;"
+        :class "ramp-${
+          percent == 100 ? "12" : "${
+            percent < n * 95 / (arraylength(steps) - 1) ? "1" : "${
+              round(n * 15 / (arraylength(steps) - 1) / 2.1, 0) + 4
             }"
+          }"
+        }"
+      )
+    )
+  )
+)
+
+(defwidget memory [compact key]
+  (tip :compact compact :text "  󰍛 󰳽 btop  " :visible {computer-info.ram_available}
+    (eventbox
+      :onhover {compact ? "" : "eww update hover=${key}"}
+      :onhoverlost {compact ? "" : "eww update hover=''"}
+      :onclick "${terminal} --title='terminalfloat' -e btop & disown"
+      :cursor "pointer"
+      (box
+        :class "${compact ? "" : "computerbox"} ${!compact && hover == key ? "computerbox-hover" : ""}"
+        :space-evenly false
+        (label-ramp
+          :icon "󰍛"
+          :percent {computer-info.ram_used_percent}
+          :bool {hover == key}
+        )
+        (slide-n-fade :bool {compact && hover != key} :direction "right"
+          (box :class "gap-text" (level-bars :percent {computer-info.ram_used_percent} :steps range4))
+        )
+        (slide-n-fade :bool {!compact || hover == key} :direction "right"
+          (box :class "gap" :style {compact ? "" : "margin-left: 8px;"}
+            (level-bars :percent {computer-info.ram_used_percent} :steps range16)
           )
         )
       )
@@ -231,4 +256,12 @@
 (deflisten computer-info
   :initial '{"ram_available":false,"ram_used_percent":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0}'
   'ewwd subscribe computer | jq --unbuffered -c ".data"'
+)
+
+;; ----------------------------------------------------------------------------
+;; battery
+
+(deflisten battery
+  :initial '{"available":false,"percent":0,"plugged":false,"status":"","icon":"","remaining":""}'
+  `ewwd subscribe battery | jq --unbuffered -c '.data | .summary = ((.percent | tostring) + "% · " + (if .remaining == "" then .status elif .status == "charging" then "charging · " + .remaining + " to full" else .remaining + " left" end))'`
 )

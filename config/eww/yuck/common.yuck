@@ -15,6 +15,15 @@
 (defvar terminal "kitty")
 (defvar hover "")
 
+(defwidget tip [text compact ?visible]
+  (tooltip
+    :visible {visible == "" || visible}
+    :tooltip {compact ? text : ""}
+    (label :class "tip" :text text)
+    (box :tooltip {compact ? "" : text} (children))
+  )
+)
+
 (defwidget slide-n-fade [direction bool]
   (revealer
     :transition "slide${direction}"

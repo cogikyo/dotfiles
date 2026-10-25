@@ -5,9 +5,9 @@
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :width "45%" :anchor "top center")
   (centerbox :style "margin-right: 142px;"
-    (box :halign "end"    :style "margin-right: 6px;" (weather))
-    (box :halign "center" :style "margin-right: 6px;" (time))
-    (box :halign "start" (date))
+    (box :halign "end"    :style "margin-right: 6px;" (weather :compact false))
+    (box :halign "center" :style "margin-right: 6px;" (time :compact false))
+    (box :halign "start" (date :compact false))
   )
 )
 
@@ -19,111 +19,136 @@
   'ewwd subscribe weather | jq --unbuffered -c ".data"'
 )
 
-(defwidget daily-temp [temp margin color]
-  (label
-    :class "weather-${cycle-5 == 1 ? "${color}" : "base-alt" }"
-    :markup "<tt>${temp}</tt>"
-    :style "font-size: 0.7em; margin-top: ${margin}px;"
-    :tooltip " ${color} ${temp}  "
+(defwidget daily-temp [temp margin color compact]
+  (tip :compact compact :text " ${color} ${temp}  "
+    (label
+      :class "weather-${cycle-5 == 1 ? "${color}" : "base-alt" }"
+      :markup "<tt>${temp}</tt>"
+      :style "font-size: 0.7em; margin-top: ${margin / 14}em;"
+    )
   )
 )
 
-(defwidget weather []
-  (eventbox
-    :onhover "eww update hover=weather"
-    :onhoverlost "eww update hover=''"
-    :onclick "${browser} https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
-    :cursor "pointer"
-    :tooltip "  󰖟 󰳽 open windy  "
-    (box
-      :class "weather ${hover == "weather" ? "weather-hover" : "" }"
-      :halign "end" :space-evenly false :spacing 8
-      (label
-        :class "weather-${cycle-6 == 0 ?
-               "${weather.night ? "night" : "day"}"
-               : "base-alt"
-        }"
-        :markup "<b><tt>${weather.icon}${weather.temp}<sup> </sup></tt></b>"
-        :style "margin-right: -6px;"
-        :tooltip "  ${weather.icon}reported: ${weather.temp}   󰈷 feels: ${weather.feels_like}  "
-      )
-      (slide-n-fade :bool {hover == "weather"} :direction "right"
-        (box :space-evenly false :spacing 3
+(defwidget weather [compact]
+  (tip :compact compact :text "  󰖟 󰳽 open windy  "
+    (eventbox
+      :onhover {compact ? "eww update hover=weather; ewwd action weather refresh" : "eww update hover=weather"}
+      :onhoverlost "eww update hover=''"
+      :onclick "${browser} https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
+      :cursor "pointer"
+      (box
+        :class "weather ${hover == "weather" ? "weather-hover" : "" }"
+        :halign "end" :space-evenly false :spacing {compact && hover != "weather" ? 0 : 8}
+        (tip :compact compact :text "  ${weather.icon}reported: ${weather.temp}   󰈷 feels: ${weather.feels_like}  "
           (label
             :class "weather-${cycle-6 == 0 ?
-                  "${weather.night ? "night" : "day"}"
-                  : "base-alt"
+                   "${weather.night ? "night" : "day"}"
+                   : "base-alt"
             }"
-            :markup " <tt><small>${weather.feels_like}<sup> </sup></small></tt>"
-            :style "font-size: 0.8em; margin-right: 6px;"
-            :tooltip "  󰈷 Feels like: ${weather.feels_like}  "
-          )
-          (daily-temp :temp {weather.temp_morn} :margin 12 :color "morning")
-          (daily-temp :temp {weather.temp_day} :margin -2 :color "day")
-          (daily-temp :temp {weather.temp_max} :margin -10 :color "max")
-          (daily-temp :temp {weather.temp_eve} :margin 4 :color "evening")
-          (daily-temp :temp {weather.temp_night} :margin 12 :color "night")
-        )
-      )
-      (label
-        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-        :markup "<b>${weather.desc}</b>"
-        :style "margin-top: 2px; margin-left: ${hover == "weather" ? "2" : "-4"}px;"
-        :tooltip "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
-      )
-      (slide-n-fade :bool {hover == "weather"} :direction "right"
-        (box :space-evenly false :spacing 5
-          (label
-            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-            :markup " <tt><small>${weather.clouds}<small>%</small></small></tt>"
-            :style "margin-top: 2px; margin-left: -5px;"
-            :tooltip "  ${weather.clouds}% cloud coverage "
-          )
-          (label
-            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-            :markup "${weather.bf_icon}"
-            :style "margin: 6px -4px 0 0;"
-            :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
-          )
-          (label
-            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-            :markup "<tt><i><small>${weather.wind_speed}m<sup>-1</sup></small></i></tt>"
-            :style "margin-top: 2px;"
-            :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
+            :markup "<b><tt>${weather.icon}${weather.temp}<sup> </sup></tt></b>"
+            :style {compact ? "" : "margin-right: -6px;"}
           )
         )
-      )
-      (slide-n-fade :bool {hover == "weather"} :direction "right"
-        (box :space-evenly false :spacing 8
+        (tip :compact compact :text "   ${weather.rain_1h}% chance of rain in the next hour, ${weather.rain_day}% today  " :visible compact
           (label
-            :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
-            :markup "<tt><small><sub> </sub>${weather.rain_day}<small>%</small></small></tt>"
-            :style "margin-top: 6px; margin-left: 3px;"
-            :tooltip "   ${weather.rain_day}% chance of rain today, ${weather.rain_1h}% in the next hour  "
-          )
-          (label
-            :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
-            :markup "<tt>󰓠<small> </small>${weather.uvi}</tt>"
-            :style "margin-top: 2px; margin-left: 4px;"
-            :tooltip "  󰓠 ultraviolet index: ${weather.uvi}, ${weather.uvi_desc} "
-          )
-          (label
-            :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
-            :markup "<tt><small> </small>${weather.aqi}</tt>"
-            :style "margin-top: 2px; margin-left: 2px;"
-            :tooltip "   air quality index: ${weather.aqi}, ${weather.aqi_desc} "
+            :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" } gap"
+            :markup "<tt><small><sub> </sub>${weather.rain_1h}<small>%</small></small></tt>"
+            :style "margin-top: 0.3em;"
           )
         )
-      )
-      (label
-        :class "weather-moon${weather.moon == " " ? "-full" : ""}"
-        :text "${weather.moon}"
-        :style "
-          margin-top: -8px;
-          margin-left: ${hover == "weather" ? "-2" : "-18" }px;
-          transition: margin 0.25s ease-out;
-        "
-        :tooltip "  ${weather.moon} ${weather.moon_desc}  "
+        (slide-n-fade :bool {hover == "weather"} :direction "right"
+          (box :space-evenly false :spacing 3
+            (tip :compact compact :text "  󰈷 Feels like: ${weather.feels_like}  "
+              (label
+                :class "weather-${cycle-6 == 0 ?
+                      "${weather.night ? "night" : "day"}"
+                      : "base-alt"
+                }"
+                :markup " <tt><small>${weather.feels_like}<sup> </sup></small></tt>"
+                :style "font-size: 0.8em; margin-right: 6px;"
+              )
+            )
+            (daily-temp :temp {weather.temp_morn} :margin 12 :color "morning" :compact compact)
+            (daily-temp :temp {weather.temp_day} :margin -2 :color "day" :compact compact)
+            (daily-temp :temp {weather.temp_max} :margin -10 :color "max" :compact compact)
+            (daily-temp :temp {weather.temp_eve} :margin 4 :color "evening" :compact compact)
+            (daily-temp :temp {weather.temp_night} :margin 12 :color "night" :compact compact)
+          )
+        )
+        (slide-n-fade :bool {!compact || hover == "weather"} :direction "right"
+          (tip :compact compact :text "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
+            (label
+              :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+              :markup "<b>${weather.desc}</b>"
+              :style "margin-top: 2px; margin-left: ${hover == "weather" ? "2" : "-4"}px;"
+            )
+          )
+        )
+        (slide-n-fade :bool {hover == "weather"} :direction "right"
+          (box :space-evenly false :spacing 5
+            (tip :compact compact :text "  ${weather.clouds}% cloud coverage "
+              (label
+                :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+                :markup " <tt><small>${weather.clouds}<small>%</small></small></tt>"
+                :style "margin-top: 2px; margin-left: -5px;"
+              )
+            )
+            (tip :compact compact :text "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
+              (label
+                :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+                :markup "${weather.bf_icon}"
+                :style "margin: 0.3em -4px 0 0;"
+              )
+            )
+            (tip :compact compact :text "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
+              (label
+                :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+                :markup "<tt><i><small>${weather.wind_speed}m<sup>-1</sup></small></i></tt>"
+                :style "margin-top: 2px;"
+              )
+            )
+          )
+        )
+        (slide-n-fade :bool {hover == "weather"} :direction "right"
+          (box :space-evenly false :spacing 8
+            (label
+              :visible {!compact}
+              :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
+              :markup "<tt><small><sub> </sub>${weather.rain_day}<small>%</small></small></tt>"
+              :style "margin-top: 0.3em; margin-left: 3px;"
+              :tooltip "   ${weather.rain_day}% chance of rain today, ${weather.rain_1h}% in the next hour  "
+            )
+            (tip :compact compact :text "  󰓠 ultraviolet index: ${weather.uvi}, ${weather.uvi_desc} "
+              (label
+                :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
+                :markup "<tt>󰓠<small> </small>${weather.uvi}</tt>"
+                :style "margin-top: 2px; margin-left: 4px;"
+              )
+            )
+            (tip :compact compact :text "   air quality index: ${weather.aqi}, ${weather.aqi_desc} "
+              (label
+                :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
+                :markup "<tt><small> </small>${weather.aqi}</tt>"
+                :style "margin-top: 2px; margin-left: 2px;"
+              )
+            )
+          )
+        )
+        (box
+          :style "
+            margin-top: -8px;
+            margin-left: ${hover == "weather" ? "-2" : compact ? "0" : "-18" }px;
+            transition: margin 0.25s ease-out;
+          "
+          (slide-n-fade :bool {!compact || hover == "weather"} :direction "right"
+            (tip :compact compact :text "  ${weather.moon} ${weather.moon_desc}  "
+              (label
+                :class "weather-moon${weather.moon == " " ? "-full" : ""}"
+                :text "${weather.moon}"
+              )
+            )
+          )
+        )
       )
     )
   )
@@ -145,43 +170,59 @@
   'ewwd subscribe timer | jq --unbuffered -c ".data"'
 )
 
-(defwidget time []
-  (eventbox
-    :onhover "eww update hover=time"
-    :onhoverlost "eww update hover='' hour-active=false minute-active=false"
-    :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
-    :tooltip "  󰔟 ǂ fine adjust  "
-    (box
-      :class "time ${hover == "time" ? "time-hover" : ""}"
-      :halign "center"
-      :space-evenly false
-      :spacing 3
-      :style "padding: 0 ${hover == "time" ? "0.9" : "1.318" }em;"
-      (alarm)
-      (clock :child "hour" :text {time.hour} :bool hour-active)
-      (clockface)
-      (clock :child "minute" :text {time.minute} :bool minute-active)
-      (timer)
+(defwidget time [compact]
+  (tip :compact compact :text {compact && battery.available ? "  ${battery.summary} · 󰔟 ǂ fine adjust  " : "  󰔟 ǂ fine adjust  "}
+    (eventbox
+      :onhover "eww update hover=time"
+      :onhoverlost "eww update hover='' hour-active=false minute-active=false"
+      :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
+      (box
+        :class "time-frame ${compact && battery.available ? "time-battery ramp-${
+          100 - battery.percent < 20 ? "3" :
+          100 - battery.percent < 30 ? "4" :
+          100 - battery.percent < 40 ? "5" :
+          100 - battery.percent < 50 ? "6" :
+          100 - battery.percent < 60 ? "7" :
+          100 - battery.percent < 70 ? "8" :
+          100 - battery.percent < 80 ? "9" :
+          100 - battery.percent < 90 ? "10" :
+          100 - battery.percent < 95 ? "11" : "12"
+        }" : ""} ${hover == "time" ? "time-frame-hover" : ""}"
+        :style {compact && battery.available ? "background-image: linear-gradient(to right, currentColor ${battery.percent}%, transparent ${battery.percent}%);" : ""}
+        :halign "center"
+        (box
+          :class "time ${hover == "time" ? "time-hover" : ""}"
+          :space-evenly false
+          :spacing 3
+          :style "padding: 0 ${hover == "time" ? "0.9" : "1.318" }em;"
+          (alarm :compact compact)
+          (clock :child "hour" :text {time.hour} :bool hour-active :compact compact)
+          (clockface :compact compact)
+          (clock :child "minute" :text {time.minute} :bool minute-active :compact compact)
+          (timer :compact compact)
+        )
+      )
     )
   )
 )
 
-(defwidget clock [child bool text]
-  (eventbox
-    :class "time-${child}"
-    :onhover "eww update ${child}-active=true"
-    :onhoverlost "eww update ${child}-active=false"
-    :onclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
-    :cursor "pointer"
-    :tooltip " ${child == "hour" ?
+(defwidget clock [child bool text compact]
+  (tip :compact compact :text "${compact && battery.available ? "  ${battery.summary} ·" : ""} ${child == "hour" ?
       "  ${timer-info.alarm_active ?  "set for ${timer-info.alarm_target}" : "no active alarm"}" :
       " 󰔟 ${timer-info.timer_active ?  "${timer-info.timer} remaining" : "no active timer"}"
     } · 󰳽 new event "
-    (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
+    (eventbox
+      :class "time-${child}"
+      :onhover "eww update ${child}-active=true"
+      :onhoverlost "eww update ${child}-active=false"
+      :onclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
+      :cursor "pointer"
+      (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
+    )
   )
 )
 
-(defwidget clockface []
+(defwidget clockface [compact]
   (box
     :class "time-clockface"
     :orientation "v"
@@ -189,44 +230,46 @@
     :spacing -3
     :style "margin-left: 3px; margin-right: -4px;"
     :space-evenly false
-    (clock :child "hour" :text "${date.clock_hour} " :bool hour-active)
-    (clock :child "minute" :text "${date.clock_minute} " :bool minute-active)
+    (clock :child "hour" :text "${date.clock_hour} " :bool hour-active :compact compact)
+    (clock :child "minute" :text "${date.clock_minute} " :bool minute-active :compact compact)
   )
 )
 
-(defwidget time-revealer [app direction child bool icon text subtext]
+(defwidget time-revealer [app direction child bool icon text subtext compact]
   (slide-n-fade
     :bool {hover == "time"}
     :direction {direction == "left" ? "right" : "left"}
-    (eventbox
-      :class "time-${app} time-${child}-${bool ? "active" : "inactive" }"
-      :onhover "eww update ${child}-active=true"
-      :onhoverlost "eww update ${child}-active=false"
-      :onclick "ewwd action timer ${app} start"
-      :onscroll "ewwd action timer ${app} {} ${fine-adjust ? 1 : 15}"
-      :onrightclick "ewwd action timer ${app} reset"
-      :onmiddleclick "ewwd action timer ${app} up ${fine-adjust ? 1 : 15}"
-      :cursor "pointer"
-      :tooltip "  󰔟 󰳽 start · 󱕒 adjust · ǂ +step · 󰳾 reset  "
-      (box
-        :class "time-${app}" :space-evenly false :spacing 6
-        {direction == "left" ? text : ""}
+    (tip :compact compact :text "  󰔟 󰳽 start · 󱕒 adjust · ǂ +step · 󰳾 reset  "
+      (eventbox
+        :class "time-${app} time-${child}-${bool ? "active" : "inactive" }"
+        :onhover "eww update ${child}-active=true"
+        :onhoverlost "eww update ${child}-active=false"
+        :onclick "ewwd action timer ${app} start"
+        :onscroll "ewwd action timer ${app} {} ${fine-adjust ? 1 : 15}"
+        :onrightclick "ewwd action timer ${app} reset"
+        :onmiddleclick "ewwd action timer ${app} up ${fine-adjust ? 1 : 15}"
+        :cursor "pointer"
         (box
-          :orientation "v"
-          :valign "center"
-          :space-evenly false
-          :spacing 1
-          (label :class "time-${app}-icon" :text icon)
-          (label :class "time-${app}-subtext" :text subtext)
+          :class "time-${app}" :space-evenly false :spacing 6
+          {direction == "left" ? text : ""}
+          (box
+            :orientation "v"
+            :valign "center"
+            :space-evenly false
+            :spacing 1
+            (label :class "time-${app}-icon" :text icon)
+            (label :class "time-${app}-subtext" :text subtext)
+          )
+          {direction == "right" ? text : "" }
         )
-        {direction == "right" ? text : "" }
       )
     )
   )
 )
 
-(defwidget alarm []
+(defwidget alarm [compact]
   (time-revealer
+    :compact compact
     :app "alarm"
     :direction "left"
     :child "hour"
@@ -237,8 +280,9 @@
   )
 )
 
-(defwidget timer []
+(defwidget timer [compact]
   (time-revealer
+    :compact compact
     :app "timer"
     :direction "right"
     :child "minute"
@@ -257,51 +301,57 @@
   'ewwd subscribe date | jq --unbuffered -c ".data"'
 )
 
-(defwidget date []
-  (eventbox
-    :onhover "eww update hover=date"
-    :onhoverlost "eww update hover=''"
-    :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
-    :tooltip "  󰃭 󰳽 open calendar  "
-    (box
-      :class "date ${hover == "date" ? "date-hover" : ""}"
-      :halign "start"
-      :space-evenly false
-      :spacing 4
-      (slide-n-fade
-        :bool {hover == "date"}
-        :direction "left"
-        (label
-          :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
-          :markup "󰕶  ${date.weeks_alive}"
-          :style "margin-top: 3px; margin-right: 10px; margin-left: 6px;"
-          :tooltip "  󰕶 weeks survived: ${date.weeks_alive}  "
+(defwidget date [compact]
+  (tip :compact compact :text "  󰃭 󰳽 open calendar  "
+    (eventbox
+      :onhover "eww update hover=date"
+      :onhoverlost "eww update hover=''"
+      :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+      (box
+        :class "date ${hover == "date" ? "date-hover" : ""}"
+        :halign "start"
+        :space-evenly false
+        :spacing 4
+        (slide-n-fade
+          :bool {hover == "date"}
+          :direction "left"
+          (tip :compact compact :text "  󰕶 weeks survived: ${date.weeks_alive}  "
+            (label
+              :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
+              :markup "󰕶  ${date.weeks_alive}"
+              :style "margin-top: 3px; margin-right: 10px; margin-left: 6px;"
+            )
+          )
         )
-      )
-      (label
-        :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
-        :text " 󰃭 ${hover == "date" ? date.weekday : date.weekday_short}"
-        :style "margin-right: -4px; margin-left: -2px;"
-        :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
-      )
-      (label
-        :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
-        :text ", ${hover == "date" ? date.month : date.month_short}"
-        :style "margin-top: 1px;"
-        :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
-      )
-      (label
-        :class "date-day date-${cycle-6 == 1 ? "base" : "base-alt"}"
-        :text "${date.day}"
-        :style "margin-top: 1px; margin-left: 2px;"
-        :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
-      )
-      (slide-n-fade :bool {hover == "date"} :direction "right"
-        (label
-          :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
-          :markup " ${weather.sunset}"
-          :style "margin-top: 2px; margin-left: 6px;"
-          :tooltip "   sunset: ${weather.sunset}  "
+        (tip :compact compact :text "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
+          (label
+            :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
+            :text " 󰃭 ${hover == "date" ? date.weekday : date.weekday_short}"
+            :style "margin-right: -4px; margin-left: -2px;"
+          )
+        )
+        (tip :compact compact :text "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
+          (label
+            :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
+            :text ", ${hover == "date" ? date.month : date.month_short}"
+            :style "margin-top: 1px;"
+          )
+        )
+        (tip :compact compact :text "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
+          (label
+            :class "date-day date-${cycle-6 == 1 ? "base" : "base-alt"}"
+            :text "${date.day}"
+            :style "margin-top: 1px; margin-left: 2px;"
+          )
+        )
+        (slide-n-fade :bool {hover == "date"} :direction "right"
+          (tip :compact compact :text "   sunset: ${weather.sunset}  "
+            (label
+              :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
+              :markup " ${weather.sunset}"
+              :style "margin-top: 2px; margin-left: 6px;"
+            )
+          )
         )
       )
     )
