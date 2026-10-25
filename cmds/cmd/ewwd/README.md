@@ -63,6 +63,9 @@ ewwd action timer timer up <minutes>      # add minutes
 ewwd action timer alarm start             # start alarm countdown
 ewwd action timer alarm reset             # stop and reset to +6 hours
 ewwd action timer alarm up <minutes>      # add minutes
+
+# Weather
+ewwd action weather refresh               # refetch unless fetched <10m ago
 ```
 
 The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
@@ -100,6 +103,18 @@ Canvas and Connect access tokens use `sp_dc`, and Connect client tokens also nee
 
 Each history or queue entry has `title`, `artist`, and `art_url` fields.
 Canvas frames publish on a separate `canvas` topic as `{"frame": "<path>"}`, with an empty path when no Canvas plays, so frame ticks never republish `music`.
+
+### Weather
+
+The location comes from the public IP through ip-api.com.
+How often ewwd looks it up depends on `form` in `/etc/dctl/machine`.
+A desktop, or a machine with a missing or invalid record, looks it up once at startup and falls back to `LAT LON` in `~/.local/.location`.
+
+On a laptop, each poll and each `refresh` looks up the location before fetching.
+While a NetworkManager VPN connection is active, the lookup is skipped because it would return the VPN server's city.
+Each successful lookup is saved to `~/.cache/ewwd/location`.
+A skipped or failed lookup keeps the last known location; with none yet, as after a restart, ewwd reads `LAT LON` from `~/.cache/ewwd/location`, then from `~/.local/.location`.
+`refresh` runs in the background and does nothing while another fetch runs or when the last successful fetch is under 10 minutes old.
 
 ## Configuration
 

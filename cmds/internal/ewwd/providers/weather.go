@@ -4,6 +4,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -11,9 +12,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/machine"
 )
 
 type WeatherState struct {
@@ -50,17 +53,23 @@ type Weather struct {
 	active bool
 	client *http.Client
 
-	lat    string
-	lon    string
-	apiKey string
+	// mu serializes updates; it guards every field below.
+	mu      sync.Mutex
+	notify  func(data any)
+	laptop  bool
+	fetched time.Time
+	lat     string
+	lon     string
+	apiKey  string
 }
 
-// NewWeather constructs a Weather provider; credentials and coordinates load lazily in Start.
+// NewWeather constructs a Weather provider; credentials and coordinates load lazily on each update.
 func NewWeather(state StateSetter, cfg config.WeatherConfig) Provider {
 	return &Weather{
 		state:  state,
 		config: cfg,
 		done:   make(chan struct{}),
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -72,34 +81,24 @@ func (w *Weather) Name() string {
 // │ lifecycle                                                                    │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-const weatherStartupRetryInterval = time.Minute
+const (
+	weatherStartupRetryInterval = time.Minute
+	weatherRefreshFloor         = 10 * time.Minute
+)
 
-// Start loads credentials, publishes the first successful fetch, then polls at PollInterval.
+// Start publishes the cache, retries until the first successful update, then updates at PollInterval.
 func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	w.active = true
-	w.client = &http.Client{Timeout: 10 * time.Second}
 
-	for {
-		if w.apiKey == "" || w.lat == "" || w.lon == "" {
-			if err := w.loadCredentials(); err != nil {
-				fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
-				if w.wait(ctx, weatherStartupRetryInterval) {
-					return nil
-				}
-				continue
-			}
-		}
+	w.mu.Lock()
+	w.notify = notify
+	w.laptop = isLaptop()
+	if cached := w.loadCache(); cached != nil {
+		w.publish(cached)
+	}
+	w.mu.Unlock()
 
-		if cached := w.loadCache(); cached != nil {
-			w.publish(notify, cached)
-		}
-
-		state := w.fetch()
-		if state != nil {
-			w.publish(notify, state)
-			w.saveCache(state)
-			break
-		}
+	for !w.lockedUpdate() {
 		if w.wait(ctx, weatherStartupRetryInterval) {
 			return nil
 		}
@@ -115,24 +114,74 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 		case <-w.done:
 			return nil
 		case <-ticker.C:
-			if state := w.fetch(); state != nil {
-				w.publish(notify, state)
-				w.saveCache(state)
-			}
+			w.lockedUpdate()
 		}
 	}
 }
 
-func (w *Weather) cachePath() (string, error) {
+// HandleAction serves "refresh": an update in the background unless one is running or the last fetch is under weatherRefreshFloor old.
+func (w *Weather) HandleAction(args []string) (string, error) {
+	if len(args) != 1 || args[0] != "refresh" {
+		return "", errors.New("usage: weather refresh")
+	}
+	if !w.mu.TryLock() {
+		return "weather: refresh in progress", nil
+	}
+	if w.notify == nil {
+		w.mu.Unlock()
+		return "", errors.New("weather provider not started")
+	}
+	if age := time.Since(w.fetched); age < weatherRefreshFloor {
+		w.mu.Unlock()
+		return fmt.Sprintf("weather: fresh (fetched %s ago)", age.Round(time.Second)), nil
+	}
+
+	go func() {
+		defer w.mu.Unlock()
+		w.update()
+	}()
+	return "weather: refreshing", nil
+}
+
+func (w *Weather) lockedUpdate() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.update()
+}
+
+// update loads the API key once, locates, fetches, and publishes; callers hold mu.
+func (w *Weather) update() bool {
+	if w.apiKey == "" {
+		if err := w.loadAPIKey(); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
+			return false
+		}
+	}
+	if err := w.locate(); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather location error: %v\n", err)
+		return false
+	}
+
+	state := w.fetch()
+	if state == nil {
+		return false
+	}
+	w.fetched = time.Now()
+	w.publish(state)
+	w.saveCache(state)
+	return true
+}
+
+func cachePath(name string) (string, error) {
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "ewwd", "weather.json"), nil
+	return filepath.Join(dir, "ewwd", name), nil
 }
 
 func (w *Weather) loadCache() *WeatherState {
-	path, err := w.cachePath()
+	path, err := cachePath("weather.json")
 	if err != nil {
 		return nil
 	}
@@ -149,7 +198,7 @@ func (w *Weather) loadCache() *WeatherState {
 }
 
 func (w *Weather) saveCache(state *WeatherState) {
-	path, err := w.cachePath()
+	path, err := cachePath("weather.json")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: weather cache path error: %v\n", err)
 		return
@@ -182,9 +231,9 @@ func (w *Weather) wait(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-func (w *Weather) publish(notify func(data any), state *WeatherState) {
+func (w *Weather) publish(state *WeatherState) {
 	w.state.Set("weather", state)
-	notify(state)
+	w.notify(state)
 }
 
 func (w *Weather) Stop() error {
@@ -205,36 +254,110 @@ type geoResponse struct {
 	Lon    float64 `json:"lon"`
 }
 
-// loadCredentials reads the API key and resolves location via IP geolocation, falling back to ~/.local/.location.
-func (w *Weather) loadCredentials() error {
-	keyPath := config.ExpandPath(w.config.APIKeyFile)
-	keyData, err := os.ReadFile(keyPath)
+func (w *Weather) loadAPIKey() error {
+	keyData, err := os.ReadFile(config.ExpandPath(w.config.APIKeyFile))
 	if err != nil {
 		return fmt.Errorf("read api key: %w", err)
 	}
 	w.apiKey = strings.TrimSpace(string(keyData))
-
-	if err := w.geolocate(); err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: geolocation failed (%v), trying fallback\n", err)
-
-		locPath := config.ExpandPath("~/.local/.location")
-		locData, err := os.ReadFile(locPath)
-		if err != nil {
-			return fmt.Errorf("geolocation failed and no fallback (~/.local/.location): %w", err)
-		}
-		parts := strings.Fields(string(locData))
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid fallback location format: expected 'LAT LON'")
-		}
-		w.lat = parts[0]
-		w.lon = parts[1]
-		fmt.Fprintf(os.Stderr, "ewwd: using fallback location: %s, %s\n", w.lat, w.lon)
-	}
-
 	return nil
 }
 
-// geolocate queries ip-api.com for approximate coordinates.
+// isLaptop reads the machine record's form; a missing or invalid record counts as a machine that stays put.
+func isLaptop() bool {
+	p, err := machine.Read(machine.Path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather: %v; locating once\n", err)
+		return false
+	}
+	return p.Form == machine.Laptop
+}
+
+// locate sets the location for the next fetch.
+// Machines other than laptops stay put: they look up the location by IP once and fall back to ~/.local/.location.
+// A laptop looks up by IP on every call unless a VPN would report its server's city, and persists each IP-derived location.
+// When its lookup is skipped or fails, it keeps the last known location, then tries the persisted one, then ~/.local/.location.
+func (w *Weather) locate() error {
+	if !w.laptop {
+		if w.lat != "" && w.lon != "" {
+			return nil
+		}
+		if err := w.geolocate(); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: geolocation failed (%v), trying fallback\n", err)
+			return w.locateFallback()
+		}
+		return nil
+	}
+
+	switch vpn, err := vpnActive(); {
+	case err != nil:
+		fmt.Fprintf(os.Stderr, "ewwd: weather vpn check failed (%v), skipping geolocation\n", err)
+	case vpn:
+		fmt.Fprintf(os.Stderr, "ewwd: vpn active, skipping geolocation\n")
+	default:
+		if err = w.geolocate(); err == nil {
+			if err := saveLocation(w.lat, w.lon); err != nil {
+				fmt.Fprintf(os.Stderr, "ewwd: weather location save error: %v\n", err)
+			}
+			return nil
+		}
+		fmt.Fprintf(os.Stderr, "ewwd: geolocation failed (%v)\n", err)
+	}
+
+	if w.lat != "" && w.lon != "" {
+		return nil
+	}
+
+	if path, err := cachePath("location"); err == nil {
+		if lat, lon, err := readLocation(path); err == nil {
+			w.lat, w.lon = lat, lon
+			fmt.Fprintf(os.Stderr, "ewwd: using last real location: %s, %s\n", lat, lon)
+			return nil
+		}
+	}
+	return w.locateFallback()
+}
+
+func (w *Weather) locateFallback() error {
+	lat, lon, err := readLocation(config.ExpandPath("~/.local/.location"))
+	if err != nil {
+		return fmt.Errorf("no location and no fallback: %w", err)
+	}
+	w.lat, w.lon = lat, lon
+	fmt.Fprintf(os.Stderr, "ewwd: using fallback location: %s, %s\n", lat, lon)
+	return nil
+}
+
+// readLocation parses a "LAT LON" file.
+func readLocation(path string) (lat, lon string, err error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", err
+	}
+	parts := strings.Fields(string(data))
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid location format in %s: expected 'LAT LON'", path)
+	}
+	return parts[0], parts[1], nil
+}
+
+// saveLocation writes a "LAT LON" file through a rename so a crash never leaves a truncated location.
+func saveLocation(lat, lon string) error {
+	path, err := cachePath("location")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(lat+" "+lon+"\n"), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+// geolocate queries ip-api.com for approximate coordinates and logs when they change.
 func (w *Weather) geolocate() error {
 	resp, err := w.client.Get("http://ip-api.com/json/")
 	if err != nil {
@@ -259,8 +382,11 @@ func (w *Weather) geolocate() error {
 		return fmt.Errorf("api status: %s", geo.Status)
 	}
 
-	w.lat = fmt.Sprintf("%f", geo.Lat)
-	w.lon = fmt.Sprintf("%f", geo.Lon)
+	lat, lon := fmt.Sprintf("%f", geo.Lat), fmt.Sprintf("%f", geo.Lon)
+	if lat != w.lat || lon != w.lon {
+		fmt.Fprintf(os.Stderr, "ewwd: weather location: %s, %s\n", lat, lon)
+	}
+	w.lat, w.lon = lat, lon
 	return nil
 }
 

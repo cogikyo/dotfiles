@@ -242,6 +242,7 @@ Actions (for eww buttons/scrolls):
   ewwd action timer alarm down <minutes>    Subtract minutes from alarm
   ewwd action timer alarm start             Start alarm countdown
   ewwd action timer alarm reset             Stop and reset to +6 hours
+  ewwd action weather refresh               Refetch unless fetched <10m ago
 
 Providers:
   network    - Network speed monitoring

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -77,8 +78,30 @@ func (n *Network) Stop() error {
 	return nil
 }
 
-func (n *Network) read() *NetworkState {
+// activeConnections lists NetworkManager's active connections as TYPE:NAME:DEVICE lines.
+func activeConnections() ([]string, error) {
 	out, err := exec.Command("nmcli", "-t", "-f", "TYPE,NAME,DEVICE", "connection", "show", "--active").Output()
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
+}
+
+func isVPN(connection string) bool {
+	return strings.HasPrefix(connection, "vpn")
+}
+
+// vpnActive reports whether NetworkManager has an active VPN connection, the same signal as NetworkState.VPN.
+func vpnActive() (bool, error) {
+	lines, err := activeConnections()
+	if err != nil {
+		return false, err
+	}
+	return slices.ContainsFunc(lines, isVPN), nil
+}
+
+func (n *Network) read() *NetworkState {
+	lines, err := activeConnections()
 	if err != nil {
 		return &NetworkState{
 			Type:     "none",
@@ -93,13 +116,11 @@ func (n *Network) read() *NetworkState {
 		}
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-
 	var connType, connName, iface string
 	var hasVPN bool
 
 	for _, line := range lines {
-		if strings.HasPrefix(line, "vpn") {
+		if isVPN(line) {
 			hasVPN = true
 			continue
 		}
