@@ -34,7 +34,7 @@ func ResolveDisplay(monitors []hypr.Monitor, profiles config.DisplayProfiles) (s
 	}, true
 }
 
-// SyncDisplay resolves the display, applies its gaps, and converges GLava and the Kitty font size when they changed.
+// SyncDisplay resolves the display, applies its gaps and shadow, and converges GLava and the Kitty font size when they changed.
 func (s *Share) SyncDisplay() (prev, next state.Display, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -48,7 +48,7 @@ func (s *Share) SyncDisplay() (prev, next state.Display, err error) {
 		next = display
 		s.state.SetDisplay(next)
 	}
-	errs := []error{setGaps(s.hypr, s.state.OuterGaps())}
+	errs := []error{setGaps(s.hypr, s.state.OuterGaps()), setShadow(s.hypr, s.state.Profile().Shadow)}
 	if prev != next {
 		SyncGLava(s.state, s.lock.Locked())
 	}
@@ -76,6 +76,13 @@ func (s *Share) Relayout() error {
 func setGaps(h *hypr.Client, gaps config.OuterGaps) error {
 	if err := h.SetOuterGaps(gaps.Sides()); err != nil {
 		return fmt.Errorf("set gaps_out: %w", err)
+	}
+	return nil
+}
+
+func setShadow(h *hypr.Client, shadow config.ShadowConfig) error {
+	if err := h.SetShadow(shadow.Range, shadow.ColorInactive); err != nil {
+		return fmt.Errorf("set shadow: %w", err)
 	}
 	return nil
 }

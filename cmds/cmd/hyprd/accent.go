@@ -1,20 +1,19 @@
 package main
 
 import (
+	"cmp"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
 	"fmt"
 	"strings"
 	"sync"
 )
 
-const (
-	defaultActiveBorder = "rgba(f2a170ff)"
-	defaultActiveShadow = "rgba(f2a17008)"
-	accentShadowAlpha   = "08"
-)
+const defaultAccent = "f2a170"
 
 type Accent struct {
-	hypr *hypr.Client
+	hypr  *hypr.Client
+	state *state.State
 
 	mu      sync.Mutex
 	color   string
@@ -26,9 +25,10 @@ type accentTarget struct {
 	Shadow string
 }
 
-func NewAccent(hypr *hypr.Client) *Accent {
+func NewAccent(hypr *hypr.Client, state *state.State) *Accent {
 	return &Accent{
-		hypr: hypr,
+		hypr:  hypr,
+		state: state,
 	}
 }
 
@@ -89,15 +89,12 @@ func parseAccentColor(raw string) (string, bool, error) {
 }
 
 func (a *Accent) Apply() error {
-	target := accentTarget{Border: defaultActiveBorder, Shadow: defaultActiveShadow}
 	a.mu.Lock()
-	color := a.color
+	color := cmp.Or(a.color, defaultAccent)
 	a.mu.Unlock()
-	if color != "" {
-		target = accentTarget{
-			Border: "rgba(" + color + "ff)",
-			Shadow: "rgba(" + color + accentShadowAlpha + ")",
-		}
+	target := accentTarget{
+		Border: "rgba(" + color + "ff)",
+		Shadow: fmt.Sprintf("rgba(%s%02x)", color, a.state.Profile().Shadow.ActiveAlpha),
 	}
 
 	a.mu.Lock()

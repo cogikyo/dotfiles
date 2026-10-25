@@ -341,6 +341,14 @@ func (c *Client) SetOuterGaps(top, right, bottom, left int) error {
 	))
 }
 
+// SetShadow sets decoration.shadow range and color_inactive (an rgba(...) string).
+func (c *Client) SetShadow(size int, inactive string) error {
+	return c.eval("SetShadow", fmt.Sprintf(
+		"hl.config({ decoration = { shadow = { range = %d, color_inactive = %s } } })",
+		size, luaQuote(inactive),
+	))
+}
+
 // SetMasterFactor sets master.mfact, the ratio new master nodes start with.
 func (c *Client) SetMasterFactor(mfact float64) error {
 	return c.eval("SetMasterFactor", fmt.Sprintf(

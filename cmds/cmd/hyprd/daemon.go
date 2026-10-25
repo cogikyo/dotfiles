@@ -70,7 +70,7 @@ func New() (*Daemon, error) {
 		state:     stateStore,
 		lockCtl:   lockCtl,
 		pickerCtl: session.NewPicker(hyprClient, stateStore, lockCtl),
-		accentCtl: NewAccent(hyprClient),
+		accentCtl: NewAccent(hyprClient, stateStore),
 		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
@@ -698,6 +698,9 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 				fmt.Printf("hyprd: config reloaded\n")
 				if err := d.shareCtl.Relayout(); err != nil {
 					fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
+				}
+				if err := d.accentCtl.Apply(); err != nil {
+					fmt.Fprintf(os.Stderr, "hyprd accent: %v\n", err)
 				}
 			})
 		case err, ok := <-watcher.Errors:

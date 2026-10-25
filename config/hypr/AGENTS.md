@@ -21,7 +21,7 @@ Hyprland config uses Lua `hl.*`, not `hyprland.conf`.
 
 Gaps and split ratios are fitted to Kitty's cell grid.
 Change `general.gaps_out`, `master.mfact`, and `floatSize` together with the fallback `tv` profile in `../../cmds/config/hyprd.yaml` → `displays` and cell-size settings in `../kitty/kitty.conf`.
-hyprd overrides the gaps and mfact with the active profile's values; `floatSize` stays fitted to the `tv` profile on every screen.
+hyprd overrides the gaps, mfact, and shadow `range`, `color`, and `color_inactive` with the active profile's values; `floatSize` stays fitted to the `tv` profile on every screen.
 
 ## Checking
 

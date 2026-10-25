@@ -15,6 +15,7 @@ displays:
       normal: [52, 10, 10, 10]
       share: [13, 10, 13, 10]
     monocle: { width: 0.75, height: 0.87, offset_x: 0, offset_y: 17 }
+    shadow: { range: 20, active_alpha: 0x06, color_inactive: "rgba(4a6be304)" }
 
   - name: desk
     match: { min_width: 3200, min_ppi: 120 }
@@ -28,6 +29,7 @@ displays:
       normal: [85, 90, 27, 124]
       share: [14, 16, 14, 16]
     monocle: { width: 0.751, height: 0.8685, offset_x: 0, offset_y: 25 }
+    shadow: { range: 24, active_alpha: 0x08, color_inactive: "rgba(4a6be305)" }
 
   - name: tv
     eww: full
@@ -40,6 +42,7 @@ displays:
       normal: [85, 90, 27, 124]
       share: [14, 16, 14, 16]
     monocle: { width: 0.751, height: 0.8685, offset_x: 0, offset_y: 25 }
+    shadow: { range: 24, active_alpha: 0x08, color_inactive: "rgba(4a6be305)" }
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ session catalog                                                               │

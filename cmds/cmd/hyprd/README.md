@@ -294,10 +294,11 @@ Copy `description` into a profile's `match` to pin a screen to it.
 `displays` in `cmds/config/hyprd.yaml` is an ordered list; the first profile whose `match` holds for the widest monitor wins, and the last profile is the fallback.
 A `match` holds when every field it sets holds: `description` equals Hyprland's monitor description, `min_width` is at most the mode width in pixels, and `min_ppi` is at most the horizontal pixel density.
 A monitor without a usable physical size has no density, so `min_ppi` never matches it; this covers EDIDs that report 0 or only an aspect ratio, as TVs often do.
-Each profile sets the eww window set (`eww`), unlocked GLava (`glava`), Kitty's `font_size`, `split` presets, `gaps_out`, and `monocle` sizing, each with normal and share variants where they apply.
+Each profile sets the eww window set (`eww`), unlocked GLava (`glava`), Kitty's `font_size`, `split` presets, `gaps_out`, `monocle` sizing, and `shadow`, each with normal and share variants where they apply.
+`shadow` sets Hyprland's shadow `range` and `color_inactive`, and the alpha (`active_alpha`) of the active shadow, whose hue follows `hyprd accent`.
 The `narrow` and `mobile` split presets are optional; an unset preset resolves to `default`.
 
-On a profile change, hyprd applies the gaps, reseeds and refreshes the split, and restarts eww if the window set or monitor changed.
+On a profile change, hyprd applies the gaps and shadow, reseeds and refreshes the split, and restarts eww if the window set or monitor changed.
 It writes the font size to `~/.local/state/hyprd/kitty.conf`, which `config/kitty/kitty.conf` includes, and runs `load-config` on every `/tmp/kitty-<pid>` socket.
 Reloading the config, unlike `set-font-size`, also moves the size that new OS windows and the font-size reset use.
 A Kitty that starts before hyprd has ever written the file logs the missing include and uses 17.

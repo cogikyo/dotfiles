@@ -87,6 +87,7 @@ type DisplayProfile struct {
 	Split    SplitConfig   `yaml:"split"`
 	GapsOut  GapsOutConfig `yaml:"gaps_out"`
 	Monocle  MonocleConfig `yaml:"monocle"`
+	Shadow   ShadowConfig  `yaml:"shadow"`
 }
 
 // DisplayMatch holds when every set field holds; an empty match holds for every screen.
@@ -220,6 +221,13 @@ func (c MonocleConfig) Size(width, height float64, gaps OuterGaps) (w, h int) {
 	w = int(math.RoundToEven(min(width*c.Width, width-float64(2*max(left, right)))))
 	h = int(math.RoundToEven(min(height*c.Height, height-float64(2*max(top, bottom)))))
 	return w, h
+}
+
+// ShadowConfig sets Hyprland's decoration.shadow range and colors; the active color takes the accent hue at ActiveAlpha.
+type ShadowConfig struct {
+	Range         int    `yaml:"range"`
+	ActiveAlpha   uint8  `yaml:"active_alpha"`
+	ColorInactive string `yaml:"color_inactive"` // rgba(rrggbbaa)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

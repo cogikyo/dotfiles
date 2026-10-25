@@ -98,10 +98,10 @@ func (e *EventLoop) syncState() error {
 		return err
 	}
 	e.notifyWorkspace()
-	e.resetAccent()
 	if _, _, err := e.share.SyncDisplay(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
 	}
+	e.resetAccent()
 	e.state.LockLayout()
 	e.reseedSplit()
 	e.refit()
@@ -187,7 +187,6 @@ func (e *EventLoop) handleEvent(line string) {
 		if e.accent != nil {
 			e.accent.Invalidate()
 		}
-		e.applyAccent()
 		e.state.LockLayout()
 		e.reseedSplit()
 		e.refit()
@@ -244,6 +243,7 @@ func (e *EventLoop) syncDisplay() {
 	if err := e.share.Relayout(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd display: %v\n", err)
 	}
+	e.applyAccent()
 }
 
 func (e *EventLoop) applyAccent() {
