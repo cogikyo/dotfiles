@@ -92,6 +92,7 @@ Rectangle {
     }
 
     Column {
+        id: clock
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.topMargin: 64 * root.s
@@ -138,10 +139,9 @@ Rectangle {
     }
 
     Column {
+        x: Math.max(parent.width / 2 - 380 * root.s, clock.x + clock.width + 48 * root.s)
         anchors.top: parent.top
-        anchors.left: parent.horizontalCenter
         anchors.topMargin: 88 * root.s
-        anchors.leftMargin: -380 * root.s
         spacing: 12 * root.s
         layer.enabled: true
         layer.effect: Shadowed {}
