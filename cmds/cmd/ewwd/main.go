@@ -249,6 +249,7 @@ Providers:
   date       - Date/time, clockface icons, weeks alive
   clock      - Wall-aligned hour, minute, and second
   computer   - RAM use and NVMe Composite temperature
+  battery    - Laptop charge, AC state, and time remaining
   cycle-5    - Wall-aligned five-second display cycle
   cycle-6    - Wall-aligned six-second display cycle
   audio      - WirePlumber default sink/source volume and mute

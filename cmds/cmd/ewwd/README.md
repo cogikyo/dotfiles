@@ -85,6 +85,7 @@ In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open it
 | date      | time               | time, date, clockface icons, weeks alive   |
 | clock     | time               | wall-aligned hour, minute, second          |
 | computer  | procfs/sysfs       | RAM use, NVMe Composite temperature        |
+| battery   | sysfs power_supply | charge, AC state, time to empty or full    |
 | cycle-5   | time               | wall-aligned scalar display cycle          |
 | cycle-6   | time               | wall-aligned scalar display cycle          |
 | weather   | OpenWeatherMap API | temperature, conditions, moon phase, wind  |
