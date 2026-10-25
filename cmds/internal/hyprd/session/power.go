@@ -38,20 +38,25 @@ func unplugged() bool {
 	return discharging && !mains
 }
 
-// WatchPower polls AC power and converges GLava and the wallpaper on every change, starting with the first poll.
+// WatchPower polls power and converges GLava when AC power changes and the wallpaper when holdVideo changes, starting with the first poll.
 func WatchPower(done <-chan struct{}, s *state.State, lock *Lock) {
 	ticker := time.NewTicker(powerPoll)
 	defer ticker.Stop()
-	first, last := true, false
+	first := true
+	var battery, held bool
 	for {
-		if now := unplugged(); first || now != last {
-			first, last = false, now
+		if now := unplugged(); first || now != battery {
+			battery = now
 			SyncGLava(s, lock.Locked())
+		}
+		if now := holdVideo(); first || now != held {
+			held = now
 			cfg := s.GetConfig()
 			if err := EnsureBG(&cfg.Background); err != nil {
 				fmt.Fprintf(os.Stderr, "hyprd power: background: %v\n", err)
 			}
 		}
+		first = false
 		select {
 		case <-done:
 			return

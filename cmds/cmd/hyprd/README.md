@@ -86,7 +86,7 @@ Init and lock release apply the saved mode.
 On a machine with a battery, video and lock-time desktop GLava run only on AC power, which hyprd reads from `/sys/class/power_supply`.
 It counts as on battery when a system battery reports `Discharging` and no Mains supply is `online`; USB supplies are ignored because a USB-C peripheral can report `online` while the battery drains.
 The daemon polls that every 2 seconds and converges on each change and at startup, so `hyprd rebuild` also stops a video or GLava that the current power state forbids.
-On battery the wallpaper stays static while the saved mode stays `video`, so plugging in restores it.
+On battery the wallpaper stays static outside the first 60 seconds of a full lock, while the saved mode stays `video`, so plugging in restores it.
 Unlocked GLava follows the display profile's `glava` and stops in share mode.
 
 Monocle zooms the focused tiled window and parks its peers, including any shadow, as floats at the same size on `special:mono<n>`.
@@ -165,7 +165,7 @@ Startup also relaunches a lock when the compositor is locked without a client, a
 `hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
 
 On the first launch, the desktop cover runs after hyprd enters `lockbarrier` and before the lock client starts, with 2-second timeouts on cover helper commands.
-It saves the workspace, switches to the empty workspace 7, stops desktop GLava when on battery, tags the remaining GLava windows `lock`, pauses dunst, and closes eww widgets.
+It saves the workspace, switches to the empty workspace 7, stops desktop GLava when on battery, tags the remaining GLava windows `lock`, pauses dunst, closes eww widgets, and applies the saved wallpaper mode.
 The `glava-lock` rule in `config/hypr/hyprland.lua` drops tagged desktop GLava windows to 0.01 opacity.
 The opacity stays above 0 because Hyprland skips drawing a window at 0, which stops its frame callbacks and would stall GLava.
 Release removes the tag, restarts desktop GLava if the display profile wants it, restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, and reconnects configured Bluetooth.

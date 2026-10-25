@@ -42,6 +42,7 @@ const (
 	releasePoll   = time.Second
 	releaseGrace  = 2 * time.Second
 	coverTimeout  = 2 * time.Second
+	videoGrace    = 60 * time.Second
 )
 
 // Lock supervises the Quickshell session lock and restores session resources after release.
@@ -364,6 +365,7 @@ func (l *Lock) cover() {
 	}
 	l.saved = l.capture()
 	l.mu.Unlock()
+	videoUntil.Store(time.Now().Add(videoGrace).UnixNano())
 
 	if err := l.hypr.FocusWorkspace(coverWorkspace); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: switch to workspace %d: %v\n", coverWorkspace, err)
@@ -371,6 +373,12 @@ func (l *Lock) cover() {
 	SyncGLava(l.state, true)
 	l.tagGLava("+" + glavaTag)
 	enterBlackout()
+	cfg := l.state.GetConfig()
+	go func() {
+		if err := EnsureBG(&cfg.Background); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
+		}
+	}()
 }
 
 func (l *Lock) tagGLava(tag string) {
@@ -619,6 +627,7 @@ func closeEwwWidgets() {
 
 // exitBlackout requires l.mu to be held.
 func (l *Lock) exitBlackout(saved *lockState) error {
+	videoUntil.Store(0)
 	cfg := l.state.GetConfig()
 	l.tagGLava("-" + glavaTag)
 	SyncGLava(l.state, false)

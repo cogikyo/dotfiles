@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"dotfiles/cmds/internal/config"
@@ -56,9 +57,16 @@ func (b *BG) Execute(arg string) (string, error) {
 	return b.apply(mode)
 }
 
-var bgMu sync.Mutex
+var (
+	bgMu       sync.Mutex
+	videoUntil atomic.Int64
+)
 
-// apply holds video back while unplugged; the saved mode stays video so plugging in restores it.
+func holdVideo() bool {
+	return unplugged() && time.Now().UnixNano() >= videoUntil.Load()
+}
+
+// apply holds video back while unplugged, except during a full lock's videoGrace; the saved mode stays video so plugging in restores it.
 func (b *BG) apply(mode Mode) (string, error) {
 	bgMu.Lock()
 	defer bgMu.Unlock()
@@ -66,7 +74,7 @@ func (b *BG) apply(mode Mode) (string, error) {
 		b.killAll()
 		return "bg: static", nil
 	}
-	if unplugged() {
+	if holdVideo() {
 		b.killAll()
 		return "bg: static while on battery", nil
 	}
@@ -250,7 +258,7 @@ func (b *BG) killAll() {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// EnsureBG applies the saved mode: static stops mpvpaper, and video spawns it if it is not running and the machine is on AC.
+// EnsureBG applies the saved mode: static stops mpvpaper, and video spawns it if it is not running and apply does not hold it back.
 func EnsureBG(cfg *config.BackgroundConfig) error {
 	mode, err := loadMode()
 	if err != nil {
