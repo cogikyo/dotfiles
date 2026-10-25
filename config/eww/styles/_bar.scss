@@ -223,3 +223,31 @@ $bar-pill-gap: 16px;
   font-size: 13px;
   padding: 4px $bar-gap;
 }
+
+@keyframes osd-drop {
+  from {
+    margin-top: -40px;
+  }
+
+  to {
+    margin-top: -6px;
+  }
+}
+
+.osd {
+  font-size: 15px;
+  font-family: Archivo, "Symbols Nerd Font", sans-serif;
+  font-weight: 500;
+  background: $bg;
+  border: solid $blu-1;
+  border-width: 0 1px 2px;
+  border-radius: 27px 27px 69px 69px;
+  padding: 6px ($bar-gap * 2) 4px;
+  margin: -6px ($bar-pill-gap * 0.5) 6px;
+  animation: osd-drop 0.4s $ease-out-snap;
+  @include bar-shadow(0, $blu-0);
+
+  &-bars {
+    margin-left: $bar-gap;
+  }
+}

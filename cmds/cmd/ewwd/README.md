@@ -64,6 +64,10 @@ ewwd action timer alarm start             # start alarm countdown
 ewwd action timer alarm reset             # stop and reset to +6 hours
 ewwd action timer alarm up <minutes>      # add minutes
 
+# Backlight
+ewwd action backlight set 40%             # percent, clamped to 1–100
+ewwd action backlight step <up|down>      # ±2%, coalesced
+
 # Weather
 ewwd action weather refresh               # refetch unless fetched <10m ago
 ```
@@ -73,6 +77,8 @@ Cycling skips disconnected ports and output monitors, and keeps each device's vo
 When the tracked headphones' wear state changes, the default sink follows: putting them on selects their Bluetooth sink once it appears, and taking them off selects `audio.fallback_sink`.
 Unknown wear state and disconnects leave the default sink alone, and cycling the sink by hand cancels a pending switch to the headphones.
 In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.
+
+Brightness changes made outside these actions, such as the brightness keys, open the `backlight-osd` window for 1.5 s while any widgets are open.
 
 ## Providers
 
@@ -86,6 +92,7 @@ In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open it
 | clock     | time               | wall-aligned hour, minute, second          |
 | computer  | procfs/sysfs       | RAM use, NVMe Composite temperature        |
 | battery   | sysfs power_supply | charge, AC state, time to empty or full    |
+| backlight | sysfs backlight    | brightness percent; OSD on key changes     |
 | cycle-5   | time               | wall-aligned scalar display cycle          |
 | cycle-6   | time               | wall-aligned scalar display cycle          |
 | weather   | OpenWeatherMap API | temperature, conditions, moon phase, wind  |

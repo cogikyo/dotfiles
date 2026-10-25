@@ -265,3 +265,20 @@
   :initial '{"available":false,"percent":0,"plugged":false,"status":"","icon":"","remaining":""}'
   `ewwd subscribe battery | jq --unbuffered -c '.data | .summary = ((.percent | tostring) + "% · " + (if .remaining == "" then .status elif .status == "charging" then "charging · " + .remaining + " to full" else .remaining + " left" end))'`
 )
+
+;; ----------------------------------------------------------------------------
+;; backlight
+
+(deflisten backlight
+  :initial '{"available":false,"percent":0}'
+  'ewwd subscribe backlight | jq --unbuffered -c ".data"'
+)
+
+(defwindow backlight-osd
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :geometry (geometry :anchor "top center" :y "40px" :height "40px")
+  (box :class "osd" :valign "start" :space-evenly false
+    (label-ramp :icon "󰃠" :percent {backlight.percent} :bool true)
+    (box :class "osd-bars" (level-bars :percent {backlight.percent} :steps range16))
+  )
+)

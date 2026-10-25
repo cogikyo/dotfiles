@@ -243,6 +243,8 @@ Actions (for eww buttons/scrolls):
   ewwd action timer alarm start             Start alarm countdown
   ewwd action timer alarm reset             Stop and reset to +6 hours
   ewwd action weather refresh               Refetch unless fetched <10m ago
+  ewwd action backlight set <percent>       Set brightness (1–100%)
+  ewwd action backlight step <up|down>      Adjust brightness ±2%
 
 Providers:
   network    - Network speed monitoring
@@ -250,6 +252,7 @@ Providers:
   clock      - Wall-aligned hour, minute, and second
   computer   - RAM use and NVMe Composite temperature
   battery    - Laptop charge, AC state, and time remaining
+  backlight  - Panel brightness; flashes the OSD on outside changes
   cycle-5    - Wall-aligned five-second display cycle
   cycle-6    - Wall-aligned six-second display cycle
   audio      - WirePlumber default sink/source volume and mute

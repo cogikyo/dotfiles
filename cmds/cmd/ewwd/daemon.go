@@ -134,6 +134,7 @@ func (d *Daemon) initProviders() {
 		providers.NewClock(d.state),
 		providers.NewComputer(d.state),
 		providers.NewBattery(d.state),
+		providers.NewBacklight(d.state),
 		providers.NewCycle(d.state, "cycle-5", 5*time.Second),
 		providers.NewCycle(d.state, "cycle-6", 6*time.Second),
 		audio,
