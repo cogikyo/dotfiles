@@ -16,7 +16,7 @@ Hyprland config uses Lua `hl.*`, not `hyprland.conf`.
 - Binds call hyprd verbs; keep them aligned with `../../cmds/cmd/hyprd/{main,daemon}.go`.
 - `binds.lua` prefixes every Corne-block description with `Corne: `; `../../cmds/cmd/keys/hyprland.go` hides binds with that prefix from the Svalboard viewer.
 - `hyprd tab` sends Alt+N and Alt+Shift+N; `../../system/usr/lib/firefox-developer-edition/firefox.cfg` replaces Firefox's built-in Alt+1–8 keys to handle them.
-- `hyprland.lua` and the lid binds in `binds.lua` assume the internal panel is `eDP-1`.
+- `hyprland.lua` assumes the internal panel is `eDP-1` and disables it while any external monitor is connected.
 - Lock supervision belongs to the [hyprd lock controller](../../cmds/internal/hyprd/session/lock.go); these configs control triggers, and the lock UI lives in `../quickshell/lock/`.
 
 Gaps and split ratios are fitted to Kitty's cell grid.

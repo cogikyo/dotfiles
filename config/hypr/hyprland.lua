@@ -57,12 +57,36 @@ hl.monitor({
 	position = "auto",
 	scale = 1.00,
 })
-hl.monitor({
-	output = "eDP-1",
-	mode = "preferred",
-	position = "auto",
-	scale = 1.00,
-})
+
+local panel = "eDP-1"
+
+local function dock(gone)
+	local external = false
+	for _, monitor in ipairs(hl.get_monitors()) do
+		if monitor.name ~= panel and monitor.name ~= gone and monitor.name ~= "FALLBACK" then
+			external = true
+		end
+	end
+	hl.monitor({
+		output = panel,
+		mode = "preferred",
+		position = "auto",
+		scale = 1.00,
+		disabled = external,
+	})
+end
+
+dock()
+hl.on("monitor.added", function(added)
+	if added.name ~= panel then
+		dock()
+	end
+end)
+hl.on("monitor.removed", function(removed)
+	if removed.name ~= panel then
+		dock(removed.name)
+	end
+end)
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                 window rules                                  │

@@ -216,35 +216,6 @@ hl.define_submap("lockbarrier", function()
 end)
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
--- │ lid                                                                           │
--- ╰───────────────────────────────────────────────────────────────────────────────╯
-
-local panel = "eDP-1"
-
-hl.bind("switch:on:Lid Switch", function()
-	for _, monitor in ipairs(hl.get_monitors()) do
-		if monitor.name ~= panel then
-			hl.monitor({ output = panel, disabled = true })
-			return
-		end
-	end
-end, { locked = true })
-hl.bind("switch:off:Lid Switch", function()
-	hl.monitor({ output = panel, disabled = false })
-end, { locked = true })
-hl.on("monitor.removed", function(removed)
-	if removed.name == panel then
-		return
-	end
-	for _, monitor in ipairs(hl.get_monitors()) do
-		if monitor.name ~= removed.name and monitor.name ~= "FALLBACK" then
-			return
-		end
-	end
-	hl.monitor({ output = panel, disabled = false })
-end)
-
--- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ svalboard                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
