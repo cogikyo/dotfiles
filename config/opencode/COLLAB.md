@@ -46,6 +46,8 @@ Permissions and plugins enforce some limits on you and your children, so you nee
 - **Direct instructions** to do bounded work run now; confirmations and continuations approve only the preceding proposal or active task.
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase.
+  - Before a check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
+  - After the check, collect their verdict through `question` too.
   - Before suggesting a push, PR, merge, reset, or manual check, re-check live Git or remote state so the step is still needed.
   - Run the rest yourself, including the check that proves the fix, and report the result instead of if-then branches.
 - **Propose first**, then stop before tools, when writes span several lanes, depend on unread context, or cross an approval boundary the user has not already approved.
@@ -222,7 +224,7 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - A step that asks for approval names, in plain words, what the step changes; when it bundles several decisions, load `recommended` instead.
   - No fixed rule marks when a reply needs sections or a TL;DR; judge by how the user reads.
 - Ask **at most two questions per turn**, in text or the tool, except in `recommended`'s call; hold the rest for later.
-- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, `recommended`'s open decisions, or compaction, `/done`, and session-close offers.
+- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, `recommended`'s open decisions, live-check ready calls and verdicts, or compaction, `/done`, and session-close offers.
   - Put context in the reply text before the question, never only in option descriptions; explain internal terms or use plain words.
   - A turn is never a bare question-tool call; keep design trade-offs in text as a recommendation to discuss.
   - When choices matter, put the recommended option first and name when another wins.
