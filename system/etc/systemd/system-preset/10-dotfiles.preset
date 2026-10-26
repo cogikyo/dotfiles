@@ -5,12 +5,6 @@ enable fstrim.timer
 enable greetd.service
 enable nftables.service
 enable nix-daemon.socket
-enable nut-driver-enumerator.path
-enable nut-driver-enumerator.service
-enable nut-driver.target
-enable nut-monitor.service
-enable nut-server.service
-enable nut.target
 enable pcscd.socket
 enable snapper-cleanup.timer
 enable snapper-timeline.timer
