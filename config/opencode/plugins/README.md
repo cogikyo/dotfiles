@@ -28,7 +28,7 @@ Closing moves the name from `lane` to `closed: { lane, by, at }` in child metada
 
 `lanes/tui.tsx` appends to `sidebar.content` and adds `/lanes` with Steer, Interrupt, Continue, and Open actions.
 Continue sends `Continue.` directly without a parent completion notice.
-The ⊗ on an idle row and `/lanes-close` close lanes through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
+Click a non-running named lane's status icon or use `/lanes-close` to close lanes through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
 The sidebar hides closed children.
 Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
 Only Collab delegates, with one level of children.
