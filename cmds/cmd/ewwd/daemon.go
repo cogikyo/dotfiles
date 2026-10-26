@@ -264,6 +264,15 @@ func (d *Daemon) closeWindows() string {
 
 func (d *Daemon) resume() {
 	display, err := queryDisplay()
+	deadline := time.Now().Add(10 * time.Second)
+	for err != nil && time.Now().Before(deadline) {
+		select {
+		case <-d.ctx.Done():
+			return
+		case <-time.After(250 * time.Millisecond):
+		}
+		display, err = queryDisplay()
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: hyprd display unavailable, widgets stay closed: %v\n", err)
 		return
