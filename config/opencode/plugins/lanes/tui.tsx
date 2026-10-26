@@ -1,78 +1,22 @@
 import { MouseButton, type MouseEvent } from "@opentui/core";
 import { Plugin } from "@opencode/plugin/tui";
 import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { configured, threshold } from "../compact/limits.ts";
+import { configured } from "../compact/limits.ts";
 import { hover, Section, spinner } from "../context/section.tsx";
-import { colors, pressure, roles } from "../statusline/palette.ts";
+import { colors, roles } from "../statusline/palette.ts";
+import { strain, usage, type Usage } from "./label.ts";
 import { api } from "./rpc.ts";
 
 type Context = Plugin.Context;
 type Session = ReturnType<Context["data"]["session"]["list"]>[number];
-type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
-type Assistant = Extract<Message, { type: "assistant" }>;
-type Measured = Assistant & { tokens: NonNullable<Assistant["tokens"]> };
 type Status = "running" | "idle" | "error" | "interrupted";
 type Action = "steer" | "interrupt" | "continue" | "open";
-type Model = NonNullable<ReturnType<Context["data"]["location"]["model"]["list"]>>[number];
-type Row = {
-  session: Session;
-  name: string;
-  status: Status;
-  agent: string;
-  model: string;
-  limit?: Model["limit"];
-  tokens: number;
-  spent: string;
-};
+type Row = Usage & { session: Session; name: string; status: Status };
 
 const glyph = {
   idle: "\u{f03e6}",
   error: "\u{f015c}",
 };
-
-const icons: Partial<Record<string, string>> = {
-  build: "\u{f1887} ",
-  review: "\u{f0208} ",
-  verify: "\u{f0565} ",
-  scout: "\u{f018b} ",
-};
-
-const scopes: Partial<Record<string, string>> = {
-  general: "\u{265e}",
-  owner: "\u{f085a}",
-  patch: "\u{f0daf}",
-  scribe: "\u{f0d13}",
-  git: "\u{f062c}",
-  debug: "\u{f00e4}",
-  architect: "\u{f04aa}",
-  simplify: "\u{f0190}",
-  critic: "\u{f029b}",
-  copy: "\u{f0284}",
-  entropy: "\u{f0f38}",
-  design: "\u{f03d8}",
-  security: "\u{f033e}",
-  profile: "\u{f04c5}",
-  context: "\u{f034d}",
-  code: "\u{f0174}",
-  library: "\u{f0331}",
-  dirty: "\u{f0dc8}",
-  session: "\u{f02da}",
-  web: "\u{f059f}",
-  source: "\u{f0169}",
-  test: "\u{f0093}",
-  browser: "\u{f0cfd}",
-};
-
-const families: [RegExp, string][] = [
-  [/^opus/, "opus"],
-  [/^sonnet/, "sonnet"],
-  [/sol/, "sol"],
-  [/luna/, "luna"],
-  [/astra/, "astra"],
-  [/fable/, "fable"],
-  [/grok/, "grok"],
-  [/deepseek-v4.*-flash/, "v4 Flash"],
-];
 
 const laneOf = (session: Session) => (typeof session.metadata?.lane === "string" ? session.metadata.lane : undefined);
 
@@ -90,52 +34,12 @@ function lanes(context: Context, rootID: string) {
 }
 
 function row(context: Context, session: Session): Row {
-  const last = latest(context.data.session.message.list(session.id));
-  const usage = last?.tokens;
-  const tokens = usage ? usage.input + usage.output + usage.reasoning + usage.cache.read + usage.cache.write : 0;
-  const model =
-    last &&
-    context.data.location.model
-      .list(session.location)
-      ?.find((entry) => entry.providerID === last.model.providerID && entry.id === last.model.id);
   return {
     session,
     name: laneOf(session) ?? session.title ?? session.id,
     status: status(context, session),
-    agent: label(session.agent ?? "unknown"),
-    model: family(last?.model.id ?? session.model?.id ?? "unknown"),
-    limit: model?.limit,
-    tokens,
-    spent: usage ? count(tokens) : "",
+    ...usage(context, session),
   };
-}
-
-function latest(messages: readonly Message[]) {
-  const compaction = messages.findLastIndex(
-    (message) => message.type === "compaction" && message.status === "completed",
-  );
-  return messages.findLast(
-    (message, at): message is Measured =>
-      message.type === "assistant" && message.tokens !== undefined && at > compaction,
-  );
-}
-
-function family(model: string) {
-  const bare = model.replace(/^.*\//, "").replace(/^claude-/, "");
-  return families.find(([pattern]) => pattern.test(bare))?.[1] ?? bare;
-}
-
-function label(agent: string) {
-  const [role, ...rest] = agent.split("/");
-  const icon = icons[role];
-  if (!icon || !rest.length) return agent;
-  const scope = rest.join("/");
-  return `${icon}${scopes[scope] ?? scope}`;
-}
-
-function count(tokens: number) {
-  if (tokens >= 999_500) return `${(tokens / 1_000_000).toFixed(1)}M`;
-  return tokens < 1_000 ? String(tokens) : `${Math.round(tokens / 1_000)}K`;
 }
 
 async function close(context: Context, rootID: string, names: string[]) {
@@ -249,11 +153,7 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
   };
   const role = () => roles[entry().session.agent?.split("/")[0] ?? ""] ?? theme().muted;
   const spent = () => (props.width.spent ? ` ${entry().spent.padStart(props.width.spent)}` : "");
-  const heat = () => {
-    const { limit, tokens } = entry();
-    const stop = limit && buffer.state === "ready" ? threshold(limit, buffer(), false) : undefined;
-    return stop ? pressure((tokens / stop) * 100) : theme().muted;
-  };
+  const heat = () => (buffer.state === "ready" ? strain(entry(), buffer()) : undefined) ?? theme().muted;
   const click = (event: MouseEvent) => {
     if (event.button === MouseButton.RIGHT) return void act(props.context, entry().session);
     props.context.ui.router.navigate({ type: "session", sessionID: entry().session.id });

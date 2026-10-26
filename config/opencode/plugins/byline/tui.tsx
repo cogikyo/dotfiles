@@ -1,21 +1,33 @@
 import { Plugin } from "@opencode/plugin/tui";
 import type { Renderable } from "@opentui/core";
 import { createMemo, createRoot, onCleanup } from "solid-js";
+import { animate, refresh } from "../statusline/working.tsx";
+import { Stage } from "./draw.ts";
 import { Ledger, prompt, transcript } from "./rewrite.ts";
 
 type Context = Plugin.Context;
-type Pass = (anchor: Renderable, names: () => ReadonlySet<string>, ledger: Ledger, sessionID?: string) => void;
+type Pass = {
+  run: (anchor: Renderable, names: () => ReadonlySet<string>, ledger: Ledger, sessionID?: string) => boolean | void;
+  dispose?: () => void;
+};
 
 export default Plugin.define({
   id: "byline",
   setup(context) {
-    const Prompt = anchor(context, (box, names, ledger, sessionID) => {
-      const agent = sessionID ? context.data.session.get(sessionID)?.agent : undefined;
-      prompt(box, names, ledger, agent && titlecase(agent));
+    void refresh();
+    const Prompt = anchor(context, () => ({
+      run: (box, names, ledger, sessionID) => {
+        const agent = sessionID ? context.data.session.get(sessionID)?.agent : undefined;
+        prompt(box, names, ledger, agent && titlecase(agent));
+      },
+    }));
+    const Transcript = anchor(context, () => {
+      const stage = new Stage(context.renderer);
+      return {
+        run: (box, names, ledger, sessionID) => transcript(box, names, ledger, { context, sessionID, stage }),
+        dispose: () => stage.dispose(),
+      };
     });
-    const Transcript = anchor(context, (box, names, ledger, sessionID) =>
-      transcript(box, names, ledger, { context, sessionID }),
-    );
     return createRoot((dispose) => {
       context.ui.slot({
         append: "prompt.footer",
@@ -30,18 +42,29 @@ export default Plugin.define({
   },
 });
 
-function anchor(context: Context, pass: Pass) {
+function anchor(context: Context, make: () => Pass) {
   return (props: { sessionID?: string }) => {
     const names = createMemo(() => primaries(context, props.sessionID));
 
     const attach = (box: Renderable) => {
       const ledger = new Ledger();
-      const run = () => pass(box, names, ledger, props.sessionID);
+      const pass = make();
+      let stop: (() => void) | undefined;
+      const run = () => {
+        const moving = pass.run(box, names, ledger, props.sessionID) === true;
+        if (moving && !stop) stop = animate(context.renderer);
+        if (!moving && stop) {
+          stop();
+          stop = undefined;
+        }
+      };
       box.onLifecyclePass = run;
       context.renderer.registerLifecyclePass(box);
       return () => {
         box.onLifecyclePass = null;
         context.renderer.unregisterLifecyclePass(box);
+        stop?.();
+        pass.dispose?.();
         ledger.clear();
       };
     };

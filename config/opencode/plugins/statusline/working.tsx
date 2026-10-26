@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin/tui";
-import { RGBA, type OptimizedBuffer, type Renderable } from "@opentui/core";
+import { RGBA, type CliRenderer, type OptimizedBuffer, type Renderable } from "@opentui/core";
 import os from "node:os";
 import path from "node:path";
 import { createEffect, onCleanup } from "solid-js";
@@ -36,7 +36,6 @@ export function Working(props: { context: Context; sessionID?: string }) {
 
   createEffect(() => {
     if (!working() || !host) return;
-    void animations().then((value) => (moving = value));
     const prompt = locate(host);
     if (prompt) onCleanup(start(props.context, prompt));
   });
@@ -44,16 +43,35 @@ export function Working(props: { context: Context; sessionID?: string }) {
   return <box position="absolute" ref={(box) => (host = box)} />;
 }
 
+export async function refresh() {
+  moving = await animations();
+  return moving;
+}
+
+export function animate(renderer: CliRenderer) {
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let stopped = false;
+  const begin = async () => {
+    if (!(await refresh()) || stopped) return;
+    timer = setInterval(() => {
+      if (moving) renderer.requestRender();
+    }, tick);
+  };
+  void begin();
+  renderer.requestRender();
+  return () => {
+    stopped = true;
+    clearInterval(timer);
+    renderer.requestRender();
+  };
+}
+
 function start(context: Context, prompt: Prompt) {
   const column = hook(prompt.cap, (buffer) => bar(buffer, prompt));
-  const timer = setInterval(() => {
-    if (moving) context.renderer.requestRender();
-  }, tick);
-  context.renderer.requestRender();
+  const stop = animate(context.renderer);
   return () => {
-    clearInterval(timer);
+    stop();
     column();
-    context.renderer.requestRender();
   };
 }
 

@@ -268,10 +268,20 @@ Drive owns its own toggle and badge.
 
 ## Byline
 
-`byline/tui.tsx` hides primary-agent labels, currently Collab, on the prompt model row and assistant message footers, and gives the model name the agent color.
-Non-primary agents keep their labels.
-V2 has no slot for these rows, so `byline/rewrite.ts` rewrites native text nodes in a lifecycle pass each frame.
-An upstream layout change can leave the native label visible; assistant footers also keep the native label below 28 terminal columns.
+`byline/tui.tsx` hides primary-agent labels, currently Collab, on the prompt model row and assistant message footers, and gives the prompt model name the agent color.
+Non-primary agents keep their labels; assistant footers also keep the native label below 28 terminal columns.
+
+Each successful subagent notice and Collab's `---`…`---` reply block form one indented box, tinted in the lane's role color with a flush right edge bar.
+The rules are hidden and text wraps inside the box.
+The notice puts the subagent's description on the left and `icon Scope / icon Agent · model/variant · tokens` on the right, truncating the description first when space is short.
+Lane icons, colors, model names, and token counts use the same source as the Lanes sidebar.
+
+Build, review, scout, and verify each have a distinct icon reveal for new notices; the icon breathes while Collab replies, then settles.
+Set `animations` to `false` in `cli.json` to keep these effects static.
+
+Failed and cancelled lanes show a red `✗` and the state word without a box.
+Question-tool blocks end the box and stay untinted.
+Unrecognized renderer layouts leave the plain transcript in place.
 
 ## Code blocks
 
