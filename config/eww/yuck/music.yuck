@@ -298,6 +298,7 @@
             :text name
             :limit-width {compact ? 19 : 64}
             :truncate-left true
+            :show-truncated false
           )
         )
       )
