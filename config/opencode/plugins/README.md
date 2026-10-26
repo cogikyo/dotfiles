@@ -135,9 +135,9 @@ Generated titles are Title Case and at most 36 characters, so they fit on one si
 `retitle/tui.tsx` adds `<leader>s` (`/retitle`) to retitle the root now with the same stored context, omitting the current title from the prompt.
 A pinned title gets the new name in caps.
 `<leader>shift+r` (`/caps`) pins the title by writing it in caps, or unpins it with a fresh Title Case title.
-The sidebar title is centered; left-click retitles the shown session and right-click toggles caps.
-V2 publishes no slot for the sidebar title, so a zero-size anchor in `sidebar.content` finds the native title node by its `_rename` and `pendingTitle` fields.
-If a V2 update breaks that lookup, the plugin shows one warning toast and the keybinds still work.
+Clicking the sidebar title copies the shown session's `Title (ses_…)` to the clipboard via OSC 52.
+V2 has no sidebar-title slot, so the plugin hooks the native title node.
+If that lookup breaks, one warning toast appears; retitle keybinds still work.
 
 ## Hyprd
 

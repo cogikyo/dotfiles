@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { MouseButton, type BaseRenderable, type TextRenderable } from "@opentui/core";
+import type { BaseRenderable, TextRenderable } from "@opentui/core";
 import { api, pinned } from "./rpc.ts";
 
 const REACH = 8;
@@ -57,13 +57,26 @@ export default Plugin.define({
         context.ui.toast.show({ title: "Retitle failed", message: String(error), variant: "error" });
       }
     };
+    const copy = (sessionID: string | undefined) => {
+      const session = sessionID ? context.data.session.get(sessionID) : undefined;
+      if (!session) return;
+      const text = `${session.title} (${session.id})`;
+      if (context.renderer.copyToClipboardOSC52(text))
+        context.ui.toast.show({ message: `Copied: ${text}`, variant: "info" });
+      else
+        context.ui.toast.show({
+          title: "Copy failed",
+          message: "The terminal rejected the OSC 52 write",
+          variant: "error",
+        });
+    };
     const attach = (anchor: BaseRenderable) => {
       const node = title(anchor);
       if (!node) {
         if (!warned)
           context.ui.toast.show({
-            title: "Retitle",
-            message: "Sidebar title not found; V2 may have changed its layout. Use <leader>s and <leader>shift+r.",
+            title: "Sidebar title",
+            message: "Sidebar title not found; V2 may have changed its layout, so clicking it won't copy.",
             variant: "warning",
           });
         warned = true;
@@ -75,7 +88,7 @@ export default Plugin.define({
         box.paddingRight = 1;
       }
       node.textAlign = "center";
-      node.onMouseUp = (event) => void run(shown(), event.button === MouseButton.RIGHT);
+      node.onMouseUp = () => copy(shown());
     };
 
     context.ui.slot({
