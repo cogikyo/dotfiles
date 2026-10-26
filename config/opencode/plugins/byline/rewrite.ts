@@ -13,14 +13,12 @@ import type { Plugin } from "@opencode/plugin/tui";
 import type { Stage } from "./draw.ts";
 import { apply, dashes, grow, runs, walk, type Item } from "./lane.ts";
 import { compose, flatten, match, notice } from "./notice.ts";
-import { asks } from "./parts.ts";
+import { question } from "./question.ts";
+import { owned, type Ledger } from "./ledger.ts";
 
 type Text = Renderable & { readonly textNode: TextNodeRenderable; fg: RGBA };
 type Frame = Renderable & { readonly border: unknown };
 type Scroll = Renderable & { readonly content: Renderable; readonly viewport: Renderable };
-type Undo = () => void;
-type Entry = { undo: Undo; value?: unknown };
-type Field<T> = { get: () => T; set: (value: T) => void };
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
@@ -35,98 +33,8 @@ const tones = {
 
 const italic = { attributes: TextAttributes.ITALIC };
 
-// Exclude injected nodes from host-tree matching and repeated italic wrapping.
-const owned = new WeakSet<object>();
 const rules = new WeakMap<Renderable, TextRenderable[]>();
 const failed = new WeakSet<Ledger>();
-
-export class Ledger {
-  readonly #entries = new Map<Renderable, Map<unknown, Entry>>();
-
-  has(owner: Renderable) {
-    return this.#entries.has(owner);
-  }
-
-  record(owner: Renderable, key: unknown, undo: Undo) {
-    this.#set(owner, key, { undo });
-  }
-
-  restore(owner: Renderable) {
-    this.#entries.get(owner)?.forEach(({ undo }) => undo());
-    this.#entries.delete(owner);
-  }
-
-  prune() {
-    for (const owner of this.#entries.keys()) if (owner.isDestroyed) this.#entries.delete(owner);
-  }
-
-  clear() {
-    for (const owner of this.#entries.keys()) if (!owner.isDestroyed) this.restore(owner);
-    this.#entries.clear();
-  }
-
-  hide(node: Renderable) {
-    if (!node.visible) return false;
-    node.visible = false;
-    this.record(node, node, () => (node.visible = true));
-    return true;
-  }
-
-  paint(owner: Renderable, target: { fg: RGBA | undefined }, color: RGBA) {
-    if (target.fg?.equals(color)) return false;
-    this.#change(owner, target, color, { get: () => target.fg, set: (value) => (target.fg = value) });
-    return true;
-  }
-
-  write(owner: Renderable, node: TextNodeRenderable, index: number, value: string | TextNodeRenderable) {
-    const from = node.children[index];
-    if (typeof from !== "string" || from === value) return false;
-    node.replace(value, index);
-    this.record(owner, typeof value === "string" ? node : value, () => {
-      if (node.children[index] === value) node.replace(from, index);
-    });
-    return true;
-  }
-
-  adjust<T>(owner: Renderable, key: string, value: T, field: Field<T>) {
-    if (field.get() === value) return false;
-    this.#change(owner, key, value, field);
-    owner.requestRender();
-    return true;
-  }
-
-  mount(owner: Renderable, child: Renderable, index?: number) {
-    if (child.parent === owner) return false;
-    owner.add(child, index);
-    this.record(owner, child, () => child.destroy());
-    return true;
-  }
-
-  #change<T>(owner: Renderable, key: unknown, value: T, field: Field<T>) {
-    const known = this.#entries.get(owner)?.get(key);
-    const from = field.get();
-    field.set(value);
-    if (known && "value" in known && same(known.value, from)) {
-      known.value = value;
-      return;
-    }
-    const entry: Entry = {
-      value,
-      undo: () => {
-        if (!same(field.get(), entry.value)) return;
-        field.set(from);
-        owner.requestRender();
-      },
-    };
-    this.#set(owner, key, entry);
-  }
-
-  #set(owner: Renderable, key: unknown, entry: Entry) {
-    const entries = this.#entries.get(owner) ?? new Map<unknown, Entry>();
-    entries.set(key, entry);
-    this.#entries.set(owner, entries);
-  }
-}
 
 export function prompt(anchor: Renderable, names: Names, ledger: Ledger, fallback = "") {
   ledger.prune();
@@ -191,18 +99,18 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
   const session = context.data.session;
   const stops = (row: Renderable) =>
     sessionID !== undefined &&
-    (session.message.get(sessionID, row.id)?.type === "user" || asks(session, sessionID, row.id));
+    (session.message.get(sessionID, row.id)?.type === "user" ||
+      question(row, native(row), { context, sessionID, ledger }));
   try {
     const items = rows.map((row, index) => classify(row, scan, stops(row), index === rows.length - 1));
     const { units, closed, open } = walk(items);
     const found = match(items, closed, session, sessionID);
     grow(open, (lane) => found.get(lane)?.live === true);
     apply(units, ledger);
-    const own = (node: object) => owned.add(node);
     const lanes = items.flatMap((item) => {
       if (item.kind !== "notice" && item.kind !== "failed") return [];
       const reply = found.get(item.lane);
-      const mark = compose(item.lane, reply?.child, { context, ledger, own, error: scan.error });
+      const mark = compose(item.lane, reply?.child, { context, ledger, error: scan.error });
       return item.kind === "notice" ? [{ lane: item.lane, reply, mark }] : [];
     });
     return stage.update({
@@ -374,8 +282,4 @@ function framed(node: Renderable): node is Frame {
 
 function editable(node: Renderable) {
   return "plainText" in node && "cursorOffset" in node && "extmarks" in node;
-}
-
-function same(a: unknown, b: unknown) {
-  return a === b || (a instanceof RGBA && b instanceof RGBA && a.equals(b));
 }

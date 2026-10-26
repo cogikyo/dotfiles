@@ -280,7 +280,13 @@ Build, review, scout, and verify each have a distinct icon reveal for new notice
 Set `animations` to `false` in `cli.json` to keep these effects static.
 
 Failed and cancelled lanes show a red `✗` and the state word without a box.
-Question-tool blocks end the box and stay untinted.
+Question-tool blocks end the lane box.
+
+Each completed question-tool block becomes one rounded box in the theme's accent color, titled with the question count.
+Each question shows its header, text, and all options with descriptions.
+Picked options get `✓`; the recommended option gets `★`, green when picked and orange otherwise.
+Typed answers get `✎` and keep their paragraphs; dismissed forms show `Dismissed`.
+Pending questions and the live form stay native.
 Unrecognized renderer layouts leave the plain transcript in place.
 
 ## Code blocks

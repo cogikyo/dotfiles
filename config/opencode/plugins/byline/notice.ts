@@ -13,14 +13,14 @@ import { configured } from "../compact/limits.ts";
 import { glyphs, strain, usage } from "../lanes/label.ts";
 import { roles } from "../statusline/palette.ts";
 import { padding, type Item, type Lane, type Mark } from "./lane.ts";
-import type { Ledger } from "./rewrite.ts";
+import { owned, type Ledger } from "./ledger.ts";
 
 type Context = Plugin.Context;
 type Session = NonNullable<ReturnType<Context["data"]["session"]["get"]>>;
 type Data = Context["data"]["session"];
 type Source = Pick<Data, "status"> & { message: Pick<Data["message"], "list"> };
 type Message = ReturnType<Data["message"]["list"]>[number];
-type Scan = { context: Context; ledger: Ledger; own: (node: object) => void; error: RGBA };
+type Scan = { context: Context; ledger: Ledger; error: RGBA };
 type Shown = { key: string; full: string; value: string | TextNodeRenderable; label: string };
 type Part = [text: string, color: RGBA];
 type Side = { parts: Part[]; icon?: { x: number; glyph: string } };
@@ -176,7 +176,7 @@ function stats(context: Context, session: Session): Part[] {
   return [...parts, [separator, muted], [entry.spent, spent]];
 }
 
-function pin(box: Renderable, parts: readonly Part[], { context, ledger, own }: Scan) {
+function pin(box: Renderable, parts: readonly Part[], { context, ledger }: Scan) {
   const key = JSON.stringify(parts.map(([value, color]) => [value, color.toInts()]));
   const known = pins.get(box);
   const text =
@@ -189,7 +189,7 @@ function pin(box: Renderable, parts: readonly Part[], { context, ledger, own }: 
           wrapMode: "none",
           selectable: false,
         });
-  own(text);
+  owned.add(text);
   if (known?.key !== key || known.text !== text) {
     text.content = new StyledText(parts.map(([value, color]) => fg(color)(value)));
     pins.set(box, { text, key });
@@ -198,7 +198,7 @@ function pin(box: Renderable, parts: readonly Part[], { context, ledger, own }: 
   return text;
 }
 
-function lead({ state }: Lane, heading: TextNodeRenderable, { context, own, error }: Scan) {
+function lead({ state }: Lane, heading: TextNodeRenderable, { context, error }: Scan) {
   if (state === "finished") return ["", ""] as const;
   const word = `${state.charAt(0).toUpperCase()}${state.slice(1)}`;
   const label = `✗ ${word}${separator}`;
@@ -211,7 +211,7 @@ function lead({ state }: Lane, heading: TextNodeRenderable, { context, own, erro
     TextNodeRenderable.fromString(` ${word}`),
     TextNodeRenderable.fromString(separator, { fg: muted }),
   ]);
-  own(node);
+  owned.add(node);
   leads.set(heading, { key, node });
   return [node, label] as const;
 }
@@ -232,7 +232,7 @@ function width(parts: readonly Part[]) {
   return Bun.stringWidth(parts.map(([value]) => value).join(""));
 }
 
-function clip(value: string, space: number) {
+export function clip(value: string, space: number) {
   if (Bun.stringWidth(value) <= space) return value;
   let kept = "";
   for (const { segment } of segments.segment(value)) {

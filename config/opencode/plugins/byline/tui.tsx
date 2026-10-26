@@ -3,7 +3,8 @@ import type { Renderable } from "@opentui/core";
 import { createMemo, createRoot, onCleanup } from "solid-js";
 import { animate, refresh } from "../statusline/working.tsx";
 import { Stage } from "./draw.ts";
-import { Ledger, prompt, transcript } from "./rewrite.ts";
+import { Ledger } from "./ledger.ts";
+import { prompt, transcript } from "./rewrite.ts";
 
 type Context = Plugin.Context;
 type Pass = {

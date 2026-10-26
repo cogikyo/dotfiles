@@ -1,5 +1,5 @@
 import { Yoga, type RGBA, type Renderable, type TextNodeRenderable } from "@opentui/core";
-import type { Ledger } from "./rewrite.ts";
+import type { Ledger } from "./ledger.ts";
 
 export type Lane = {
   text: Renderable & { readonly textNode: TextNodeRenderable };
