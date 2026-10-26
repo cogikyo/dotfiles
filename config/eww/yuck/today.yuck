@@ -75,12 +75,15 @@
             (daily-temp :temp {weather.temp_night} :margin 12 :color "night" :compact compact)
           )
         )
-        (slide-n-fade :bool {!compact || hover == "weather"} :direction "right"
-          (tip :compact compact :text "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
-            (label
-              :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-              :markup "<b>${weather.desc}</b>"
-              :style "margin-top: 2px; margin-left: ${hover == "weather" ? "2" : "-4"}px;"
+        ;; Keep the negative margin outside the revealer so it does not clip the label's left edge.
+        (box :style "margin-left: ${hover == "weather" ? "2" : compact ? "0" : "-4"}px;"
+          (slide-n-fade :bool {!compact || hover == "weather"} :direction "right"
+            (tip :compact compact :text "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
+              (label
+                :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+                :markup "<b>${weather.desc}</b>"
+                :style "margin-top: 2px;"
+              )
             )
           )
         )
