@@ -263,6 +263,7 @@ func (d *Daemon) closeWindows() string {
 }
 
 func (d *Daemon) resume() {
+	// dctl update may restart ewwd while hyprd is still restarting.
 	display, err := queryDisplay()
 	deadline := time.Now().Add(10 * time.Second)
 	for err != nil && time.Now().Before(deadline) {
