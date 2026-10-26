@@ -11,16 +11,22 @@ export type Scene = {
   lanes: readonly { lane: Lane; reply?: Reply; mark?: Mark }[];
 };
 type Clip = { left: number; top: number; right: number; bottom: number };
-type Frame = { x: number; y: number; left: number; icon: string; tone: RGBA; tint: RGBA; p: number };
-type Effect = (pen: Pen, frame: Frame) => void;
+type Row = { y: number; left: number; right: number; start: number; x: number };
+type Frame = Row & { icon: string; tone: RGBA; p: number };
+type Look = { a?: number; hot?: number; band?: number; glyph?: string; noise?: string };
+type Scope = { row: (x: number, frame: Frame) => Look; icon: (pen: Pen, frame: Frame) => void };
 type Seen = { first: number; revealing: boolean; live: boolean; settled?: number };
 
 const fill = 0.1;
-const reveal = 600;
+const reveal = 1_200;
 const settle = 300;
 const fresh = 3_000;
 const rings = ["·", "◦", "○", "◎"];
 const pooled = 0x8000_0000;
+const grain = ["░", "▒", "▓"];
+const slam = 0.72;
+const decode = 0.7;
+const ember = RGBA.fromHex("#ffb86c");
 
 export class Stage {
   #scene: Scene | undefined;
@@ -91,19 +97,26 @@ export class Stage {
       pen.box({ left, top, right, bottom }, run.lane);
     }
     if (!motion()) return;
-    for (const entry of scene.lanes) this.#icon(pen, entry, left);
+    for (const entry of scene.lanes) this.#lane(pen, entry, left, right);
   }
 
-  #icon(pen: Pen, { lane: { tone, role }, reply, mark }: Scene["lanes"][number], left: number) {
+  #lane(pen: Pen, { lane: { tone, role }, reply, mark }: Scene["lanes"][number], left: number, right: number) {
     const seen = reply && this.#seen.get(reply.id);
     if (!reply || !seen || !mark || mark.node.isDestroyed) return;
     const { node, x: offset, glyph: icon } = mark;
     const x = Math.trunc(node.screenX) + offset;
     const y = Math.trunc(node.screenY);
-    if (!pen.claim(icon, x, y)) return;
+    const claimed = pen.claim(icon, x, y);
     const now = performance.now();
     const p = reveals(seen, now);
-    if (p !== undefined) return effects[role]?.(pen, { x, y, left, icon, tone, tint: mix(pen.base, tone, fill), p });
+    const scope = scopes[role];
+    if (p !== undefined && scope) {
+      const frame = { y, left, right, start: Math.trunc(node.screenX), x, icon, tone, p };
+      pen.sweep(frame, scope.row);
+      if (claimed) scope.icon(pen, frame);
+      return;
+    }
+    if (!claimed) return;
     const since = now - seen.first - (seen.revealing ? reveal : 0);
     if (reply.live) return pen.glyph(icon, x, y, heat(tone, wave(since)));
     const ended = seen.settled;
@@ -116,14 +129,22 @@ class Pen {
   readonly #bg: Uint16Array;
   readonly #chars: Uint32Array;
   readonly #width: number;
+  readonly #fg: Uint16Array;
   readonly #tints = new Set<number>();
+  readonly #owned = new Set<number>();
   #claimed = -1;
   readonly clip: Clip;
   readonly base: RGBA;
 
-  private constructor(buffer: OptimizedBuffer, planes: { bg: Uint16Array; char: Uint32Array }, clip: Clip, base: RGBA) {
+  private constructor(
+    buffer: OptimizedBuffer,
+    planes: { bg: Uint16Array; fg: Uint16Array; char: Uint32Array },
+    clip: Clip,
+    base: RGBA,
+  ) {
     this.#buffer = buffer;
     this.#bg = planes.bg;
+    this.#fg = planes.fg;
     this.#chars = planes.char;
     this.#width = buffer.width;
     this.clip = clip;
@@ -131,15 +152,15 @@ class Pen {
   }
 
   static open(buffer: OptimizedBuffer, clip: Clip, base: RGBA) {
-    const { bg, char }: { bg: unknown; char: unknown } = buffer.buffers;
-    if (!(bg instanceof Uint16Array) || !(char instanceof Uint32Array)) return;
+    const { bg, fg, char }: { bg: unknown; fg: unknown; char: unknown } = buffer.buffers;
+    if (!(bg instanceof Uint16Array) || !(fg instanceof Uint16Array) || !(char instanceof Uint32Array)) return;
     const inside = {
       left: Math.max(0, clip.left),
       top: Math.max(0, clip.top),
       right: Math.min(buffer.width - 1, clip.right),
       bottom: Math.min(buffer.height - 1, clip.bottom),
     };
-    return new Pen(buffer, { bg, char }, inside, base);
+    return new Pen(buffer, { bg, fg, char }, inside, base);
   }
 
   box({ left, top, right, bottom }: Clip, { tone }: Lane) {
@@ -151,6 +172,24 @@ class Pen {
         if (this.#plain(x, y)) this.#paint(x, y, tint);
       }
       if (ruled) this.#buffer.drawText("▎", right, y, tone);
+    }
+  }
+
+  sweep(frame: Frame, look: Scope["row"]) {
+    const { y, left, right, tone } = frame;
+    for (let x = left; x <= right; x++) {
+      if (!this.#inside(x, y) || !this.#ours(x, y)) continue;
+      const { a = 1, hot = 0, glyph, noise, ...rest } = look(x, frame);
+      const edge = x === right;
+      const band = edge ? 0 : (rest.band ?? 0);
+      const blank = this.#holds(x, y, " ");
+      const bg = mix(mix(this.base, this.#read(x, y), a), tone, band);
+      const fg = mix(mix(bg, this.#ink(x, y), a), ember, hot);
+      this.#paint(x, y, bg);
+      this.#color(x, y, fg);
+      this.#owned.add(this.#cell(x, y));
+      if (noise && !edge && !blank) this.#buffer.drawText(noise, x, y, mix(this.base, tone, 0.7));
+      else if (glyph && a > 0) this.#buffer.drawText(glyph, x, y, mix(fg, heat(tone, 1), 0.5));
     }
   }
 
@@ -176,7 +215,21 @@ class Pen {
   }
 
   #ours(x: number, y: number) {
-    return this.#plain(x, y) || this.#tints.has(pack(this.#read(x, y)));
+    return this.#owned.has(this.#cell(x, y)) || this.#plain(x, y) || this.#tints.has(pack(this.#read(x, y)));
+  }
+
+  #ink(x: number, y: number) {
+    const at = (y * this.#width + x) * 4;
+    const fg = this.#fg;
+    return RGBA.fromInts(fg[at] & 0xff, fg[at + 1] & 0xff, fg[at + 2] & 0xff, 255);
+  }
+
+  #color(x: number, y: number, color: RGBA) {
+    const at = (y * this.#width + x) * 4;
+    this.#fg[at] = byte(color.r);
+    this.#fg[at + 1] = byte(color.g);
+    this.#fg[at + 2] = byte(color.b);
+    this.#fg[at + 3] = 255;
   }
 
   #holds(x: number, y: number, char: string) {
@@ -213,43 +266,66 @@ class Pen {
   }
 }
 
-const effects: Partial<Record<string, Effect>> = {
-  build: (pen, { x, y, icon, tone, tint, p }) => {
-    if (p < 0.3) {
-      pen.glyph(icon, x, y - 1, mix(tint, tone, p / 0.3));
-      pen.glyph(icon, x, y, tint);
-      return;
-    }
-    const k = p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5;
-    pen.glyph(icon, x, y, heat(tone, k));
-    if (p >= 0.7) return;
-    const spark = p < 0.5 ? "✦" : "✧";
-    pen.glyph(spark, x - 1, y, heat(tone, 0.8 * k));
-    pen.glyph(spark, x + 1, y, heat(tone, 0.8 * k));
+const scopes: Partial<Record<string, Scope>> = {
+  build: {
+    row: (x, { left, right, start, p }) => {
+      const head = 0.6;
+      const span = Math.max(1, start - left);
+      const at =
+        x < start ? ((x - left) / span) * head : head + ((right - x) / Math.max(1, right - start)) * (slam - head);
+      if (p >= at) return { hot: cool(p - at) };
+      if (x < start && p < head && at - p <= head / span) return { glyph: "✦", hot: 1 };
+      return { a: 0 };
+    },
+    icon: (pen, { x, y, icon, tone, p }) => {
+      if (p < slam) return;
+      const k = 1 - (p - slam) / (1 - slam);
+      pen.glyph(icon, x, y, heat(tone, k));
+      if (p >= 0.95) return;
+      const spark = p < 0.84 ? "✦" : "✧";
+      pen.glyph(spark, x - 1, y, heat(tone, k));
+      pen.glyph(spark, x + 1, y, heat(tone, k));
+    },
   },
-  review: (pen, { x, y, left, icon, tone, tint, p }) => {
-    if (p < 0.6) {
-      const column = left + Math.round((x - left) * (p / 0.6));
-      for (const [offset, amount] of [0.45, 0.25, 0.12].entries()) {
-        if (column - offset >= left) pen.shade(column - offset, y, tone, amount);
-      }
-      pen.glyph(icon, x, y, tint);
-      return;
-    }
-    const k = 1 - (p - 0.6) / 0.4;
-    pen.shade(x, y, tone, 0.35 * k);
-    pen.glyph(icon, x, y, heat(tone, k));
+  review: {
+    row: (x, frame) => {
+      const passed = scan(frame) - x;
+      if (passed < 0) return { a: 0 };
+      return { band: [0.45, 0.25, 0.12][Math.floor(passed)] ?? 0, hot: Math.max(0, 1 - passed / 6) * 0.5 };
+    },
+    icon: (pen, frame) => {
+      const { x, y, icon, tone } = frame;
+      const landed = scan(frame) - x;
+      if (landed < 0) return;
+      const k = Math.max(0, 1 - landed / 12);
+      pen.shade(x, y, tone, 0.45 * k);
+      pen.glyph(icon, x, y, heat(tone, k));
+    },
   },
-  scout: (pen, { x, y, icon, tone, p }) => {
-    if (p < 0.6) return pen.glyph(rings[Math.min(rings.length - 1, Math.floor(p / 0.15))], x, y, heat(tone, 0.4));
-    pen.glyph(icon, x, y, heat(tone, 0.6 * (1 - (p - 0.6) / 0.4)));
+  scout: {
+    row: (x, { left, right, x: icon, p }) => {
+      const reach = Math.max(icon - left, right - icon) + 4;
+      const front = reach * (1 - (1 - Math.min(1, p / 0.8)) ** 2) - Math.abs(x - icon);
+      return { a: clamp(front / 4), band: front >= 0 && front < 2 ? 0.3 * (1 - front / 2) : 0 };
+    },
+    icon: (pen, { x, y, icon, tone, p }) => {
+      if (p < 0.6) return pen.glyph(rings[Math.min(rings.length - 1, Math.floor(p / 0.15))], x, y, heat(tone, 1));
+      pen.glyph(icon, x, y, heat(tone, 1 - (p - 0.6) / 0.4));
+    },
   },
-  verify: (pen, { x, y, icon, tone, tint, p }) => {
-    if (p < 0.2) return pen.glyph(icon, x, y, tint);
-    const k = p < 0.35 ? 1 : 1 - (p - 0.35) / 0.65;
-    pen.shade(x, y, tone, 0.5 * k);
-    pen.glyph(icon, x, y, heat(tone, k));
-    if (p >= 0.35 && p < 0.8) pen.glyph("✓", x - 1, y, heat(tone, k));
+  verify: {
+    row: (x, { left, right, p }) => {
+      const front = left + (right + 1 - left) * (p / decode);
+      if (x >= front) return { a: 0, noise: grain[Math.abs(Math.trunc(x * 7 + p * 40)) % grain.length] };
+      const flash = p >= decode && p < 0.9 ? 1 - (p - decode) / 0.2 : 0;
+      return { band: 0.35 * flash, hot: 0.4 * flash };
+    },
+    icon: (pen, { x, y, icon, tone, p }) => {
+      if (p < decode) return;
+      const k = 1 - (p - decode) / (1 - decode);
+      pen.glyph(icon, x, y, heat(tone, k));
+      pen.glyph("✓", x - 1, y, heat(tone, Math.max(k, 0.6)));
+    },
   },
 };
 
@@ -266,6 +342,18 @@ function reveals({ first, revealing }: Seen, now: number) {
 
 function pack(color: RGBA) {
   return (byte(color.r) << 16) | (byte(color.g) << 8) | byte(color.b);
+}
+
+function scan({ left, right, p }: Frame) {
+  return left + (right + 3 - left) * (p / 0.75);
+}
+
+function cool(age: number) {
+  return Math.max(0, 1 - (age * reveal) / 300);
+}
+
+function clamp(value: number) {
+  return Math.min(1, Math.max(0, value));
 }
 
 function wave(since: number) {

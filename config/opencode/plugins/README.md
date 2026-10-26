@@ -276,7 +276,8 @@ The rules are hidden and text wraps inside the box.
 The notice puts the subagent's description on the left and `icon Scope / icon Agent · model/variant · tokens` on the right, truncating the description first when space is short.
 Lane icons, colors, model names, and token counts use the same source as the Lanes sidebar.
 
-Build, review, scout, and verify each have a distinct icon reveal for new notices; the icon breathes while Collab replies, then settles.
+New notices reveal the whole row in about 1.2 s: build forge, review scan, scout ping, or verify decode.
+The icon then breathes while Collab replies, then settles.
 Set `animations` to `false` in `cli.json` to keep these effects static.
 
 Failed and cancelled lanes show a red `✗` and the state word without a box.
