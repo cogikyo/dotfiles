@@ -298,6 +298,7 @@
             :text name
             :limit-width {compact ? 19 : 64}
             :truncate-left true
+            ;; Avoid GTK ellipsizing, which can shrink the name to one glyph inside the revealer.
             :show-truncated false
           )
         )
