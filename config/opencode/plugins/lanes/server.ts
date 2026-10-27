@@ -1,15 +1,14 @@
 import { Plugin } from "@opencode/plugin/effect";
 import type { Session } from "@opencode/schema/session";
 import { Tool } from "@opencode/schema/tool";
-import { YAML } from "bun";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { claudeAccounts } from "../anthropic/accounts.ts";
+import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
 
-type Ref = { providerID: string; id: string; variant?: string };
 type Status = "running" | "idle" | "error" | "interrupted";
 type Window = { label: string; usedPercent?: number; resetAt?: string };
 type Account = { id: string; age?: number; known: boolean; capped: number[]; weekly: number };
@@ -23,8 +22,6 @@ type Input = {
   lane?: string;
 };
 
-const configRoot = path.join(import.meta.dirname, "..", "..");
-const routingPath = path.join(configRoot, "ROUTING.md");
 const pool = "claude";
 const accounts = Object.values(claudeAccounts).map(({ id }) => id);
 const staleAfter = 10 * 60_000;
@@ -37,46 +34,13 @@ function parseRef(value: string): Ref {
   return { providerID: model.slice(0, slash), id: model.slice(slash + 1), variant: variant || undefined };
 }
 
-function parseRoute(key: string, value: unknown): Ref {
-  const match = typeof value === "string" ? /^([^\s/]+)\/(\S+?)(?:\s+(\S+))?$/u.exec(value.trim()) : null;
-  if (!match) throw new Error(`route "${key}" must be "provider/model [effort]"`);
-  return { providerID: match[1], id: match[2], variant: match[3] };
-}
-
-function parseRoutes(value: unknown) {
-  return Object.fromEntries(Object.entries(value ?? {}).map(([key, route]) => [key, parseRoute(key, route)]));
-}
-
 const readRouting = Effect.tryPromise({
-  try: async () => {
-    const match = /^---\r?\n([\s\S]*?)\r?\n---/u.exec(await readFile(routingPath, "utf8"));
-    if (!match) throw new Error("no YAML frontmatter");
-    const data = YAML.parse(match[1]) as { routes?: unknown; fallbacks?: unknown };
-    return { routes: parseRoutes(data.routes), fallbacks: parseRoutes(data.fallbacks) };
-  },
+  try: async () => parseRouting(await readFile(routingPath, "utf8")),
   catch: (error) =>
     new Tool.Error({
       message: `ROUTING.md at ${routingPath} is unusable (${error instanceof Error ? error.message : String(error)}); pass model explicitly.`,
     }),
 });
-
-function routeFor(routes: Record<string, Ref>, agent: string) {
-  if (Object.hasOwn(routes, agent)) return routes[agent];
-  const [key] = Object.keys(routes)
-    .filter((pattern) => pattern.includes("*") && glob(pattern).test(agent))
-    .toSorted((a, b) => b.length - a.length);
-  return key === undefined ? undefined : routes[key];
-}
-
-function glob(pattern: string) {
-  return new RegExp(
-    `^${pattern
-      .split("*")
-      .map((part) => RegExp.escape(part))
-      .join(".*")}$`,
-    "u",
-  );
-}
 
 function cacheFile(providerID: string) {
   const xdg = process.env.XDG_CACHE_HOME?.trim();
