@@ -28,6 +28,12 @@ Open with one sentence placing the work against the original ask, then write the
 - **Open**: each decision that needs the user, with Collab's recommendation and when another option wins.
 - **Uncertainties**: what could still be wrong, what would show it, and what remains unverified.
 
+When work follows the restatement, whether approved, proposed, or waiting on an answer, show it in a `workflow` fence in a section before the TL;DR, following the `workflow` skill.
+Put open decisions that gate work in the card as `you` steps.
+Work that runs only under one answer carries `if:` with that answer.
+Skip the card only when nothing but the user's decisions is pending.
+“Write for a reader returning cold” governs prose; in the card, lane names appear as pills by design, and each headline says what its step does.
+
 End with `## TL;DR`: the thesis and top recommendation in one or two sentences.
 When something is open, add that any reply brings the questions; otherwise, that a go proceeds with the decisions above.
 
