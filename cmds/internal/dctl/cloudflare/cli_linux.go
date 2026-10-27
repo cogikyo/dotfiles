@@ -10,8 +10,10 @@ import (
 )
 
 type Cmd struct {
-	Plan  PlanCmd  `cmd:"" default:"withargs" help:"Preview what would make Cloudflare match the sites file; read-only (default)."`
-	Apply ApplyCmd `cmd:"" help:"Apply the previewed tunnel ingress, DNS, and WAF changes after consent, then verify by readback."`
+	Plan   PlanCmd   `cmd:"" default:"withargs" help:"Preview what would make Cloudflare match the sites file; read-only (default)."`
+	Apply  ApplyCmd  `cmd:"" help:"Apply the previewed rules, tunnel ingress, DNS, TLS, and DNSSEC changes after consent, then verify by readback."`
+	Status StatusCmd `cmd:"" help:"Show each zone's registration, DNSSEC, TLS, certificates, records, and rule counts; read-only."`
+	Cert   CertCmd   `cmd:"" help:"Issue a Cloudflare Origin CA certificate after consent, with the key generated locally."`
 }
 
 type source struct {

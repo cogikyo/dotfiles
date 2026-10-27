@@ -3,21 +3,24 @@ package cloudflare
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"slices"
 	"strings"
 )
 
-const phase = "http_request_firewall_custom"
-
 type zone struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Account struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Status      string   `json:"status"`
+	NameServers []string `json:"name_servers"`
+	Account     struct {
 		ID string `json:"id"`
 	} `json:"account"`
 	Plan struct {
+		Name     string `json:"name"`
 		LegacyID string `json:"legacy_id"`
 	} `json:"plan"`
 }
@@ -39,6 +42,22 @@ type record struct {
 	Type    string `json:"type"`
 	Content string `json:"content"`
 	Proxied bool   `json:"proxied"`
+	Comment string `json:"comment"`
+}
+
+type target struct {
+	Expression string `json:"expression,omitempty"`
+}
+
+type forward struct {
+	StatusCode    int    `json:"status_code,omitempty"`
+	TargetURL     target `json:"target_url,omitzero"`
+	PreserveQuery bool   `json:"preserve_query_string,omitempty"`
+}
+
+type params struct {
+	FromValue    forward `json:"from_value,omitzero"`
+	ResponseBody string  `json:"response_body_buffering,omitempty"`
 }
 
 type rule struct {
@@ -48,6 +67,7 @@ type rule struct {
 	Description string `json:"description"`
 	Expression  string `json:"expression"`
 	Action      string `json:"action"`
+	Params      params `json:"action_parameters,omitzero"`
 	Enabled     bool   `json:"enabled"`
 }
 
@@ -67,16 +87,34 @@ type ruleset struct {
 	Rules   []rule `json:"rules"`
 }
 
+type dnssec struct {
+	Status     string `json:"status"`
+	Flags      int    `json:"flags"`
+	Algorithm  string `json:"algorithm"`
+	KeyTag     int    `json:"key_tag"`
+	DigestType string `json:"digest_type"`
+	Digest     string `json:"digest"`
+	DS         string `json:"ds"`
+	PublicKey  string `json:"public_key"`
+}
+
+type setting struct {
+	Value  string `json:"value"`
+	Denied string `json:"-"`
+}
+
 type live struct {
 	Account  string
 	Zones    []zone
 	Tunnel   tunnel
 	Config   tunnelConfig
 	Records  map[string][]record
-	Rulesets map[string]*ruleset
+	Rulesets map[string]map[string]*ruleset
+	Settings map[string]map[string]setting
+	DNSSEC   map[string]dnssec
 }
 
-func read(ctx context.Context, c *client, s *sites) (*live, error) {
+func listZones(ctx context.Context, c *client) ([]zone, error) {
 	zones, err := list[zone](ctx, c, nil, "zones")
 	if err != nil {
 		return nil, err
@@ -85,8 +123,44 @@ func read(ctx context.Context, c *client, s *sites) (*live, error) {
 		return nil, fmt.Errorf("the token sees no zones; it needs Zone Read on the account's zones")
 	}
 	slices.SortFunc(zones, func(a, b zone) int { return strings.Compare(a.Name, b.Name) })
+	return zones, nil
+}
 
-	l := &live{Zones: zones, Records: map[string][]record{}, Rulesets: map[string]*ruleset{}}
+func entrypoint(ctx context.Context, c *client, zoneID, phase string) (*ruleset, error) {
+	var rs ruleset
+	err := c.get(ctx, &rs, nil, "zones", zoneID, "rulesets", "phases", phase, "entrypoint")
+	switch {
+	case isMissing(err):
+		return nil, nil
+	case err != nil:
+		return nil, err
+	}
+	return &rs, nil
+}
+
+func readSetting(ctx context.Context, c *client, zoneID, id string) (setting, error) {
+	var s setting
+	err := c.get(ctx, &s, nil, "zones", zoneID, "settings", id)
+	var refused *apiError
+	if id == automatic && errors.As(err, &refused) && (refused.Status == http.StatusForbidden || refused.Status == http.StatusUnauthorized) {
+		return setting{Denied: err.Error()}, nil
+	}
+	return s, err
+}
+
+func read(ctx context.Context, c *client, s *sites) (*live, error) {
+	zones, err := listZones(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
+	l := &live{
+		Zones:    zones,
+		Records:  map[string][]record{},
+		Rulesets: map[string]map[string]*ruleset{},
+		Settings: map[string]map[string]setting{},
+		DNSSEC:   map[string]dnssec{},
+	}
 	names := make([]string, len(zones))
 	for i, z := range zones {
 		names[i] = z.Name
@@ -119,14 +193,30 @@ func read(ctx context.Context, c *client, s *sites) (*live, error) {
 		}
 		l.Records[z.Name] = records
 
-		var rs ruleset
-		err = c.get(ctx, &rs, nil, "zones", z.ID, "rulesets", "phases", phase, "entrypoint")
-		switch {
-		case isMissing(err):
-		case err != nil:
-			return nil, err
-		default:
-			l.Rulesets[z.Name] = &rs
+		l.Rulesets[z.Name] = map[string]*ruleset{}
+		for _, ph := range phases {
+			rs, err := entrypoint(ctx, c, z.ID, ph.ID)
+			if err != nil {
+				return nil, err
+			}
+			l.Rulesets[z.Name][ph.ID] = rs
+		}
+
+		l.Settings[z.Name] = map[string]setting{}
+		for _, want := range s.settings() {
+			v, err := readSetting(ctx, c, z.ID, want.ID)
+			if err != nil {
+				return nil, err
+			}
+			l.Settings[z.Name][want.ID] = v
+		}
+
+		if s.DNSSEC != nil {
+			var d dnssec
+			if err := c.get(ctx, &d, nil, "zones", z.ID, "dnssec"); err != nil {
+				return nil, err
+			}
+			l.DNSSEC[z.Name] = d
 		}
 	}
 	return l, nil

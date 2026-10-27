@@ -758,7 +758,7 @@ Token errors fall back to the passphrase or recovery-key prompt.
 ## Cloudflare sites
 
 `dctl cloudflare` previews changes that make Cloudflare match `~/cogikyo/cogikyo/vagarios/sites.toml`.
-`apply` writes the tunnel ingress, proxied DNS CNAMEs and WAF block rules, then verifies API readback.
+`apply` writes ingress, DNS, WAF, redirects, stream rules and declared zone settings, then verifies API readback.
 Run as your normal user, without sudo.
 
 ```sh
@@ -766,17 +766,32 @@ dctl cloudflare
 dctl cloudflare plan --sites /path/to/sites.toml
 dctl cloudflare apply
 dctl --yes --json cloudflare apply
+dctl cloudflare status [zone]
+dctl cloudflare cert <host>... --out DIR
 ```
 
 - **`plan` is the default** and sends only GET requests.
-- `--sites PATH` selects a different sites file for either command.
-- `apply` asks for consent on a TTY; JSON/non-TTY use requires global `--yes`.
+- `--sites PATH` selects a different sites file for `plan` or `apply`.
+- `apply` and `cert` ask for consent on a TTY; JSON/non-TTY use requires global `--yes`.
+- `status` is read-only: registrar (RDAP), nameservers, DNSSEC and parent DS, settings, edge certificates and rule counts.
+  - Records show type, name and proxied state, never record content.
+- `cert` issues an Origin CA certificate with a locally generated ECDSA P-256 key and CSR.
+  - Writes `<first host>.pem` and `<first host>.key` as `0600` in an existing `DIR`, without overwriting.
+  - Issuance is separate from convergence; installing the certificate and configuring origin trust remain manual.
 
 ### Sites file and ownership
 
 The [sites loader](../../internal/dctl/cloudflare/sites_linux.go) owns the format: a tunnel name, named `[allow]` lists, `[zone."name"]` defaults and ordered `[[site]]` entries with origins and optional `[[site.route]]` path rules.
 IDs are resolved through the API; the account ID comes from the zones list.
 Origins use `http`, `https` or `ssh` with an IPv4 host and port; `noTLSVerify` applies only to HTTPS.
+
+Optional zone settings apply to **every account zone**, including zones without a `[zone]` table:
+
+- `dnssec = true` enables signing; `false` is rejected because disabling with a parent DS breaks resolution.
+- `transparent = true` sets `browser_check` and `email_obfuscation` off, and `security_level` to `essentially_off`.
+  - `false` is rejected; omit either top-level key to leave its settings alone.
+- `[tls]` requires `mode` (`off`, `flexible`, `full`, `strict`), `min` (`"1.0"`–`"1.3"`) and boolean `https`.
+  - It also sets `ssl_automatic_mode = custom`; undeclared settings such as HSTS stay untouched.
 
 A site's `allow` overrides its zone default; `public` means no restriction.
 A declared apex site defaults to public, but an undeclared apex keeps the zone default.
@@ -785,11 +800,30 @@ Missing access policy is a load error; a non-public site needs a `[zone]` table 
 - **Tunnel:** Replaces the whole ingress in file order: each site's routes, its origin, then one final 404.
   - The PUT can drop other tunnel config keys; the preview lists them.
 - **DNS:** Creates one proxied CNAME per site pointing at this tunnel.
-  - Deletes only CNAMEs targeting this tunnel that are absent from the file.
-  - A conflicting record stops the plan; dctl overwrites nothing.
+  - Redirect sources and fallback wildcards get proxied `A 192.0.2.1` placeholders.
+  - The record comment `dctl: redirect placeholder` marks placeholder ownership; unmarked A records are never adopted.
+  - Deletes undeclared CNAMEs targeting this tunnel and obsolete marked placeholders only.
+  - Conflicting A, AAAA or CNAME records stop the plan; MX and TXT may share the name, including at an apex.
 - **WAF:** Writes one block rule per non-public effective allowlist in each declared zone.
   - Owns refs prefixed `dctl-allow-` and replaces the legacy `vagarios-allowlist` rule.
-  - Keeps other rules unchanged and in order; exceeding Free's five-rule limit stops the plan.
+- **Redirects:** `[[redirect]]` requires a unique `from` host and `to = "https://host"`, without a path or trailing slash.
+  - `from` cannot also serve a site, and `to` cannot point back to it.
+  - Answers 301, keeping path and query; redirects run before WAF, so anyone gets the redirect.
+  - Owns refs prefixed `dctl-` in the redirect phase.
+- **Fallback:** `[zone."name"]` may set `fallback = "https://host/path"`, without port, query or fragment.
+  - Answers 302 for undeclared hosts and visitors outside a site's allowlist; WAF stays as the backstop.
+  - Appends `?from=<host><path>` and drops the original query.
+  - A fallback target in a fallback zone must be a declared public site to prevent loops.
+- **Streaming:** `stream = true` on a route sets `response_body_buffering = none` for that host and path prefix.
+  - The path must be `^` plus a literal `/` prefix, unique per host; Free uses `starts_with`, without regex.
+  - Owns refs prefixed `dctl-stream-` in the config phase.
+  - Free's 125 s SSE idle limit remains; the origin still needs heartbeats.
+
+A fallback gives dctl ownership of the zone's whole proxied namespace.
+Plan and apply **fail loudly on stray proxied records** unless they are owned records scheduled for deletion; declare each host as a site or redirect, or make it DNS-only.
+DNS-only records do not reach redirect rules.
+In every rule phase, other rules stay unchanged and in order.
+Free limits are five WAF custom rules, ten Single Redirects and ten configuration rules per zone; the plan checks peak usage before removals.
 
 Nix reads the same file only to derive cloudflared's origin egress holes on edge.
 It does not publish the sites' ingress.
@@ -809,17 +843,23 @@ It is non-staged, so `dctl setup secrets` can restore it when missing after unlo
 Agent read, edit and directory deny rules protect the plaintext file.
 
 The account-owned token `costello-dctl` has no expiry and is IP-filtered to home (`50.173.27.178`) and Trend VPN (`50.232.1.98`) as of 2026-10-27.
-For this slice, the relevant grants are Cloudflare Tunnel Write, Zone Read, DNS Write and Zone WAF Write.
+Relevant grants are Cloudflare Tunnel Write, Zone Read, DNS Write, Zone WAF Write, Zone Settings Write, Dynamic Redirects Write, Config Settings Write, and SSL and Certificates Write.
 The command reads the plaintext token; it does not unlock age itself.
 
 ### Apply safety and edge checks
 
-Apply rechecks the preview after consent, then sends WAF additions, tunnel ingress, DNS additions, DNS removals and WAF removals.
+Apply rechecks the preview after consent, then sends WAF, redirect and config rule additions, ingress, DNS additions, zone settings and DNSSEC.
+Removals follow: DNS, config, redirects, then WAF.
 Changed block expressions cover the old or new policy first, then narrow after DNS changes, so a hostname is not published without its block rule.
 On a failed mutation or readback, run `dctl cloudflare plan` before retrying; there is no automatic retry or rollback.
 Readback proves API state, not that edge loaded the ingress or that a site responds.
 
-After an ingress change, check edge's cloudflared unit journal for `Updated to new configuration`; restart that unit if the message is absent.
+For zones at a third-party registrar, paste the DS fields printed after DNSSEC activation into that registrar's dashboard.
+`status [zone]` shows them again while signing is pending and no DS is at the parent.
+Cloudflare Registrar publishes its zones' DS automatically, usually within 1–2 days; check `status` for completion.
+
+After an ingress change, dctl prints a hint to check edge's cloudflared unit journal for `Updated to new configuration`; restart that unit if the message is absent.
+dctl never restarts edge.
 The 2026-10-27 cutover needed one restart; later live pushes remain untested.
 An edge deploy that restarted cloudflared cut the tunnel for about 31 s because cloudflared waits a 30 s stop grace period.
 
