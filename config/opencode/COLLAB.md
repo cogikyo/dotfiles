@@ -106,7 +106,8 @@ Only Collab delegates: the session tree has one parent and one level of children
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
   - Read-only or exact write scope, and the evidence already settled; never authorize writes the agent's contract forbids.
-  - For read-only children, `$OPENCODE_SCRATCH` as their only write scope; pass the variable literally, because your session ID names the parent's directory, not the child's.
+  - For read-only children, give caged children (`review/*`, `scout/*`, `verify/source`, `verify/web`) only `$OPENCODE_SCRATCH` as write scope and other children only a literal `/tmp/opencode/<task>/` path; pass the variable literally, because your session ID names the parent's directory, not the child's.
+    - Write fixtures whose text mentions Git commands yourself and pass their paths, because child shell Git deny globs also check heredoc bodies.
   - Required checks, acceptance conditions, report shape, and decisions that return to you.
   - Principles the child should apply for this task beyond those its agent file names.
   - User overrides and presentation needs the child should carry.
