@@ -1,6 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { SessionMessage } from "@opencode/schema/session-message";
-import { Schema } from "effect";
+import { Effect, Fiber, Schema } from "effect";
 import { retag, tag } from "../sessions/tags.ts";
 import { flat, glyphs, kinds, type Mail, mailable, plain, source } from "./mail.ts";
 import { api } from "./rpc.ts";
@@ -24,9 +24,12 @@ const Input = Schema.Struct({
   ),
 });
 
+const wakeAfter = 3 * 60_000;
+const sweepEvery = 60_000;
+
 const description = [
   "Send a message to the agent in another top-level session.",
-  "Mail parks in the target without starting a turn and rides along with that session's next turn, whatever starts it; a running target gets it at its next step.",
+  "Mail reaches running targets at their next step; otherwise it waits for their next turn. Idle targets wake after about 3 minutes unless a revert is staged or their last turn failed after the mail parked.",
   "The target sees it as mail from this session's agent, not from the user, so it carries no approval.",
   "Use kind info to share something and ask when you need a reply; answer an ask with replyTo set to its mail ID.",
   "Only top-level sessions can send, and only to open top-level sessions.",
@@ -87,6 +90,22 @@ function refuse(session: { id: string; parentID?: string; title?: string }, role
 export default Plugin.define({
   id: "mail",
   async setup(ctx) {
+    const fiber = Fiber.getCurrent();
+    if (!fiber) throw new Error("mail: setup started outside the plugin fiber");
+    const log = Effect.runForkWith(fiber.context);
+    const fail = (what: string, error: unknown) =>
+      log(Effect.logError(`mail: ${what} failed`, { error: String(error) }));
+    const sweep = async () =>
+      Promise.all(
+        store
+          .stale(Date.now() - wakeAfter)
+          .map(({ mail, ...input }) =>
+            ctx.session
+              .synthetic({ ...input, metadata: mail, delivery: "steer" })
+              .catch((error: unknown) => fail(`wake ${input.sessionID}`, error)),
+          ),
+      );
+    const wake = () => void sweep().catch((error: unknown) => fail("sweep", error));
     await ctx.rpc.register(api, {
       ledger: async ({ sessionID }) => store.ledger(sessionID),
       parked: async () => store.inboxes(),
@@ -132,15 +151,18 @@ export default Plugin.define({
             description: `${glyphs[mail.kind]} ${mail.sender}: ${mail.subject}`,
             metadata: mail,
             delivery: "steer",
-            // Park idle mail without waking the target; a running turn still absorbs the steer.
+            // Defer idle wakes to the sweep.
             resume: false,
           });
           return {
-            content: `Sent ${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}). It parks there without starting a turn and rides along with that session's next turn; if it is running, it arrives at its next step.`,
+            content: `Sent ${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}). Arrives at the next step if running; otherwise the next turn, with an idle wake after about 3 minutes unless a revert is staged or the last turn failed after parking.`,
             metadata: mail,
           };
         },
       }),
     );
+    wake();
+    const timer = setInterval(wake, sweepEvery);
+    return () => clearInterval(timer);
   },
 });

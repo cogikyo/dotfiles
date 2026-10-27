@@ -31,6 +31,16 @@ const parked = `
   SELECT DISTINCT session_id AS id FROM session_inbox
   WHERE type = 'synthetic' AND json_extract(payload, '$.metadata.source') = ?1`;
 
+const overdue = `
+  SELECT inbox.id, inbox.session_id AS sessionID, session.parent_id AS parentID, session.title,
+    json_extract(inbox.payload, '$.text') AS text, json_extract(inbox.payload, '$.description') AS description,
+    json_extract(inbox.payload, '$.metadata') AS meta
+  FROM session_inbox inbox JOIN session_v2 session ON session.id = inbox.session_id
+  WHERE inbox.type = 'synthetic' AND json_extract(inbox.payload, '$.metadata.source') = ?1
+    AND session.time_suspended IS NULL AND inbox.time_created <= ?2
+    AND NOT (session.idle_outcome IS 'failed' AND session.time_idle >= inbox.time_created)
+  ORDER BY inbox.enqueued_seq`;
+
 const roots = "SELECT id, parent_id AS parentID, title FROM session_v2 WHERE parent_id IS NULL";
 
 const peers = "SELECT id, parent_id AS parentID, title FROM session_v2 WHERE id IN (SELECT value FROM json_each(?1))";
@@ -38,6 +48,16 @@ const peers = "SELECT id, parent_id AS parentID, title FROM session_v2 WHERE id 
 type Session = { id: string; parentID: string | null; title: string | null };
 
 type Row = { meta: string | null; parked: number };
+
+type Overdue = {
+  id: string;
+  sessionID: string;
+  parentID: string | null;
+  title: string | null;
+  text: string;
+  description: string | null;
+  meta: string | null;
+};
 
 function query<T>(run: (db: Database) => T) {
   const db = new Database(file, { readonly: true });
@@ -72,5 +92,17 @@ export const inboxes = () =>
       .all(source)
       .map((row) => row.id),
   );
+
+export const stale = (before: number) =>
+  query((db) => {
+    const pending = db
+      .query<Overdue, [string, number]>(overdue)
+      .all(source, before)
+      .flatMap(({ sessionID, id, text, description, meta, ...session }) => {
+        const mail = meta ? read(JSON.parse(meta)) : undefined;
+        return mail && mailable(session) ? [{ sessionID, id, text, description: description ?? undefined, mail }] : [];
+      });
+    return [...Map.groupBy(pending, (item) => item.sessionID).values()].map(([oldest]) => oldest);
+  });
 
 export const sessions = () => query((db) => db.query<Session, []>(roots).all());

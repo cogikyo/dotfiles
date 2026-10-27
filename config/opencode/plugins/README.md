@@ -49,8 +49,9 @@ Mail comes from the sending session's agent and carries no user approval.
 `info` expects no reply, and acknowledgment-only replies are forbidden.
 `ask` expects a `mail` reply with `replyTo`, even when the answer is that the agent can't act or is waiting on the user.
 
-Delivery uses a host synthetic with `delivery: "steer", resume: false`: mail parks without starting a turn and rides along with the target's next turn, whatever starts it, including an interrupt, `/compact`, or unrevert.
-A running target gets it at its next step.
+Mail waits for the target's next turn; a running target gets it at its next step.
+At setup and every 60 seconds, the server wakes idle, mailable targets with mail parked for at least 3 minutes.
+A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
 Delivered info and answered asks leave the sidebar.
