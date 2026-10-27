@@ -137,6 +137,7 @@ export default Plugin.define({
     if (!fiber) throw new Error("retitle: setup started outside the plugin fiber");
     const log = Effect.runForkWith(fiber.context);
     const states = new Map<string, State>();
+    const owned = new Set<string>();
     const controller = new AbortController();
 
     const state = (sessionID: string) => {
@@ -174,6 +175,7 @@ export default Plugin.define({
         if (!title) return;
         const latest = await ctx.session.get({ sessionID });
         if (
+          controller.signal.aborted ||
           !latest.title ||
           pinned(latest.title) ||
           tag(latest.title) ||
@@ -210,6 +212,7 @@ export default Plugin.define({
     });
 
     await ctx.session.hook("context", async (event) => {
+      owned.add(event.sessionID);
       try {
         const session = await ctx.session.get({ sessionID: event.sessionID });
         if (!session.parentID && pinned(session.title)) event.system.push({ type: "text", text: ORCHESTRATOR });
@@ -226,8 +229,17 @@ export default Plugin.define({
           human(event.data.item.payload.text)
         )
           state(event.data.sessionID).count++;
-        if (event.type === "session.deleted") states.delete(event.data.sessionID);
-        if (event.type === "session.execution.succeeded") {
+        if (
+          event.type === "session.moved" ||
+          event.type === "session.execution.failed" ||
+          event.type === "session.execution.interrupted"
+        )
+          owned.delete(event.data.sessionID);
+        if (event.type === "session.deleted") {
+          states.delete(event.data.sessionID);
+          owned.delete(event.data.sessionID);
+        }
+        if (event.type === "session.execution.succeeded" && owned.delete(event.data.sessionID)) {
           retitle(event.data.sessionID).catch((error: unknown) =>
             log(Effect.logError("retitle: failed", { sessionID: event.data.sessionID, error: String(error) })),
           );
