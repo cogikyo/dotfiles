@@ -14,7 +14,7 @@ Read the subskills the task needs; they combine freely:
 
 - `docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
 - `diagram` (`prose/diagrams/diagram/SKILL.md`) for an architecture diagram or annotated tree that has already earned its place.
-- `workflow` (`prose/diagrams/workflow/SKILL.md`) for numbered workflow graphs in proposals and runs.
+- `workflow` (`prose/diagrams/workflow/SKILL.md`) for declarative workflow fences in proposals and runs.
 
 Attention-friendly presentation keeps a document's necessary explanation and safety context.
 User-facing product text belongs to `copy` (`design/copy/SKILL.md`), under the `design` skills.

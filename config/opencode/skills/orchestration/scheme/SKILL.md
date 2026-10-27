@@ -24,8 +24,13 @@ Leave reversible implementation mechanics open unless a constraint depends on th
 Inspect directly when the question fits the current context.
 Send a scout or verifier for a consequential evidence gap that would crowd the conversation.
 Use a `review/*` leaf for a real uncertainty or an independent challenge, usually `review/critic` or `review/architect`.
+Resume the critic lane to check whether Collab's revisions answered its objections; use a fresh leaf when the verdict needs independence from earlier rounds.
 Skip the multi-stage workflow when the design is already settled.
 For each load-bearing conjecture, name what would falsify it.
+Revise candidates when evidence or criticism changes their premise.
+Build a throwaway prototype under `/tmp/opencode`, outside the repository, only when argument cannot settle the question.
+Get separate approval for the prototype; missing approval returns a blocker.
+Treat the user's prototype trial as evidence, not implementation, and name what it falsified.
 Continue until the remaining uncertainty is harmless implementation freedom or a real decision for the user.
 
 ## Return
@@ -34,55 +39,3 @@ Lead with the recommendation and the trade-offs that survive.
 State the evidence, material dissent, open decisions, and what could falsify the design.
 Give the next owner enough intent, constraints, and dependencies to act without repeating the investigation.
 Keep the execution steps separate from the design, and propose them as a workflow when the user wants to proceed.
-
-## Examples
-
-These are shapes, not approved work; `workflow` defines the notation.
-Scheme goes deeper by letting evidence and criticism change the candidates before anything is built.
-
-### Evidence before candidates
-
-```text
-        ┌─→ 2 ─→ 3 ─┐
-(1) ────┤           ├─→ (5) ─→ RETURN user
-        └─→ 4 ──────┘
-```
-
-1. `self`: State the design question, fixed decisions, and what would change the answer.
-2. `scout/code`: Trace every writer of the lease state across queue and worker.
-3. `verify/source`: Verify the pinned primitive's atomicity from step 2's locations.
-4. `scout/web`: Map prior art for lease recovery, with cited URLs.
-5. `self`: Compare two or three candidates by ownership, failure behavior, and cost, and name each falsifier.
-
-Step 3 needs step 2's locations; step 4 runs in parallel with both.
-
-### Candidates under challenge
-
-```text
-(1) ─→ 2 ─→ (3) ─→ <3> ─→ RETURN user
-       ↑            │
-       └────────────┘ revise ≤1
-```
-
-1. `self`: Draft the candidates from evidence already in the conversation.
-2. `review/architect`, lane `critic`: Challenge ownership, coupling, and failure cases.
-3. `self`: Revise; gate 3 accepts, sends one revision back to lane `critic`, or returns an open decision to the user.
-
-Resuming lane `critic` lets it check whether its own objections were answered.
-Use a fresh leaf instead when the final verdict needs independence from earlier rounds.
-
-### Prototype when the user must feel it
-
-```text
-(1) ─→ <1> ─┬─→ 2 ─→ you: 3 ─┐
-            │                ├─→ (4) ─→ RETURN user
-            └────────────────┘
-```
-
-1. `self`: Narrow to the leading design; gate 1 selects step 2 only when a throwaway prototype would settle a question that argument cannot.
-2. `build/general`, lane `spike`: Build the prototype under `/tmp/opencode`, outside the repository.
-3. You try it and say what feels wrong.
-4. `self`: Fold the result into the plan and name what it falsified.
-
-The prototype is evidence, not implementation, and step 2 needs its own approval.
-The merge is exclusive: without a prototype, step 4 works from the argument alone.

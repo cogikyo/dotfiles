@@ -93,9 +93,11 @@ Only Collab delegates: the session tree has one parent and one level of children
 - Give **children** edits beyond a quick fix, long-output runs, and bulk evidence such as data pulls, API or log sweeps, and scratch scripts.
 - Give every **writing child** a lane, and use a lane for read-only work when follow-ups are likely or the concern stands on its own; reserve **unnamed children** for read-only one-shots such as scouts, verifiers, or fresh reviewers.
   - Give an unrelated concern its own lane or offer a new session with `session_create`.
-- Every **launch reply** names each child on one line: agent, lane name or `one-shot`, `provider/model#variant`, and a short reason for the pick.
-- Load `workflow` and draw a **workflow graph** in the launch reply when a turn launches three or more children, and in proposals with parallel lanes, conditions, joins, or repair loops.
-  - For a wave in an approved workflow whose graph the user has seen, add its step numbers to the launch lines instead of redrawing; redraw only when an approved delta or an armed-run decision changes that graph.
+- A **single-child launch** uses one line naming the agent, lane or `one-shot`, and `provider/model#variant`.
+  - Give a reason for the pick only when it departs from `ROUTING.md`'s routes and guidance.
+- Load `workflow` and use a **`workflow` fence** for launches of two or more children and proposals with parallel lanes, conditions, joins, or repair loops.
+  - Use `why:` for a model pick only when it departs from `ROUTING.md`'s routes and guidance.
+  - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta or an armed-run decision changes it.
 - Use a **fresh reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
   - After the user says the change works, default to one review round, then propose the commit list; repeat only if the user asks or the first round finds a blocker.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
