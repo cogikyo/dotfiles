@@ -47,8 +47,9 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase or creating a first credential.
   - Before handing over dashboard or GUI steps, look for a CLI, an API, or a repository tool such as `dctl` that does the job.
-  - Before a check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
-  - After the check, collect their verdict through `question` too.
+  - Before each check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
+  - Run one check per Ready; fire short-lived events such as notices or animations only after that check's Ready.
+  - Collect its verdict through `question` before starting the next check.
   - Before suggesting a push, PR, merge, reset, or manual check, re-check live Git or remote state so the step is still needed.
   - Run the rest yourself, including the check that proves the fix, and report the result instead of if-then branches.
 - **Propose first**, then stop before tools, when writes span several lanes, depend on unread context, or cross an approval boundary the user has not already approved.

@@ -5,9 +5,11 @@ OpenCode discovers immediate plugin directories and loads their server and TUI e
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
 The sidebar shows usage, Markdown Context, lanes, Mail, then browser; claims that share a placement render in plugin directory-name order.
 Run `bun run check` from `config/opencode` for type, lint, and format checks.
+For renderer checks, `uv run plugins/capture.py SESSION [--dir DIR] [--seconds N] [--keys TEXT] [--size COLSxROWS] [--out FILE]` captures a real TUI screen in a pty; offscreen fixtures can miss host render nodes.
 `dctl update bun` installs plugin dependencies from `config/opencode/bun.lock` with `bun install --frozen-lockfile --ignore-scripts`.
 Setup's `extra-bun` item does the same when a locked package for this platform is missing from `node_modules` or has the wrong version.
 Saves apply live: the TUI watches plugin sources, discovery directories, and `cli.json`, and the server watches its plugin modules.
+After removing or renaming an export another plugin imports, check `opencode.log` for `not found in module`; long-running TUIs can keep failing to load the plugin until `/reload`.
 Plugin types under-declare the host; some extra fields, such as `titleView` on `dialog.select` options, still reach the native component at runtime.
 The server runs one copy of each plugin per loaded location, and a copy's `ctx.event.subscribe` can receive other locations' session events, so a handler that acts on a session should first check that `event.location` matches `ctx.location`.
 Execution and inbox events can omit `event.location`; `compact/server.ts` handles those with state that is safe to update in any copy.
