@@ -8,6 +8,7 @@ enable nix-daemon.socket
 enable pcscd.socket
 enable snapper-cleanup.timer
 enable snapper-timeline.timer
+enable sshd.service
 enable systemd-resolved.service
 enable systemd-timesyncd.service
 enable tailscaled.service

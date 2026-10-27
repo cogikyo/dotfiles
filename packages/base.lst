@@ -50,6 +50,7 @@ seahorse
 yubikey-manager
 
 # network
+cloudflared
 iperf3
 libnma
 networkmanager

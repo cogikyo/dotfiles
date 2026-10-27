@@ -1,0 +1,12 @@
+[Unit]
+Description=Reverse SSH tunnel exposing this host's sshd on costello
+ConditionHost=abbott
+
+[Service]
+# Keep the tunnel up at home too: costello uses localhost:2201 on either network.
+ExecStart=/usr/bin/ssh -N costello-tunnel
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

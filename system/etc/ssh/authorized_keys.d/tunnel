@@ -1,0 +1,1 @@
+restrict,port-forwarding,permitlisten="localhost:2201" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICzYG3Ol8nC6kDlO0qyxQEYMSVIkmirGEhjyWjY8ri94 tunnel@abbott
