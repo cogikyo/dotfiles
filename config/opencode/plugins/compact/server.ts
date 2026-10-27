@@ -1,4 +1,7 @@
+import type { OpenCodeEvent } from "@opencode/client/promise";
 import { Plugin } from "@opencode/plugin";
+import { Event } from "@opencode/schema/event";
+import { SessionMessage } from "@opencode/schema/session-message";
 import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 import { ceiling } from "./limits.ts";
@@ -19,7 +22,10 @@ const SUMMARY = [
 const CHILD =
   "- This is a delegate child session. Keep its brief's objective, write scope, exclusions, rules, and acceptance checks, as updated by later prompts.";
 
-const CONTINUE = "Continue the armed drive run from the handoff brief.";
+const RECOMMENDED = "Load the `recommended` skill and follow it.";
+
+const DRIVE =
+  "Drive is armed. Load the `recommended` skill and write its restatement and workflow card, but decide each open item yourself and record it under Decided. Then, in this same turn, continue the armed drive run from the handoff brief or summary.";
 
 const Input = Schema.Struct({
   brief: Schema.String.annotate({
@@ -29,10 +35,10 @@ const Input = Schema.Struct({
   reason: Schema.String.annotate({ description: "Why now is a good time to compact." }),
 });
 
-const Pending = Schema.Struct({ brief: Schema.String, halted: Schema.optional(Schema.Boolean) });
+const Pending = Schema.Struct({ brief: Schema.String });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends; the session then waits for the user, or continues from the brief in an armed drive run. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or in an armed drive run at a completed-work boundary.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or in an armed drive run at a completed-work boundary.";
 
 function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
@@ -64,6 +70,8 @@ function explain(error: unknown) {
   return error instanceof Error ? error.message : JSON.stringify(error);
 }
 
+type Request = { id: string; halted: boolean; steered: boolean };
+
 export default Plugin.define({
   id: "compact",
   async setup(ctx) {
@@ -72,11 +80,16 @@ export default Plugin.define({
     const log = Effect.runForkWith(fiber.context);
     const fail = (what: string, error: unknown) =>
       log(Effect.logError(`compact: ${what} failed`, { error: explain(error) }));
-    const guard = (what: string, work: Promise<unknown>) => work.catch((error: unknown) => fail(what, error));
+    const guard = <T>(what: string, work: Promise<T>, fallback?: T) =>
+      work.catch((error: unknown) => {
+        fail(what, error);
+        return fallback;
+      });
 
     const tokens = new Map<string, number>();
     const primaries = new Map<string, Promise<boolean>>();
     const compacting = new Set<string>();
+    const requests = new Map<string, Request>();
 
     const primary = (sessionID: string) => {
       let known = primaries.get(sessionID);
@@ -87,6 +100,9 @@ export default Plugin.define({
       }
       return known;
     };
+
+    const mine = (location?: { directory: string; workspaceID?: string }) =>
+      location?.directory === ctx.location.directory && location.workspaceID === ctx.location.workspaceID;
 
     const scan = async (prefix: string, after?: string): Promise<{ key: string; value: unknown }[]> => {
       const page = await ctx.storage.scan({ prefix, after, limit: 1000 });
@@ -104,31 +120,38 @@ export default Plugin.define({
 
     const sweep = async (sessionID: string) => {
       const entries = await stored(sessionID);
-      if (entries.length === 0) return [];
+      if (entries.length === 0) return;
       const compactions = (await ctx.session.context({ sessionID })).filter((message) => message.type === "compaction");
-      const done = entries.flatMap((entry) => {
+      const done = entries.filter((entry) => {
         const own = compactions.find((message) => message.id === entry.inbox);
         const later = compactions.some(
           (message) => message.reason === "manual" && message.status === "completed" && message.id > entry.inbox,
         );
-        if (!later && (!own || own.status === "running")) return [];
-        return [{ ...entry, completed: own?.status === "completed" }];
+        return later || (own !== undefined && own.status !== "running");
       });
       await forget(done.map((entry) => entry.key));
-      return done;
     };
 
-    const halt = async (sessionID: string) =>
-      Promise.all(
-        (await stored(sessionID)).map((entry) => ctx.storage.set(entry.key, { ...entry.value, halted: true })),
-      );
-
-    const resume = async (sessionID: string, since: number) => {
-      await ctx.session.wait({ sessionID });
-      const session = await ctx.session.get({ sessionID });
-      if (session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
-      if (!(await ctx.rpc(drive).state({ sessionID })).armed) return;
-      await ctx.session.synthetic({ sessionID, text: CONTINUE, delivery: "queue" });
+    const resume = async (sessionID: string, request: Request, since: number) => {
+      try {
+        if (!(await primary(sessionID))) return;
+        await ctx.session.wait({ sessionID });
+        const session = await ctx.session.get({ sessionID });
+        if (request.halted || session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
+        const armed = await guard(
+          "drive state",
+          ctx
+            .rpc(drive)
+            .state({ sessionID })
+            .then((state) => state.armed),
+          false,
+        );
+        const [marker, ...after] = await ctx.session.context({ sessionID });
+        if (marker?.id !== request.id || request.steered || after.some((message) => message.type === "user")) return;
+        await ctx.session.synthetic({ sessionID, text: armed ? DRIVE : RECOMMENDED, delivery: "queue" });
+      } finally {
+        if (requests.get(sessionID) === request) requests.delete(sessionID);
+      }
     };
 
     const reconcile = async () => {
@@ -203,47 +226,74 @@ export default Plugin.define({
       );
     };
 
+    const track = async (event: OpenCodeEvent) => {
+      if (event.type === "session.deleted") {
+        tokens.delete(event.data.sessionID);
+        compacting.delete(event.data.sessionID);
+        primaries.delete(event.data.sessionID);
+        requests.delete(event.data.sessionID);
+        await guard(
+          "clear brief",
+          stored(event.data.sessionID).then((entries) => forget(entries.map((entry) => entry.key))),
+        );
+      }
+      if (event.type === "session.inbox.enqueued") {
+        const { sessionID, inboxID, item } = event.data;
+        if (item.type === "compaction") requests.set(sessionID, { id: inboxID, halted: false, steered: false });
+        const request = requests.get(sessionID);
+        if (item.type === "user" && request) request.steered = true;
+      }
+      if (event.type === "session.inbox.cancelled") {
+        const { sessionID, inboxID } = event.data;
+        if (requests.get(sessionID)?.id === inboxID) requests.delete(sessionID);
+        await guard("clear brief", ctx.storage.remove(key(sessionID, inboxID)));
+      }
+      const halted =
+        event.type === "session.execution.failed" ||
+        (event.type === "session.execution.interrupted" && event.data.reason !== "shutdown");
+      const request = halted ? requests.get(event.data.sessionID) : undefined;
+      if (request) request.halted = true;
+    };
+
+    const act = async (event: OpenCodeEvent) => {
+      if (event.type === "session.step.ended") {
+        const { sessionID } = event.data;
+        const { input, output, reasoning, cache } = event.data.tokens;
+        const total = input + output + reasoning + cache.read + cache.write;
+        tokens.set(sessionID, total);
+        cap(sessionID, total);
+      }
+      if (event.type === "session.compaction.started") {
+        const { sessionID } = event.data;
+        const id = event.data.inputID ?? SessionMessage.ID.fromEvent(Event.ID.make(event.id));
+        const prior = requests.get(sessionID);
+        requests.set(
+          sessionID,
+          prior?.id === id ? { ...prior, steered: false } : { id, halted: false, steered: false },
+        );
+        compacting.add(sessionID);
+      }
+      if (event.type === "session.compaction.ended") {
+        const { sessionID } = event.data;
+        tokens.delete(sessionID);
+        compacting.delete(sessionID);
+        await guard("clear brief", sweep(sessionID));
+        const request = requests.get(sessionID);
+        if (request) void guard("follow up after compaction", resume(sessionID, request, event.created));
+      }
+      if (event.type === "session.compaction.failed") {
+        const { sessionID, inputID } = event.data;
+        requests.delete(sessionID);
+        if (inputID) await guard("clear brief", ctx.storage.remove(key(sessionID, inputID)));
+      }
+    };
+
     const controller = new AbortController();
     const watch = async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
-        if (event.type === "session.step.ended") {
-          const { sessionID } = event.data;
-          const { input, output, reasoning, cache } = event.data.tokens;
-          const total = input + output + reasoning + cache.read + cache.write;
-          tokens.set(sessionID, total);
-          cap(sessionID, total);
-        }
-        if (event.type === "session.compaction.started") compacting.add(event.data.sessionID);
-        if (
-          event.type === "session.execution.failed" ||
-          (event.type === "session.execution.interrupted" && event.data.reason !== "shutdown")
-        )
-          await guard("halt continuation", halt(event.data.sessionID));
-        if (event.type === "session.compaction.ended") {
-          const { sessionID } = event.data;
-          tokens.delete(sessionID);
-          compacting.delete(sessionID);
-          if (event.data.reason !== "manual") continue;
-          const done = await sweep(sessionID).catch((error: unknown) => {
-            fail("clear brief", error);
-            return [];
-          });
-          if (done.some((entry) => entry.completed && !entry.value.halted))
-            void guard("continue after compaction", resume(sessionID, event.created));
-        }
-        if (event.type === "session.compaction.failed" && event.data.inputID)
-          await guard("clear brief", ctx.storage.remove(key(event.data.sessionID, event.data.inputID)));
-        if (event.type === "session.inbox.cancelled")
-          await guard("clear brief", ctx.storage.remove(key(event.data.sessionID, event.data.inboxID)));
-        if (event.type === "session.deleted") {
-          tokens.delete(event.data.sessionID);
-          compacting.delete(event.data.sessionID);
-          primaries.delete(event.data.sessionID);
-          await guard(
-            "clear brief",
-            stored(event.data.sessionID).then((entries) => forget(entries.map((entry) => entry.key))),
-          );
-        }
+        // Inbox and execution events can lack a location; filtering them would bypass follow-up suppression.
+        await track(event);
+        if (mine(event.location)) await act(event);
       }
     };
     watch().catch((error: unknown) => {

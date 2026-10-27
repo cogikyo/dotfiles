@@ -47,20 +47,16 @@ Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~
 
 ## Compact
 
-`compact/server.ts` exposes `compact` with `brief` and `reason`; `delivery: "queue"` runs compaction after the current turn, then the session waits for the user.
-V2 gives plugins no permission-ask path, so the agent offers compaction with the `question` tool and calls `compact` once the user approves; in an armed drive run, commit finished work, then compact without asking.
-When a compaction this tool queued completes and the `drive` RPC reports the tree armed, the plugin queues a synthetic "Continue the armed drive run from the handoff brief." so the run does not stall.
-It does not continue when the compaction fails or is cancelled, when the session was interrupted (except by shutdown) or failed between the tool call and compaction, or when the execution that ran the compaction ends without `succeeded`.
-The `context` hook nudges root sessions at 150K and 250K tokens; both nudges allow compaction only after a commit lands or a task is done, never mid-task.
-Tokens are the last step's `input + output + reasoning + cache.read + cache.write`, the measure native compaction and the statusline use; V2 reports `input` without cached tokens.
-At or above 300K tokens, `session.step.ended` triggers root-only compaction with `delivery: "steer"` once per crossing.
-It runs at the next step boundary and continues the turn without creating a handoff brief or triggering drive resume.
+`compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn with a handoff brief for the summary.
+Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval; armed drive runs commit finished work and compact without asking.
+At 300K tokens, it requests root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
+Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
-The `compaction` hook adds summary rules for user wording, approvals, remaining work, and path ownership, plus the stored handoff brief.
-Child summaries also preserve the delegate brief's objective, scope, limits, and checks.
-Each brief lives in plugin storage at `pending/<sessionID>/<inboxID>`, so settling one compaction never touches a newer brief; the hook uses the newest.
-A brief is removed when its compaction fails or is cancelled, the session is deleted, or a manual compaction completes and session context shows its own compaction finished or a newer manual one completed; automatic compactions leave it in place.
-At startup the plugin applies the same check to every stored brief, because terminal events missed while the server was down are not replayed.
+After root compaction from any trigger, the plugin waits for a successful idle session and queues a synthetic `recommended` follow-up.
+If drive is confirmed armed, the follow-up instead asks the agent to restate, decide open items, and continue in the same turn; a drive lookup failure uses the normal follow-up.
+User input, including queued input, suppresses the follow-up, as does a superseding compaction or a failure or non-shutdown interruption between the compaction request and idle.
+
+Summary instructions cover user wording, approvals, remaining work, file ownership, and stored handoff briefs, plus the delegate's objective, scope, limits, and checks for child sessions.
 
 ## Usage
 
