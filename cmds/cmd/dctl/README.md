@@ -816,6 +816,74 @@ These checks do not prove public DNS propagation or prevent all concurrent chang
 - Failed mutation/readback can mean the change succeeded despite a nonzero exit.
   - Inspect `list` before retrying; there is no automatic retry or rollback.
 
+## Cloudflare sites
+
+`dctl cloudflare` previews changes that make Cloudflare match `~/cogikyo/cogikyo/vagarios/sites.toml`.
+`apply` writes the tunnel ingress, proxied DNS CNAMEs and WAF block rules, then verifies API readback.
+Run as your normal user, without sudo.
+
+```sh
+dctl cloudflare
+dctl cloudflare plan --sites /path/to/sites.toml
+dctl cloudflare apply
+dctl --yes --json cloudflare apply
+```
+
+- **`plan` is the default** and sends only GET requests.
+- `--sites PATH` selects a different sites file for either command.
+- `apply` asks for consent on a TTY; JSON/non-TTY use requires global `--yes`.
+
+### Sites file and ownership
+
+The [sites loader](../../internal/dctl/cloudflare/sites_linux.go) owns the format: a tunnel name, named `[allow]` lists, `[zone."name"]` defaults and ordered `[[site]]` entries with origins and optional `[[site.route]]` path rules.
+IDs are resolved through the API; the account ID comes from the zones list.
+Origins use `http`, `https` or `ssh` with an IPv4 host and port; `noTLSVerify` applies only to HTTPS.
+
+A site's `allow` overrides its zone default; `public` means no restriction.
+A declared apex site defaults to public, but an undeclared apex keeps the zone default.
+Missing access policy is a load error; a non-public site needs a `[zone]` table so dctl can write its WAF rule.
+
+- **Tunnel:** Replaces the whole ingress in file order: each site's routes, its origin, then one final 404.
+  - The PUT can drop other tunnel config keys; the preview lists them.
+- **DNS:** Creates one proxied CNAME per site pointing at this tunnel.
+  - Deletes only CNAMEs targeting this tunnel that are absent from the file.
+  - A conflicting record stops the plan; dctl overwrites nothing.
+- **WAF:** Writes one block rule per non-public effective allowlist in each declared zone.
+  - Owns refs prefixed `dctl-allow-` and replaces the legacy `vagarios-allowlist` rule.
+  - Keeps other rules unchanged and in order; exceeding Free's five-rule limit stops the plan.
+
+Nix reads the same file only to derive cloudflared's origin egress holes on edge.
+It does not publish the sites' ingress.
+
+### Token and age recovery
+
+The token is data in `~/.local/share/dotfiles/cloudflare.env`, a user-owned regular file with mode `0600`; symlinks are refused.
+Use one unquoted assignment, with no blanks, comments or shell expressions:
+
+```text
+CLOUDFLARE_API_TOKEN=value
+```
+
+The manifest entry is `cloudflare.env:~/.local/share/dotfiles/cloudflare.env:600`.
+`dctl secrets sync` seals it as an age secret; `dctl secrets decrypt cloudflare.env` restores it.
+It is non-staged, so setup can restore it when missing, as with [Porkbun credentials](#credentials).
+Agent read/edit deny rules protect the plaintext file as they do `porkbun.env`.
+
+The account-owned token `costello-dctl` has no expiry and is IP-filtered to home (`50.173.27.178`) and Trend VPN (`50.232.1.98`) as of 2026-10-27.
+For this slice, the relevant grants are Cloudflare Tunnel Write, Zone Read, DNS Write and Zone WAF Write.
+The command reads the plaintext token; it does not unlock age itself.
+
+### Apply safety and edge checks
+
+Apply rechecks the preview after consent, then sends WAF additions, tunnel ingress, DNS additions, DNS removals and WAF removals.
+Changed block expressions cover the old or new policy first, then narrow after DNS changes, so a hostname is not published without its block rule.
+On a failed mutation or readback, run `dctl cloudflare plan` before retrying; there is no automatic retry or rollback.
+Readback proves API state, not that edge loaded the ingress or that a site responds.
+
+After an ingress change, check edge's cloudflared unit journal for `Updated to new configuration`; restart that unit if the message is absent.
+The 2026-10-27 cutover needed one restart; later live pushes remain untested.
+An edge deploy that restarted cloudflared cut the tunnel for about 31 s because cloudflared waits a 30 s stop grace period.
+
 ## Repos
 
 Repository management runs through setup and update, with no standalone repos command.
