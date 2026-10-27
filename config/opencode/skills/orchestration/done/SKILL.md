@@ -1,6 +1,6 @@
 ---
 name: done
-description: Use when the user invokes /done or asks to finish and close the current session; Collab runs comments, commits, and a qualifying live retro, then closes finished lanes and marks the session closed.
+description: Use when the user invokes /done or asks to finish and close the current session; Collab runs comments, commits, and a qualifying live retro, then closes finished lanes and tags the session.
 ---
 
 # Done
@@ -32,15 +32,29 @@ When nothing qualifies, say so in one line.
 ## Close
 
 Close without asking; `/done` already says the user wants the session closed.
-Ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without renaming.
+Ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without tagging.
 Load `clear-lanes` and close finished lanes under its judgment.
-Read `$OPENCODE_SESSION_ID` from the shell, then call `sessions` with `query: "sql"`, `sql: "SELECT title FROM session_v2 WHERE id = ?"`, and the ID bound in `params`.
-Call `tools.opencode.session_rename({ title })` through `execute` with `[CLOSED] <current title>`, omitting `sessionID` for the current session.
-Never add a second `[CLOSED] ` prefix.
+Choose the state and flags below, then call `tools.opencode.session_tag` through `execute`, omitting `sessionID`.
 
-`[CLOSED]` means this session's work is committed and its retro was judged or run.
-Later `/improve` runs scan it but send it no retro leaf, and auto-retitle leaves its title alone.
+## Tags
+
+Choose one state and any flags without asking; pass the names below in lowercase as `state` and `flags`.
+Pass all applicable flags, including existing ones that still apply, because the tool replaces them except for `REFUSALS`.
+
+Pick the state by outcome:
+
+- `CLOSED`: the session's work landed.
+- `ARCHIVED`: the session was shelved and nothing landed.
+- `RESEARCH`: the session's result is findings rather than changes.
+
+Add each flag that applies:
+
+- `FIX`: the work repaired a bug or regression.
+- `ISSUES`: the session hit friction the retro did not resolve.
+- `REVIEWME`: landed work deserves a later look, such as a risky or unreviewed change.
+- `TODO`: follow-up work remains.
+- `REFUSALS`: the session's content made a model stop or refuse; this excludes its history from agents' `sessions` queries.
 
 ## Report
 
-Report commit OIDs, retro outcome, dirty state left, and whether the session closed.
+Report commit OIDs, retro outcome, dirty state left, and the tag written.

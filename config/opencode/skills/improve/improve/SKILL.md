@@ -30,6 +30,8 @@ Select top-level sessions only (`parent_id IS NULL`) and exclude the current ses
 Use `list` for exact-directory selection; prefix selection needs `sql` because `list.directory` is exact.
 For prefix selection, match the project path itself or paths beginning with that path plus `/`.
 Report the sampled top-level count and oldest-to-newest `time_updated` span once, disclosing any truncation without claiming full coverage.
+Report any store-wide hidden count from `sessions` as a coverage gap, not a count for the selected window or project.
+Do not try to reach `REFUSALS`-hidden sessions another way.
 
 ### Triage
 
@@ -43,7 +45,7 @@ When evidence is spread thin across many sessions, such as one small correction 
 
 ### Fan out
 
-Sessions whose title starts with `[CLOSED] ` stay in triage but never get a retro leaf because `/done` already judged or ran their retro.
+Keep state-tagged sessions eligible; prioritize visible sessions flagged `REVIEWME` or `ISSUES`.
 Run one background `scout/session` leaf per selected session, in parallel.
 Tell each leaf to load `retro` in past mode for its session and children, supplying the ID, focus, triage evidence, and papercuts diagnosis.
 Require read-only findings marked unconfirmed, each with a question the user would need to answer.
@@ -56,6 +58,16 @@ Promote findings that recur across independent sessions using epistemology's evi
 Ask the leaves' open questions one or two at a time and hold the rest; discard single-session findings unless the user confirms the reusable lesson.
 State problems and their evidence without proposing fixes.
 End Find with a confirmed problem list.
+
+### Tag
+
+Invoking `/improve` approves only the tag writes below; other writes need separate approval.
+Read the Tags section in `../../orchestration/done/SKILL.md` before choosing states or flags.
+Tag each untagged sampled session last updated more than a day ago.
+For sessions with a state, keep that state and existing flags, adding flags the evidence supports.
+Leave flags-only tags unchanged, because `session_tag` requires a state and would close the session.
+Leave a session untagged when the evidence cannot pick its state.
+Call `tools.opencode.session_tag` through `execute` with `sessionID`, lowercase `state`, and the full `flags` list; report every tag written.
 
 ## Solve
 
