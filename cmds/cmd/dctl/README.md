@@ -147,7 +147,7 @@ For non-lock stages, each need pulls in its own needs only when it is not OK, re
 
 - Omit stage names to show the full plan and apply pending work.
 - Name stages to redo them.
-- Use `--from <name>` to redo that stage and later ones; optional stages need names.
+- Use `--from <name>` to redo that stage and later ones; `vpn` must be named.
 - Lock stages whose checks pass show OK and are not redone, even when named or reached by `--from`.
 - Use `--yes` to accept the plan; rerun without it for lock work.
   - Without a terminal, the plan prompt requires `--yes`.
@@ -157,7 +157,7 @@ For non-lock stages, each need pulls in its own needs only when it is not OK, re
 ### Stages and prerequisites
 
 Required phase-1 stages run in the table's order, from machine through certs.
-The optional stages do not gate security enrollment.
+The optional `vpn` stage does not gate security enrollment.
 
 | Stage      | Needs                       | Work                              |
 | ---------- | --------------------------- | --------------------------------- |
@@ -173,7 +173,6 @@ The optional stages do not gate security enrollment.
 | repos      | ssh                         | Clone and fetch history           |
 | firefox    | packages                    | Profile and config                |
 | certs      | firefox                     | Local CA and certificates         |
-| tailscale  | network                     | Optional login and SSH            |
 | vpn        | secrets                     | Optional work VPN                 |
 | luks       | All required phase-1 stages | Profile's 0–2 keys and recovery   |
 | secureboot | luks                        | Keys and boot signatures          |
@@ -187,7 +186,7 @@ It checks units in its `running` list, currently only `sshd.service`, and starts
 - Consecutive root stages share one sudo child; user stages stay in your session.
   - When sudo needs authentication, setup explains which stages it will check or run as root and prompts with `dctl: sudo password for <user>:`.
   - If no terminal can ask for the sudo password and no cached authentication is available, the stage fails with a message to run the named stages in a terminal.
-- Root runs `machine`, `system`, `packages`, `tailscale`, `luks`, `secureboot`, and `totp`.
+- Root runs `machine`, `system`, `packages`, `luks`, `secureboot`, and `totp`.
 - `certs` uses sudo from the user session; user stages refuse root execution.
 
 ### Machine profile
@@ -296,19 +295,16 @@ Missing AUR and local base packages need manual installation.
 
 > _See [Package reconciliation](#package-reconciliation) for interactive selection._
 
-### Optional networking
+### Work VPN
 
-Tailscale and work VPN setup run only when named.
+Work VPN setup runs only when named.
 
 ```sh
-dctl setup tailscale
 dctl setup vpn
 ```
 
-- Tailscale login shows a QR code; scan with a phone logged in to Tailscale.
-  - No browser opens; an existing connection only needs SSH enabled.
-- VPN profiles come from `cmds/config/hyprd.yaml` and staged secrets.
-  - Imports use hyprd; newly staged plaintext is removed even after failure.
+VPN profiles come from `cmds/config/hyprd.yaml` and staged secrets.
+Imports use hyprd; newly staged plaintext is removed even after failure.
 
 ### Lock confirmation and root execution
 

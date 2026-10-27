@@ -26,7 +26,6 @@ import (
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ssh"
 	"dotfiles/cmds/internal/dctl/system"
-	"dotfiles/cmds/internal/dctl/tailscale"
 	"dotfiles/cmds/internal/dctl/vpn"
 	"dotfiles/cmds/internal/ui"
 )
@@ -66,8 +65,7 @@ Examples:
   dctl setup
   dctl setup --status
   dctl setup repos
-  dctl setup --from firefox
-  dctl setup tailscale`
+  dctl setup --from firefox`
 }
 
 // catalog lists stages in execution order; Needs must name earlier stages, and consecutive root stages share one sudo child.
@@ -106,7 +104,6 @@ func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 		stage(repos.Stage(root, run), "clone your repos", "ssh"),
 		stage(home.Firefox(root, run), "profile and config", "packages"),
 		trust,
-		optional(tailscale.Stage(run), "login and SSH access", "network"),
 		optional(vpn.Stage(u, root, run), "import the work VPN", "secrets"),
 	}
 	var phase []string

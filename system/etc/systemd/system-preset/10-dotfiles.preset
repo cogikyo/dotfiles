@@ -11,5 +11,4 @@ enable snapper-timeline.timer
 enable sshd.service
 enable systemd-resolved.service
 enable systemd-timesyncd.service
-enable tailscaled.service
 enable tuned.service

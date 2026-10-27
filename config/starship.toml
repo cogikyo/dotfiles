@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ ${custom.hostname_abbott}${custom.hostname_costello}${custom.hostname_neumann}${custom.hostname_other}${custom.vpn}${custom.tailscale} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
+[╭╼╾ $sudo$username ╼╾ ${custom.hostname_abbott}${custom.hostname_costello}${custom.hostname_neumann}${custom.hostname_other}${custom.vpn} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
@@ -160,13 +160,6 @@ command = "nmcli -t -f TYPE,NAME connection show --active | while IFS=: read -r 
 symbol = "󰖂 "
 style = "cy2_3"
 format = "[ ╼╾](blu_2) [$symbol$output]($style)"
-
-[custom.tailscale]
-when = "tailscale status --json | jq -e '.BackendState == \"Running\"' >/dev/null"
-command = "tailscale status --json | jq -r '.CurrentTailnet.Name as $name | ([.Peer[] | select(.Online == true and (.ShareeNode != true))] | length) as $n | (if (.Self.Capabilities // [] | index(\"funnel\")) then \"󰼸\" else \"󱁉\" end) as $symbol | if $n > 0 then \"\\($symbol) \\($name) \\($n)\" else \"\\($symbol) \\($name)\" end'"
-style = "pnk_3"
-symbol = ""
-format = "[ ╼╾](blu_2) [$output]($style)"
 
 
 [custom.golang]

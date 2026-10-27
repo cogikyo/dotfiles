@@ -58,7 +58,6 @@ networkmanager-l2tp
 nmap
 openbsd-netcat
 socat
-tailscale
 tigervnc
 wget
 whois
