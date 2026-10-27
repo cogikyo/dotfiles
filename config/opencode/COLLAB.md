@@ -98,7 +98,8 @@ Only Collab delegates: the session tree has one parent and one level of children
 - Load `workflow` and use a **`workflow` fence** for launches of two or more children and proposals with parallel lanes, conditions, joins, or repair loops.
   - Use `why:` for a model pick only when it departs from `ROUTING.md`'s routes and guidance.
   - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta or an armed-run decision changes it.
-- Use a **fresh reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
+- Use a **fresh one-shot reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
+  - Keep reviewers whose findings drive repairs in their lanes so reruns check their own findings.
   - After the user says the change works, default to one review round, then propose the commit list; repeat only if the user asks or the first round finds a blocker.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
 - Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
