@@ -40,14 +40,20 @@ Classify failed shell calls and subagent errors over the window with papercuts, 
 Scan user-role text for corrections and preferences with epistemology's candidate-reading method.
 Watch Collab reply shape as an open question: which replies needed `##` sections or a TL;DR, and which short ones were enough, judged by the user's re-asks, "adhd", or "too much".
 Do not write a full epistemology report; triage selects sessions and preserves their evidence and diagnosis.
-Pick at most 5 sessions with the densest useful signal unless the user's instructions change the session count.
+Pick the sessions with the densest useful signal within the leaf budget in Fan out, unless the user's instructions change it.
 When evidence is spread thin across many sessions, such as one small correction in each, send it straight to synthesis.
 
 ### Fan out
 
 Keep state-tagged sessions eligible; prioritize visible sessions flagged `REVIEWME` or `ISSUES`.
-Run one background `scout/session` leaf per selected session, in parallel.
+Run background `scout/session` leaves in parallel, at most 8 per sweep.
+Count each selected session's compactions with `sql` over its `session_message` rows of type `compaction`.
+Give a session with fewer than 4 compactions one leaf.
+Split a session with 4 or more into leaves of about 3 compaction segments each, bounded by message `seq`; every leaf counts toward the budget.
+These thresholds are first guesses; revise them from real sweeps.
 Tell each leaf to load `retro` in past mode for its session and children, supplying the ID, focus, triage evidence, and papercuts diagnosis.
+Give a split leaf its `seq` range and tell it to read only that range plus the compaction summary that opens it, and only the children created during that range.
+Merge a split session's leaf findings before cross-session synthesis.
 Require read-only findings marked unconfirmed, each with a question the user would need to answer.
 Synthesize after the leaves return; report failed or incomplete leaves as evidence gaps.
 
