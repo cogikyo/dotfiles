@@ -1,6 +1,6 @@
 import path from "node:path";
 import { located, temp, within } from "./paths.ts";
-import { type Command, launches } from "./shell.ts";
+import { type Command, flags, launches } from "./shell.ts";
 
 export function readOnly(agent: string | undefined) {
   if (!agent) return false;
@@ -50,11 +50,23 @@ function removal([, ...args]: Command) {
   return targets.length > 0 && targets.every(removable);
 }
 
+function collected(command: Command) {
+  return flags(command).some(
+    ({ flag, value }) =>
+      flag === "G" ||
+      flag === "collect" ||
+      ((flag === "p" || flag === "property") && value?.startsWith("CollectMode=")),
+  );
+}
+
 export function denial(resource: string, agent: string | undefined) {
   const commands = launches(resource);
   // Cage already confines read-only deletion to scratch tmp/ and cache/.
   if (!readOnly(agent) && commands.some((command) => command[0] === "rm" && !removal(command))) {
     return `rm takes only literal absolute paths inside ${temp}/, without variables, \`..\`, a trailing slash, or a top-level glob; move anything else to trash with \`trash -- <path>\``;
+  }
+  if (commands.some((command) => command[0] === "systemd-run" && !collected(command))) {
+    return "systemd-run must pass `--collect` (`-G`), since a failed unit otherwise stays loaded and hyprd health reports it; when a test needs the failed unit to stay, pass `-p CollectMode=inactive` instead";
   }
   if (commands.some(([name]) => name === "grok")) return "grok is disabled in the shell; use the `x` tool for X search";
   if (commands.some(([name, ...args]) => (name === "opencode" || name === "opencode-v2") && args.includes("api"))) {

@@ -29,6 +29,39 @@ const wrappers: Record<string, Spec> = {
     short: "ugCDhprtUR",
     long: ["user", "group", "close-from", "chdir", "host", "prompt", "role", "type", "other-user", "chroot"],
   },
+  "systemd-run": {
+    short: "HMCupE",
+    long: [
+      "host",
+      "machine",
+      "capsule",
+      "unit",
+      "property",
+      "description",
+      "slice",
+      "expand-environment",
+      "service-type",
+      "uid",
+      "gid",
+      "nice",
+      "working-directory",
+      "root-directory",
+      "setenv",
+      "output",
+      "json",
+      "job-mode",
+      "background",
+      "path-property",
+      "socket-property",
+      "on-active",
+      "on-boot",
+      "on-startup",
+      "on-unit-active",
+      "on-unit-inactive",
+      "on-calendar",
+      "timer-property",
+    ],
+  },
   xargs: {
     short: "adEILnPs",
     long: ["arg-file", "delimiter", "max-args", "max-procs", "max-chars", "process-slot-var"],
@@ -39,6 +72,11 @@ export function launches(source: string, depth = 0): Command[] {
   if (depth > maxDepth) return [];
   const { segments, subs } = new Lexer(unheredoc(source)).run();
   return [...subs.flatMap((sub) => launches(sub, depth + 1)), ...segments.flatMap((words) => peel(words, depth + 1))];
+}
+
+export function flags([name, ...args]: Command) {
+  const spec = wrappers[name];
+  return spec ? options(args, 0, spec).found : [];
 }
 
 function unheredoc(source: string) {
