@@ -161,17 +161,12 @@ func (c *Client) Rezoom(incoming, outgoing string) error {
 	))
 }
 
-// Zoom floats active and parked at the same monocle size and offset.
-// Only parked windows move to workspace; active keeps its workspace.
+// Zoom floats all members but moves only parked windows to workspace.
 func (c *Client) Zoom(active string, parked []Window, workspace string, size, offset [2]int) error {
 	var b strings.Builder
-	box := func(w string) {
-		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.center({ window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, relative = true, window = %s })); `,
-			size[0], size[1], w, w, offset[0], offset[1], w)
-	}
 	a := luaQuote(windowAddress(active))
 	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); `, a)
-	box(a)
+	writeBox(&b, a, size, offset)
 	for _, p := range parked {
 		w := luaQuote(windowAddress(p.Address))
 		if !p.Floating {
@@ -179,10 +174,27 @@ func (c *Client) Zoom(active string, parked []Window, workspace string, size, of
 				w, p.Size[0], p.Size[1], w, p.At[0], p.At[1], w)
 		}
 		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); `, luaQuote(workspace), w)
-		box(w)
+		writeBox(&b, w, size, offset)
 	}
 	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, a)
 	return c.eval("Zoom", b.String())
+}
+
+// Rebox applies Zoom's geometry without changing workspace or focus.
+func (c *Client) Rebox(addresses []string, size, offset [2]int) error {
+	if len(addresses) == 0 {
+		return nil
+	}
+	var b strings.Builder
+	for _, addr := range addresses {
+		writeBox(&b, luaQuote(windowAddress(addr)), size, offset)
+	}
+	return c.eval("Rebox", b.String())
+}
+
+func writeBox(b *strings.Builder, w string, size, offset [2]int) {
+	fmt.Fprintf(b, `hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.center({ window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, relative = true, window = %s })); `,
+		size[0], size[1], w, w, offset[0], offset[1], w)
 }
 
 // Unzoom moves each supplied address to workspace and tiles it in order, then focuses zoomed.
@@ -218,12 +230,16 @@ func (c *Client) ResizeWindowExact(address string, w, h int) error {
 	))
 }
 
-// CenterWindow centers the addressed window.
-func (c *Client) CenterWindow(address string) error {
-	return c.eval("CenterWindow", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.window.center({ window = %s }))",
-		luaQuote(windowAddress(address)),
-	))
+// CenterWindows centers each window on its own monitor.
+func (c *Client) CenterWindows(addresses ...string) error {
+	if len(addresses) == 0 {
+		return nil
+	}
+	var b strings.Builder
+	for _, addr := range addresses {
+		fmt.Fprintf(&b, "hl.dispatch(hl.dsp.window.center({ window = %s })); ", luaQuote(windowAddress(addr)))
+	}
+	return c.eval("CenterWindows", b.String())
 }
 
 // ToggleFloatActive toggles floating on the active window.

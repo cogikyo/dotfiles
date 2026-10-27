@@ -75,6 +75,7 @@ type Window struct {
 	At             [2]int `json:"at"`
 	Size           [2]int `json:"size"`
 	Workspace      WsRef  `json:"workspace"`
+	Monitor        int    `json:"monitor"`
 	Floating       bool   `json:"floating"`
 	Pinned         bool   `json:"pinned"`
 	Class          string `json:"class"`

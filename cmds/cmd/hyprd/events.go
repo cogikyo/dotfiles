@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -28,7 +29,13 @@ type EventLoop struct {
 	accent          *Accent
 	done            <-chan struct{}
 	browserQAPlaced map[string]bool
+	settle          *time.Timer
 }
+
+const (
+	displaySettle   = time.Second
+	fallbackMonitor = "FALLBACK"
+)
 
 func NewEventLoop(hypr *hypr.Client, state *state.State, share *session.Share, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
@@ -190,11 +197,16 @@ func (e *EventLoop) handleEvent(line string) {
 		e.state.LockLayout()
 		e.reseedSplit()
 		e.refit()
+		e.refitMonocle()
 		e.state.UnlockLayout()
 		e.syncDisplay()
 
 	case "monitoraddedv2", "monitorremoved":
 		e.syncDisplay()
+		e.armSettle()
+
+	case "monitorremovedv2":
+		e.armSettle()
 
 	case "createworkspace", "destroyworkspace":
 		e.refreshClients()
@@ -371,6 +383,44 @@ func (e *EventLoop) refit() {
 	if err := windows.RefitAll(e.hypr, e.state); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd refit: %v\n", err)
 	}
+}
+
+func (e *EventLoop) refitMonocle() {
+	if err := wm.NewMonocle(e.hypr, e.state).Refit(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd refit: %v\n", err)
+	}
+}
+
+// armSettle uses a heuristic delay; Hyprland has no settled event.
+func (e *EventLoop) armSettle() {
+	if e.settle == nil {
+		e.settle = time.AfterFunc(displaySettle, e.settled)
+		return
+	}
+	e.settle.Reset(displaySettle)
+}
+
+func (e *EventLoop) settled() {
+	select {
+	case <-e.done:
+		return
+	default:
+	}
+	monitors, err := e.hypr.Monitors()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd settle: %v\n", err)
+		return
+	}
+	if len(monitors) == 0 || slices.ContainsFunc(monitors, func(m hypr.Monitor) bool { return m.Name == fallbackMonitor }) {
+		return
+	}
+	e.state.LockLayout()
+	e.refitMonocle()
+	e.refit()
+	if err := windows.Recenter(e.hypr, e.state); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd recenter: %v\n", err)
+	}
+	e.state.UnlockLayout()
 }
 
 func (e *EventLoop) refitWorkspace(ws int) {

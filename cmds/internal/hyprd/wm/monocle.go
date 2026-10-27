@@ -180,6 +180,39 @@ func (m *Monocle) Closed(address string) error {
 	return nil
 }
 
+// Refit updates monocle geometry without changing state.
+func (m *Monocle) Refit() error {
+	all := m.state.AllMonocle()
+	if len(all) == 0 {
+		return nil
+	}
+	clients, err := m.hypr.Clients()
+	if err != nil {
+		return err
+	}
+	w, h, err := windows.MonocleSize(m.hypr, m.state)
+	if err != nil {
+		return fmt.Errorf("monocle size: %w", err)
+	}
+	offset := m.state.Profile().Monocle
+	var members []string
+	for wsID, ms := range all {
+		for _, addr := range ms.Order {
+			c := windows.Find(clients, addr)
+			if c == nil || !c.Floating {
+				continue
+			}
+			if addr == ms.Focused && c.Workspace.ID == wsID || addr != ms.Focused && c.Workspace.Name == monoWorkspace(wsID) {
+				members = append(members, addr)
+			}
+		}
+	}
+	if err := m.hypr.Rebox(members, [2]int{w, h}, [2]int{offset.OffsetX, offset.OffsetY}); err != nil {
+		return fmt.Errorf("monocle refit: %w", err)
+	}
+	return nil
+}
+
 func (m *Monocle) current() (int, *state.MonocleState, error) {
 	wsID, err := m.hypr.ActiveWorkspace()
 	if err != nil {

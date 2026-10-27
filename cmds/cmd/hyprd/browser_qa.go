@@ -130,7 +130,7 @@ func (e *EventLoop) placeBrowserQA(window hypr.Window, workspace string, newAssi
 		changed = true
 	}
 	if changed || newAssignment {
-		if err := e.hypr.CenterWindow(window.Address); err != nil {
+		if err := e.hypr.CenterWindows(window.Address); err != nil {
 			return fmt.Errorf("center %s: %w", window.Address, err)
 		}
 	}

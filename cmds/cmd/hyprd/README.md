@@ -94,6 +94,7 @@ Its size uses the display profile's `monocle` fractions of the focused monitor's
 `hyprd swap` and `hyprd shadow` change roles without leaving monocle; `hyprd three-body <name>` and notification focus zoom an existing monocle member in place.
 The left/right focus keys (`hyprd cycle left|right`) cycle through the entry order without changing roles.
 Run monocle again to restore the tiled layout with the current master/shadow roles.
+After a monitor hotplug, hyprd re-places monocle windows and re-centers off-screen floats at their current size.
 
 ### Three-body & shadow
 
