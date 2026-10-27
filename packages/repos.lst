@@ -1,12 +1,14 @@
-# owner/repo             path
-cogikyo/dotfiles         ~/dotfiles
-cogikyo/otorama          ~/otorama
-cogikyo/harpoon          ~/cogikyo/harpoon
-cogikyo/cogikyo          ~/cogikyo/cogikyo
-cogikyo/vagari           ~/vagari/vagari
-cogikyo/vagari.nvim      ~/vagari/nvim
-cogikyo/vagari.firefox   ~/vagari/firefox
-cogikyo/cullyn.dev       ~/cogikyo/cullyn.dev
-cogikyo/hgmx-builder     ~/cogikyo/hgmx-builder
-cogikyo/hgmx             ~/cogikyo/hgmx
-cogikyo/kaizen           ~/cogikyo/kaizen
+# owner/repo                path
+cogikyo/dotfiles            ~/dotfiles
+cogikyo/otorama             ~/otorama
+cogikyo/harpoon             ~/cogikyo/harpoon
+cogikyo/cogikyo             ~/cogikyo/cogikyo
+cogikyo/vagari              ~/vagari/vagari
+cogikyo/vagari.nvim         ~/vagari/nvim
+cogikyo/vagari.firefox      ~/vagari/firefox
+cogikyo/cullyn.dev          ~/cogikyo/cullyn.dev
+cogikyo/cogikyo.com         ~/cogikyo/cogikyo.com
+cogikyo/alrodriguez.studio  ~/cogikyo/alrodriguez.studio
+cogikyo/hgmx.dev            ~/cogikyo/hgmx.dev
+cogikyo/hgmx                ~/cogikyo/hgmx
+cogikyo/kaizen              ~/cogikyo/kaizen
