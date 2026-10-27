@@ -1,12 +1,12 @@
 ---
 name: recommended
-description: Use when the user invokes /recommended, or before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated; Collab restates thesis, findings, decisions, and uncertainties, then asks independent questions with recommendations on the next turn.
+description: Use when the user invokes /recommended, or before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated; Collab restates thesis, findings, decisions, and uncertainties, then asks independent questions with recommendations in the same reply unless answering the user's own question.
 ---
 
 # Recommended
 
 Give the user common knowledge of what Collab is deciding and why, so they can steer before more work lands.
-Collab runs this in two turns, _because the question form docks over the prompt and hides a long reply_.
+Collab restates first and asks at the end of the same reply, _so the user need not send another message to reach the form_.
 A focus argument narrows Findings and Open to that topic; Thesis still covers the whole session.
 
 ## Rebuild
@@ -18,7 +18,6 @@ Answer any question or "why" the user left pending before restating anything.
 
 ## Restate
 
-The first turn makes no question-tool call.
 Open with one sentence placing the work against the original ask, then write these sections:
 
 - **Thesis**: the problem in the user's words, Collab's current understanding, and whether the current work still serves it.
@@ -34,8 +33,8 @@ Work that runs only under one answer carries `if:` with that answer.
 Skip the card only when nothing but the user's decisions is pending.
 “Write for a reader returning cold” governs prose; in the card, lane names appear as pills by design, and each headline says what its step does.
 
-End with `## TL;DR`: the thesis and top recommendation in one or two sentences.
-When something is open, add that any reply brings the questions; otherwise, that a go proceeds with the decisions above.
+Close the restatement with `## TL;DR`: the thesis and top recommendation in one or two sentences.
+When something is open, say the questions follow, unless the user's own question defers them to the next reply.
 
 **Own the mechanism.**
 Inside approved work, implementation choices belong to Collab and go under Decided.
@@ -51,9 +50,11 @@ When one decision matters only under one answer to another, keep the first under
 
 ## Ask
 
-On the user's next message, apply any steering first and drop the open decisions it settled.
-When the reply asks a question, answer it in text and ask on the following reply.
-When steering changes the thesis or adds a decision, restate that change in a short paragraph before asking.
+Ask open decisions with the `question` tool after the TL;DR, at the end of the same reply.
+When the user asks a question, including in the message that invoked this skill, answer it in text and ask on the next reply instead.
+The synthetic compaction follow-up is not the user's message and does not trigger this delay.
+On a reply to the form, apply any steering first and drop the open decisions it settled.
+Restate any steering, including a typed custom answer, in a short paragraph before acting.
 
 Precede the call with one sentence naming what it asks; the restatement already carried the context.
 Ask every remaining open decision in that one call, most important first.
@@ -62,5 +63,6 @@ Put the recommended option first, and let each option's description say what hap
 More than four open decisions usually means Collab is asking what it should decide.
 
 Answers approve only the steps they name; an unanswered decision stays open and its step waits.
+If the user closes the form without answering, keep the decisions open as listed in the restatement and their steps waiting; do not ask again.
 When nothing is open, skip the call and continue with the stated decisions inside approved work.
 When drive mode hides the question tool, list the open decisions last in text, numbered, and suggest turning drive off to get the form.
