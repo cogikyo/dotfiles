@@ -755,67 +755,6 @@ Token errors fall back to the passphrase or recovery-key prompt.
 - Dctl-enrolled tokens ask once for **LUKS2 token PIN**, plus touch when the key requires it.
 - The `luks` stage removes legacy `fido2-device=auto` boot options to restore fallback.
 
-## Porkbun DNS
-
-Porkbun commands change remote DNS records, not the machine's resolver.
-They require an explicit domain and refuse root/sudo execution.
-
-```sh
-dctl porkbun check <domain>
-dctl porkbun list <domain>
-dctl porkbun create <domain> <name> <type> <content>
-dctl porkbun edit <domain> <id> --content VALUE
-dctl porkbun delete <domain> <id>
-```
-
-### Credentials
-
-Credentials are read as data, never evaluated as shell code.
-Keep values out of shell history and editor backups.
-
-1. Create credentials in the [Porkbun dashboard](https://porkbun.com/account/api).
-2. Enable API access for the domain.
-3. Provision `~/.local/share/dotfiles/porkbun.env` as a user-owned regular file.
-   - Mode must be `0600`; symlinks are refused.
-   - Use exactly two unquoted assignments; no comments, blanks, or shell expressions:
-
-     ```text
-     PORKBUN_API_KEY=value
-     PORKBUN_API_SECRET_KEY=value
-     ```
-
-- Dctl does not decrypt credentials automatically.
-- Restore ciphertext-backed credentials with `dctl secrets decrypt porkbun.env`.
-
-### Record fields
-
-Use the domain's listed record IDs for edits and deletion.
-Edit preserves name, type, notes, and omitted TTL/priority fields.
-
-- Use lowercase ASCII/punycode domains, without scheme, path, or trailing dot.
-- Create relative lowercase subdomains; `@` or empty means the root.
-  - Quote wildcard names such as `'*'`.
-- Use positive decimal IDs, without signs or leading zeros.
-- Supported types are A, AAAA, CNAME, TXT, MX, SRV; content uses Porkbun's format.
-- Set `--ttl N` in seconds; omitted create TTL or zero uses the account minimum.
-- Set `--prio N` for MX/SRV only, 0–65535; create defaults to zero.
-- Duplicate name/type/content/priority is refused even if TTL differs.
-
-### Consent and uncertain outcomes
-
-Writes preview the change, recheck state after consent, and verify API readback.
-These checks do not prove public DNS propagation or prevent all concurrent changes.
-
-- TTY writes ask default **No**; global `--yes` grants consent.
-  - JSON/non-TTY writes require `--yes`; `--plain` still permits TTY consent.
-- `--dry-run` needs no consent.
-  - Create asks the provider to validate; edit/delete preview locally only.
-- `check` tests authentication, authority evidence, and a create dry-run.
-  - It does not prove live-write permission.
-- Provider warnings, missing authority evidence, or changed targets block writes.
-- Failed mutation/readback can mean the change succeeded despite a nonzero exit.
-  - Inspect `list` before retrying; there is no automatic retry or rollback.
-
 ## Cloudflare sites
 
 `dctl cloudflare` previews changes that make Cloudflare match `~/cogikyo/cogikyo/vagarios/sites.toml`.
@@ -866,8 +805,8 @@ CLOUDFLARE_API_TOKEN=value
 
 The manifest entry is `cloudflare.env:~/.local/share/dotfiles/cloudflare.env:600`.
 `dctl secrets sync` seals it as an age secret; `dctl secrets decrypt cloudflare.env` restores it.
-It is non-staged, so setup can restore it when missing, as with [Porkbun credentials](#credentials).
-Agent read/edit deny rules protect the plaintext file as they do `porkbun.env`.
+It is non-staged, so `dctl setup secrets` can restore it when missing after unlocking age, or fix its mode without replacing existing content.
+Agent read, edit and directory deny rules protect the plaintext file.
 
 The account-owned token `costello-dctl` has no expiry and is IP-filtered to home (`50.173.27.178`) and Trend VPN (`50.232.1.98`) as of 2026-10-27.
 For this slice, the relevant grants are Cloudflare Tunnel Write, Zone Read, DNS Write and Zone WAF Write.

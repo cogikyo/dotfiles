@@ -134,7 +134,6 @@
     { "action": "edit", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
-    { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/cloudflare.env*", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*", "effect": "deny" },
@@ -150,7 +149,6 @@
     { "action": "read", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
-    { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/cloudflare.env*", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.mozilla/firefox/**/cookies.sqlite*", "effect": "deny" },
@@ -171,7 +169,6 @@
     { "action": "external_directory", "resource": "/home/cullyn/.password-store/**", "effect": "deny" },
     { "action": "external_directory", "resource": "/home/cullyn/.local/share/keyrings/**", "effect": "deny" },
     { "action": "external_directory", "resource": "/home/cullyn/.local/.owm_api_key*", "effect": "deny" },
-    { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/porkbun.env*", "effect": "deny" },
     { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/cloudflare.env*", "effect": "deny" },
     { "action": "external_directory", "resource": "/home/cullyn/.local/share/dotfiles/vpn/**", "effect": "deny" },
     {

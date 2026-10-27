@@ -1,9 +1,6 @@
 package cli
 
-import (
-	"dotfiles/cmds/internal/dctl/cloudflare"
-	"dotfiles/cmds/internal/dctl/porkbun"
-)
+import "dotfiles/cmds/internal/dctl/cloudflare"
 
 type CLI struct {
 	JSON  bool `help:"Emit JSON results where supported."`
@@ -12,7 +9,6 @@ type CLI struct {
 
 	Install    InstallCmd     `cmd:"" help:"Erase a whole disk and install this machine from the dctl ISO (root, live environment only)."`
 	Setup      SetupCmd       `cmd:"" help:"Apply setup stages that are pending, or redo named stages."`
-	Porkbun    porkbun.Cmd    `cmd:"" help:"Manage personal Porkbun DNS records (Linux)."`
 	Cloudflare cloudflare.Cmd `cmd:"" help:"Converge Cloudflare tunnel ingress, DNS, and WAF to the sites file (Linux)."`
 	Update     UpdateCmd      `cmd:"" help:"Upgrade packages, repos, and commands, one step at a time."`
 	Secrets    SecretsCmd     `cmd:"" help:"Manage age-encrypted secrets."`
