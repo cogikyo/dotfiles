@@ -1,5 +1,6 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { createConnection } from "node:net";
+import { tag } from "../sessions/tags.ts";
 
 type Data = Plugin.Context["data"];
 type Client = Plugin.Context["client"];
@@ -106,7 +107,7 @@ function reminder(data: Data, id: string, { permissions, forms }: Asks, shown: b
       data.session.status(member) === "running" ||
       data.session.pending.list(member).some((item) => item.type !== "synthetic"),
   );
-  if (!shown || busy || info?.time.idle === undefined || title.startsWith("[CLOSED] ")) return { key };
+  if (!shown || busy || info?.time.idle === undefined || tag(title)?.state) return { key };
   return { key, kind: "idle" as const, after: IDLE_MS, message: title };
 }
 

@@ -3,6 +3,7 @@ import { Option, Schema } from "effect";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { flags, retag, states, tag, title } from "./tags.ts";
 
 const cap = 20;
 const timeout = 30_000;
@@ -87,10 +88,28 @@ async function query(input: Query, signal: AbortSignal) {
   return reply.value.output;
 }
 
+const TagInput = Schema.Struct({
+  sessionID: Schema.optional(
+    Schema.String.annotate({ description: "Top-level session to tag; omit for this session." }),
+  ),
+  state: Schema.Literals(states).annotate({ description: "Why the session is finished." }),
+  flags: Schema.optional(
+    Schema.Array(Schema.Literals(flags)).annotate({ description: "Follow-up markers for search and ranking." }),
+  ),
+});
+
+const TagOutput = Schema.Struct({ sessionID: Schema.String, title: Schema.String });
+
+const tagDescription = [
+  "Mark a finished top-level session by replacing its title tag with one state and optional flags, keeping the rest of the title.",
+  "The state marks the session closed. Repeating a call changes nothing.",
+  "Only top-level sessions can call it.",
+].join(" ");
+
 export default Plugin.define({
   id: "sessions",
   async setup(ctx) {
-    await ctx.tool.transform((editor) =>
+    await ctx.tool.transform((editor) => {
       editor.add({
         name: "sessions",
         description,
@@ -99,7 +118,33 @@ export default Plugin.define({
         execute: async (input, context) => ({
           content: await query({ ...input, limit: input.limit ?? (input.query === "list" ? 12 : cap) }, context.signal),
         }),
-      }),
-    );
+      });
+      editor.add({
+        name: "session_tag",
+        description: tagDescription,
+        input: TagInput,
+        output: TagOutput,
+        options: { namespace: "opencode", codemode: true, pinned: true },
+        execute: async (input, context) => {
+          const caller = await ctx.session.get({ sessionID: context.sessionID });
+          if (caller.parentID) throw new Error("session_tag: only top-level sessions can tag sessions");
+          const sessionID = input.sessionID ?? context.sessionID;
+          const session = sessionID === caller.id ? caller : await ctx.session.get({ sessionID });
+          if (session.parentID)
+            throw new Error(`session_tag: ${sessionID} is a child session; only top-level sessions take tags`);
+          // This tool cannot clear REFUSALS; the TUI toggle can.
+          const sticky = tag(session.title)?.flags.filter((name) => name === "refusals") ?? [];
+          if (sticky.length && session.id !== caller.id)
+            throw new Error(`session_tag: ${sessionID} is hidden from agents by the refusals flag`);
+          const next = retag(title(session), { state: input.state, flags: [...(input.flags ?? []), ...sticky] });
+          const changed = next !== session.title;
+          if (changed) await ctx.session.update({ sessionID, title: next });
+          return {
+            output: { sessionID, title: next },
+            content: `${changed ? "Tagged" : "Already tagged"} session ${sessionID}: ${next}`,
+          };
+        },
+      });
+    });
   },
 });

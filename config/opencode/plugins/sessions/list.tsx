@@ -1,18 +1,8 @@
 import path from "node:path";
 import { createMemo, createRoot } from "solid-js";
-import {
-  attention,
-  closed,
-  located,
-  projectName,
-  row,
-  stable,
-  title,
-  watch,
-  type Option,
-  type Picker,
-} from "./rows.tsx";
+import { attention, located, projectName, row, stable, watch, type Option, type Picker } from "./rows.tsx";
 import { message, sessions, type Context, type Session } from "./source.ts";
+import { tag, title } from "./tags.ts";
 
 function worktree(context: Context, session: Session) {
   const directory = session.location.directory;
@@ -37,7 +27,7 @@ const day = (session: Session) => new Date(session.time.updated).setHours(0, 0, 
 
 function arrange(context: Context, scope: Session[]) {
   const rank = new Map(
-    scope.map((session) => [session.id, closed(session) ? 2 : attention(context, session.id) ? 0 : 1]),
+    scope.map((session) => [session.id, tag(session.title)?.state ? 2 : attention(context, session.id) ? 0 : 1]),
   );
   return scope.toSorted(
     (a, b) => day(b) - day(a) || (rank.get(a.id) ?? 1) - (rank.get(b.id) ?? 1) || b.time.updated - a.time.updated,

@@ -120,7 +120,7 @@ The index and scratch files persist; there is no tool, key, or TUI slot.
 ## Retitle
 
 `retitle/server.ts` renames a titled root after two new user messages of at least three words and a successful turn, at most once per five minutes.
-Auto-retitle skips titles that start with `[CLOSED] `, which `/done` sets.
+Auto-retitle skips any tagged title, and manual retitle refuses a `REFUSALS` title (see [Sessions](#sessions)).
 It asks the configured `title` agent's model for a two-to-four-word title naming the session's main work, keeping the current title when it still fits.
 It generates the title without a temporary child session.
 A title containing letters but no lowercase letters stays pinned.
@@ -153,7 +153,7 @@ Notification deduplication and timers live in memory.
 Every 60 seconds, the plugin checks each open root and its lanes for pending requests, with a separate reminder clock per root.
 With tabs enabled, open roots are the roots of tab sessions; without tabs, only the displayed root is open.
 Permission and question reminders repeat every five minutes on any open root until answered.
-Only the displayed root gets idle reminders every 15 minutes, unless its title starts with `[CLOSED] ` or its tree has running work or pending non-synthetic items.
+Only the displayed root gets idle reminders every 15 minutes, unless its title starts with a closed tag or its tree has running work or pending non-synthetic items.
 Each root's clock pauses while Hyprland reports the screen locked and resets while the TUI is focused on that root, leaving other roots' clocks unchanged.
 Clocks are dropped when their roots are no longer open.
 
@@ -172,14 +172,31 @@ Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-a
 Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
 Message reads must use an indexed `session_id` bound.
 
+A title tag is an uppercase prefix such as `[CLOSED,FIX] ` or `[REFUSALS] `, defined in `sessions/tags.ts`.
+It holds an optional state (`CLOSED`, `ARCHIVED`, or `RESEARCH`) first, then flags (`FIX`, `ISSUES`, `REVIEWME`, `TODO`, or `REFUSALS`), with at least one name.
+Only tags with a state count as closed; unknown names or misplaced states make a prefix unrecognized.
+Writes deduplicate flags in the order above; see [done's tag criteria](../skills/orchestration/done/SKILL.md#tags) to choose them.
+
+`sessions/query.ts` filters session and message views to omit `REFUSALS` sessions and their descendants through child or fork links; the TUI still shows them.
+Successful queries append the store-wide hidden count when nonzero; direct session and part lookups refuse hidden targets.
+Visible text results and query errors replace exact hidden-title copies with `[hidden by refusals]` before clipping or paging.
+Plain-title copies are included only with at least two words and 10 characters, excluding default titles; matching is case-sensitive and covers up to two JSON-escape layers.
+
+`sessions/server.ts` exposes `tools.opencode.session_tag` in Code Mode with a required lowercase `state` and optional `flags`.
+It replaces the tag, preserves an existing `refusals` flag and the rest of the title, and skips an unchanged title.
+It refuses another session flagged `REFUSALS` without echoing its title.
+Only top-level sessions can call it or be tagged; `sessionID` defaults to the caller, and a missing title becomes `New session - <ISO time>`.
+
 `sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>r` to Sessions.
 `<leader>shift+return` sends `/done` with no arguments to the root session.
+`/archive` and `/research` set the root session's state to `ARCHIVED` or `RESEARCH` without running `/done`, keeping its flags, then open Home in its directory so the next prompt starts a new session.
+`/refusals` toggles `REFUSALS` on the root session, keeping its state and other flags, and stays in the session.
 `cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 
-Without a search, Open orders sessions needing permission or question input first, then other open sessions, then titles starting with `[CLOSED] `, newest first within each rank.
+Without a search, Open orders sessions needing permission or question input first, then other open sessions, then titles starting with a closed tag, newest first within each rank.
 Sessions groups by date, newest day first, and applies that order within each group, except closed sessions always come last even when they need input.
-Closed titles are muted unless selected or current; rows retain pending-input and running markers.
+Closed titles are muted, with `RESEARCH` titles in a faint scout blue, unless selected or current; rows retain pending-input and running markers.
 
 - Open shows up to eight recents plus projects, expanding the list to include all sessions needing input; typing searches the full loaded session list.
 - Right arrow on a Git project opens its worktrees, including a `New worktree…` row; left arrow returns to Open.

@@ -1,5 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber } from "effect";
+import { tag } from "../sessions/tags.ts";
 import { api, pinned } from "./rpc.ts";
 
 const TRIGGER = 2;
@@ -11,7 +12,6 @@ const LATEST = 3;
 const MESSAGE_CHARS = 400;
 const SUMMARY_CHARS = 1_200;
 const MAX_CHARS = 36;
-const CLOSED = "[CLOSED] ";
 const ORCHESTRATOR =
   "Orchestrator mode: the user gave this session an all-caps title. Keep decisions, synthesis, Git, and the user conversation here; send every edit, investigation, data pull, and check to children.";
 const MINOR = new Set([
@@ -168,7 +168,7 @@ export default Plugin.define({
       current.running = true;
       try {
         const session = await ctx.session.get({ sessionID });
-        if (session.parentID || !session.title || pinned(session.title) || session.title.startsWith(CLOSED)) return;
+        if (session.parentID || !session.title || pinned(session.title) || tag(session.title)) return;
         current.count = 0;
         const title = await generate(sessionID, session.title);
         if (!title) return;
@@ -176,7 +176,7 @@ export default Plugin.define({
         if (
           !latest.title ||
           pinned(latest.title) ||
-          latest.title.startsWith(CLOSED) ||
+          tag(latest.title) ||
           latest.title.toLowerCase() === title.toLowerCase()
         )
           return;
@@ -189,6 +189,8 @@ export default Plugin.define({
     const manual = async (sessionID: string, caps: boolean) => {
       const session = await ctx.session.get({ sessionID });
       if (session.parentID) throw new Error("retitle: child sessions keep their delegated titles");
+      if (tag(session.title)?.flags.includes("refusals"))
+        throw new Error("retitle: sessions flagged REFUSALS keep their messages away from the title model");
       const title = await generate(sessionID, undefined);
       if (!title) throw new Error("retitle: the title model returned no title");
       return write(sessionID, caps ? title.toUpperCase() : title);

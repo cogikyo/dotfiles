@@ -1,8 +1,77 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { list } from "./list.tsx";
-import { open } from "./open.tsx";
+import { go, open } from "./open.tsx";
 import type { Kind, Picker } from "./rows.tsx";
-import { source } from "./source.ts";
+import { source, type Context } from "./source.ts";
+import { retag, tag, title, type State, type Tag } from "./tags.ts";
+
+async function edit(context: Context, command: string, change: (current?: Tag) => Tag) {
+  const current = context.ui.router.current();
+  if (current.type !== "session") return undefined;
+  const cached = context.data.session.get(context.data.session.root(current.sessionID));
+  if (!cached) return undefined;
+  try {
+    const session = await context.client.session.get({ sessionID: cached.id });
+    const next = change(tag(session.title));
+    const text = retag(title(session), next);
+    if (text !== session.title) await context.client.session.update({ sessionID: session.id, title: text });
+    return { session, tag: next };
+  } catch (error) {
+    context.ui.toast.show({ title: `/${command} failed`, message: String(error), variant: "error" });
+    return undefined;
+  }
+}
+
+async function mark(context: Context, command: string, state: State) {
+  const done = await edit(context, command, (current) => ({ state, flags: current?.flags ?? [] }));
+  if (done) go(context, { type: "project", directory: done.session.location.directory });
+}
+
+async function refusals(context: Context) {
+  const done = await edit(context, "refusals", (current) => {
+    const flags = current?.flags ?? [];
+    const on = flags.includes("refusals");
+    return { state: current?.state, flags: on ? flags.filter((flag) => flag !== "refusals") : [...flags, "refusals"] };
+  });
+  if (!done) return;
+  const hidden = done.tag.flags.includes("refusals");
+  context.ui.toast.show({
+    message: hidden ? "Agents can no longer see this session" : "Agents can see this session again",
+    variant: "info",
+  });
+}
+
+function tagging(context: Context) {
+  return [
+    {
+      id: "sessions.archive",
+      title: "Archive session",
+      description: "Mark the session [ARCHIVED] without /done, then start a new one here",
+      group: "Session",
+      palette: true,
+      slash: { name: "archive" },
+      run: () => mark(context, "archive", "archived"),
+    },
+    {
+      id: "sessions.research",
+      title: "Mark session as research",
+      description: "Mark the session [RESEARCH] without /done, then start a new one here",
+      group: "Session",
+      palette: true,
+      slash: { name: "research" },
+      run: () => mark(context, "research", "research"),
+    },
+    {
+      id: "sessions.refusals",
+      title: "Toggle refusals flag",
+      description: "Hide or show this session and its children in the agents' sessions tool",
+      group: "Session",
+      palette: true,
+      slash: { name: "refusals" },
+      run: () => refusals(context),
+    },
+  ] as const;
+}
 
 export default Plugin.define({
   id: "sessions",
@@ -63,6 +132,7 @@ export default Plugin.define({
               );
           },
         },
+        ...tagging(context),
       ],
     }));
 

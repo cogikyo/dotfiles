@@ -1,19 +1,31 @@
-import { Database, type SQLQueryBindings } from "bun:sqlite";
+import { constants, Database, type SQLQueryBindings } from "bun:sqlite";
 import type { Query } from "./server.ts";
+import { retag, tag, title } from "./tags.ts";
 
 const excerpt = 800;
 const brief = 160;
-const readable = new Set(["session_v2", "session_message", "project", "sqlite_schema"]);
+const tables = ["session_v2", "session_message", "project"];
+const store = `s_${crypto.randomUUID().replaceAll("-", "")}`;
+const filters: Record<string, string> = { session_v2: "id", session_message: "session_id" };
 const huge = new Set(["session_message"]);
 const scans = new Set(["Rewind", "Last", "Count"]);
 const seeks = new Set(["SeekGE", "SeekGT", "SeekLE", "SeekLT"]);
 const bounds = new Set(["IdxGE", "IdxGT", "IdxLE", "IdxLT"]);
 const harness = ["synthetic", "system", "skill", "compaction"];
+const marker = "[hidden by refusals]";
 const HUGE =
   "session_message is huge, so filter it by the indexed session_id, such as m.session_id = ? or m.session_id IN (SELECT id FROM session_v2 WHERE …)";
 
 type Row = Record<string, unknown>;
 type Op = { opcode: string; p1: number; p2: number; p3: number; p4: unknown };
+
+class Slice {
+  constructor(
+    readonly text: string,
+    readonly size: number,
+    readonly from = 0,
+  ) {}
+}
 
 const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
   list: (db, args) =>
@@ -48,7 +60,7 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
                 coalesce(json_extract(c.value, '$.time.created'), m.time_created) AS created,
                 json_extract(c.value, '$.name') AS tool,
                 json_extract(c.value, '$.state.status') AS status,
-                substr(json_extract(c.value, '$.state.input'), 1, ${brief}) AS input
+                json_extract(c.value, '$.state.input') AS input
          FROM session_message AS m, json_each(m.data, '$.content') AS c
          WHERE m.session_id = ?1
            AND m.type = 'assistant'
@@ -57,7 +69,10 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
          ORDER BY m.seq, c.key
          LIMIT ?3 OFFSET ?4`,
       )
-      .all(required(args.session, "session"), args.tool ?? null, args.limit, args.offset ?? 0),
+      .all(required(args.session, "session"), args.tool ?? null, args.limit, args.offset ?? 0)
+      .map((row) =>
+        Object.assign(row, { input: typeof row.input === "string" ? new Slice(row.input, brief) : row.input }),
+      ),
   part: (db, args) => {
     const address = required(args.part, "part");
     const [id, index] = address.split("#");
@@ -92,7 +107,7 @@ function excerpts(db: Database, args: Query) {
          WHERE ?2 = 'text' AND session_id = ?1
            AND (type = 'user' OR ?4 = 1 AND type IN (${harness.map((type) => `'${type}'`).join(", ")}))
        )
-       SELECT id, role, type, created, length(text) AS length, substr(text, 1, ${excerpt}) AS text
+       SELECT id, role, type, created, length(text) AS length, text
        FROM items
        WHERE length(text) > 0
          AND (?3 IS NULL OR role = ?3)
@@ -137,10 +152,10 @@ function detail(item: Item, whole: boolean, from: number) {
     type: whole ? undefined : item.type,
     tool: item.name,
     status,
-    input: input === undefined ? undefined : clip(JSON.stringify(input)),
+    input: input === undefined ? undefined : JSON.stringify(input),
     length: output.length,
-    output: output.slice(from, from + excerpt),
-    error: error ? clip(error.message ?? JSON.stringify(error)) : undefined,
+    output: new Slice(output, excerpt, from),
+    error: error ? (error.message ?? JSON.stringify(error)) : undefined,
   };
 }
 
@@ -153,22 +168,25 @@ function select(db: Database, source: string, params: SQLQueryBindings[], limit:
 
   const rows: Row[] = [];
   for (const row of db.query<Row, SQLQueryBindings[]>(sql).iterate(...params)) {
-    rows.push(Object.fromEntries(Object.entries(row).map(([name, value]) => [name, clip(value)])));
+    rows.push(row);
     if (rows.length >= limit) break;
   }
   return rows;
 }
 
 function inspect(db: Database, ops: Op[]) {
+  const attached = db
+    .query<{ seq: number; name: string }, []>("PRAGMA database_list")
+    .all()
+    .find((row) => row.name === store)?.seq;
   const roots = new Map(
     db
       .query<{ rootpage: number; tbl_name: string }, []>(
-        "SELECT rootpage, tbl_name FROM sqlite_schema WHERE rootpage > 0",
+        `SELECT rootpage, tbl_name FROM ${store}.sqlite_schema WHERE rootpage > 0 AND tbl_name IN (${list(tables)})`,
       )
       .all()
       .map((row) => [row.rootpage, row.tbl_name]),
   );
-  roots.set(1, "sqlite_schema");
   const json = jsonTables(db);
   const opened = new Map<number, string>();
   for (const op of ops) {
@@ -176,12 +194,12 @@ function inspect(db: Database, ops: Op[]) {
     if (op.opcode === "VOpen" && !json.has(op.p4))
       throw new Error("sql may use only json_each and json_tree as virtual tables or table-valued functions");
     if (op.opcode !== "OpenRead" && op.opcode !== "ReopenIdx") continue;
-    const table = op.p3 === 0 ? roots.get(op.p2) : undefined;
-    if (!table || !readable.has(table)) {
+    if (op.p3 === 0) continue;
+    const table = op.p3 === attached ? roots.get(op.p2) : undefined;
+    if (!table)
       throw new Error(
-        `sql may read only ${[...readable].join(", ")}; it reads ${table ?? `root page ${String(op.p2)}`}`,
+        `sql may read only ${[...tables, "sqlite_schema"].join(", ")}; it reads root page ${String(op.p2)}`,
       );
-    }
     if (huge.has(table)) opened.set(op.p1, table);
   }
   return opened;
@@ -214,8 +232,15 @@ function guardScans(ops: Op[], cursors: Map<number, string>) {
   }
 }
 
-function clip(value: unknown) {
-  return typeof value === "string" && value.length > excerpt ? `${value.slice(0, excerpt)}…` : value;
+function clip(value: unknown, redact: (text: string) => string) {
+  // Redact before clipping or paging, which could split a hidden title and prevent a match.
+  if (value instanceof Slice) {
+    const text = redact(value.text).slice(value.from);
+    return text.length > value.size ? `${text.slice(0, value.size)}…` : text;
+  }
+  if (typeof value !== "string") return value;
+  const text = redact(value);
+  return text.length > excerpt ? `${text.slice(0, excerpt)}…` : text;
 }
 
 function required(value: string | undefined, name: string) {
@@ -230,9 +255,85 @@ function time(value: string | undefined, name: string) {
   return ms;
 }
 
-function render(rows: Row[]) {
-  if (rows.length === 0) return "no rows";
-  return rows.map((row) => JSON.stringify(row, stamp)).join("\n");
+function render(rows: Row[], hidden: number, redact: (text: string) => string) {
+  const body =
+    rows.length === 0
+      ? "no rows"
+      : rows
+          .map((row) =>
+            JSON.stringify(
+              Object.fromEntries(Object.entries(row).map(([name, value]) => [name, clip(value, redact)])),
+              stamp,
+            ),
+          )
+          .join("\n");
+  return hidden ? `${body}\n(${hidden} sessions hidden by the refusals flag)` : body;
+}
+
+function encode(text: string) {
+  return JSON.stringify(text).slice(1, -1);
+}
+
+function redactor(titles: string[]) {
+  const forms = [...new Set(titles.flatMap((text) => [text, encode(text), encode(encode(text))]))].toSorted(
+    (a, b) => b.length - a.length,
+  );
+  return (text: string) => forms.reduce((out, form) => out.replaceAll(form, marker), text);
+}
+
+function specific(text: string) {
+  return text.length >= 10 && text.trim().split(/\s+/u).length >= 2;
+}
+
+function list(values: Iterable<string>) {
+  return [...values].map((value) => `'${value.replaceAll("'", "''")}'`).join(", ");
+}
+
+function shield(db: Database, path: string) {
+  db.run(`ATTACH DATABASE ?1 AS ${store}`, [`file:${path}?mode=ro`]);
+  db.run("BEGIN");
+  for (const { sql } of db
+    .query<{ sql: string }, []>(
+      `SELECT sql FROM ${store}.sqlite_schema WHERE type IN ('table', 'index') AND sql IS NOT NULL AND tbl_name IN (${list(tables)})`,
+    )
+    .all())
+    db.run(sql);
+  const sessions = db
+    .query<{ id: string; parent: string | null; fork: string | null; title: string | null; created: number }, []>(
+      `SELECT id, parent_id AS parent, fork_session_id AS fork, title, time_created AS created FROM ${store}.session_v2`,
+    )
+    .all();
+  const hidden = new Set(
+    sessions.filter((session) => tag(session.title ?? undefined)?.flags.includes("refusals")).map(({ id }) => id),
+  );
+  const children = Map.groupBy(
+    sessions.flatMap((session) => [session.parent, session.fork].map((source) => ({ source, id: session.id }))),
+    (edge) => edge.source,
+  );
+  for (const id of hidden) for (const child of children.get(id) ?? []) hidden.add(child.id);
+  for (const table of tables) {
+    const column = filters[table];
+    const where = column && hidden.size ? ` WHERE ${column} NOT IN (${list(hidden)})` : "";
+    db.run(`CREATE TEMP VIEW ${table} AS SELECT * FROM ${store}.${table}${where}`);
+  }
+  const titles = sessions.flatMap((session) => {
+    if (!hidden.has(session.id) || !session.title) return [];
+    const plain = retag(session.title, { flags: [] });
+    const generic = !specific(plain) || plain === title({ time: { created: session.created } });
+    return generic ? [session.title].filter((text) => text !== plain) : [session.title, plain];
+  });
+  return { hidden, redact: redactor(titles) };
+}
+
+function refuse(db: Database, hidden: Set<string>, args: Query) {
+  for (const id of [args.session, args.parent])
+    if (id && hidden.has(id)) throw new Error(`session ${id} is hidden from agents by the refusals flag`);
+  if (args.query !== "part" || !args.part) return;
+  const owner = db
+    .query<{ session: string }, [string]>(`SELECT session_id AS session FROM ${store}.session_message WHERE id = ?1`)
+    .get(args.part.split("#")[0] ?? "");
+  if (owner && hidden.has(owner.session))
+    throw new Error(`part ${args.part} belongs to a session hidden from agents by the refusals flag`);
 }
 
 function stamp(name: string, value: unknown) {
@@ -241,12 +342,18 @@ function stamp(name: string, value: unknown) {
     : value;
 }
 
-export function run(store: string, args: Query) {
-  const db = new Database(store, { readonly: true });
+export function run(path: string, args: Query) {
+  const db = new Database(":memory:", constants.SQLITE_OPEN_READWRITE | constants.SQLITE_OPEN_URI);
   try {
-    db.run("PRAGMA query_only=ON");
     db.run("PRAGMA busy_timeout=200");
-    return render(queries[args.query](db, args));
+    const { hidden, redact } = shield(db, path);
+    try {
+      refuse(db, hidden, args);
+      db.run("PRAGMA query_only=ON");
+      return render(queries[args.query](db, args), hidden.size, redact);
+    } catch (error) {
+      throw new Error(redact(error instanceof Error ? error.message : String(error)), { cause: error });
+    }
   } finally {
     db.close();
   }
@@ -254,9 +361,9 @@ export function run(store: string, args: Query) {
 
 if (import.meta.main) {
   try {
-    const store = process.argv[2];
-    if (!store) throw new Error("usage: query.ts <opencode.db> < query.json");
-    process.stdout.write(JSON.stringify({ output: run(store, JSON.parse(await Bun.stdin.text())) }));
+    const path = process.argv[2];
+    if (!path) throw new Error("usage: query.ts <opencode.db> < query.json");
+    process.stdout.write(JSON.stringify({ output: run(path, JSON.parse(await Bun.stdin.text())) }));
   } catch (error) {
     process.stdout.write(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
   }

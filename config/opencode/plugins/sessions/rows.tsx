@@ -3,7 +3,10 @@ import { TextAttributes, type RGBA } from "@opentui/core";
 import path from "node:path";
 import { createEffect, createMemo, createSignal, Match, Switch, type JSX } from "solid-js";
 import { spinner } from "../context/section.tsx";
+import { roles } from "../statusline/palette.ts";
+import { mix } from "../statusline/working.tsx";
 import type { Context, Session, Source } from "./source.ts";
+import { tag, title, type State } from "./tags.ts";
 
 export type Kind = "open" | "list";
 
@@ -33,13 +36,7 @@ type Located = { readonly directory: string; readonly project?: { readonly id: s
 
 export const located = (context: Context): Located | undefined => context.location;
 
-const CLOSED = "[CLOSED] ";
 const TITLE_WIDTH = 61;
-
-export const closed = (session: Session) => session.title?.startsWith(CLOSED) === true;
-
-export const title = (session: Session) =>
-  session.title ?? `New session - ${new Date(session.time.created).toISOString()}`;
 
 export const dialog = (context: Context) => context.theme.surface("dialog");
 
@@ -61,7 +58,7 @@ const running = (context: Context, sessionID: string) =>
 
 export function order(context: Context, list: Session[]) {
   const rank = new Map(
-    list.map((session) => [session.id, attention(context, session.id) ? 0 : closed(session) ? 2 : 1]),
+    list.map((session) => [session.id, attention(context, session.id) ? 0 : tag(session.title)?.state ? 2 : 1]),
   );
   return list.toSorted((a, b) => (rank.get(a.id) ?? 1) - (rank.get(b.id) ?? 1) || b.time.updated - a.time.updated);
 }
@@ -119,14 +116,21 @@ export function row<Value>(context: Context, session: Session, value: Value, cur
     setPlain(color.equals(dialog(context).text.base));
     return <Mark context={context} sessionID={session.id} current={current} color={color} />;
   };
-  if (!closed(session)) return { title: text, value, gutter };
+  const state = tag(session.title)?.state;
+  if (!state) return { title: text, value, gutter };
   const shown = text.length > TITLE_WIDTH ? `${text.slice(0, TITLE_WIDTH - 1)}…` : text;
   return {
     title: text,
     value,
     gutter,
-    titleView: () => (plain() ? <span style={{ fg: dialog(context).text.muted }}>{shown}</span> : shown),
+    titleView: () => (plain() ? <span style={{ fg: faded(context, state) }}>{shown}</span> : shown),
   };
+}
+
+function faded(context: Context, state: State) {
+  const theme = dialog(context);
+  if (state === "research" && roles.scout) return mix(roles.scout, theme.background.base, 0.4);
+  return theme.text.muted;
 }
 
 const signature = (option: Option<unknown>) =>

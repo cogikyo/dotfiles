@@ -26,7 +26,7 @@ const LARGE = 88;
 
 const contentWidth = (context: Context) => Math.min(LARGE, context.renderer.width - 2) - 12;
 
-function go(context: Context, target: Target | { type: "project"; directory: string }) {
+export function go(context: Context, target: Target | { type: "project"; directory: string }) {
   const router = context.ui.router;
   if (target.type === "session") return router.navigate({ type: "session", sessionID: target.sessionID });
   const location = { directory: target.directory };
