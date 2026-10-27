@@ -21,6 +21,9 @@ import (
 
 const preset = "etc/systemd/system-preset/10-dotfiles.preset"
 
+// Preset units may be oneshots or condition-skipped, so need not stay active.
+var running = []string{"sshd.service"}
+
 func Stage(root, overlay string) setup.Stage {
 	return setup.Stage{Name: "system", Root: true, Items: []setup.Item{
 		{
@@ -29,9 +32,19 @@ func Stage(root, overlay string) setup.Stage {
 			Fix:   func(context.Context) error { return apply(root, overlay) },
 		},
 		{
+			Name:  "system-users",
+			Check: func(context.Context) error { return checkUsers(root, overlay) },
+			Fix:   func(ctx context.Context) error { return addUsers(ctx, root) },
+		},
+		{
 			Name:  "system-units",
 			Check: func(ctx context.Context) error { return checkUnits(ctx, root, overlay) },
 			Fix:   func(ctx context.Context) error { return enable(ctx, root, overlay) },
+		},
+		{
+			Name:  "system-running",
+			Check: func(ctx context.Context) error { return checkRunning(ctx, execx.OSRunner{}) },
+			Fix:   func(ctx context.Context) error { return start(ctx, execx.OSRunner{}) },
 		},
 		{
 			Name:  "system-resolv-conf",
@@ -257,5 +270,31 @@ func enable(ctx context.Context, root, overlay string) error {
 		return err
 	}
 	_, err = execx.OSRunner{}.Output(ctx, "", "systemctl", append([]string{"--root=" + root, "enable"}, list...)...)
+	return err
+}
+
+func checkRunning(ctx context.Context, run execx.Runner) error {
+	out, err := run.Output(ctx, "", "systemctl", append([]string{"is-active"}, running...)...)
+	if err == nil {
+		return nil
+	}
+	states := strings.Split(out, "\n")
+	if len(states) != len(running) {
+		return fmt.Errorf("systemctl is-active: %w", err)
+	}
+	var off []string
+	for i, unit := range running {
+		if states[i] != "active" {
+			off = append(off, unit+" ("+states[i]+")")
+		}
+	}
+	if len(off) == 0 {
+		return fmt.Errorf("systemctl is-active: %w", err)
+	}
+	return errors.New(setup.List("not running", off))
+}
+
+func start(ctx context.Context, run execx.Runner) error {
+	_, err := run.Output(ctx, "", "systemctl", append([]string{"start"}, running...)...)
 	return err
 }

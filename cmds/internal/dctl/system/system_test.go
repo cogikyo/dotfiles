@@ -1,7 +1,11 @@
 package system
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -215,5 +219,91 @@ func TestResolv(t *testing.T) {
 	}
 	if err := checkResolv(root); err == nil {
 		t.Fatal("wrong symlink target passed")
+	}
+}
+
+func TestParseSysusers(t *testing.T) {
+	got, err := parseSysusers(strings.NewReader("# users\n\nu tunnel - \"SSH reverse tunnel\" / /usr/bin/nologin\nu! locked -\ng group -\nm tunnel group\n#u commented -\n"))
+	if err != nil || !slices.Equal(got, []string{"tunnel", "locked"}) {
+		t.Fatalf("got %v, %v", got, err)
+	}
+}
+
+func TestUsers(t *testing.T) {
+	if _, err := exec.LookPath("systemd-sysusers"); err != nil {
+		t.Skip("systemd-sysusers not installed")
+	}
+	src, root := overlay(t), t.TempDir()
+	record(t, root)
+	conf := filepath.Join(src, sysusers, "tunnel.conf")
+	if err := os.MkdirAll(filepath.Dir(conf), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(conf, []byte("u tunnel - \"SSH reverse tunnel\" / /usr/bin/nologin\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := apply(root, src); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkUsers(root, src); err == nil || !strings.Contains(err.Error(), "tunnel") {
+		t.Fatalf("before sysusers: %v", err)
+	}
+	if err := addUsers(t.Context(), root); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkUsers(root, src); err != nil {
+		t.Fatalf("after sysusers: %v", err)
+	}
+	passwd := filepath.Join(root, "etc", "passwd")
+	before, err := os.ReadFile(passwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := addUsers(t.Context(), root); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := os.ReadFile(passwd); !bytes.Equal(before, after) {
+		t.Errorf("second run changed passwd:\n%s\n%s", before, after)
+	}
+}
+
+type systemctl struct {
+	active bool
+	calls  []string
+}
+
+func (s *systemctl) Run(ctx context.Context, dir, name string, args ...string) error {
+	_, err := s.Output(ctx, dir, name, args...)
+	return err
+}
+
+func (s *systemctl) Output(_ context.Context, _, name string, args ...string) (string, error) {
+	cmd := strings.Join(append([]string{name}, args...), " ")
+	s.calls = append(s.calls, cmd)
+	switch {
+	case cmd == "systemctl start sshd.service":
+		s.active = true
+	case cmd == "systemctl is-active sshd.service" && !s.active:
+		return "inactive", errors.New("exit status 3")
+	case cmd == "systemctl is-active sshd.service":
+		return "active", nil
+	}
+	return "", nil
+}
+
+func TestRunning(t *testing.T) {
+	s := &systemctl{}
+	if err := checkRunning(t.Context(), s); err == nil || !strings.Contains(err.Error(), "sshd.service (inactive)") {
+		t.Fatalf("inactive: %v", err)
+	}
+	if err := start(t.Context(), s); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkRunning(t.Context(), s); err != nil {
+		t.Fatalf("after start: %v", err)
+	}
+	want := []string{"systemctl is-active sshd.service", "systemctl start sshd.service", "systemctl is-active sshd.service"}
+	if !slices.Equal(s.calls, want) {
+		t.Errorf("calls %q, want %q", s.calls, want)
 	}
 }

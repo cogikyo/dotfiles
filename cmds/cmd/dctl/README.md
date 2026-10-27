@@ -179,6 +179,9 @@ The optional stages do not gate security enrollment.
 | secureboot | luks                        | Keys and boot signatures          |
 | totp       | secureboot                  | Seal the boot TOTP                |
 
+The `system` stage creates users declared in `system/etc/sysusers.d/*.conf` with `systemd-sysusers`.
+It checks units in its `running` list, currently only `sshd.service`, and starts them if inactive.
+
 - Root stages other than lock stages are checked as the user first; only stages that are not OK and lock stages need sudo.
   - `dctl setup home` checks `packages`; if it is OK, `system` and `network` are not checked and no sudo is needed.
 - Consecutive root stages share one sudo child; user stages stay in your session.
