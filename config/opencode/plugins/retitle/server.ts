@@ -212,6 +212,7 @@ export default Plugin.define({
     });
 
     await ctx.session.hook("context", async (event) => {
+      // Context is location-scoped, so this mark lets only this copy retitle on a global success event.
       owned.add(event.sessionID);
       try {
         const session = await ctx.session.get({ sessionID: event.sessionID });
