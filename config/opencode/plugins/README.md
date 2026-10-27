@@ -301,6 +301,19 @@ Sync needs `~/vagari/nvim`, the nvim-treesitter `main` checkout at `~/.local/sha
 From `config/opencode`, run `bun plugins/code-blocks/sync.ts` after changes to Vagari, nvim-treesitter queries, or the host parser catalog.
 Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tree-sitter/` but keeps every parser folder whose manifest sets no `filetype`, and fails if such a folder shares a name with a generated one.
 
+## Workflow
+
+`plugins/workflow/` registers a renderer for `workflow` fences and draws a card with an automatic dependency graph.
+Graph nodes are numbers in the owner's color; lane steps are role-color pills, and gates use `◆N`.
+Rows lead with the scope icon and scope name in the role color, then the number, a square lane pill for lane steps, and the headline.
+A headline's main idea, before any `: `, takes the owner's color, bold for lanes and italic for one-shots; the rest is regular text.
+Delegated rows show the model family flush right in the role color, bold for lanes and italic for one-shots.
+The renderer reads `ROUTING.md` and shows a brain glyph and the variant left of the model only for a variant departure; no brain appears when the file is missing.
+`plugins/lanes/routing.ts` holds route parsing shared by the lanes server and the card.
+Gate checklist items get a distinct watching-for glyph; `if:` steps show an `only if` row.
+Only the summary wraps; other rows clip, and bad specs show red error lines.
+From `config/opencode`, run `bun plugins/workflow/preview.ts [file] --width N` to print the card with ANSI color.
+
 ## Bullets
 
 `bullets/tui.ts` uses `•` for depth-0 unordered list markers and `◦` at deeper levels.

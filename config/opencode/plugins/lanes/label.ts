@@ -108,7 +108,7 @@ function latest(messages: readonly Message[]) {
   );
 }
 
-function family(model: string) {
+export function family(model: string) {
   const bare = model.replace(/^.*\//, "").replace(/^claude-/, "");
   return families.find(([pattern]) => pattern.test(bare))?.[1] ?? bare;
 }
