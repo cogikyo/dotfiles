@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+root=/home/cullyn/LeadPier
+
+deny() {
+  echo "leadpier-git-read: $1" >&2
+  exit 1
+}
+
+cmd=${SSH_ORIGINAL_COMMAND:-}
+case $cmd in
+  "git-upload-pack '"*"'" | "git upload-pack '"*"'") ;;
+  *) deny "only git-upload-pack is allowed" ;;
+esac
+path=${cmd#*upload-pack \'}
+path=${path%\'}
+case $path in
+  *"'"* | *\\* | *$'\n'*) deny "unsupported path" ;;
+esac
+[[ -e $path || $path != *.git ]] || path=${path%.git}
+real=$(realpath -e -- "$path" 2>/dev/null) || deny "no such repository"
+[[ $real == "$root"/* ]] || deny "only repositories under $root are served"
+exec git-upload-pack --timeout=600 -- "$real"

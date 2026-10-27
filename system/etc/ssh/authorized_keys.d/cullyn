@@ -1,1 +1,2 @@
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOt9eMlxoiGNoWbDhcm7UiTZypx8mx4dwyudAWT6FlKZ cullyn@cogikyo
+restrict,command="/usr/local/libexec/leadpier-git-read" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFoVHYFX04vwczBAGyvcsBo+wTVRJIsGA5OA1jDv6RIr apps-git

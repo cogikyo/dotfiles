@@ -1,0 +1,1 @@
+restrict,port-forwarding,permitopen="192.168.165.9:9000" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJd8KwmQYRPlpJm267cMPyjClWSciZJbD2uwPeN23xXT apps-prod-tunnel
