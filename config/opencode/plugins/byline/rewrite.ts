@@ -10,13 +10,14 @@ import {
   type Renderable,
 } from "@opentui/core";
 import type { Plugin } from "@opencode/plugin/tui";
-import type { Stage } from "./draw.ts";
-import { apply, dashes, grow, runs, walk, type Item } from "./lane.ts";
+import type { Mail } from "../mail/mail.ts";
+import type { Post, Stage } from "./draw.ts";
+import { apply, dashes, grow, runs, walk, type Item, type Letter, type Tint } from "./lane.ts";
 import { compose, flatten, match, notice } from "./notice.ts";
 import { question } from "./question.ts";
-import { owned, type Ledger } from "./ledger.ts";
+import { native, owned, textual, type Ledger, type Text } from "./ledger.ts";
+import * as mail from "./mail.ts";
 
-type Text = Renderable & { readonly textNode: TextNodeRenderable; fg: RGBA };
 type Frame = Renderable & { readonly border: unknown };
 type Scroll = Renderable & { readonly content: Renderable; readonly viewport: Renderable };
 type Names = () => ReadonlySet<string>;
@@ -97,16 +98,32 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
   };
   const rows = scroll.content.getChildren();
   const session = context.data.session;
-  const stops = (row: Renderable) =>
-    sessionID !== undefined &&
-    (session.message.get(sessionID, row.id)?.type === "user" ||
-      question(row, native(row), { context, sessionID, ledger }));
+  const stops = (row: Renderable) => {
+    if (sessionID === undefined) return;
+    if (session.message.get(sessionID, row.id)?.type === "user") return "prompt";
+    return question(row, native(row), { context, sessionID, ledger }) ? "stop" : undefined;
+  };
   try {
-    const items = rows.map((row, index) => classify(row, scan, stops(row), index === rows.length - 1));
-    const { units, closed, open } = walk(items);
+    const inner = new Set<Renderable>();
+    const scanned = rows.flatMap((row, index) => {
+      const item = classify(row, scan, stops(row), index === rows.length - 1);
+      if (item.kind !== "content") return [item];
+      const entries = mail.nested(row);
+      for (const entry of entries) inner.add(entry.row);
+      return [item as Item].concat(entries);
+    });
+    const posts = mail.resolve(scanned, session, sessionID);
+    const items = scanned.flatMap((item): Item[] => {
+      if (!mail.candidate(item) || posts.has(item.lane)) return [item];
+      if (!inner.has(item.row)) return [{ kind: "content", row: item.row }];
+      ledger.restore(item.row);
+      return [];
+    });
+    const { units, closed, open } = walk(items, mail.tone);
     const found = match(items, closed, session, sessionID);
     grow(open, (lane) => found.get(lane)?.live === true);
     apply(units, ledger);
+    const letters = arrivals(items, posts, { context, ledger, closed, sessionID });
     const lanes = items.flatMap((item) => {
       if (item.kind !== "notice" && item.kind !== "failed") return [];
       const reply = found.get(item.lane);
@@ -119,11 +136,44 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
       base: theme.background.base,
       runs: runs(units),
       lanes,
+      posts: letters,
     });
   } catch {
     halt(ledger, stage);
     return false;
   }
+}
+
+function arrivals(
+  items: readonly Item[],
+  posts: ReadonlyMap<Letter, Mail>,
+  {
+    context,
+    ledger,
+    closed,
+    sessionID,
+  }: { context: Plugin.Context; ledger: Ledger; closed: ReadonlySet<Tint>; sessionID?: string },
+): Post[] {
+  const session = context.data.session;
+  const messages = sessionID === undefined ? [] : session.message.list(sessionID);
+  const running = sessionID !== undefined && session.status(sessionID) === "running";
+  const idle = messages.findLastIndex((message) => message.type === "idle");
+  return items.flatMap((item): Post[] => {
+    if (!mail.candidate(item)) return [];
+    const post = posts.get(item.lane);
+    const shape = post && mail.compose(item, post, { context, ledger });
+    if (!post || !shape) return [];
+    const { kind, lane } = item;
+    const tone = lane.tone;
+    if (kind === "sent")
+      return [{ ...shape, kind, tone, reply: { id: `sent:${post.id}`, created: post.sent, live: false } }];
+    const index = messages.findIndex((message) => message.id === post.id);
+    const message = messages[index];
+    if (!message) return [];
+    const live = running && index > idle && !closed.has(lane);
+    // Use delivery time so long-parked mail can still reveal on arrival.
+    return [{ ...shape, kind, tone, reply: { id: post.id, created: message.time.created, live } }];
+  });
 }
 
 function halt(ledger: Ledger, stage: Stage) {
@@ -133,9 +183,11 @@ function halt(ledger: Ledger, stage: Stage) {
   stage.clear();
 }
 
-function classify(row: Renderable, scan: Scan, stop: boolean, last: boolean): Item {
+function classify(row: Renderable, scan: Scan, stop: "prompt" | "stop" | undefined, last: boolean): Item {
   const box = native(row).at(-1);
-  if (stop) return { kind: "stop", row };
+  if (stop) return { kind: stop, row };
+  const letter = mail.letter(row);
+  if (letter) return letter;
   const [only, ...extra] = box ? native(box) : [];
   if (!box || extra.length > 0) return { kind: "content", row };
   if (textual(only)) {
@@ -249,16 +301,8 @@ function leaves(node: TextNodeRenderable): [TextNodeRenderable, number, string][
   );
 }
 
-function native(node: Renderable) {
-  return node.getChildren().filter((child) => !owned.has(child));
-}
-
 function read(node: Text) {
   return flatten(node.textNode);
-}
-
-function textual(node: Renderable | undefined): node is Text {
-  return node !== undefined && "textNode" in node;
 }
 
 function marked(node: Renderable | undefined): node is MarkdownRenderable {

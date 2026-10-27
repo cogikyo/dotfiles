@@ -327,12 +327,23 @@ The rules are hidden and text wraps inside the box.
 The notice puts the subagent's description on the left and `icon Scope / icon Agent · model/variant · tokens` on the right, truncating the description first when space is short.
 Lane icons, colors, model names, and token counts use the same source as the Lanes sidebar.
 
-New notices reveal the whole row in about 1.2 s: build forge, review scan, scout ping, or verify decode.
+New lane notices reveal the whole row in about 1.2 s: build forge, review scan, scout ping, or verify decode.
 The icon then breathes while Collab replies, then settles.
+Newly delivered mail opens and types its header behind a pink cursor in up to about 2.6 s, ending with a blink and postmark stamp.
+The body fades as typing ends; the icon then breathes until the delivering turn ends or its joined reply box closes.
+Newly sent mail types its header, then closes and seals in at most about 1.1 s without breathing.
+Both mail reveals play only for fresh items; received freshness uses delivery time, so long-parked mail still reveals on arrival.
 Set `animations` to `false` in `cli.json` to keep these effects static.
 
 Failed and cancelled lanes show a red `✗` and the state word without a box.
-Question-tool blocks end the lane box.
+User messages and question-tool blocks end the current lane or mail box.
+
+Delivered mail and the sender's completed `mail` tool call render in pink boxes with the peer, subject, and body.
+The header shows the kind glyph, keeps `<kind> · <time>` on the right, and cuts long subjects with `…` instead of wrapping.
+After parked mail is delivered at turn start, a reply whose first Markdown part starts with `---` gets its own pink commentary box, even with the user's prompt between the mail and reply.
+Question-tool rows end the commentary slot.
+Mail delivered mid-turn still joins a `---`…`---` reply block only when no user message comes between them.
+At low verbosity the sender's `mail` call folds into `+ N tools`; the host's `grouping/session.ts` exempts only `question` from tool grouping.
 
 Each completed question-tool block becomes one rounded box in the theme's accent color, titled with the question count.
 Each question shows its header, text, and all options with descriptions.

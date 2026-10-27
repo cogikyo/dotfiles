@@ -1,23 +1,34 @@
-import { RGBA, type CliRenderer, type OptimizedBuffer, type Renderable } from "@opentui/core";
+import { RGBA, type CliRenderer, type OptimizedBuffer, type Renderable, type TextRenderable } from "@opentui/core";
 import { heat, mix, motion, period } from "../statusline/working.tsx";
-import { layout, type Lane, type Mark, type Run } from "./lane.ts";
+import { layout, type Lane, type Mark, type Run, type Tint } from "./lane.ts";
 import type { Reply } from "./notice.ts";
+import { length, seal, unseal } from "./unseal.ts";
 
+export type Post = {
+  kind: "mail" | "sent";
+  tone: RGBA;
+  reply: Reply;
+  mark: Mark;
+  text: TextRenderable;
+  detail: Renderable;
+  body: Renderable;
+};
 export type Scene = {
   content: Renderable;
   viewport: Renderable;
   base: RGBA;
   runs: readonly Run[];
   lanes: readonly { lane: Lane; reply?: Reply; mark?: Mark }[];
+  posts: readonly Post[];
 };
 type Clip = { left: number; top: number; right: number; bottom: number };
 type Row = { y: number; left: number; right: number; start: number; x: number };
-type Frame = Row & { icon: string; tone: RGBA; p: number };
-type Look = { a?: number; hot?: number; band?: number; glyph?: string; noise?: string };
+export type Frame = Row & { icon: string; tone: RGBA; p: number };
+type Look = { a?: number; t?: number; hot?: number; glow?: number; band?: number; glyph?: string; noise?: string };
 type Scope = { row: (x: number, frame: Frame) => Look; icon: (pen: Pen, frame: Frame) => void };
-type Seen = { first: number; revealing: boolean; live: boolean; settled?: number };
+type Seen = { first: number; span: number; revealing: boolean; live: boolean; settled?: number };
 
-const fill = 0.1;
+export const fill = 0.1;
 const reveal = 1_200;
 const settle = 300;
 const fresh = 3_000;
@@ -66,10 +77,15 @@ export class Stage {
     this.#scene = scene;
     const now = performance.now();
     let moving = false;
-    for (const { reply } of scene.lanes) {
+    const entries = [
+      ...scene.lanes.map(({ reply }) => ({ reply, span: reveal })),
+      ...scene.posts.map((post) => ({ reply: post.reply, span: length(post) })),
+    ];
+    for (const { reply, span } of entries) {
       if (!reply) continue;
       const seen = this.#seen.get(reply.id) ?? {
         first: now,
+        span,
         revealing: reply.created >= this.#mounted && Date.now() - reply.created < fresh,
         live: false,
       };
@@ -98,6 +114,7 @@ export class Stage {
     }
     if (!motion()) return;
     for (const entry of scene.lanes) this.#lane(pen, entry, left, right);
+    for (const post of scene.posts) this.#letter(pen, post, left, right);
   }
 
   #lane(pen: Pen, { lane: { tone, role }, reply, mark }: Scene["lanes"][number], left: number, right: number) {
@@ -116,15 +133,38 @@ export class Stage {
       if (claimed) scope.icon(pen, frame);
       return;
     }
-    if (!claimed) return;
-    const since = now - seen.first - (seen.revealing ? reveal : 0);
-    if (reply.live) return pen.glyph(icon, x, y, heat(tone, wave(since)));
-    const ended = seen.settled;
-    if (ended !== undefined && now - ended < settle) pen.glyph(icon, x, y, heat(tone, 1 - (now - ended) / settle));
+    if (claimed) breathe(pen, { seen, reply, now }, { icon, x, y, tone });
+  }
+
+  #letter(pen: Pen, post: Post, left: number, right: number) {
+    const { reply, mark, tone } = post;
+    const seen = this.#seen.get(reply.id);
+    const nodes = [mark.node, post.text, post.detail, post.body];
+    if (!seen || nodes.some((node) => node.isDestroyed)) return;
+    const x = Math.trunc(mark.node.screenX) + mark.x;
+    const y = Math.trunc(mark.node.screenY);
+    if (!pen.claim(mark.glyph, x, y)) return;
+    const now = performance.now();
+    const p = reveals(seen, now);
+    if (p === undefined) return breathe(pen, { seen, reply, now }, { icon: mark.glyph, x, y, tone });
+    const frame = { y, left, right, start: x, x, icon: mark.glyph, tone, p };
+    if (post.kind === "mail") unseal(pen, frame, post, p * seen.span);
+    else seal(pen, frame, post, p * seen.span);
   }
 }
 
-class Pen {
+function breathe(
+  pen: Pen,
+  { seen, reply, now }: { seen: Seen; reply: Reply; now: number },
+  { icon, x, y, tone }: { icon: string; x: number; y: number; tone: RGBA },
+) {
+  const since = now - seen.first - (seen.revealing ? seen.span : 0);
+  if (reply.live) return pen.glyph(icon, x, y, heat(tone, wave(since)));
+  const ended = seen.settled;
+  if (ended !== undefined && now - ended < settle) pen.glyph(icon, x, y, heat(tone, 1 - (now - ended) / settle));
+}
+
+export class Pen {
   readonly #buffer: OptimizedBuffer;
   readonly #bg: Uint16Array;
   readonly #chars: Uint32Array;
@@ -163,7 +203,7 @@ class Pen {
     return new Pen(buffer, { bg, fg, char }, inside, base);
   }
 
-  box({ left, top, right, bottom }: Clip, { tone }: Lane) {
+  box({ left, top, right, bottom }: Clip, { tone }: Tint) {
     const tint = mix(this.base, tone, fill);
     this.#tints.add(pack(tint));
     for (let y = Math.max(top, this.clip.top); y <= Math.min(bottom, this.clip.bottom); y++) {
@@ -179,12 +219,12 @@ class Pen {
     const { y, left, right, tone } = frame;
     for (let x = left; x <= right; x++) {
       if (!this.#inside(x, y) || !this.#ours(x, y)) continue;
-      const { a = 1, hot = 0, glyph, noise, ...rest } = look(x, frame);
+      const { a = 1, hot = 0, glow = 0, glyph, noise, ...rest } = look(x, frame);
       const edge = x === right;
       const band = edge ? 0 : (rest.band ?? 0);
       const blank = this.#holds(x, y, " ");
       const bg = mix(mix(this.base, this.#read(x, y), a), tone, band);
-      const fg = mix(mix(bg, this.#ink(x, y), a), ember, hot);
+      const fg = mix(mix(mix(bg, this.#ink(x, y), rest.t ?? a), ember, hot), heat(tone, 1), glow);
       this.#paint(x, y, bg);
       this.#color(x, y, fg);
       this.#owned.add(this.#cell(x, y));
@@ -201,6 +241,12 @@ class Pen {
   glyph(char: string, x: number, y: number, fg: RGBA) {
     if (!this.#inside(x, y)) return;
     if (this.#cell(x, y) !== this.#claimed && !(this.#ours(x, y) && this.#holds(x, y, " "))) return;
+    this.#buffer.drawText(char, x, y, fg);
+  }
+
+  stamp(char: string, x: number, y: number, fg: RGBA) {
+    if (!this.#inside(x, y)) return;
+    if (this.#cell(x, y) !== this.#claimed && !this.#owned.has(this.#cell(x, y))) return;
     this.#buffer.drawText(char, x, y, fg);
   }
 
@@ -335,9 +381,9 @@ function bounds(node: Renderable): Clip {
   return { left, top, right: left + Math.trunc(node.width) - 1, bottom: top + Math.trunc(node.height) - 1 };
 }
 
-function reveals({ first, revealing }: Seen, now: number) {
-  if (!revealing || now - first >= reveal) return;
-  return (now - first) / reveal;
+function reveals({ first, span, revealing }: Seen, now: number) {
+  if (!revealing || now - first >= span) return;
+  return (now - first) / span;
 }
 
 function pack(color: RGBA) {
@@ -352,7 +398,7 @@ function cool(age: number) {
   return Math.max(0, 1 - (age * reveal) / 300);
 }
 
-function clamp(value: number) {
+export function clamp(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 

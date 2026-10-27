@@ -12,7 +12,7 @@ import type { Plugin } from "@opencode/plugin/tui";
 import { configured } from "../compact/limits.ts";
 import { glyphs, strain, usage } from "../lanes/label.ts";
 import { roles } from "../statusline/palette.ts";
-import { padding, type Item, type Lane, type Mark } from "./lane.ts";
+import { padding, type Item, type Lane, type Mark, type Tint } from "./lane.ts";
 import { owned, type Ledger } from "./ledger.ts";
 
 type Context = Plugin.Context;
@@ -53,15 +53,16 @@ export function notice(row: Renderable, text: Lane["text"]): Item | undefined {
   return { kind: glyph === "!" ? "failed" : "notice", row, lane };
 }
 
-export function match(items: readonly Item[], closed: ReadonlySet<Lane>, session: Source, sessionID?: string) {
-  const found = new Map<Lane, Reply>();
-  const notes = items.flatMap((item, at) => ("lane" in item ? [{ lane: item.lane, at }] : []));
+export function match(items: readonly Item[], closed: ReadonlySet<Tint>, session: Source, sessionID?: string) {
+  const found = new Map<Tint, Reply>();
+  const notes = items.flatMap((item, at) =>
+    item.kind === "notice" || item.kind === "failed" ? [{ lane: item.lane, at }] : [],
+  );
   if (sessionID === undefined || notes.length === 0) return found;
   const running = session.status(sessionID) === "running";
   const messages = session.message.list(sessionID);
   const idle = messages.findLastIndex((message) => message.type === "idle");
-  const positions = new Map(messages.map((message, index) => [message.id, index]));
-  const order = items.map(({ row }) => positions.get(/^session-part:([^:]+):/.exec(row.id)?.[1] ?? row.id));
+  const order = locate(items, messages);
   let end = messages.length;
   for (const { lane, at } of notes.toReversed()) {
     const low = order.findLast((value, index) => index < at && value !== undefined) ?? -1;
@@ -79,6 +80,11 @@ export function match(items: readonly Item[], closed: ReadonlySet<Lane>, session
     });
   }
   return found;
+}
+
+export function locate(items: readonly Item[], messages: readonly Message[]) {
+  const positions = new Map(messages.map((message, index) => [message.id, index]));
+  return items.map(({ row }) => positions.get(/^session-part:([^:]+):/.exec(row.id)?.[1] ?? row.id));
 }
 
 export function compose(lane: Lane, child: string | undefined, scan: Scan): Mark | undefined {
@@ -109,7 +115,7 @@ export function flatten(node: TextNodeRenderable): string {
   return node.children.map((child) => (typeof child === "string" ? child : flatten(child))).join("");
 }
 
-function whole(node: TextNodeRenderable) {
+export function whole(node: TextNodeRenderable) {
   const value = flatten(node);
   const known = shown.get(node);
   return known?.label === value ? known.full : value;
@@ -216,7 +222,7 @@ function lead({ state }: Lane, heading: TextNodeRenderable, { context, error }: 
   return [node, label] as const;
 }
 
-function put(owner: Renderable, node: TextNodeRenderable, { key, full, value, label }: Shown, ledger: Ledger) {
+export function put(owner: Renderable, node: TextNodeRenderable, { key, full, value, label }: Shown, ledger: Ledger) {
   const [current, ...more] = node.children;
   if (current === undefined || more.length > 0) return false;
   shown.set(node, { full, label });

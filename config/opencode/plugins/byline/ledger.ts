@@ -1,11 +1,21 @@
 import { RGBA, type Renderable, type TextNodeRenderable } from "@opentui/core";
 
+export type Text = Renderable & { readonly textNode: TextNodeRenderable; fg: RGBA };
+
 type Undo = () => void;
 type Entry = { undo: Undo; value?: unknown };
 type Field<T> = { get: () => T; set: (value: T) => void };
 
 // Exclude injected nodes from host-tree matching and repeated italic wrapping.
 export const owned = new WeakSet<object>();
+
+export function native(node: Renderable) {
+  return node.getChildren().filter((child) => !owned.has(child));
+}
+
+export function textual(node: Renderable | undefined): node is Text {
+  return node !== undefined && "textNode" in node;
+}
 
 export class Ledger {
   readonly #entries = new Map<Renderable, Map<unknown, Entry>>();
