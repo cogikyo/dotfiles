@@ -9,6 +9,8 @@ Run `bun run check` from `config/opencode` for type, lint, and format checks.
 Setup's `extra-bun` item does the same when a locked package for this platform is missing from `node_modules` or has the wrong version.
 Saves apply live: the TUI watches plugin sources, discovery directories, and `cli.json`, and the server watches its plugin modules.
 Plugin types under-declare the host; some extra fields, such as `titleView` on `dialog.select` options, still reach the native component at runtime.
+The server runs one copy of each plugin per loaded location, and a copy's `ctx.event.subscribe` can receive other locations' session events, so a handler that acts on a session should first check that `event.location` matches `ctx.location`.
+Execution and inbox events can omit `event.location`; `compact/server.ts` handles those with state that is safe to update in any copy.
 
 Drive, sidebar, and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
 Their four leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
