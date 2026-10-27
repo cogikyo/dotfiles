@@ -1,9 +1,11 @@
 import type { DialogSelectOption } from "@opencode/plugin/tui/context";
 import { TextAttributes, type RGBA } from "@opentui/core";
 import path from "node:path";
-import { createEffect, createMemo, createSignal, Match, Switch, type JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, Match, onCleanup, Switch, type JSX } from "solid-js";
 import { spinner } from "../context/section.tsx";
-import { roles } from "../statusline/palette.ts";
+import { envelope, mailable } from "../mail/mail.ts";
+import { api } from "../mail/rpc.ts";
+import { colors, roles } from "../statusline/palette.ts";
 import { mix } from "../statusline/working.tsx";
 import type { Context, Session, Source } from "./source.ts";
 import { tag, title, type State } from "./tags.ts";
@@ -53,12 +55,33 @@ export function attention(context: Context, sessionID: string): Attention {
   return false;
 }
 
+export type Mailed = (sessionID: string) => boolean;
+
+export const urgent = (context: Context, session: Session, mailed?: Mailed) =>
+  !!attention(context, session.id) || (mailable(session) && !!mailed?.(session.id));
+
+export function inbox(context: Context): Mailed {
+  const [parked, setParked] = createSignal<ReadonlySet<string>>(new Set());
+  const load = () =>
+    context.client
+      .rpc(api)
+      .parked({})
+      .then((ids) => setParked(new Set(ids)))
+      .catch(() => undefined);
+  void load();
+  const offs = (
+    ["session.inbox.enqueued", "session.inbox.delivered", "session.inbox.cancelled", "server.connected"] as const
+  ).map((type) => context.data.on(type, () => void load()));
+  onCleanup(() => offs.forEach((off) => off()));
+  return (sessionID) => parked().has(sessionID);
+}
+
 const running = (context: Context, sessionID: string) =>
   members(context, sessionID).some((id) => context.data.session.status(id) === "running");
 
-export function order(context: Context, list: Session[]) {
+export function order(context: Context, list: Session[], mailed?: Mailed) {
   const rank = new Map(
-    list.map((session) => [session.id, attention(context, session.id) ? 0 : tag(session.title)?.state ? 2 : 1]),
+    list.map((session) => [session.id, urgent(context, session, mailed) ? 0 : tag(session.title)?.state ? 2 : 1]),
   );
   return list.toSorted((a, b) => (rank.get(a.id) ?? 1) - (rank.get(b.id) ?? 1) || b.time.updated - a.time.updated);
 }
@@ -109,23 +132,42 @@ function Mark(props: { context: Context; sessionID: string; current: boolean; co
   );
 }
 
-export function row<Value>(context: Context, session: Session, value: Value, current: boolean): Option<Value> {
-  const text = title(session);
-  const [plain, setPlain] = createSignal(true);
-  const gutter = (color: RGBA) => {
-    setPlain(color.equals(dialog(context).text.base));
-    return <Mark context={context} sessionID={session.id} current={current} color={color} />;
+export const rows = (mailed?: Mailed) =>
+  function row<Value>(context: Context, session: Session, value: Value, current: boolean): Option<Value> {
+    const text = title(session);
+    const [plain, setPlain] = createSignal(true);
+    const gutter = (color: RGBA) => {
+      setPlain(color.equals(dialog(context).text.base));
+      return <Mark context={context} sessionID={session.id} current={current} color={color} />;
+    };
+    const state = tag(session.title)?.state;
+    const mail = () => mailable(session) && !!mailed?.(session.id);
+    const fit = () => {
+      const room = mail() ? TITLE_WIDTH - 2 : TITLE_WIDTH;
+      return text.length > room ? `${text.slice(0, room - 1)}…` : text;
+    };
+    return {
+      title: text,
+      value,
+      gutter,
+      titleView: () => (
+        <>
+          {plain() && state ? <span style={{ fg: faded(context, state) }}>{fit()}</span> : fit()}
+          {mail() ? (
+            plain() ? (
+              <span style={{ fg: colors.pink }}>{` ${envelope.closed}`}</span>
+            ) : (
+              ` ${envelope.closed}`
+            )
+          ) : (
+            ""
+          )}
+        </>
+      ),
+    };
   };
-  const state = tag(session.title)?.state;
-  if (!state) return { title: text, value, gutter };
-  const shown = text.length > TITLE_WIDTH ? `${text.slice(0, TITLE_WIDTH - 1)}…` : text;
-  return {
-    title: text,
-    value,
-    gutter,
-    titleView: () => (plain() ? <span style={{ fg: faded(context, state) }}>{shown}</span> : shown),
-  };
-}
+
+export const row = rows();
 
 function faded(context: Context, state: State) {
   const theme = dialog(context);

@@ -1,18 +1,20 @@
 import path from "node:path";
 import { createRoot, createSignal, onCleanup } from "solid-js";
 import {
-  attention,
   clip,
   dialog,
+  inbox,
   listen,
   located,
   order,
   projectName,
-  row,
+  rows,
   stable,
   timeAgo,
+  urgent,
   watch,
   width,
+  type Mailed,
   type Option,
   type Picker,
 } from "./rows.tsx";
@@ -37,7 +39,7 @@ export function go(context: Context, target: Target | { type: "project"; directo
 
 const here = (context: Context) => context.location?.directory ?? context.data.location.default().directory;
 
-function sessionOption(context: Context, session: Session, current: boolean): Option<Target> {
+function sessionOption(context: Context, session: Session, current: boolean, mailed: Mailed): Option<Target> {
   const project = context.data.project.get(session.projectID);
   const name = projectName(project);
   const directory = session.location.directory;
@@ -48,7 +50,7 @@ function sessionOption(context: Context, session: Session, current: boolean): Op
       : name || base;
   const shown = label.length > 30 ? `${label.slice(0, 29)}…` : label;
   return {
-    ...row<Target>(context, session, { type: "session", sessionID: session.id }, current),
+    ...rows(mailed)<Target>(context, session, { type: "session", sessionID: session.id }, current),
     searchText: `${session.id} ${directory}`,
     category: "Sessions",
     footer: `${shown ? `${shown} · ` : ""}${timeAgo(session.time.updated)}`,
@@ -88,14 +90,15 @@ export async function open(picker: Picker) {
     const route = context.ui.router.current();
     const current = route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
     watch(context, source.loaded);
+    const mailed = inbox(context);
     void source.load();
     void context.data.project.sync().catch(() => undefined);
     const options = stable(() => {
-      const list = order(context, sessions(context, source.loaded()));
-      const waiting = list.filter((session) => attention(context, session.id)).length;
+      const list = order(context, sessions(context, source.loaded()), mailed);
+      const waiting = list.filter((session) => urgent(context, session, mailed)).length;
       const shown = query().trim() ? list : list.slice(0, Math.max(RECENT, waiting));
       return [
-        ...shown.map((session) => sessionOption(context, session, session.id === current)),
+        ...shown.map((session) => sessionOption(context, session, session.id === current, mailed)),
         ...projectOptions(context),
       ];
     });

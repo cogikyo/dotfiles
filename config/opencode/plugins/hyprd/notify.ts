@@ -1,5 +1,9 @@
 import { Plugin } from "@opencode/plugin/tui";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
+import { tmpdir } from "node:os";
+import { setTimeout as sleep } from "node:timers/promises";
+import * as mail from "../mail/mail.ts";
 import { tag } from "../sessions/tags.ts";
 
 type Data = Plugin.Context["data"];
@@ -16,6 +20,9 @@ const ASK_MS = 5 * 60_000;
 const IDLE_MS = 15 * 60_000;
 const REQUEST_MS = 2_000;
 const SYNC_MS = 10_000;
+const NEAR_MS = 250;
+const FAR_MS = 1_000;
+const CLAIMS = `${process.env.XDG_RUNTIME_DIR ?? tmpdir()}/opencode-mail`;
 const LINE_MAX = 200; // Keeps the JSON request within hyprd's single 4096-byte Read.
 
 type Kind = "permission" | "question" | "complete" | "idle" | "error" | "lane" | "viewed";
@@ -44,6 +51,27 @@ function request(path: string, command: string) {
     });
     socket.write(command);
   });
+}
+
+function claim(id: string) {
+  try {
+    mkdirSync(CLAIMS, { recursive: true });
+    // Multiple TUIs can receive the same inbox event; claim one desktop notice.
+    writeFileSync(`${CLAIMS}/${id}`, `${process.pid}\n`, { flag: "wx" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+type Place = { focused: boolean; open: (id: string) => boolean; shown: () => string | undefined };
+
+async function post(letter: mail.Mail, sessionID: string, { focused, open, shown }: Place, signal: AbortSignal) {
+  const watching = focused && shown() === sessionID;
+  const near = [sessionID, letter.from].some((id) => open(id) || shown() === id);
+  if (!watching) await sleep(near ? NEAR_MS : FAR_MS, undefined, { signal }).catch(() => undefined);
+  if (signal.aborted || !pane.kitty_pid || !pane.kitty_window_id || !claim(letter.id) || watching) return;
+  send("lane", { message: `${mail.glyphs[letter.kind]} ${letter.recipient} ← ${letter.sender}: ${letter.subject}` });
 }
 
 const line = (text: string) =>
@@ -276,6 +304,10 @@ export default Plugin.define({
       }),
       data.on("form.replied", (event) => seen.delete(event.data.id)),
       data.on("form.cancelled", (event) => seen.delete(event.data.id)),
+      data.on("session.inbox.enqueued", ({ data: { sessionID, item } }) => {
+        const letter = item.type === "synthetic" ? mail.read(item.payload.metadata) : undefined;
+        if (letter) void post(letter, sessionID, { focused: focus.focused, open, shown }, abort.signal);
+      }),
       data.on("session.execution.started", (event) => ended.delete(event.data.sessionID)),
       data.on("session.execution.succeeded", (event) => {
         // Read before any await: later events in the host batch can change the store.

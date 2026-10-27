@@ -3,7 +3,7 @@
 This guide covers the local plugins for OpenCode V2.
 OpenCode discovers immediate plugin directories and loads their server and TUI entrypoints from source.
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
-The sidebar shows usage, Markdown Context, lanes, then browser; claims that share a placement render in plugin directory-name order.
+The sidebar shows usage, Markdown Context, lanes, Mail, then browser; claims that share a placement render in plugin directory-name order.
 Run `bun run check` from `config/opencode` for type, lint, and format checks.
 `dctl update bun` installs plugin dependencies from `config/opencode/bun.lock` with `bun install --frozen-lockfile --ignore-scripts`.
 Setup's `extra-bun` item does the same when a locked package for this platform is missing from `node_modules` or has the wrong version.
@@ -34,6 +34,36 @@ Click a non-running named lane's status icon or use `/lanes-close` to close lane
 The sidebar hides closed children.
 Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
 Only Collab delegates, with one level of children.
+
+## Mail
+
+`mail/server.ts` exposes `mail` with `to`, required `kind` (`info` or `ask`), `subject`, `body`, and optional `replyTo` for cross-session handoffs, including across directories.
+`to` accepts a top-level session ID or an exact title with its tag stripped; missing or ambiguous title matches fail and list up to eight close matches when available.
+`replyTo` must name a mail message this session received from the target.
+Subjects are single lines of at most 80 characters, and bodies are plain text of at most 4000 characters.
+Callers and targets must be open, non-`REFUSALS`, top-level sessions, as defined by `mailable()` in `mail/mail.ts`.
+Title matching uses the same rule; self and missing targets are refused.
+Mail comes from the sending session's agent and carries no user approval.
+`info` expects no reply, and acknowledgment-only replies are forbidden.
+`ask` expects a `mail` reply with `replyTo`, even when the answer is that the agent can't act or is waiting on the user.
+
+Delivery uses a host synthetic with `delivery: "steer", resume: false`: mail parks without starting a turn and rides along with the target's next turn, whatever starts it, including an interrupt, `/compact`, or unrevert.
+A running target gets it at its next step.
+
+`mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
+Delivered info and answered asks leave the sidebar.
+An answer counts only when its `replyTo` names the ask and its `from` and `to` reverse the ask's endpoints.
+Owed asks and delivered sent asks also leave when the peer is closed, `REFUSALS`, or deleted.
+The section hides when nothing is open.
+Incoming rows show the kind glyph and age; sent rows have a closed envelope while waiting in the target and an open envelope while awaiting an ask's reply.
+Rows open the peer session when clicked.
+The sidebar refreshes on inbox enqueue, delivery, and cancellation, `session.deleted`, `server.connected`, and successful `mail` calls, debounced by 300 ms.
+
+`mail/rpc.ts` exposes `ledger` and `parked`; `mail/store.ts` reads the OpenCode DB read-only because the TUI initially loads only the newest 20 messages per session.
+The queries depend on host tables `session_v2`, `session_message`, and `session_inbox`, including their JSON message and metadata shapes; review these after host updates.
+Received history is filtered by `to` and sent history by `from`, so forks do not inherit a parent's mail.
+This plugin has no key or separate state file.
+See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notices.
 
 ## Drive
 
@@ -141,12 +171,16 @@ If that lookup breaks, one warning toast appears; retitle keybinds still work.
 
 `hyprd/tui.ts` loads the notification and pane-context plugins together.
 `hyprd/notify.ts` sends permission, question, complete, idle, error, lane, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
-It needs `KITTY_PID` and `KITTY_WINDOW_ID`, follows child requests to their root, and sends desktop notices for open sessions outside the focused view.
+It needs `KITTY_PID` and `KITTY_WINDOW_ID` and follows child requests to their root.
+Except for mail, desktop notices are limited to open sessions outside the focused view.
 Successful children send a `lane` notice with `<lane> done`; one-shot children use their agent name, such as `verify/test done`.
 Root turns skip completion notices when no user message started the turn and all lane notices that woke it report `completed`, because each lane already sent its own notice; if the TUI has not loaded the start of the turn, the notice is sent anyway.
 User turns, turns woken by failed or cancelled lanes, and turns woken only by other notices still send completion notices.
 Notice text uses the first line containing a letter or digit, skipping Markdown rules such as `---`.
-Notification deduplication and timers live in memory.
+Mail sends a `lane` notice with recipient, sender, and subject, unless the target is displayed and focused.
+Only TUIs with both Kitty pane identifiers claim `$XDG_RUNTIME_DIR/opencode-mail/<mailID>` with an exclusive file create so at most one sends the notice; without `XDG_RUNTIME_DIR`, the directory is under the system temp directory.
+Claim errors count as not claimed and suppress that TUI's notice.
+Other notification deduplication and timers live in memory.
 
 Every 60 seconds, the plugin checks each open root and its lanes for pending requests, with a separate reminder clock per root.
 With tabs enabled, open roots are the roots of tab sessions; without tabs, only the displayed root is open.
@@ -192,11 +226,13 @@ Only top-level sessions can call it or be tagged; `sessionID` defaults to the ca
 `cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 
-Without a search, Open orders sessions needing permission or question input first, then other open sessions, then titles starting with a closed tag, newest first within each rank.
-Sessions groups by date, newest day first, and applies that order within each group, except closed sessions always come last even when they need input.
+Without a search, Open ranks sessions needing permission or question input together with open, non-`REFUSALS` sessions with parked mail, then other open sessions, then titles starting with a closed tag, newest first within each rank.
+Sessions groups by date, newest day first, and ranks permission or question input first within each group, except closed sessions always come last even when they need input.
 Closed titles are muted, with `RESEARCH` titles in a faint scout blue, unless selected or current; rows retain pending-input and running markers.
+In Open, an envelope after a session title marks parked mail for open, non-`REFUSALS` sessions.
+The marker and mail ranking share one `mail.parked` RPC request on opening, refreshed on inbox events and `server.connected`, instead of querying each session's inbox.
 
-- Open shows up to eight recents plus projects, expanding the list to include all sessions needing input; typing searches the full loaded session list.
+- Open shows up to eight recents plus projects, expanding the list to include all sessions in its first rank; typing searches the full loaded session list.
 - Right arrow on a Git project opens its worktrees, including a `New worktree…` row; left arrow returns to Open.
 - Sessions lists only the current directory's sessions and offers `ctrl+d` to delete and `ctrl+r` to rename; Open covers all projects.
 
