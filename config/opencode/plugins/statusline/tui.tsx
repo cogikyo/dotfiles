@@ -50,9 +50,18 @@ export default Plugin.define({
   id: "statusline",
   setup(context) {
     return createRoot((dispose) => {
+      const [focused, setFocused] = createSignal(true);
+      const focus = () => setFocused(true);
+      const blur = () => setFocused(false);
+      context.renderer.on("focus", focus);
+      context.renderer.on("blur", blur);
+      onCleanup(() => {
+        context.renderer.off("focus", focus);
+        context.renderer.off("blur", blur);
+      });
       context.ui.slot({
         replace: "prompt.footer.status",
-        render: (input) => <Location context={context} sessionID={input.sessionID} />,
+        render: (input) => <Location context={context} focused={focused} sessionID={input.sessionID} />,
       });
       context.ui.slot({
         append: "prompt.footer",
@@ -86,13 +95,13 @@ export default Plugin.define({
   },
 });
 
-function Location(props: { context: Context; sessionID?: string }) {
+function Location(props: { context: Context; focused: () => boolean; sessionID?: string }) {
   const directory = createMemo(() => {
     const session = props.sessionID ? props.context.data.session.get(props.sessionID) : undefined;
     return (session?.location ?? props.context.location ?? props.context.data.location.default()).directory;
   });
-  const [git, setGit] = createSignal<GitStatus>();
-  createEffect(() => onCleanup(watch(directory(), setGit)));
+  const [git, setGit] = createSignal<GitStatus | undefined>(undefined, { equals: Bun.deepEquals });
+  createEffect(() => onCleanup(watch(directory(), props.focused(), setGit)));
   const [where] = createResource(directory, place);
 
   return (
@@ -107,14 +116,14 @@ function Location(props: { context: Context; sessionID?: string }) {
   );
 }
 
-function watch(dir: string, set: (status: GitStatus | undefined) => void) {
+function watch(dir: string, polling: boolean, set: (status: GitStatus | undefined) => void) {
   let live = true;
   const read = async () => {
     const status = await gitStatus(dir);
     if (live) set(status);
   };
   void read();
-  const timer = setInterval(() => void read(), poll);
+  const timer = polling ? setInterval(() => void read(), poll) : undefined;
   return () => {
     live = false;
     clearInterval(timer);
