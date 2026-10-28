@@ -12,6 +12,7 @@ export const period = 1_000;
 export const tail = 3;
 export const tick = 100;
 const white = RGBA.fromInts(255, 255, 255);
+// Hot reload gives each plugin entrypoint its own clock and timer.
 const holds = new Set<Hold>();
 const [clock, setClock] = createSignal(0);
 
