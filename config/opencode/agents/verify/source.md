@@ -7,6 +7,17 @@ permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "shell", "resource": "*", "effect": "allow" }
   - { "action": "shell", "resource": "*src prune*", "effect": "deny" }
+  - { "action": "shell", "resource": "*hyprd opencode now*", "effect": "deny" }
+  - {
+      "action": "shell",
+      "resource": "*hyprd opencode recycle*",
+      "effect": "deny",
+    }
+  - {
+      "action": "shell",
+      "resource": "*hyprd opencode queue*",
+      "effect": "deny",
+    }
   - { "action": "skill", "resource": "x", "effect": "allow" }
 ---
 
