@@ -601,7 +601,7 @@ Unsigned builds are refused.
 
 ```sh
 dctl iso usb /dev/sdX
-dctl iso usb --iso ~/Downloads/dotfiles-REV.iso /dev/sdX
+dctl iso usb --iso ~/downloads/dotfiles-REV.iso /dev/sdX
 ```
 
 1. Run as the user; dctl elevates through sudo.

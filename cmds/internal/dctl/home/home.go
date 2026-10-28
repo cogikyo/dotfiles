@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	dirs  = []string{"downloads", "documents", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
+	dirs  = []string{"downloads", "docs", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
 	fonts = []string{"Vagari", "Symbols Nerd Font Mono"}
 )
 
