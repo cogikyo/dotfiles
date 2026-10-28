@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
@@ -89,12 +90,9 @@ func SyncGLava(s *state.State, locked bool) {
 		running := exec.Command("pgrep", "-fx", cmdline).Run() == nil
 		switch {
 		case want && !running && !locked:
-			cmd := exec.Command(argv[0], argv[1:]...)
-			if err := cmd.Start(); err != nil {
+			if err := detach.Start(exec.Command(argv[0], argv[1:]...)); err != nil {
 				fmt.Fprintf(os.Stderr, "hyprd glava: start %q: %v\n", cmdline, err)
-				continue
 			}
-			go cmd.Wait()
 		case !want && running:
 			exec.Command("pkill", "-fx", cmdline).Run()
 		}

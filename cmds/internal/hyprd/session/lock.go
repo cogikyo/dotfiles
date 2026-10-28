@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 )
@@ -680,17 +681,7 @@ func waitEwwdReady(timeout time.Duration) bool {
 }
 
 func startDetached(name string, args ...string) {
-	cmd := exec.Command(name, args...)
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	if err := cmd.Start(); err != nil {
+	if err := detach.Start(exec.Command(name, args...)); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: start %s %s: %v\n", name, strings.Join(args, " "), err)
-		return
 	}
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd lock: %s %s: %v\n", name, strings.Join(args, " "), err)
-		}
-	}()
 }
