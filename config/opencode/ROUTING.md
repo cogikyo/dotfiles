@@ -70,6 +70,9 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - After implementation, pair **`review/debug`** for correctness with **`review/simplify`** for idiom, dead code, and cleanliness.
   - Keep `review/debug` alone as the default for small fixes.
 - Add `review/security`, `review/profile`, `review/architect`, and `review/copy` as the change's risks warrant.
+- Keep `review/security` and other adversarial briefs on OpenAI, because Anthropic's cyber filter blocks Opus on them.
+  - Adversarial means bypass hunts, exploit paths, or attacks on keys, sandboxes, or guards.
+  - Opus can still take a routine security pass, such as secrets or auth in an app diff.
 - Send frontend changes that add or change UI text through `review/copy` before commit.
 - Run `review/entropy` on request, on package or app sweeps, or as a retro after a feature lands; on a small diff it produces rewrite noise.
 
@@ -98,7 +101,7 @@ Pick a builder by how much the brief settles.
   - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
 - Pass `openai/gpt-6-astra#high` or `openai/gpt-6.1-sol#high` when Collab picks one explicitly.
 - Seat a **fresh Opus reviewer** beside Sol or Astra in every review council, and convene one for harness changes, production-impact findings, and design verdicts.
-  - Give Opus a different lens when risks span lenses; keep seats on the same lens only for high-stakes changes where model diversity is the point.
+  - Give Opus a different lens when risks span lenses, but not an adversarial one; keep seats on the same lens only for high-stakes changes where model diversity is the point.
   - Pass `claude/claude-opus-5-5#high` for the Opus seat.
   - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
 - Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
