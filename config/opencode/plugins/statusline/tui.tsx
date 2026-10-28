@@ -6,7 +6,7 @@ import { Delivery } from "./delivery.tsx";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toasts.tsx";
-import { heat, mix, motion, period, tail, tick, Working } from "./working.tsx";
+import { animate, clock, heat, mix, period, tail, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -176,13 +176,11 @@ function Bar(props: { context: Context; sessionID?: string }) {
   });
   const running = () =>
     props.sessionID !== undefined && props.context.data.session.status(props.sessionID) === "running";
-  const [now, setNow] = createSignal(0);
+  const now = () => (running() ? clock() : 0);
   let lit = 0;
 
   createEffect(() => {
-    if (!running()) return setNow(0);
-    const timer = setInterval(() => setNow(motion() ? performance.now() : 0), tick);
-    onCleanup(() => clearInterval(timer));
+    if (running()) onCleanup(animate());
   });
   createEffect(
     on(level, (next, previous) => {

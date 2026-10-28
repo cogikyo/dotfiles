@@ -2,19 +2,24 @@ import type { Plugin } from "@opencode/plugin/tui";
 import { RGBA, type CliRenderer, type OptimizedBuffer, type Renderable } from "@opentui/core";
 import os from "node:os";
 import path from "node:path";
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { hook, locate, type Prompt } from "./prompt.ts";
 
 type Context = Plugin.Context;
+type Hold = { readonly renderer?: CliRenderer };
 
 export const period = 1_000;
 export const tail = 3;
-export const tick = 40;
+export const tick = 100;
 const white = RGBA.fromInts(255, 255, 255);
+const holds = new Set<Hold>();
+const [clock, setClock] = createSignal(0);
 
 let moving = true;
+let timer: ReturnType<typeof setInterval> | undefined;
 
 export const motion = () => moving;
+export { clock };
 
 export function heat(base: RGBA, amount: number) {
   return mix(base, white, 0.55 * amount);
@@ -48,22 +53,32 @@ export async function refresh() {
   return moving;
 }
 
-export function animate(renderer: CliRenderer) {
-  let timer: ReturnType<typeof setInterval> | undefined;
+export function animate(renderer?: CliRenderer) {
+  const hold: Hold = { renderer };
   let stopped = false;
   const begin = async () => {
     if (!(await refresh()) || stopped) return;
-    timer = setInterval(() => {
-      if (moving) renderer.requestRender();
-    }, tick);
+    holds.add(hold);
+    timer ??= setInterval(beat, tick);
   };
   void begin();
-  renderer.requestRender();
+  renderer?.requestRender();
   return () => {
     stopped = true;
-    clearInterval(timer);
-    renderer.requestRender();
+    holds.delete(hold);
+    if (holds.size === 0) {
+      clearInterval(timer);
+      timer = undefined;
+      setClock(0);
+    }
+    renderer?.requestRender();
   };
+}
+
+function beat() {
+  if (!moving) return setClock(0);
+  setClock(performance.now());
+  for (const hold of holds) hold.renderer?.requestRender();
 }
 
 function start(context: Context, prompt: Prompt) {

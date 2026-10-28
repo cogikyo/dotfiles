@@ -1,19 +1,17 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { RGBA } from "@opentui/core";
 import { createEffect, createSignal, onCleanup, Show, type JSX } from "solid-js";
+import { animate, clock, tick } from "../statusline/working.tsx";
 
 export const hover = RGBA.fromHex("#6380ec");
 
 const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 export function spinner(active: () => boolean) {
-  const [frame, setFrame] = createSignal(0);
   createEffect(() => {
-    if (!active()) return;
-    const timer = setInterval(() => setFrame((value) => value + 1), 100);
-    onCleanup(() => clearInterval(timer));
+    if (active()) onCleanup(animate());
   });
-  return () => frames[frame() % frames.length];
+  return () => frames[active() ? Math.floor(clock() / tick) % frames.length : 0];
 }
 
 export function Section(props: { context: Plugin.Context; title: string; detail: string; children: JSX.Element }) {
