@@ -23,7 +23,6 @@ const (
 )
 
 // paneWaiter re-shows the notification after any close but a Focus click, dismissal included.
-// It stops when hyprd reports the pane viewed or superseded, or after n re-shows.
 const paneWaiter = `p=$1 w=$2 g=$3 t=$4 n=$5
 shift 5
 i=0
@@ -54,6 +53,8 @@ var globalPaneNotifications = &paneNotificationRegistry{
 var globalDunstDeliveries = &dunstDeliveryRegistry{
 	byID: make(map[int]dunstDelivery),
 }
+
+var paneWaiters sync.Mutex
 
 var soundQueue = make(chan soundRequest, 32)
 
@@ -340,6 +341,9 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 		return detach.Start(exec.Command("dunstify", args...))
 	}
 
+	paneWaiters.Lock()
+	defer paneWaiters.Unlock()
+
 	key, token := globalPaneNotifications.Begin(ctx, spec.Style, spec.Birth)
 	if !globalPaneNotifications.Live(key, token) {
 		globalPaneNotifications.End(key, token)
@@ -351,12 +355,15 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	if timeout == 0 {
 		retries = maxPersistentRetries
 	}
+	prefix := paneUnitPrefix(ctx, spec.Style)
+	// Dunst signals only the newest sender for a replaced ID.
+	stopErr := detach.Stop(context.Background(), prefix+"*.service")
 	args = append([]string{strconv.Itoa(key.PID), strconv.Itoa(key.WindowID), key.Group, strconv.FormatUint(token, 10), strconv.Itoa(retries)}, args...)
-	if err := detach.Unit(context.Background(), "hyprd-pane", paneWaiter, args...); err != nil {
+	if err := detach.NamedUnit(context.Background(), prefix+strconv.FormatUint(token, 10), paneWaiter, args...); err != nil {
 		globalPaneNotifications.End(key, token)
-		return err
+		return errors.Join(stopErr, err)
 	}
-	return nil
+	return stopErr
 }
 
 // Pane answers [paneWaiter] callbacks; the waiter re-shows only on the reply "rearm".
@@ -514,10 +521,24 @@ func soundWorker() {
 }
 
 func (n *Notifier) acknowledgePane(ctx *kittyContext) {
+	paneWaiters.Lock()
+	defer paneWaiters.Unlock()
+
 	globalPaneNotifications.Cancel(ctx, opencodePaneAckGroups)
+	patterns := make([]string, len(opencodePaneAckGroups))
+	for i, group := range opencodePaneAckGroups {
+		patterns[i] = paneUnitPrefix(ctx, group) + "*.service"
+	}
+	if err := detach.Stop(context.Background(), patterns...); err != nil {
+		logf("acknowledge pane pid=%d window=%d: %v", ctx.PID, ctx.WindowID, err)
+	}
 	for _, group := range opencodePaneAckGroups {
 		closeDunstNotification(replacementNotificationID(ctx, group))
 	}
+}
+
+func paneUnitPrefix(ctx *kittyContext, group string) string {
+	return "hyprd-pane-" + strconv.Itoa(replacementNotificationID(ctx, group)) + "-"
 }
 
 func (r *paneNotificationRegistry) Begin(ctx *kittyContext, group string, birth uint64) (paneNotificationKey, uint64) {
