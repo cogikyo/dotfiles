@@ -20,8 +20,8 @@ func (c *Client) eval(op, lua string) error {
 	return nil
 }
 
-// luaQuote returns a Lua double-quoted string literal.
-func luaQuote(s string) string {
+// LuaQuote returns a Lua double-quoted string literal.
+func LuaQuote(s string) string {
 	var b strings.Builder
 	b.Grow(len(s) + 2)
 	b.WriteByte('"')
@@ -66,7 +66,7 @@ func (c *Client) FocusWorkspace(id int) error {
 // FocusNamedWorkspace switches to a named workspace.
 func (c *Client) FocusNamedWorkspace(name string) error {
 	return c.eval("FocusNamedWorkspace", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.focus({ workspace = %s }))", luaQuote("name:"+name),
+		"hl.dispatch(hl.dsp.focus({ workspace = %s }))", LuaQuote("name:"+name),
 	))
 }
 
@@ -74,7 +74,7 @@ func (c *Client) FocusNamedWorkspace(name string) error {
 func (c *Client) Tag(address, tag string) error {
 	return c.eval("Tag", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.tag({ tag = %s, window = %s }))",
-		luaQuote(tag), luaQuote(windowAddress(address)),
+		LuaQuote(tag), LuaQuote(windowAddress(address)),
 	))
 }
 
@@ -82,7 +82,7 @@ func (c *Client) Tag(address, tag string) error {
 func (c *Client) FocusWindow(address string) error {
 	return c.eval("FocusWindow", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.focus({ window = %s }))",
-		luaQuote(windowAddress(address)),
+		LuaQuote(windowAddress(address)),
 	))
 }
 
@@ -100,7 +100,7 @@ func (c *Client) MoveActiveToWorkspace(id int, follow bool) error {
 func (c *Client) MoveWindowToWorkspace(address string, workspace string, follow bool) error {
 	return c.eval("MoveWindowToWorkspace", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = %s, window = %s }))",
-		luaQuote(workspace), luaBool(follow), luaQuote(windowAddress(address)),
+		LuaQuote(workspace), luaBool(follow), LuaQuote(windowAddress(address)),
 	))
 }
 
@@ -108,31 +108,31 @@ func (c *Client) MoveWindowToWorkspace(address string, workspace string, follow 
 func (c *Client) SetWindowFloating(address string) error {
 	return c.eval("SetWindowFloating", fmt.Sprintf(
 		`hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s }))`,
-		luaQuote(windowAddress(address)),
+		LuaQuote(windowAddress(address)),
 	))
 }
 
 // Park floats the addressed window at its current global box at, size and silently moves it to workspace in one frame.
 func (c *Client) Park(address, workspace string, at, size [2]int) error {
-	w := luaQuote(windowAddress(address))
+	w := LuaQuote(windowAddress(address))
 	return c.eval("Park", fmt.Sprintf(
 		`hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s }))`,
-		w, size[0], size[1], w, at[0], at[1], w, luaQuote(workspace), w,
+		w, size[0], size[1], w, at[0], at[1], w, LuaQuote(workspace), w,
 	))
 }
 
 // Unpark silently moves the addressed window to workspace and tiles it in one frame.
 func (c *Client) Unpark(address, workspace string) error {
-	w := luaQuote(windowAddress(address))
+	w := LuaQuote(windowAddress(address))
 	return c.eval("Unpark", fmt.Sprintf(
 		`hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.float({ action = "disable", window = %s }))`,
-		luaQuote(workspace), w, w,
+		LuaQuote(workspace), w, w,
 	))
 }
 
 // Fit moves and resizes the addressed floating window to the global box at, size.
 func (c *Client) Fit(address string, at, size [2]int) error {
-	w := luaQuote(windowAddress(address))
+	w := LuaQuote(windowAddress(address))
 	return c.eval("Fit", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s }))",
 		size[0], size[1], w, at[0], at[1], w,
@@ -144,36 +144,36 @@ func (c *Client) Fit(address string, at, size [2]int) error {
 // In Hyprland 0.56.2, window.swap leaves incoming's xdg_toplevel state suspended after a move off a hidden special workspace, so kitty skips rendering.
 // A zero relative resize unsuspends incoming without changing its geometry.
 func (c *Client) SwapSlot(incoming, outgoing string) error {
-	w := luaQuote(windowAddress(incoming))
+	w := LuaQuote(windowAddress(incoming))
 	return c.eval("SwapSlot", fmt.Sprintf(
 		`hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })); hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s })); hl.dispatch(hl.dsp.focus({ window = %s })); hl.dispatch(hl.dsp.layout("orientationleft"))`,
-		w, luaQuote(windowAddress(outgoing)), w, w,
+		w, LuaQuote(windowAddress(outgoing)), w, w,
 	))
 }
 
 // Rezoom swaps two monocle floats and focuses incoming at unchanged geometry.
 // The zero relative resize wakes incoming as in [Client.SwapSlot].
 func (c *Client) Rezoom(incoming, outgoing string) error {
-	w := luaQuote(windowAddress(incoming))
+	w := LuaQuote(windowAddress(incoming))
 	return c.eval("Rezoom", fmt.Sprintf(
 		`if hl.dispatch(hl.dsp.window.swap({ window = %s, target = %s })).ok then hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s })); hl.dispatch(hl.dsp.focus({ window = %s })) end`,
-		w, luaQuote(windowAddress(outgoing)), w, w,
+		w, LuaQuote(windowAddress(outgoing)), w, w,
 	))
 }
 
 // Zoom floats all members but moves only parked windows to workspace.
 func (c *Client) Zoom(active string, parked []Window, workspace string, size, offset [2]int) error {
 	var b strings.Builder
-	a := luaQuote(windowAddress(active))
+	a := LuaQuote(windowAddress(active))
 	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); `, a)
 	writeBox(&b, a, size, offset)
 	for _, p := range parked {
-		w := luaQuote(windowAddress(p.Address))
+		w := LuaQuote(windowAddress(p.Address))
 		if !p.Floating {
 			fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.float({ action = "enable", window = %s })); hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s })); hl.dispatch(hl.dsp.window.move({ x = %d, y = %d, window = %s })); `,
 				w, p.Size[0], p.Size[1], w, p.At[0], p.At[1], w)
 		}
-		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); `, luaQuote(workspace), w)
+		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); `, LuaQuote(workspace), w)
 		writeBox(&b, w, size, offset)
 	}
 	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, a)
@@ -187,7 +187,7 @@ func (c *Client) Rebox(addresses []string, size, offset [2]int) error {
 	}
 	var b strings.Builder
 	for _, addr := range addresses {
-		writeBox(&b, luaQuote(windowAddress(addr)), size, offset)
+		writeBox(&b, LuaQuote(windowAddress(addr)), size, offset)
 	}
 	return c.eval("Rebox", b.String())
 }
@@ -201,32 +201,32 @@ func writeBox(b *strings.Builder, w string, size, offset [2]int) {
 func (c *Client) Unzoom(workspace, zoomed string, tile []string) error {
 	var b strings.Builder
 	for _, addr := range tile {
-		w := luaQuote(windowAddress(addr))
-		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.float({ action = "disable", window = %s })); `, luaQuote(workspace), w, w)
+		w := LuaQuote(windowAddress(addr))
+		fmt.Fprintf(&b, `hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.float({ action = "disable", window = %s })); `, LuaQuote(workspace), w, w)
 	}
-	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, luaQuote(windowAddress(zoomed)))
+	fmt.Fprintf(&b, `hl.dispatch(hl.dsp.focus({ window = %s }))`, LuaQuote(windowAddress(zoomed)))
 	return c.eval("Unzoom", b.String())
 }
 
 // Present brings a parked float to workspace without changing its geometry.
 func (c *Client) Present(address, workspace string) error {
-	w := luaQuote(windowAddress(address))
+	w := LuaQuote(windowAddress(address))
 	return c.eval("Present", fmt.Sprintf(
 		`hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = false, window = %s })); hl.dispatch(hl.dsp.window.resize({ x = 0, y = 0, relative = true, window = %s }))`,
-		luaQuote(workspace), w, w,
+		LuaQuote(workspace), w, w,
 	))
 }
 
 // FocusDirection delegates directional focus to Hyprland without monocle handling.
 func (c *Client) FocusDirection(dir string) error {
-	return c.eval("FocusDirection", fmt.Sprintf("hl.dispatch(hl.dsp.focus({ direction = %s }))", luaQuote(dir)))
+	return c.eval("FocusDirection", fmt.Sprintf("hl.dispatch(hl.dsp.focus({ direction = %s }))", LuaQuote(dir)))
 }
 
 // ResizeWindowExact resizes the addressed window to exact pixel size w×h.
 func (c *Client) ResizeWindowExact(address string, w, h int) error {
 	return c.eval("ResizeWindowExact", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s }))",
-		w, h, luaQuote(windowAddress(address)),
+		w, h, LuaQuote(windowAddress(address)),
 	))
 }
 
@@ -237,7 +237,7 @@ func (c *Client) CenterWindows(addresses ...string) error {
 	}
 	var b strings.Builder
 	for _, addr := range addresses {
-		fmt.Fprintf(&b, "hl.dispatch(hl.dsp.window.center({ window = %s })); ", luaQuote(windowAddress(addr)))
+		fmt.Fprintf(&b, "hl.dispatch(hl.dsp.window.center({ window = %s })); ", LuaQuote(windowAddress(addr)))
 	}
 	return c.eval("CenterWindows", b.String())
 }
@@ -269,7 +269,7 @@ func (c *Client) MoveActiveRelative(dx, dy int) error {
 func (c *Client) MoveWindowDirection(dir string) error {
 	return c.eval("MoveWindowDirection", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.move({ direction = %s }))",
-		luaQuote(dir),
+		LuaQuote(dir),
 	))
 }
 
@@ -281,7 +281,7 @@ func (c *Client) CenterActive() error {
 func (c *Client) SendShortcut(mods, key, address string) error {
 	return c.eval("SendShortcut", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.send_shortcut({ mods = %s, key = %s, window = %s }))",
-		luaQuote(mods), luaQuote(key), luaQuote(windowAddress(address)),
+		LuaQuote(mods), LuaQuote(key), LuaQuote(windowAddress(address)),
 	))
 }
 
@@ -289,14 +289,14 @@ func (c *Client) SendShortcut(mods, key, address string) error {
 func (c *Client) CloseWindow(address string) error {
 	return c.eval("CloseWindow", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.close({ window = %s }))",
-		luaQuote(windowAddress(address)),
+		LuaQuote(windowAddress(address)),
 	))
 }
 
 // Exec runs cmd via Hyprland's exec dispatcher.
 func (c *Client) Exec(cmd string) error {
 	return c.eval("Exec", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.exec_cmd(%s))", luaQuote(cmd),
+		"hl.dispatch(hl.dsp.exec_cmd(%s))", LuaQuote(cmd),
 	))
 }
 
@@ -309,28 +309,28 @@ func (c *Client) ExecOnWorkspace(cmd string, workspace int, silent bool) error {
 	}
 	return c.eval("ExecOnWorkspace", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.exec_cmd(%s, { workspace = %s }))",
-		luaQuote(cmd), luaQuote(ws),
+		LuaQuote(cmd), LuaQuote(ws),
 	))
 }
 
 // Submap enters named submap; "reset" leaves the current submap.
 func (c *Client) Submap(name string) error {
 	return c.eval("Submap", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.submap(%s))", luaQuote(name),
+		"hl.dispatch(hl.dsp.submap(%s))", LuaQuote(name),
 	))
 }
 
 // ToggleSpecialWorkspace toggles the named special workspace.
 func (c *Client) ToggleSpecialWorkspace(name string) error {
 	return c.eval("ToggleSpecialWorkspace", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.workspace.toggle_special(%s))", luaQuote(name),
+		"hl.dispatch(hl.dsp.workspace.toggle_special(%s))", LuaQuote(name),
 	))
 }
 
 // LayoutMsg sends a layoutmsg string (e.g. "swapwithmaster master").
 func (c *Client) LayoutMsg(msg string) error {
 	return c.eval("LayoutMsg", fmt.Sprintf(
-		"hl.dispatch(hl.dsp.layout(%s))", luaQuote(msg),
+		"hl.dispatch(hl.dsp.layout(%s))", LuaQuote(msg),
 	))
 }
 
@@ -345,7 +345,7 @@ func (c *Client) MoveCursor(x, y int) error {
 func (c *Client) SetAccent(border, shadow string) error {
 	return c.eval("SetAccent", fmt.Sprintf(
 		"hl.config({ general = { col = { active_border = %s } }, decoration = { shadow = { color = %s } } })",
-		luaQuote(border), luaQuote(shadow),
+		LuaQuote(border), LuaQuote(shadow),
 	))
 }
 
@@ -361,7 +361,7 @@ func (c *Client) SetOuterGaps(top, right, bottom, left int) error {
 func (c *Client) SetShadow(size int, inactive string) error {
 	return c.eval("SetShadow", fmt.Sprintf(
 		"hl.config({ decoration = { shadow = { range = %d, color_inactive = %s } } })",
-		size, luaQuote(inactive),
+		size, LuaQuote(inactive),
 	))
 }
 

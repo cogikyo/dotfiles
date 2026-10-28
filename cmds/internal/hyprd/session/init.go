@@ -16,6 +16,7 @@ import (
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/browser"
+	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/notify"
 	"dotfiles/cmds/internal/hyprd/state"
@@ -122,7 +123,7 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	if next != "" {
-		go i.promptSetup(next, online)
+		i.promptSetup(next, online)
 	}
 
 	if _, _, err := i.share.SyncDisplay(); err != nil {
@@ -225,22 +226,21 @@ func (i *Init) promptSetup(next string, online bool) {
 	if !online {
 		body = "Plug in Ethernet or join Wi-Fi: nmcli --ask device wifi connect <SSID>\n" + next
 	}
-	notifier := notify.NewNotifier(i.hypr, i.state, i.state.GetConfig(), nil)
-	run, err := notifier.Prompt("dctl", "Finish setting up", html.EscapeString(body), "Run setup")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd init: setup prompt: %v\n", err)
-		return
-	}
-	if !run {
-		return
-	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd init: setup prompt: %v\n", err)
 		return
 	}
 	cmd := "kitty --title terminalfloat --hold -e " + filepath.Join(home, ".local", "bin", "dctl") + " setup"
-	if err := i.hypr.Exec(cmd); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd init: exec %q: %v\n", cmd, err)
+	notifier := notify.NewNotifier(i.hypr, i.state, i.state.GetConfig(), nil)
+	args := append([]string{"hl.dsp.exec_cmd(" + hypr.LuaQuote(cmd) + ")"},
+		notifier.PromptArgs("dctl", "critical", "Finish setting up", html.EscapeString(body), "Run setup")...)
+	if err := detach.Unit(context.Background(), "setup-prompt", setupPrompt, args...); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: setup prompt: %v\n", err)
 	}
 }
+
+const setupPrompt = `dispatch=$1
+shift
+[ "$(dunstify "$@")" = default ] || exit 0
+exec hyprctl dispatch "$dispatch"`

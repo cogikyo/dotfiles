@@ -404,17 +404,6 @@ func (n *Notifier) Pane(arg string) string {
 	}
 }
 
-// Prompt blocks until the persistent critical notification closes and reports whether its action was chosen.
-func (n *Notifier) Prompt(app, title, body, label string) (bool, error) {
-	out, err := exec.Command("dunstify", n.PromptArgs(app, "critical", title, body, label)...).Output()
-	if err != nil {
-		if _, ok := errors.AsType[*exec.ExitError](err); !ok {
-			return false, fmt.Errorf("dunstify: %w", err)
-		}
-	}
-	return strings.TrimSpace(string(out)) == "default", nil
-}
-
 func (n *Notifier) PromptArgs(app, urgency, title, body, label string) []string {
 	spec := notificationSpec{
 		App:     app,
