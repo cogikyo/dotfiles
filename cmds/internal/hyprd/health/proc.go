@@ -115,6 +115,20 @@ func (p *proc) resolveGroup() string {
 	return p.group
 }
 
+func vmSwap(pid int) uint64 {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
+	if err != nil {
+		return 0
+	}
+	for line := range strings.Lines(string(data)) {
+		if rest, ok := strings.CutPrefix(line, "VmSwap:"); ok {
+			kb, _ := strconv.ParseUint(strings.TrimSuffix(strings.TrimSpace(rest), " kB"), 10, 64)
+			return kb << 10
+		}
+	}
+	return 0
+}
+
 func cmdline(pid int) string {
 	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {

@@ -50,6 +50,7 @@ type point struct {
 type minute struct {
 	At       int64             `json:"at"`
 	Secs     int64             `json:"secs"`
+	RAM      float64           `json:"ram,omitempty"`
 	CPU      map[string]uint64 `json:"cpu,omitempty"`
 	Restarts map[string]int    `json:"restarts,omitempty"`
 	Lines    map[string]int    `json:"lines,omitempty"`
@@ -100,6 +101,12 @@ func (h *history) sample(ctx context.Context, now time.Time) ([]proc, []error) {
 		return nil, []error{fmt.Errorf("read processes: %w", err)}
 	}
 	h.sampleProcs(procs, &m, rebase, at)
+
+	if mi, err := readMeminfo(); err != nil {
+		errs = append(errs, fmt.Errorf("read meminfo: %w", err))
+	} else {
+		m.RAM = mi.used()
+	}
 
 	restarts := map[string]int{}
 	for _, scope := range scopes {

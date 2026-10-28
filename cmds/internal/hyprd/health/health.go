@@ -190,7 +190,7 @@ func (m *Monitor) save() {
 }
 
 func (m *Monitor) evaluate(ctx context.Context, now time.Time, window time.Duration, procs []proc) ([]Finding, error) {
-	found, failed := m.hist.findings(ctx, now, window, procs)
+	found, held := m.hist.findings(ctx, now, window, procs)
 
 	next := maps.Clone(m.open)
 	var opened []Finding
@@ -212,7 +212,7 @@ func (m *Monitor) evaluate(ctx context.Context, now time.Time, window time.Durat
 	}
 	for _, key := range slices.Sorted(maps.Keys(next)) {
 		f := next[key]
-		if current[key] || failed[f.Check] {
+		if current[key] || held[f.Check] {
 			continue
 		}
 		delete(next, key)

@@ -20,6 +20,10 @@ const (
 	restartLoops = 10
 	zombieCount  = 3
 	journalNoise = 2000
+	ramOpen      = 0.80
+	ramClear     = 0.75
+	ramPoints    = 10
+	ramSpacing   = int64((interval - 5*time.Second) / time.Second)
 )
 
 func (h *history) findings(ctx context.Context, now time.Time, window time.Duration, procs []proc) ([]Finding, map[string]bool) {
@@ -36,13 +40,12 @@ func (h *history) findings(ctx context.Context, now time.Time, window time.Durat
 	found = append(found, h.restartFindings(buckets)...)
 	found = append(found, h.zombieFindings(now, procs)...)
 	found = append(found, journalFindings(buckets)...)
+	ram, hold := ramFindings(buckets, procs)
+	found = append(found, ram...)
 
-	failed := map[string]bool{}
 	units, err := failedFindings(ctx)
-	if err != nil {
-		failed["failed"] = true
-	}
-	return append(found, units...), failed
+	found = append(found, units...)
+	return found, map[string]bool{"ram": hold, "failed": err != nil}
 }
 
 func span(buckets []minute) (int64, time.Duration) {
@@ -126,6 +129,38 @@ func (h *history) memoryFindings(cut int64) []Finding {
 		})
 	}
 	return found
+}
+
+func ramFindings(buckets []minute, procs []proc) ([]Finding, bool) {
+	var obs []minute
+	for _, b := range slices.Backward(buckets) {
+		if b.RAM > 0 && (len(obs) == 0 || obs[len(obs)-1].At-b.At >= ramSpacing) {
+			obs = append(obs, b)
+		}
+	}
+	slices.Reverse(obs)
+	samples := make([]float64, len(obs))
+	for i, o := range obs {
+		samples[i] = o.RAM
+	}
+	if len(samples) < ramPoints {
+		return nil, true
+	}
+	recent := samples[len(samples)-ramPoints:]
+	if slices.Min(recent) < ramOpen {
+		return nil, slices.Max(recent) >= ramClear
+	}
+	mi, err := readMeminfo()
+	if err != nil {
+		return nil, true
+	}
+	run := len(samples) - 1
+	for run > 0 && samples[run-1] >= ramOpen {
+		run--
+	}
+	over := (time.Duration(obs[len(obs)-1].At-obs[run].At) * time.Second).Round(time.Minute)
+	summary, evidence := ramReport(mi, procs, samples, over)
+	return []Finding{{Check: "ram", Subject: "system", Summary: summary, Evidence: evidence}}, false
 }
 
 func (h *history) restartFindings(buckets []minute) []Finding {
