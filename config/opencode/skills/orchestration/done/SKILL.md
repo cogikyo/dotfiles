@@ -31,12 +31,12 @@ When nothing qualifies, say so in one line.
 
 ## Cleanup
 
-Use one `sessions` SQL query to find top-level `/tmp/opencode/<name>` files and directories in this session tree's tool inputs (`$.state.input`) and check which paths other session trees touched in the last 3 days.
-Include all children; do not rely on recall.
+Run [cleanup.sql](cleanup.sql) unchanged through `sessions` with `?1` = root session ID and `?2` = now − 3 days in epoch milliseconds.
+Select existing `/tmp/opencode/<name>` paths with `shared = 0`; keep `shared = 1` paths and any of unclear ownership without asking (`REFUSALS` hides sessions from the shared check).
 Add `~/.local/state/opencode/scratch/<sessionID>/` for each session in the tree.
 Keep both scratch roots and the shared `runs.jsonl`.
-Keep any path another session tree touched in the last 3 days, and any path whose ownership is unclear, without asking.
-For the remaining paths, record their count and size, stop processes whose working directory or arguments point into them, then delete them.
+Record count and size, then stop processes whose working directory or arguments point into the selected paths.
+Delete with literal `rm -rf -- /tmp/opencode/<name> …` paths; send sandbox directories to `trash -- <path>`.
 
 ## Close
 
