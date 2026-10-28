@@ -11,8 +11,8 @@
   "devDependencies": {
     "@opencode/plugin": "2.0.27",
     "@opencode/theme": "2.0.27",
-    "@opentui/core": "0.5.17",
-    "@opentui/solid": "0.5.17",
+    "@opentui/core": "0.6.8",
+    "@opentui/solid": "0.6.8",
     "@types/bun": "1.4.0",
     "effect": "4.0.1",
     "eslint-plugin-solid": "0.18.0",
