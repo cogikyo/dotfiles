@@ -119,8 +119,8 @@ func ramReport(mi meminfo, procs []proc, samples []float64, over time.Duration) 
 	for _, m := range mounts[:min(len(mounts), 2)] {
 		largest = append(largest, fmt.Sprintf("%s %s", m.path, gib(int64(m.used))))
 	}
-	summary = fmt.Sprintf("RAM %.0f%% used (%s of %s), at or above %.0f%% for %s; swap %s used; top by RSS+swap: %s; largest tmpfs: %s",
-		100*mi.used(), gib(int64(mi.total-mi.available)), gib(int64(mi.total)), 100*ramOpen, over, gib(int64(swap)),
+	summary = fmt.Sprintf("RAM %.0f%% used at the last sample, at or above %.0f%% for %s; now %s of %s used, swap %s used; top by RSS+swap: %s; largest tmpfs now: %s",
+		100*samples[len(samples)-1], 100*ramOpen, over, gib(int64(mi.total-mi.available)), gib(int64(mi.total)), gib(int64(swap)),
 		list(brief, "none"), list(largest, "none"))
 
 	full := make([]string, len(top))
@@ -135,8 +135,8 @@ func ramReport(mi meminfo, procs []proc, samples []float64, over time.Duration) 
 	for i, s := range samples {
 		percents[i] = fmt.Sprintf("%.0f%%", 100*s)
 	}
-	evidence = fmt.Sprintf("used = (MemTotal - MemAvailable) / MemTotal; MemAvailable %s, Shmem %s, swap %s of %s; samples this window, oldest first: %s; by command (processes, summed RSS double-counts shared pages): %s; tmpfs used of size: %s",
-		gib(int64(mi.available)), gib(int64(mi.shmem)), gib(int64(swap)), gib(int64(mi.swapTotal)),
-		strings.Join(percents, " "), list(full, "none"), list(used, "none"))
+	evidence = fmt.Sprintf("used = (MemTotal - MemAvailable) / MemTotal; samples this window, oldest first: %s; now MemAvailable %s, Shmem %s, swap %s of %s; by command (processes, RSS at the last sample, swap now; summed RSS double-counts shared pages): %s; tmpfs used of size now: %s",
+		strings.Join(percents, " "), gib(int64(mi.available)), gib(int64(mi.shmem)), gib(int64(swap)), gib(int64(mi.swapTotal)),
+		list(full, "none"), list(used, "none"))
 	return summary, evidence
 }

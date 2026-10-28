@@ -42,9 +42,10 @@ type Monitor struct {
 	dir    string
 	onOpen func(context.Context, []Finding)
 
-	mu   sync.Mutex
-	hist *history
-	open map[string]Finding
+	mu    sync.Mutex
+	hist  *history
+	procs []proc
+	open  map[string]Finding
 }
 
 func New(onOpen func(context.Context, []Finding)) (*Monitor, error) {
@@ -75,6 +76,12 @@ func (m *Monitor) historyPath() string {
 }
 
 func (m *Monitor) Run(ctx context.Context) {
+	wait := min(time.Until(time.Unix(m.hist.Taken, 0).Add(interval)), interval)
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(wait):
+	}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -95,8 +102,11 @@ func (m *Monitor) tick(ctx context.Context) {
 		m.mu.Unlock()
 		return
 	}
-	if m.hist.Evaluated == 0 {
+	if m.hist.Evaluated == 0 || m.hist.Evaluated > now.Unix() {
 		m.hist.Evaluated = now.Unix()
+	}
+	if procs != nil {
+		m.procs = procs
 	}
 	var opened []Finding
 	if procs != nil && now.Sub(time.Unix(m.hist.Evaluated, 0)) >= Window {
@@ -117,14 +127,11 @@ func (m *Monitor) tick(ctx context.Context) {
 
 func (m *Monitor) Check(ctx context.Context, window time.Duration) ([]Finding, error) {
 	m.mu.Lock()
-	now := time.Now()
-	procs := m.sample(ctx, now)
-	if procs == nil {
+	if m.procs == nil {
 		m.mu.Unlock()
-		return nil, errors.New("process sample failed")
+		return nil, errors.New("no sample since hyprd started; the first is due within a minute")
 	}
-	opened, err := m.evaluate(ctx, now, window, procs)
-	m.save()
+	opened, err := m.evaluate(ctx, time.Now(), window, m.procs)
 	open := m.sorted()
 	m.mu.Unlock()
 
@@ -190,7 +197,7 @@ func (m *Monitor) save() {
 }
 
 func (m *Monitor) evaluate(ctx context.Context, now time.Time, window time.Duration, procs []proc) ([]Finding, error) {
-	found, held := m.hist.findings(ctx, now, window, procs)
+	found, held := m.hist.findings(ctx, window, procs)
 
 	next := maps.Clone(m.open)
 	var opened []Finding

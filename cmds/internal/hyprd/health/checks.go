@@ -23,11 +23,10 @@ const (
 	ramOpen      = 0.80
 	ramClear     = 0.75
 	ramPoints    = 10
-	ramSpacing   = int64((interval - 5*time.Second) / time.Second)
 )
 
-func (h *history) findings(ctx context.Context, now time.Time, window time.Duration, procs []proc) ([]Finding, map[string]bool) {
-	cut := now.Add(-window).Unix()
+func (h *history) findings(ctx context.Context, window time.Duration, procs []proc) ([]Finding, map[string]bool) {
+	cut := time.Unix(h.Taken, 0).Add(-window).Unix()
 	start := slices.IndexFunc(h.Minutes, func(m minute) bool { return m.At > cut })
 	var buckets []minute
 	if start >= 0 {
@@ -38,7 +37,7 @@ func (h *history) findings(ctx context.Context, now time.Time, window time.Durat
 	found = append(found, cpuFindings(buckets, procs)...)
 	found = append(found, h.memoryFindings(cut)...)
 	found = append(found, h.restartFindings(buckets)...)
-	found = append(found, h.zombieFindings(now, procs)...)
+	found = append(found, h.zombieFindings(procs)...)
 	found = append(found, journalFindings(buckets)...)
 	ram, hold := ramFindings(buckets, procs)
 	found = append(found, ram...)
@@ -132,13 +131,7 @@ func (h *history) memoryFindings(cut int64) []Finding {
 }
 
 func ramFindings(buckets []minute, procs []proc) ([]Finding, bool) {
-	var obs []minute
-	for _, b := range slices.Backward(buckets) {
-		if b.RAM > 0 && (len(obs) == 0 || obs[len(obs)-1].At-b.At >= ramSpacing) {
-			obs = append(obs, b)
-		}
-	}
-	slices.Reverse(obs)
+	obs := slices.DeleteFunc(slices.Clone(buckets), func(b minute) bool { return b.RAM == 0 })
 	samples := make([]float64, len(obs))
 	for i, o := range obs {
 		samples[i] = o.RAM
@@ -186,12 +179,12 @@ func (h *history) restartFindings(buckets []minute) []Finding {
 	return found
 }
 
-func (h *history) zombieFindings(now time.Time, procs []proc) []Finding {
+func (h *history) zombieFindings(procs []proc) []Finding {
 	comms := map[int]string{}
 	children := map[int][]string{}
 	for _, p := range procs {
 		comms[p.pid] = p.comm
-		if z, ok := h.Zombies[p.key]; ok && z.Since < now.Unix() {
+		if z, ok := h.Zombies[p.key]; ok && z.Since < h.Taken {
 			children[z.PPID] = append(children[z.PPID], fmt.Sprintf("%d %s", p.pid, p.comm))
 		}
 	}

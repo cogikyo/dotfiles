@@ -243,10 +243,13 @@ The [TUI plugin](../../../config/opencode/plugins/README.md#hyprd) owns reminder
 
 ### System health
 
-The daemon samples processes and systemd units every minute and evaluates health hourly.
+The daemon records process and systemd samples only on its minute timer, preserves that schedule across restarts, and evaluates health hourly.
 It watches CPU use grouped by executable and working directory, steady memory growth, sustained system RAM use, restart loops, failed system and user units, zombies, and journal noise.
+`hyprd health` evaluates recorded history, up to a minute old, without sampling; failed units are queried live.
+After a restart, it errors until the first sample.
+A zombie counts after two consecutive samples find it unreaped.
 System RAM use is `(MemTotal - MemAvailable) / MemTotal`.
-A `ram` finding opens when the latest 10 samples, spaced at least 55 seconds apart, are all at or above 80%, and resolves only when all 10 are below 75%.
+A `ram` finding opens when the latest 10 samples are all at or above 80%, and resolves only when all 10 are below 75%.
 
 ```bash
 hyprd health                                       # evaluate now and print open findings
