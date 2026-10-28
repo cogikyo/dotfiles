@@ -125,6 +125,7 @@ It denies recognized `cd`, `pushd`, and `popd` commands, including inside substi
 It also rejects broad home or secret-ancestor `grep` and `glob` roots and checks commit-message shape for agents outside the read-only set.
 For agents outside the read-only set, `rm` requires literal absolute paths whose parents resolve inside `/tmp/opencode/`; use `trash -- <path>` for other deletion.
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
+For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.
 Use `x` for X search, `sessions` for history, and `session_create` for new sessions.
 Set the shell tool's `workdir` parameter; use absolute paths, `git -C`, or a separate call for other directories.
 V2 resolves each `cd` argument against `workdir`, so chained relative changes can cause false external-directory prompts.

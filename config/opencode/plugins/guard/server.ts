@@ -5,6 +5,7 @@ import { Effect } from "effect";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
+import { relocated } from "./dirs.ts";
 import { check, fetchPublic, type Request } from "./fetch.ts";
 import { confine, expand, home, scratch, secrets } from "./paths.ts";
 import { denial, readOnly } from "./policy.ts";
@@ -161,6 +162,8 @@ export default Plugin.define({
 
       yield* ctx.tool.hook("execute.before", (event) =>
         Effect.gen(function* () {
+          const stray = relocated(event.tool, event.input);
+          if (stray) return yield* new Tool.Error({ message: stray });
           const restricted = readOnly(event.agent);
           if (restricted && !allowed.includes(event.tool)) {
             return yield* new Tool.Error({

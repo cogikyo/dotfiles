@@ -158,6 +158,10 @@ export function expand(target: string) {
   return target.startsWith("~/") ? path.join(home, target.slice(2)) : target;
 }
 
+export function tilde(target: string) {
+  return within(target, home) ? `~${target.slice(home.length)}` : target;
+}
+
 export async function confine(target: string, base: string, recursive: boolean) {
   const lexical = path.resolve(base, expand(target));
   const rules = fence();
