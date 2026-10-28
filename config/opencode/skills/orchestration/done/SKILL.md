@@ -6,8 +6,8 @@ description: Use when the user invokes /done or asks to finish and close the cur
 # Done
 
 Collab runs this procedure attended in the current session, in the order below.
-Invoking `/done` approves the comment pass, commits of this session's own work, a qualifying live retro, and closing finished lanes and the session.
-It does not approve committing other sessions' work, pushing, or deleting anything.
+Invoking `/done` approves the comment pass, commits of this session's own work, a qualifying live retro, deleting this session tree's own scratch and stopping processes running from it, and closing finished lanes and the session.
+It approves nothing else, including committing other sessions' work or pushing.
 
 ## Comments
 
@@ -28,6 +28,15 @@ Drop candidates this session already fixed.
 When any candidate qualifies, load `retro` and run live mode now without asking first; its own confirmation exchange still applies.
 Commit approved retro changes under the Commit rules above.
 When nothing qualifies, say so in one line.
+
+## Cleanup
+
+Use one `sessions` SQL query to find top-level `/tmp/opencode/<name>` files and directories in this session tree's tool inputs (`$.state.input`) and check which paths other session trees touched in the last 3 days.
+Include all children; do not rely on recall.
+Add `~/.local/state/opencode/scratch/<sessionID>/` for each session in the tree.
+Keep both scratch roots and the shared `runs.jsonl`.
+Keep any path another session tree touched in the last 3 days, and any path whose ownership is unclear, without asking.
+For the remaining paths, record their count and size, stop processes whose working directory or arguments point into them, then delete them.
 
 ## Close
 
@@ -57,4 +66,4 @@ Add each flag that applies:
 
 ## Report
 
-Report commit OIDs, retro outcome, dirty state left, and the tag written.
+Report commit OIDs, retro outcome, scratch paths removed (count and size), paths kept as shared or unclear, dirty state left, and the tag written.
