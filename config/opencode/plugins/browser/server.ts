@@ -34,10 +34,20 @@ export default Plugin.define({
       return opening;
     };
 
-    const close = async (sessionID: string) => {
+    const closing = new Set<Promise<void>>();
+
+    const close = (sessionID: string) => {
       const browser = browsers.get(sessionID);
+      if (!browser) return;
       browsers.delete(sessionID);
-      (await browser?.catch(() => undefined))?.close();
+      const done = browser
+        .catch(() => undefined)
+        .then((mcp) => mcp?.close())
+        .catch((error: unknown) => {
+          log(Effect.logError("browser: close failed", { sessionID, error: explain(error) }));
+        })
+        .finally(() => closing.delete(done));
+      closing.add(done);
     };
 
     await ctx.tool.transform((editor) => {
@@ -75,14 +85,21 @@ export default Plugin.define({
 
     (async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal }))
-        if (event.type === "session.idle" || event.type === "session.deleted") await close(event.data.sessionID);
+        if (
+          event.type === "session.execution.succeeded" ||
+          event.type === "session.execution.failed" ||
+          event.type === "session.execution.interrupted" ||
+          event.type === "session.deleted"
+        )
+          close(event.data.sessionID);
     })().catch((error: unknown) => {
       if (!controller.signal.aborted) log(Effect.logError("browser: session watch failed", { error: explain(error) }));
     });
 
     return async () => {
       controller.abort();
-      await Promise.all([...browsers.keys()].map(close));
+      for (const sessionID of browsers.keys()) close(sessionID);
+      await Promise.all(closing);
     };
   },
 });

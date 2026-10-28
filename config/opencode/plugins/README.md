@@ -278,7 +278,7 @@ There is no key, TUI slot, or separate state file.
 ## Browser
 
 `browser/server.ts` exposes `chrome-devtools_*` tools from `chrome-devtools-mcp` 1.7.0 with one isolated Chromium process per session.
-It opens headless at 1920×1080 under an armed drive root and closes the MCP process when the session is idle or deleted.
+It opens headless at 1920×1080 under an armed drive root and closes the MCP process on execution success, failure, interruption, or session deletion.
 URL-bearing calls accept HTTP(S) or `about:blank`; MCP launch patterns restrict network schemes.
 The tool catalog lives in plugin KV `catalog/1.7.0`.
 `browser/tui.tsx` places browser workspaces after `sidebar.content`, subscribes through `hyprd`, and focuses a workspace when clicked.
