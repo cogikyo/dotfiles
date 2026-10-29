@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 const width = 72;
@@ -8,9 +8,10 @@ const opener = /(?<!<)<<(-?)\s*(['"]?)([\w.-]+)\2/gu;
 
 export async function commitRejection(command: string, cwd: string) {
   if (!command.includes("commit")) return undefined;
-  for (const message of await messages(command, cwd)) {
-    const problems = lint(message);
-    if (problems.length > 0) return rejection(problems);
+  for (const { message, dir } of await messages(command, cwd)) {
+    const shape = lint(message);
+    const scope = await scopeProblem(message, dir);
+    if (shape.length > 0 || scope) return rejection(shape, scope);
   }
   return undefined;
 }
@@ -18,11 +19,13 @@ export async function commitRejection(command: string, cwd: string) {
 async function messages(command: string, cwd: string) {
   const { text, bodies } = heredocs(command);
   const words = shellWords(text);
-  const found: string[] = [];
+  const found: { message: string; dir: string }[] = [];
   for (const [at, word] of words.entries()) {
     if (path.basename(word) !== "git") continue;
-    const message = await commitMessage(words, at, bodies, cwd);
-    if (message !== undefined) found.push(message);
+    const git = gitOptions(commandArgs(words, at), cwd);
+    if (git === undefined) continue;
+    const message = await commitMessage(words, at, git, bodies);
+    if (message !== undefined) found.push({ message, dir: git.dir });
   }
   return found;
 }
@@ -99,8 +102,7 @@ function heredocsBefore(words: string[], end: number) {
   return words.slice(0, end).reduce((count, word) => count + [...word.matchAll(opener)].length, 0);
 }
 
-async function commitMessage(words: string[], at: number, bodies: string[], cwd: string) {
-  const args = commandArgs(words, at);
+function gitOptions(args: string[], cwd: string) {
   let dir = cwd;
   let index = 0;
   for (; index < args.length; index++) {
@@ -115,10 +117,17 @@ async function commitMessage(words: string[], at: number, bodies: string[], cwd:
     }
     if (!arg.startsWith("-")) break;
   }
-  if (args[index] !== "commit") return undefined;
+  return args[index] === "commit" ? { cwd, dir, index } : undefined;
+}
 
-  const base = at + index + 2;
-  const options = args.slice(index + 1);
+async function commitMessage(
+  words: string[],
+  at: number,
+  git: { cwd: string; dir: string; index: number },
+  bodies: string[],
+) {
+  const base = at + git.index + 2;
+  const options = commandArgs(words, at).slice(git.index + 1);
   const paragraphs: string[] = [];
   let file: string | undefined;
   for (let i = 0; i < options.length; i++) {
@@ -146,14 +155,14 @@ async function commitMessage(words: string[], at: number, bodies: string[], cwd:
   }
   if (paragraphs.length > 0) return paragraphs.join("\n\n");
   if (file === undefined) return undefined;
-  if (file !== "-") return read(path.resolve(dir, file));
+  if (file !== "-") return read(path.resolve(git.dir, file));
 
   const own = options.findIndex((option) => option.startsWith("<<") && !option.startsWith("<<<"));
   if (own !== -1) return bodies[heredocsBefore(words, base + own)];
   const redirect = options.findIndex((option) => option.startsWith("<"));
   if (redirect !== -1) {
     const target = options[redirect] === "<" ? options[redirect + 1] : options[redirect].slice(1);
-    return target ? read(path.resolve(cwd, target)) : undefined;
+    return target ? read(path.resolve(git.cwd, target)) : undefined;
   }
   const segment = words.lastIndexOf(separator, at - 2) + 1;
   const piped = heredocsBefore(words, at);
@@ -226,13 +235,44 @@ function quote(line: string) {
   return JSON.stringify(chars.length > 32 ? `${chars.slice(0, 32).join("")}…` : text);
 }
 
-function rejection(problems: string[]) {
-  const shown = problems.slice(0, maxProblems);
-  if (problems.length > shown.length) shown.push(`${problems.length - shown.length} more problems`);
-  return [
+async function scopeProblem(message: string, dir: string) {
+  const scope = /^[\w-]+\(([^()]+)\)!?:/u.exec(normalize(message)[0] ?? "")?.[1];
+  if (scope === undefined) return undefined;
+  const repo = await repository(dir);
+  if (repo === undefined || scope.split("/")[0].toLowerCase() !== repo.toLowerCase()) {
+    return undefined;
+  }
+  return `the scope ${quote(scope)} starts with the repository name ${quote(repo)}; scope by the area inside the repository instead`;
+}
+
+async function repository(dir: string) {
+  for (let at = dir; ; at = path.dirname(at)) {
+    const git = path.join(at, ".git");
+    const info = await stat(git).catch(() => undefined);
+    if (info?.isDirectory()) return path.basename(at);
+    if (info?.isFile()) {
+      const gitdir = /^gitdir: (.+)$/mu.exec((await read(git)) ?? "")?.[1].trim();
+      if (!gitdir) return undefined;
+      const [main, worktree] = path.resolve(at, gitdir).split("/.git/worktrees/");
+      return worktree === undefined ? undefined : path.basename(main);
+    }
+    if (path.dirname(at) === at) return undefined;
+  }
+}
+
+function rejection(shape: string[], scope: string | undefined) {
+  const lines: string[] = [];
+  if (scope) {
+    lines.push("commit message rejected: scopes never name the repository (commit skill, Subject)", `- ${scope}`);
+  }
+  if (shape.length === 0) return lines.join("\n");
+  const shown = shape.slice(0, maxProblems);
+  if (shape.length > shown.length) shown.push(`${shape.length - shown.length} more problems`);
+  lines.push(
     "commit message rejected: commit bullets never wrap (commit skill, Body)",
     ...shown.map((problem) => `- ${problem}`),
     `Write the subject, a blank line, then one "- " bullet per line, each at most ${width} characters.`,
     'Shorten the bullet, move detail into "  - " bullets under it, or split the commit.',
-  ].join("\n");
+  );
+  return lines.join("\n");
 }

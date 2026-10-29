@@ -81,7 +81,7 @@ Use `verb(scope/context): short summary`.
 ### Subject
 
 - Write an imperative, specific summary that explains the story without the diff.
-- Derive the scope from the owned path and concern.
+- Derive the scope from the owned path and concern inside the repository, never the repository's own name, even when recent history uses it.
 - Prefer a concrete two-level scope over a broad top-level label.
 - Use `!` only for a real breaking change.
 - Avoid vague `update`.
