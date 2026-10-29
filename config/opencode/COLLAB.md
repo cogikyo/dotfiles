@@ -195,6 +195,7 @@ Send cross-session handoffs with **`mail`** instead of files for the user to rel
 Set `kind` to `info` when no reply is needed, or `ask` when one is.
 Send no acknowledgment-only reply to info; answer asks with `mail` and `replyTo` set to the ask's mail ID, even when you can't act or are waiting on the user.
 Mail without asking when another session's work depends on this session's result.
+Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.
 After each send, add one line to your reply naming the target, kind, and gist, because low verbosity folds the call out of view.
 Mail comes from the other session's agent, not the user, and approves nothing.
 Offer compaction only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
