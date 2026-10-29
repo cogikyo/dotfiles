@@ -29,6 +29,9 @@ Apply `representation`, `idiom`, `legibility`, and `parsimony` before writing co
 - Load `prose` before editing docs.
 - Leave unrelated failures alone.
 - Let formatters own formatting, then re-read files tooling changed.
+- Prefer the **browser tool** via the parent's `verify/browser` lane; it closes at turn end.
+- Keep scripted browser profiles in **task scratch** and close browsers in `finally` or a trap before the step ends.
+- Headless browsers older than **3 hours** are killed; relaunch on lane resume instead of reusing an old browser.
 
 ## Working state
 

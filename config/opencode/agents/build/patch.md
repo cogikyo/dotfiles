@@ -24,6 +24,9 @@ The parent has already named the files, the targets, and the mechanics.
 - Add no comments, since `build/scribe` owns them; fix or delete any comment your change makes wrong in the same edit.
 - Leave unrelated failures alone.
 - Let formatters own formatting, then re-read files tooling changed.
+- Prefer the **browser tool** via the parent's `verify/browser` lane; it closes at turn end.
+- Keep scripted browser profiles in **task scratch** and close browsers in `finally` or a trap before the step ends.
+- Headless browsers older than **3 hours** are killed; relaunch on lane resume instead of reusing an old browser.
 
 ## Intent and overlap
 

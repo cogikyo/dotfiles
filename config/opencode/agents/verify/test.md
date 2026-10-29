@@ -28,6 +28,9 @@ Apply `falsify` before choosing or running verification commands.
 - Return a **question** before broadening a targeted build to the whole module.
 - **Shell chains, pipelines, redirects, and command substitution** are fine when they help run or inspect approved checks.
 - Skip **package installs, service starts, long suites, destructive commands, and networked setup** unless the parent approved them.
+- Prefer the **browser tool** via the parent's `verify/browser` lane; it closes at turn end.
+- Keep scripted browser profiles in **task scratch** and close browsers in `finally` or a trap before the step ends.
+- Headless browsers older than **3 hours** are killed; relaunch on lane resume instead of reusing an old browser.
 
 ## Artifact boundary
 

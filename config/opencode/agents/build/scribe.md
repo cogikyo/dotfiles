@@ -27,6 +27,10 @@ Apply `candor` before drafting; apply `warrant` when a departure from a writing 
 6. Run only the **approved checks**.
    - Inspect the final diff for unintended changes.
 
+Prefer the **browser tool** via the parent's `verify/browser` lane; it closes at turn end.
+Keep scripted browser profiles in **task scratch** and close browsers in `finally` or a trap before the step ends.
+Headless browsers older than **3 hours** are killed; relaunch on lane resume instead of reusing an old browser.
+
 ## Boundaries
 
 > [!IMPORTANT] Writing-only changes
