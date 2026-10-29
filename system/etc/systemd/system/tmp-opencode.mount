@@ -1,0 +1,16 @@
+[Unit]
+Description=Disk-backed OpenCode scratch on /tmp/opencode
+# Mount after tmpfiles creates the source; default ordering would cause a cycle.
+DefaultDependencies=no
+After=systemd-tmpfiles-setup.service
+Before=sysinit.target umount.target
+Conflicts=umount.target
+
+[Mount]
+What=/home/cullyn/.cache/opencode-tmp
+Where=/tmp/opencode
+Type=none
+Options=bind,relatime,nosuid,nodev
+
+[Install]
+WantedBy=multi-user.target
