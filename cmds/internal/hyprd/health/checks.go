@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -23,6 +24,8 @@ const (
 	ramOpen      = 0.80
 	ramClear     = 0.75
 	ramPoints    = 10
+	quotaOpen    = 0.75
+	quotaClear   = 0.70
 )
 
 func (h *history) findings(ctx context.Context, window time.Duration, procs []proc) ([]Finding, map[string]bool) {
@@ -41,10 +44,12 @@ func (h *history) findings(ctx context.Context, window time.Duration, procs []pr
 	found = append(found, journalFindings(buckets)...)
 	ram, hold := ramFindings(buckets, procs)
 	found = append(found, ram...)
+	quotas, quotaHold := quotaFindings()
+	found = append(found, quotas...)
 
 	units, err := failedFindings(ctx)
 	found = append(found, units...)
-	return found, map[string]bool{"ram": hold, "failed": err != nil}
+	return found, map[string]bool{"ram": hold, "quota": quotaHold, "failed": err != nil}
 }
 
 func span(buckets []minute) (int64, time.Duration) {
@@ -154,6 +159,31 @@ func ramFindings(buckets []minute, procs []proc) ([]Finding, bool) {
 	over := (time.Duration(obs[len(obs)-1].At-obs[run].At) * time.Second).Round(time.Minute)
 	summary, evidence := ramReport(mi, procs, samples, over)
 	return []Finding{{Check: "ram", Subject: "system", Summary: summary, Evidence: evidence}}, false
+}
+
+func quotaFindings() ([]Finding, bool) {
+	var found []Finding
+	hold := false
+	for _, path := range quotaMounts {
+		q, err := readQuota(path)
+		switch {
+		case err != nil:
+			hold = true
+		case q.limit == 0:
+		case q.share() >= quotaOpen:
+			found = append(found, Finding{
+				Check:   "quota",
+				Subject: path,
+				Summary: fmt.Sprintf("%s holds %.0f%% of this user's quota, %s of %s; writes fail with EDQUOT at the limit",
+					path, 100*q.share(), gib(int64(q.used)), gib(int64(q.limit))),
+				Evidence: fmt.Sprintf("quotactl_fd Q_GETQUOTA for uid %d: %d bytes used, %d-byte hard limit; largest entries: du -xsh %s/* | sort -h",
+					os.Getuid(), q.used, q.limit, path),
+			})
+		case q.share() >= quotaClear:
+			hold = true
+		}
+	}
+	return found, hold
 }
 
 func (h *history) restartFindings(buckets []minute) []Finding {

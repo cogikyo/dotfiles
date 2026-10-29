@@ -244,12 +244,15 @@ The [TUI plugin](../../../config/opencode/plugins/README.md#hyprd) owns reminder
 ### System health
 
 The daemon records process and systemd samples only on its minute timer, preserves that schedule across restarts, and evaluates health hourly.
-It watches CPU use grouped by executable and working directory, steady memory growth, sustained system RAM use, restart loops, failed system and user units, zombies, and journal noise.
-`hyprd health` evaluates recorded history, up to a minute old, without sampling; failed units are queried live.
+It watches CPU use grouped by executable and working directory, steady memory growth, sustained system RAM use, per-user tmpfs quota, restart loops, failed system and user units, zombies, and journal noise.
+`hyprd health` evaluates recorded history, up to a minute old, without sampling; failed units and quotas are queried live.
 After a restart, it errors until the first sample.
 A zombie counts after two consecutive samples find it unreaped.
 System RAM use is `(MemTotal - MemAvailable) / MemTotal`.
 A `ram` finding opens when the latest 10 samples are all at or above 80%, and resolves only when all 10 are below 75%.
+Quota checks read this user's usage and hard limits on `/tmp` and `/dev/shm` with `quotactl_fd`; `df` reports the whole tmpfs.
+A `quota` finding opens at 75% of the limit and resolves below 70%.
+Existing quota findings stay open if either read fails or either mount is at least 70% but below 75%.
 
 ```bash
 hyprd health                                       # evaluate now and print open findings
