@@ -1,0 +1,8 @@
+[Unit]
+Description=Reap headless browsers every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+
+[Install]
+WantedBy=timers.target
