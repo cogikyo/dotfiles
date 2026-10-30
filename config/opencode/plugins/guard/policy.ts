@@ -1,6 +1,8 @@
 import path from "node:path";
 import { located, temp, within } from "./paths.ts";
-import { type Command, flags, launches } from "./shell.ts";
+import { type Command, flags, launches, maxDepth, opaque } from "./shell.ts";
+
+export const unchecked = `the command nests substitutions, arithmetic, or inner shells more than ${maxDepth} levels deep, or puts a single quote, \`#\`, or backslash inside \`(( ))\`, so the guard cannot check every command; flatten it or split it into separate calls`;
 
 export function readOnly(agent: string | undefined) {
   if (!agent) return false;
@@ -61,6 +63,7 @@ function collected(command: Command) {
 
 export function denial(resource: string, agent: string | undefined) {
   const commands = launches(resource);
+  if (commands.includes(opaque)) return unchecked;
   // Cage already confines read-only deletion to scratch tmp/ and cache/.
   if (!readOnly(agent) && commands.some((command) => command[0] === "rm" && !removal(command))) {
     return `rm takes only literal absolute paths inside ${temp}/, without variables, \`..\`, a trailing slash, or a top-level glob; move anything else to trash with \`trash -- <path>\``;

@@ -8,8 +8,8 @@ import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
 import { check, fetchPublic, type Request } from "./fetch.ts";
 import { confine, expand, home, scratch, secrets } from "./paths.ts";
-import { denial, readOnly } from "./policy.ts";
-import { launches } from "./shell.ts";
+import { denial, readOnly, unchecked } from "./policy.ts";
+import { launches, opaque } from "./shell.ts";
 
 const cage = path.join(home, ".local/bin/cage");
 const runs = path.join(scratch, "runs.jsonl");
@@ -195,8 +195,10 @@ export default Plugin.define({
           if (event.tool !== "shell") return;
           const command = text(event.input, "command");
           if (!command) return;
+          const commands = launches(command);
+          if (commands.includes(opaque)) return yield* new Tool.Error({ message: unchecked });
           // The host asks external_directory before evaluating shell permissions, so reject navigation here.
-          if (launches(command).some(([name]) => navigators.has(name))) {
+          if (commands.some(([name]) => navigators.has(name))) {
             return yield* new Tool.Error({
               message:
                 "`cd`, `pushd`, and `popd` are disabled; set the shell tool's `workdir` parameter instead, and use absolute paths, `git -C`, or a separate call for other directories",

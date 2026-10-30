@@ -5,7 +5,8 @@ export type Command = readonly [name: string, ...args: string[]];
 type Spec = { short: string; long: string[]; positional?: number };
 type Option = { flag: string; value?: string };
 
-const maxDepth = 8;
+export const maxDepth = 8;
+export const opaque: Command = [""];
 const assignment = /^[A-Za-z_]\w*=/u;
 const redirect = /^\d*(?:[<>]|&>)/u;
 const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
@@ -69,9 +70,17 @@ const wrappers: Record<string, Spec> = {
 };
 
 export function launches(source: string, depth = 0): Command[] {
-  if (depth > maxDepth) return [];
-  const { segments, subs } = new Lexer(unheredoc(source)).run();
-  return [...subs.flatMap((sub) => launches(sub, depth + 1)), ...segments.flatMap((words) => peel(words, depth + 1))];
+  if (depth > maxDepth) return [opaque];
+  const lexer = new Lexer(unheredoc(source)).run();
+  return [...expansions(lexer, depth), ...lexer.segments.flatMap((words) => peel(words, depth + 1))];
+}
+
+function expansions({ subs, sums, hidden }: Lexer, depth: number): Command[] {
+  if (hidden) return [opaque];
+  return [
+    ...subs.flatMap((sub) => launches(sub, depth + 1)),
+    ...sums.flatMap((sum) => (depth < maxDepth ? expansions(new Lexer(sum).run(), depth + 1) : [opaque])),
+  ];
 }
 
 export function flags([name, ...args]: Command) {
@@ -162,6 +171,9 @@ function options(words: string[], start: number, spec: Spec) {
 class Lexer {
   readonly segments: string[][] = [[]];
   readonly subs: string[] = [];
+  readonly sums: string[] = [];
+  hidden = false;
+  private bound = 0;
   private word = "";
   private open = false;
   private at = 0;
@@ -191,9 +203,15 @@ class Lexer {
     }
     if (this.substitution()) return;
     if (this.comment()) return;
+    if (this.arithmetic(this.at)) {
+      this.flush();
+      this.segments.push([]);
+      return;
+    }
     this.at++;
-    if (char === "&" && /[<>]/u.test(this.source[this.at - 2] ?? "")) return this.take(char);
-    if (char === "&" && this.source[this.at] === ">") return this.take(char);
+    if (char === "&" && (/[<>]/u.test(this.source[this.at - 2] ?? "") || this.source[this.at] === ">")) {
+      return this.take(char);
+    }
     if (/[\n;&|()]/u.test(char)) {
       this.flush();
       this.segments.push([]);
@@ -229,6 +247,10 @@ class Lexer {
   private substitution() {
     const start = this.at;
     let end: number;
+    if (this.source[start] === "$" && this.arithmetic(start + 1)) {
+      this.take("$()");
+      return true;
+    }
     if (this.source.startsWith("$(", start)) {
       end = closing(this.source, start + 2);
       this.subs.push(this.source.slice(start + 2, end));
@@ -239,6 +261,20 @@ class Lexer {
       return false;
     }
     this.take("$()");
+    this.at = end + 1;
+    return true;
+  }
+
+  private arithmetic(open: number) {
+    if (open < this.bound || !this.source.startsWith("((", open)) return false;
+    const end = closing(this.source, open + 2) + 1;
+    const body = this.source.slice(open + 2, end - 1);
+    if (this.source[end] !== ")" || /['"#\\`]/u.test(body)) {
+      this.bound = end;
+      this.hidden ||= /['#\\]/u.test(this.source.slice(open, end));
+      return false;
+    }
+    this.sums.push(body);
     this.at = end + 1;
     return true;
   }
