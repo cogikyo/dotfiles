@@ -30,8 +30,8 @@ Recommend changes to this file and confirm each decision with the user before ed
 Frontmatter routes use `provider/model [variant]`, with a space before the optional variant.
 Explicit `subagent` model values use `provider/model#variant`.
 An exact agent name beats a glob, and a longer glob beats a shorter one.
-The `claude` provider is the Anthropic account pool; the lanes plugin resolves it to `anthropic` or `anthropic-personal` for each call.
-Each `fallbacks` entry names the model to use when both Anthropic accounts are capped.
+The `claude` provider is the Anthropic account pool; the lanes plugin resolves it to `anthropic`, `anthropic-personal`, or `anthropic-cullyn` for each call.
+Each `fallbacks` entry names the model to use when every Anthropic account is capped.
 
 Omit `model` on `subagent` to take the route; this is the normal case.
 To change reasoning effort, pass the model and its variant together, such as `claude/claude-opus-5-5#xhigh`.
@@ -40,11 +40,11 @@ Use `claude/<model>#<variant>` to keep account selection, or omit `#<variant>` t
 
 ## Anthropic accounts
 
-**Trend** (`anthropic`) and **Cogikyo** (`anthropic-personal`) both serve every repository.
+**Trend** (`anthropic`), **Cogikyo** (`anthropic-personal`), and **Cullyn** (`anthropic-cullyn`) all serve every repository.
 The pool spends each weekly window before it resets.
 
-- **Enforced**: when both accounts are capped, the pool uses the model's fallback without a variant and notes the switch in the result.
-- Pass `anthropic/…` or `anthropic-personal/…` only when the user names an account; that pins the account and skips the pick.
+- **Enforced**: when every account is capped, the pool uses the model's fallback without a variant and notes the switch in the result.
+- Pass `anthropic/…`, `anthropic-personal/…`, or `anthropic-cullyn/…` only when the user names an account; that pins the account and skips the pick.
 - Use Opus at `high`, `xhigh`, or `max`, and Sonnet at `high` or `xhigh`.
 - Authentication failures return a blocker rather than trigger quota overflow.
 
@@ -159,7 +159,7 @@ Most models start at `high` for every role until evidence says otherwise.
   - Use it for **short, bounded jobs**.
   - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
-- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the fallback when both Anthropic accounts are capped.
+- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the fallback when every Anthropic account is capped.
   - Each Go model has its own monthly dollar cap, with 20% per 5 hours and 50% per week; Grok's is $15, so one Grok scout spends about 15% of a week.
 
 ## Usage

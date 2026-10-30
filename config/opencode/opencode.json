@@ -29,6 +29,7 @@
     "collab": {
       "description": "The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.",
       "mode": "primary",
+      "model": "anthropic-personal/claude-opus-5-5#xhigh",
       "color": "#f8b486",
       "system": "{file:./COLLAB.md}\n\nInstructions from: ROUTING.md\n{file:./ROUTING.md}",
       "permissions": [
@@ -141,6 +142,7 @@
     { "action": "edit", "resource": "/home/cullyn/.mozilla/firefox/**/key4.db", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.claude/.credentials.json", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.claude-cogikyo/.credentials.json", "effect": "deny" },
+    { "action": "edit", "resource": "/home/cullyn/.claude-cullyn/.credentials.json", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/share/opencode*/*auth.json", "effect": "deny" },
     { "action": "edit", "resource": "*config/opencode/service*.json", "effect": "deny" },
     { "action": "edit", "resource": "/home/cullyn/.local/state/opencode*/service*.json", "effect": "deny" },
@@ -156,6 +158,7 @@
     { "action": "read", "resource": "/home/cullyn/.mozilla/firefox/**/key4.db", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.claude/.credentials.json", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.claude-cogikyo/.credentials.json", "effect": "deny" },
+    { "action": "read", "resource": "/home/cullyn/.claude-cullyn/.credentials.json", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/share/opencode*/*auth.json", "effect": "deny" },
     { "action": "read", "resource": "*config/opencode/service*.json", "effect": "deny" },
     { "action": "read", "resource": "/home/cullyn/.local/state/opencode*/service*.json", "effect": "deny" },
@@ -402,6 +405,34 @@
         }
       }
     },
+    "anthropic-cullyn": {
+      "canonical": "anthropic",
+      "name": "Anthropic [Cullyn]",
+      "settings": {
+        "apiKey": "oauth-required"
+      },
+      "models": {
+        "claude-opus-5-5": {
+          "name": "Opus 5.5",
+          "limit": { "input": 425000 }
+        },
+        "claude-sonnet-5-5": {
+          "name": "Sonnet 5.5",
+          "limit": { "input": 425000 }
+        },
+        "claude-fable-5-1": {
+          "name": "Fable 5.1",
+          "settings": {
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "effort": "medium"
+          },
+          "limit": { "input": 425000 }
+        }
+      }
+    },
     "cursor": {
       "name": "Cursor",
       "package": "aisdk:@ai-sdk/openai-compatible",
@@ -515,6 +546,7 @@
       { "action": "provider.use", "resource": "*", "effect": "deny" },
       { "action": "provider.use", "resource": "anthropic", "effect": "allow" },
       { "action": "provider.use", "resource": "anthropic-personal", "effect": "allow" },
+      { "action": "provider.use", "resource": "anthropic-cullyn", "effect": "allow" },
       { "action": "provider.use", "resource": "openai", "effect": "allow" },
       { "action": "provider.use", "resource": "xai", "effect": "allow" },
       { "action": "provider.use", "resource": "opencode-go", "effect": "allow" },

@@ -14,4 +14,10 @@ export const claudeAccounts = {
     configDir: path.join(os.homedir(), ".claude-cogikyo"),
     loginCommand: "claude-auth cogikyo",
   },
+  cullyn: {
+    id: "anthropic-cullyn",
+    label: "Anthropic [Cullyn]",
+    configDir: path.join(os.homedir(), ".claude-cullyn"),
+    loginCommand: "claude-auth cullyn",
+  },
 } as const;

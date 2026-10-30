@@ -105,7 +105,7 @@ Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/
 
 ## Anthropic
 
-`anthropic/index.ts` signs and shapes subscription requests for Trend and Cogikyo with separate credential and beta-exclusion state.
+`anthropic/index.ts` signs and shapes subscription requests for Trend, Cogikyo, and Cullyn with separate credential and beta-exclusion state.
 It uses local credential refresh and vendored request-shaping modules from `opencode-claude-auth` 2.2.1.
 See [account state and login](anthropic/README.md) before changing auth code.
 This plugin has no tool, key, or TUI slot.

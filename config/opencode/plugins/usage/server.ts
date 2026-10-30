@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin";
-import { anthropicPersonalUsage, anthropicUsage } from "./anthropic.ts";
+import { anthropicCullynUsage, anthropicPersonalUsage, anthropicUsage } from "./anthropic.ts";
 import { cursorUsage } from "./cursor.ts";
 import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
@@ -37,6 +37,7 @@ export default Plugin.define({
       openaiUsage(stored),
       anthropicUsage,
       anthropicPersonalUsage,
+      anthropicCullynUsage,
       xaiUsage,
       cursorUsage,
       opencodeGoUsage(credentials),

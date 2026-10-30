@@ -93,7 +93,7 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
     : [];
   if (!open.length && fallback) {
     const ref = { providerID: fallback.providerID, id: fallback.id };
-    notes.push(`lanes: both Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`);
+    notes.push(`lanes: all Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`);
     return { ref, note: notes.join("\n") };
   }
   const [account] =

@@ -1,8 +1,8 @@
 # Claude subscription accounts
 
-`accounts.ts` fixes the two account identities and credential directories.
-`anthropic` is Trend at `~/.claude`, and `anthropic-personal` is Cogikyo at `~/.claude-cogikyo`.
-The user logs in or repairs auth with `claude-auth trend` or `claude-auth cogikyo`.
+`accounts.ts` fixes the account identities and credential directories.
+`anthropic` is Trend at `~/.claude`, `anthropic-personal` is Cogikyo at `~/.claude-cogikyo`, and `anthropic-cullyn` is Cullyn at `~/.claude-cullyn`.
+The user logs in or repairs auth with `claude-auth trend`, `claude-auth cogikyo`, or `claude-auth cullyn`.
 Agents must not read credential files or change account state.
 
 ## Request and credential ownership

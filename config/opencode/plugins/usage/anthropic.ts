@@ -11,6 +11,7 @@ const WEEKLY = "W";
 
 export const anthropicUsage = createUsage(usageProviders.anthropic, claudeAccounts.trend.configDir);
 export const anthropicPersonalUsage = createUsage(usageProviders.anthropicPersonal, claudeAccounts.cogikyo.configDir);
+export const anthropicCullynUsage = createUsage(usageProviders.anthropicCullyn, claudeAccounts.cullyn.configDir);
 
 function createUsage({ id, label, staleAfterMS }: UsageProviderSpec, configDir: string): ProviderAdapter {
   return {

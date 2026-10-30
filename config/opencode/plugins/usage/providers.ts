@@ -21,6 +21,11 @@ export const usageProviders = {
     label: claudeAccounts.cogikyo.label,
     staleAfterMS: 10 * 60_000,
   },
+  anthropicCullyn: {
+    id: claudeAccounts.cullyn.id,
+    label: claudeAccounts.cullyn.label,
+    staleAfterMS: 10 * 60_000,
+  },
   xai: {
     id: "xai",
     label: "xAI",

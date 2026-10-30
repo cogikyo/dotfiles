@@ -95,7 +95,7 @@ crn() { hyprd opencode now }
 crr() { hyprd opencode recycle }
 function claude-auth() {
     if (( $# != 1 )); then
-        print -u2 -- 'usage: claude-auth trend|cogikyo'
+        print -u2 -- 'usage: claude-auth trend|cogikyo|cullyn'
         return 2
     fi
 
@@ -103,8 +103,9 @@ function claude-auth() {
     case $1 in
         trend) config_dir="$HOME/.claude" ;;
         cogikyo) config_dir="$HOME/.claude-cogikyo" ;;
+        cullyn) config_dir="$HOME/.claude-cullyn" ;;
         *)
-            print -u2 -- 'usage: claude-auth trend|cogikyo'
+            print -u2 -- 'usage: claude-auth trend|cogikyo|cullyn'
             return 2
             ;;
     esac
