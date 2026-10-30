@@ -11,11 +11,6 @@ import { clearing } from "./clearing.ts";
 import { Credentials, type Failure } from "./credentials.ts";
 import { sign } from "./headers.ts";
 
-const disabledVariants: Record<string, string[]> = {
-  "claude-opus-5-5": ["low", "medium"],
-  "claude-sonnet-5-5": ["low", "medium", "max"],
-};
-
 const cacheControl = { type: "ephemeral", ttl: "1h" };
 const renewEvery = 5 * 60_000;
 
@@ -62,15 +57,6 @@ export default Plugin.define({
     if (!fiber) throw new Error("anthropic: setup started outside the plugin fiber");
     const log = Effect.runForkWith(fiber.context);
     log(await detectVersion());
-    await ctx.provider.transform((providers) => {
-      const source = providers.get("anthropic");
-      for (const [id, ids] of Object.entries(disabledVariants)) {
-        if (!source?.models.has(id)) continue;
-        providers.models.update("anthropic", id, (model) => {
-          model.variants = model.variants.filter((variant) => !ids.includes(String(variant.id)));
-        });
-      }
-    });
 
     const clear = clearing(log);
     const timers: ReturnType<typeof setInterval>[] = [];
