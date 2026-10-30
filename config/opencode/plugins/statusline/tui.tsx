@@ -3,6 +3,7 @@ import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createResource, createRoot, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { configured, threshold } from "../compact/limits.ts";
 import { Delivery } from "./delivery.tsx";
+import { Effort } from "./effort.tsx";
 import { gitStatus, place, type GitStatus } from "./git.ts";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toasts.tsx";
@@ -80,6 +81,10 @@ export default Plugin.define({
       context.ui.slot({
         append: "prompt.footer",
         render: (input) => <Delivery sessionID={input.sessionID} mode={input.mode} />,
+      });
+      context.ui.slot({
+        append: "prompt.footer",
+        render: (input) => <Effort mode={input.mode} />,
       });
       const Mirror = mirror(context);
       context.ui.slot({
