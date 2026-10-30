@@ -18,6 +18,7 @@ const levels: Partial<Record<string, Level>> = {
 
 const unset: Level & { readonly word: string } = { icon: "\u{f08f5}", fg: colors.brightGreen, word: "default" };
 
+/** OpenCode V2 has no model/variant-row slot, so the footer hosts a post-render overlay. */
 export function Effort(props: { mode: "normal" | "shell" }) {
   const context = usePlugin();
   let host: Renderable | undefined;

@@ -5,7 +5,11 @@ color: "#5fc976"
 permissions:
   - { "action": "*", "resource": "*", "effect": "deny" }
   - { "action": "chrome-devtools_*", "resource": "*", "effect": "allow" }
-  - { "action": "chrome-devtools_upload_file", "resource": "*", "effect": "deny" }
+  - {
+      "action": "chrome-devtools_upload_file",
+      "resource": "*",
+      "effect": "deny",
+    }
 ---
 
 You are verify/browser.
