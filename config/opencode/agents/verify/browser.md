@@ -45,7 +45,9 @@ Set sizes with **`emulate`** and its `viewport` argument, formatted `<width>x<he
 Prefer it to `resize_page`, because _it behaves the same in headless and visible browsers_ and also sets pixel density, mobile, and touch.
 
 - Follow **parent-named or parent-limited viewports**.
+  - Always add `360x740x3,mobile,touch` unless the parent excludes mobile, _because the smallest common phone breaks layouts first_.
   - Otherwise check layout at this default sweep:
+    - `360x740x3,mobile,touch` for a small phone.
     - `390x844x3,mobile,touch` for a phone.
     - `768x1024x2,mobile,touch` for a tablet.
     - `1280x800x1` for a small laptop.
