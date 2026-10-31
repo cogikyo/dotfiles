@@ -122,6 +122,8 @@ A **lane** is a reusable direct child.
 
 - **Steer a lane with a delta**: what changed, the feedback, and the new ask.
   - Let it re-read files instead of pasting their contents.
+- A lane idle over an hour with more than 100K context closes when named again, because its prompt cache has expired.
+  Naming it again after that starts a fresh child, so send a **full brief** instead of a delta.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.
 - Send **repairs** back to the lane that built the change.

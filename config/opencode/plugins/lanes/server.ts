@@ -19,6 +19,8 @@ type Input = {
 };
 
 const pool = "claude";
+const coldAfter = 60 * 60_000;
+const coldSize = 100_000;
 
 const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
 
@@ -54,7 +56,11 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
   return { ref: { ...route, providerID: account.id }, note: notes.join("\n") || undefined };
 }
 
-const Closed = Schema.Struct({ lane: Schema.String, by: Schema.Literals(["operator", "agent"]), at: Schema.Number });
+const Closed = Schema.Struct({
+  lane: Schema.optionalKey(Schema.String),
+  by: Schema.Literals(["operator", "agent", "cache"]),
+  at: Schema.Number,
+});
 type Closed = typeof Closed.Type;
 
 const laneOf = (session: Session.Info) =>
@@ -130,6 +136,25 @@ export default Plugin.define({
           .pipe(Effect.tapCause(Effect.logError), Effect.ignore);
       });
 
+      const seal = Effect.fn("lanes.seal")(function* (child: Session.Info, by: Closed["by"]) {
+        const lane = laneOf(child);
+        const { lane: _, ...metadata } = child.metadata ?? {};
+        yield* ctx.session
+          .update({
+            sessionID: child.id,
+            metadata: { ...metadata, closed: { ...(lane ? { lane } : {}), by, at: Date.now() } },
+            permissions: [...(child.permissions ?? []), { action: "*", resource: "*", effect: "deny" }],
+          })
+          .pipe(
+            Effect.mapError(
+              (error) =>
+                new Tool.Error({
+                  message: `Closing ${lane ? `lane "${lane}"` : `session ${child.id}`} failed: ${error instanceof Error ? error.message : String(error)}`,
+                }),
+            ),
+          );
+      });
+
       const close = Effect.fn("lanes.close")(function* (parentID: string, names: readonly string[], by: Closed["by"]) {
         const list = yield* children(parentID);
         const outcomes: Outcome[] = [];
@@ -144,21 +169,7 @@ export default Plugin.define({
             outcomes.push({ lane, skipped: "running" });
             continue;
           }
-          const { lane: _, ...metadata } = child.metadata ?? {};
-          yield* ctx.session
-            .update({
-              sessionID: child.id,
-              metadata: { ...metadata, closed: { lane, by, at: Date.now() } },
-              permissions: [...(child.permissions ?? []), { action: "*", resource: "*", effect: "deny" }],
-            })
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new Tool.Error({
-                    message: `Closing lane "${lane}" failed: ${error instanceof Error ? error.message : String(error)}`,
-                  }),
-              ),
-            );
+          yield* seal(child, by);
           outcomes.push({ lane });
         }
         return outcomes;
@@ -169,6 +180,37 @@ export default Plugin.define({
           close: ({ sessionID, lanes }) => close(sessionID, lanes, "operator").pipe(Effect.orDie),
         })
         .pipe(Effect.orDie);
+
+      const expire = Effect.fn("lanes.expire")(function* (child: Session.Info, parentID: string) {
+        if (child.parentID !== parentID || status(child) === "running" || !child.time.idle) return;
+        const now = Date.now();
+        if (now - DateTime.toEpochMillis(child.time.idle) <= coldAfter) return;
+        const messages = yield* ctx.session.context({ sessionID: child.id }).pipe(
+          Effect.mapError(
+            (error) =>
+              new Tool.Error({
+                message: `Reading session ${child.id} failed: ${error instanceof Error ? error.message : String(error)}`,
+              }),
+          ),
+        );
+        const latest = messages.at(-1);
+        if (latest?.type !== "idle") return;
+        const idle = now - DateTime.toEpochMillis(latest.time.created);
+        const step = messages.findLast((message) => message.type === "assistant" && message.tokens !== undefined);
+        const tokens = step?.type === "assistant" ? step.tokens : undefined;
+        const size = tokens ? tokens.input + tokens.cache.read + tokens.cache.write : 0;
+        if (idle <= coldAfter || size <= coldSize) return;
+        yield* seal(child, "cache");
+        const lane = laneOf(child);
+        return yield* new Tool.Error({
+          message: [
+            `${lane ? `Lane "${lane}"` : `Session ${child.id}`} was idle ${Math.round(idle / 3_600_000)}h with ${Math.round(size / 1000)}K context, so its prompt cache had expired and it is now closed.`,
+            lane
+              ? "Naming it again starts a fresh child, so send a full brief instead of a delta."
+              : "Start a fresh child with a full brief instead of a delta.",
+          ].join(" "),
+        });
+      });
 
       const resolve = Effect.fn("lanes.resolve")(function* (input: Input, existing: Session.Info | undefined) {
         const explicit = input.model ? parseRef(input.model) : undefined;
@@ -210,8 +252,9 @@ export default Plugin.define({
           const closed = existing && closedOf(existing);
           if (closed)
             return yield* new Tool.Error({
-              message: `Session ${existing.id} is closed lane "${closed.lane}" and cannot resume; start a fresh lane by name instead.`,
+              message: `Session ${existing.id} is ${closed.lane ? `closed lane "${closed.lane}"` : "closed"} and cannot resume; start a fresh lane by name instead.`,
             });
+          if (existing) yield* expire(existing, context.sessionID);
           const { model, note } = yield* resolve(input, existing);
           const { model: _, ...rest } = input;
           const call = { ...rest, ...(sessionID ? { sessionID } : {}), ...(model ? { model } : {}) };
