@@ -44,6 +44,13 @@ function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
 }
 
+// A stored id marks a pending delivery; delivered records omit it.
+const Nudged = Schema.Struct({ epoch: Schema.String, tier: Schema.Number, id: Schema.optionalKey(Schema.String) });
+
+function nudged(sessionID = "") {
+  return `nudged/${sessionID}`;
+}
+
 function tierFor(tokens: number) {
   return tiers.findLastIndex((threshold) => tokens >= threshold);
 }
@@ -64,6 +71,16 @@ function nudge(tier: number) {
   const head = `Context passed ${label(tiers[tier])} tokens (compaction nudge ${tier + 1}/${tiers.length}).`;
   if (tier + 1 < tiers.length) return `${head} ${BOUNDARY}`;
   return `${head} This session compacts automatically at ${label(ceiling)} tokens, mid-turn, with no handoff brief. ${BOUNDARY}`;
+}
+
+function remember<T>(cache: Map<string, Promise<T>>, sessionID: string, load: () => Promise<T>) {
+  let known = cache.get(sessionID);
+  if (!known) {
+    known = load();
+    known.catch(() => cache.delete(sessionID));
+    cache.set(sessionID, known);
+  }
+  return known;
 }
 
 function explain(error: unknown) {
@@ -91,15 +108,15 @@ export default Plugin.define({
     const compacting = new Set<string>();
     const requests = new Map<string, Request>();
 
-    const primary = (sessionID: string) => {
-      let known = primaries.get(sessionID);
-      if (!known) {
-        known = ctx.session.get({ sessionID }).then((session) => !session.parentID);
-        known.catch(() => primaries.delete(sessionID));
-        primaries.set(sessionID, known);
-      }
-      return known;
-    };
+    const epochs = new Map<string, Promise<string>>();
+
+    const primary = (sessionID: string) =>
+      remember(primaries, sessionID, () => ctx.session.get({ sessionID }).then((session) => !session.parentID));
+
+    const epoch = (sessionID: string) =>
+      remember(epochs, sessionID, () =>
+        ctx.session.context({ sessionID }).then(([first]) => (first?.type === "compaction" ? first.id : "none")),
+      );
 
     const mine = (location?: { directory: string; workspaceID?: string }) =>
       location?.directory === ctx.location.directory && location.workspaceID === ctx.location.workspaceID;
@@ -164,11 +181,12 @@ export default Plugin.define({
         return false;
       });
       await forget(malformed.map((entry) => entry.key));
+      for (const entry of await scan(nudged())) sessions.add(entry.key.slice(nudged().length));
       await Promise.all(
         [...sessions].map((sessionID) =>
           ctx.session.get({ sessionID }).then(
             () => sweep(sessionID),
-            async () => forget((await stored(sessionID)).map((entry) => entry.key)),
+            async () => forget([...(await stored(sessionID)).map((entry) => entry.key), nudged(sessionID)]),
           ),
         ),
       );
@@ -190,17 +208,6 @@ export default Plugin.define({
         },
       }),
     );
-
-    await ctx.session.hook("context", async (event) => {
-      try {
-        const tier = tierFor(tokens.get(event.sessionID) ?? 0);
-        if (tier < 0 || !(await primary(event.sessionID))) return;
-        if ((await stored(event.sessionID)).length > 0) return;
-        event.system.push({ type: "text", text: nudge(tier) });
-      } catch (error) {
-        fail("nudge", error);
-      }
-    });
 
     await ctx.session.hook("compaction", async (event) => {
       try {
@@ -226,15 +233,39 @@ export default Plugin.define({
       );
     };
 
+    const notify = async (sessionID: string, tier: number) => {
+      if (tier < 0 || requests.has(sessionID) || !(await primary(sessionID))) return;
+      const [current, record] = await Promise.all([epoch(sessionID), ctx.storage.get(nudged(sessionID))]);
+      if (typeof record === "number") await ctx.storage.set(nudged(sessionID), { epoch: current, tier: record });
+      const known = typeof record === "number" ? { epoch: current, tier: record } : record;
+      const sent = Schema.is(Nudged)(known) && known.epoch === current && known.tier >= tier ? known : undefined;
+      if (sent && sent.id === undefined) return;
+      if ((await stored(sessionID)).length > 0) return;
+      const next = sent?.id ? { tier: sent.tier, id: sent.id } : { tier, id: SessionMessage.ID.create() };
+      if (!sent) await ctx.storage.set(nudged(sessionID), { epoch: current, ...next });
+      await ctx.session.synthetic({
+        id: SessionMessage.ID.make(next.id),
+        sessionID,
+        text: nudge(next.tier),
+        description: `Compaction nudge ${next.tier + 1}/${tiers.length}`,
+        delivery: "steer",
+        resume: false,
+      });
+      await ctx.storage.set(nudged(sessionID), { epoch: current, tier: next.tier });
+    };
+
     const track = async (event: OpenCodeEvent) => {
       if (event.type === "session.deleted") {
         tokens.delete(event.data.sessionID);
         compacting.delete(event.data.sessionID);
         primaries.delete(event.data.sessionID);
+        epochs.delete(event.data.sessionID);
         requests.delete(event.data.sessionID);
         await guard(
-          "clear brief",
-          stored(event.data.sessionID).then((entries) => forget(entries.map((entry) => entry.key))),
+          "clear session state",
+          stored(event.data.sessionID).then((entries) =>
+            forget([...entries.map((entry) => entry.key), nudged(event.data.sessionID)]),
+          ),
         );
       }
       if (event.type === "session.inbox.enqueued") {
@@ -262,6 +293,7 @@ export default Plugin.define({
         const total = input + output + reasoning + cache.read + cache.write;
         tokens.set(sessionID, total);
         cap(sessionID, total);
+        await guard("nudge", notify(sessionID, tierFor(total)));
       }
       if (event.type === "session.compaction.started") {
         const { sessionID } = event.data;
@@ -277,6 +309,7 @@ export default Plugin.define({
         const { sessionID } = event.data;
         tokens.delete(sessionID);
         compacting.delete(sessionID);
+        epochs.delete(sessionID);
         await guard("clear brief", sweep(sessionID));
         const request = requests.get(sessionID);
         if (request) void guard("follow up after compaction", resume(sessionID, request, event.created));
