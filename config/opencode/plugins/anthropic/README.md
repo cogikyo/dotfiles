@@ -11,7 +11,7 @@ Agents must not read credential files or change account state.
 `headers.ts` builds request headers from local settings and the vendored model and beta rules.
 At startup, `index.ts` detects the CLI version with `claude --version` unless `ANTHROPIC_CLI_VERSION` is already set.
 Detection failure logs a warning and keeps the vendored `ccVersion` default.
-`claude-auth/` holds request transforms, signing, beta rules, model configuration, and HTTP retry code from upstream 2.2.1.
+`claude-auth/` holds request transforms, signing, beta rules, and model configuration from upstream 2.2.1.
 Keep vendored files byte-identical when updating them, and put local policy in the wrapper modules.
 
 `credentials.ts` reads `.credentials.json` from the fixed account directory and refreshes expired or rejected tokens.
