@@ -9,6 +9,7 @@ permissions:
   - { "action": "skill", "resource": "papercuts", "effect": "allow" }
   - { "action": "skill", "resource": "epistemology", "effect": "allow" }
   - { "action": "skill", "resource": "x", "effect": "allow" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/session.

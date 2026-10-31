@@ -4,6 +4,7 @@ mode: subagent
 color: "#b29ae8"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are review/architect.

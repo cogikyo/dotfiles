@@ -4,6 +4,7 @@ mode: subagent
 color: "#8aa4f3"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are review/critic.

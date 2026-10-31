@@ -4,6 +4,7 @@ mode: subagent
 color: "#6380ec"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are review/copy.

@@ -6,6 +6,7 @@ permissions:
   - { "action": "x", "resource": "*", "effect": "allow" }
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "skill", "resource": "x", "effect": "allow" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are scout/dirty.

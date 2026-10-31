@@ -19,6 +19,7 @@ permissions:
       "effect": "deny",
     }
   - { "action": "skill", "resource": "x", "effect": "allow" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are verify/source.

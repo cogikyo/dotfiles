@@ -7,6 +7,7 @@ permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "shell", "resource": "*", "effect": "deny" }
   - { "action": "skill", "resource": "x", "effect": "allow" }
+  - { "action": "execute", "resource": "*", "effect": "deny" }
 ---
 
 You are verify/web.
