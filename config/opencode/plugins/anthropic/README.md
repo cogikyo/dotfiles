@@ -39,4 +39,5 @@ If every alternative is capped or lacks usable credentials, the original 429 is 
 ## Verification
 
 Run `bun run check` from `config/opencode` for local type, lint, and format checks.
+Code run from an agent's shell cannot load Claude credentials through the plugin, so test harnesses see a login failure.
 Credential refresh and signed live requests require separate user-approved verification because they can write real account files and refresh locks.

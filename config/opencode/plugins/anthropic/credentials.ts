@@ -145,6 +145,10 @@ export class Credentials {
   }
 
   private read(): Token | undefined {
+    if (process.env.OPENCODE_SESSION_ID) {
+      this.log(Effect.logWarning("anthropic: credentials are not read inside an agent shell", { file: this.file }));
+      return undefined;
+    }
     try {
       const data = JSON.parse(readFileSync(this.file, "utf8"));
       const entry = data.claudeAiOauth ?? data;
