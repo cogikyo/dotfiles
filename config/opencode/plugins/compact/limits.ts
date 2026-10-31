@@ -3,18 +3,20 @@ import type { Plugin } from "@opencode/plugin/tui";
 type Limit = { input?: number; context: number };
 
 const reserve = 16_000;
+const share = 0.15;
 const buffers = new Map<string, Promise<number | string | undefined>>();
 
-// Keep below opencode.json's limit.input - compaction.buffer so native compaction does not run first.
+// Keep below the native trigger in threshold() when changing opencode.json limits or buffer.
 export const ceiling = 300_000;
 
 export function threshold(limit: Limit, buffer: number | string | undefined, root: boolean) {
-  const window = limit.input || limit.context;
+  const window = limit.input && limit.context ? Math.min(limit.input, limit.context) : limit.input || limit.context;
   const tokens = typeof buffer === "string" ? Math.round((window * Number.parseFloat(buffer)) / 100) : buffer;
-  const native =
-    window > 0
-      ? window - (tokens ?? Math.max(Math.floor(window * 0.1), window >= 2 * reserve ? reserve : 0))
-      : Number.POSITIVE_INFINITY;
+  const room =
+    tokens !== undefined && tokens < window
+      ? tokens
+      : Math.max(Math.floor(window * share), window >= 2 * reserve ? reserve : 0);
+  const native = window > 0 ? window - room : Number.POSITIVE_INFINITY;
   const value = root ? Math.min(native, ceiling) : native;
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
