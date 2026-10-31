@@ -1,27 +1,27 @@
 import { Plugin } from "@opencode/plugin";
 import { SessionMessage } from "@opencode/schema/session-message";
-import { Effect, Fiber, Schema } from "effect";
+import { Effect, Fiber, Schema, SchemaTransformation } from "effect";
 import { retag, tag } from "../sessions/tags.ts";
 import { flat, glyphs, kinds, type Mail, mailable, plain, source } from "./mail.ts";
 import { api } from "./rpc.ts";
 import * as store from "./store.ts";
 
+const trimmed = (description: string, ...checks: Parameters<typeof Schema.String.check>) =>
+  Schema.String.check(...checks)
+    .annotate({ description })
+    .pipe(Schema.decodeTo(Schema.Trimmed.check(Schema.isNonEmpty(), ...checks), SchemaTransformation.trim()));
+
 const Input = Schema.Struct({
-  to: Schema.Trim.check(Schema.isNonEmpty()).annotate({
-    description: "Target top-level session: its ID, or its exact title without the tag.",
-  }),
+  to: trimmed("Target top-level session: its ID, or its exact title without the tag.", Schema.isMinLength(1)),
   kind: Schema.Literals(kinds).annotate({
     description: "info: shares something and expects no reply. ask: needs a reply from the target.",
   }),
-  subject: Schema.Trim.check(Schema.isNonEmpty(), Schema.isMaxLength(80), Schema.isPattern(/^[^\r\n]*$/u)).annotate({
-    description: "One short line.",
-  }),
-  body: Schema.Trim.check(Schema.isNonEmpty(), Schema.isMaxLength(4000)).annotate({
-    description: "Plain text. Put large artifacts in files and reference them by absolute path.",
-  }),
-  replyTo: Schema.optional(
-    Schema.Trim.check(Schema.isPattern(/^msg_[A-Za-z0-9]+$/u)).annotate({ description: "Mail ID this answers." }),
+  subject: trimmed("One line of at most 80 characters.", Schema.isMaxLength(80), Schema.isPattern(/^[^\r\n]*$/u)),
+  body: trimmed(
+    "Plain text of at most 4000 characters. Put large artifacts in files and reference them by absolute path.",
+    Schema.isMaxLength(4000),
   ),
+  replyTo: Schema.optional(trimmed("Mail ID this answers.", Schema.isPattern(/^\s*msg_[A-Za-z0-9]+\s*$/u))),
 });
 
 const wakeAfter = 3 * 60_000;
@@ -33,7 +33,11 @@ const description = [
   "The target sees it as mail from this session's agent, not from the user, so it carries no approval.",
   "Use kind info to share something and ask when you need a reply; answer an ask with replyTo set to its mail ID.",
   "Only top-level sessions can send, and only to open top-level sessions.",
+  "Subjects are one line of at most 80 characters; bodies are at most 4000 characters.",
 ].join(" ");
+
+const CHILD =
+  "Cross-session mail is for top-level sessions; if another session needs something from your work, end your report with a suggested mail: the target session and the gist.";
 
 const expects: Record<Mail["kind"], string> = {
   info: "Kind: info. No reply is expected; never send a reply that only acknowledges it.",
@@ -87,6 +91,26 @@ function refuse(session: { id: string; parentID?: string; title?: string }, role
   throw new Error(`mail: ${session.id} is ${marked?.state}`);
 }
 
+const children = new Map<string, Promise<boolean>>();
+
+async function hide(
+  ctx: Plugin.Context,
+  fail: (what: string, error: unknown) => void,
+  event: { sessionID: string; tools: Record<string, unknown>; system: { type: "text"; text: string }[] },
+) {
+  const { sessionID } = event;
+  const known = children.get(sessionID) ?? ctx.session.get({ sessionID }).then((session) => !!session.parentID);
+  children.set(sessionID, known);
+  try {
+    if (!(await known)) return;
+    delete event.tools.mail;
+    event.system.push({ type: "text", text: CHILD });
+  } catch (error) {
+    children.delete(sessionID);
+    fail("child context", error);
+  }
+}
+
 export default Plugin.define({
   id: "mail",
   async setup(ctx) {
@@ -106,6 +130,11 @@ export default Plugin.define({
           ),
       );
     const wake = () => void sweep().catch((error: unknown) => fail("sweep", error));
+    await Promise.all(
+      (["context", "compaction", "generate"] as const).map((name) =>
+        ctx.session.hook(name, async (event) => hide(ctx, fail, event)),
+      ),
+    );
     await ctx.rpc.register(api, {
       ledger: async ({ sessionID }) => store.ledger(sessionID),
       parked: async () => store.inboxes(),
