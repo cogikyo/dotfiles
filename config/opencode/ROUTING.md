@@ -3,15 +3,14 @@ routes:
   build/owner: claude/claude-opus-5-5 high
   build/general: claude/claude-opus-5-5 high
   build/git: claude/claude-opus-5-5 high
-  build/patch: claude/claude-sonnet-5-5 high
+  build/patch: claude/claude-sonnet-5-5 medium
   build/scribe: openai/gpt-6.1-sol high
-  scout/*: claude/claude-opus-5-5 high
-  scout/context: claude/claude-sonnet-5-5 high
-  scout/dirty: claude/claude-sonnet-5-5 high
+  scout/*: claude/claude-sonnet-5-5 high
+  scout/context: claude/claude-sonnet-5-5 medium
+  scout/dirty: claude/claude-sonnet-5-5 medium
   scout/web: opencode-go/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
-  review/critic: claude/claude-opus-5-5 high
-  review/entropy: claude/claude-opus-5-5 max
+  review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.1-sol high
 fallbacks:
   claude/claude-opus-5-5: opencode-go/grok-4.7
@@ -38,14 +37,28 @@ To change reasoning effort, pass the model and its variant together, such as `cl
 An explicit model does not take the route's variant.
 Use `claude/<model>#<variant>` to keep account selection, or omit `#<variant>` to use the model's default.
 
+## Effort ladder
+
+Pick effort for each workflow step from the task; route variants are defaults.
+
+- **`medium`**: mechanical or fully specified work, such as patches, lookups, first-pass maps, data pulls, and builds whose brief settles every choice.
+- **`high`**: bounded judgment, such as builders with a clear brief, focused scouts, and routine reviews.
+- **`xhigh`**: hard or ambiguous work, such as tricky debugging, cross-cutting builds, and the final review of a risky change.
+- **`max`**: only when the user asks for it, or for a sweep the user requested.
+
+Picks of `medium` or `high` along this ladder are within guidance.
+Picks of `xhigh` or `max` count as departures and carry a `why:` on the workflow card, even when the route defaults to that effort.
+Collab runs at `high`; the user switches it to `xhigh` in the TUI picker when a session needs it.
+
 ## Anthropic accounts
 
 **Trend** (`anthropic`), **Cogikyo** (`anthropic-personal`), and **Cullyn** (`anthropic-cullyn`) all serve every repository.
 The pool spends each weekly window before it resets.
 
 - **Enforced**: when every account is capped, the pool uses the model's fallback without a variant and notes the switch in the result.
+- When an account caps mid-request, the Anthropic plugin resends on the next open account; later requests in that session stay there until the cap resets.
 - Pass `anthropic/…`, `anthropic-personal/…`, or `anthropic-cullyn/…` only when the user names an account; that pins the account and skips the pick.
-- Use Opus at `high`, `xhigh`, or `max`, and Sonnet at `high` or `xhigh`.
+- Opus and Sonnet both take `medium` through `max`; pick by the effort ladder.
 - Authentication failures return a blocker rather than trigger quota overflow.
 
 ## Which agent
@@ -56,17 +69,19 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 - Use Sonnet scouts (`scout/context`, `scout/dirty`) for fast first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
 - Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
-- Send focused questions to Opus scouts; use `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
+- Send focused questions to `scout/code` on its Sonnet route for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
+  - Pass `claude/claude-opus-5-5#high` when a design or verdict rests on the trace.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Keep reads that need the Docker socket or `.pier/secrets.yaml`, such as `docker save` or `pier profile show`, in Collab's shell; cage blocks both for read-only children.
 - Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
   - Seat `scout/web` on its Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
-  - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design or otherwise matters.
+  - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design.
   - Drop a capped seat instead of substituting a fallback; the `x` tool stays on the xAI pool and is skipped when that pool is capped.
 
 ### Reviewers
 
+- Sol carries review volume; keep routine reviews on its routes.
 - After implementation, pair **`review/debug`** for correctness with **`review/simplify`** for idiom, dead code, and cleanliness.
   - Keep `review/debug` alone as the default for small fixes.
 - Add `review/security`, `review/profile`, `review/architect`, and `review/copy` as the change's risks warrant.
@@ -91,8 +106,8 @@ Pick a builder by how much the brief settles.
 
 ## When to deviate
 
-- Run a hard `build/owner` or `build/general` at Opus `xhigh` when time is not a constraint.
-- Send trivial edits to `build/patch` on Sonnet `high`, which is slightly faster than Opus.
+- Run `build/owner` or `build/general` at Opus `xhigh` only for hard or ambiguous steps, with a `why:`.
+- Send trivial edits to `build/patch` on Sonnet `medium`, which is slightly faster than Opus.
   - Keep a `{scope}-patch` lane open for repeated patches in the same scope.
 - Use Opus `max` when the user asks for it.
 - Add Sol or Astra leaves eagerly beside Opus work; Collab picks between them.
@@ -100,21 +115,21 @@ Pick a builder by how much the brief settles.
   - Use `verify/*` to settle an open claim, to double-check a claim the answer or design rests on, or as a council seat that guards against shared assumptions.
   - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
 - Pass `openai/gpt-6-astra#high` or `openai/gpt-6.1-sol#high` when Collab picks one explicitly.
-- Seat a **fresh Opus reviewer** beside Sol or Astra in every review council, and convene one for harness changes, production-impact findings, and design verdicts.
+- Convene a council for harness changes, production-impact findings, and design verdicts, with a **fresh Opus reviewer** beside Sol or Astra.
+  - Reserve the Opus seat for those cases; other councils run Sol and Astra seats.
   - Give Opus a different lens when risks span lenses, but not an adversarial one; keep seats on the same lens only for high-stakes changes where model diversity is the point.
   - Pass `claude/claude-opus-5-5#high` for the Opus seat.
-  - For repo-wide `review/entropy` sweeps, run the Opus `max` lane beside Astra at `high`.
-- Send OpenAI findings that need filtering through Opus `review/critic`, and brief it with those findings.
+  - For repo-wide `review/entropy` sweeps, run the Opus `xhigh` lane beside Astra at `high`.
+- `review/critic` routes to Sol; pass `claude/claude-opus-5-5#high` only when it filters OpenAI findings, and brief it with those findings.
 
 ## Models
 
 Listed in rough order of overall preference.
-Most models start at `high` for every role until evidence says otherwise.
+Use the effort ladder for each step.
 
 ### `claude-opus-5-5`
 
-- Reasoning: `high` by default, or `xhigh` when time is not a constraint.
-  - Below `max`, it appears to reason less on its own when the task allows.
+- Reasoning: `high` by default, `medium` for fully specified work, and `xhigh` for hard or ambiguous steps.
 
 ### `openai/gpt-6.1-sol`
 
@@ -134,8 +149,8 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### `claude-sonnet-5-5`
 
+- The default for scouts and patches: `medium` for first-pass maps, dirty-tree checks, and patches; `high` for focused scouts.
 - Orchestrates web search and `x` calls well.
-- Let `/papercuts` or `/epistemology` evidence decide which roles return to smaller models.
 
 ### `xai/grok-4.7`
 
@@ -168,6 +183,5 @@ Usage is internal routing data.
 Check `usage_status` before any dispatch to a non-pool route, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
 Mention usage only when the user asks, or when every route for a step is capped.
 
-- Spend every provider up to 100% freely; do not conserve, downgrade, or hedge, and the user says when to be careful.
-- OpenAI's weekly window tends to reset mostly unspent, so add Sol and Astra leaves freely; default routes stay on Opus.
-- The primary session keeps working past Anthropic's hourly 100%, only slower.
+- Anthropic's weekly windows are the scarce pool, so put work on Sol or Sonnet where they fit and keep Opus for building and judgment that needs it.
+- OpenAI's weekly window tends to reset mostly unspent, so Sol and Astra leaves stay cheap to add.

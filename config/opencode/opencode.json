@@ -29,7 +29,7 @@
     "collab": {
       "description": "The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.",
       "mode": "primary",
-      "model": "anthropic-personal/claude-opus-5-5#xhigh",
+      "model": "anthropic-personal/claude-opus-5-5#high",
       "color": "#f8b486",
       "system": "{file:./COLLAB.md}\n\nInstructions from: ROUTING.md\n{file:./ROUTING.md}",
       "permissions": [
