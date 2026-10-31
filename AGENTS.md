@@ -71,4 +71,6 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 - OpenCode applies `opencode.json`, `cli.json`, and plugin edits (including new plugin directories) live; test the change live before suggesting `/reload`.
   - Claim a restart is needed only after a reload failed, and quote the log line.
   - Judge what a plugin can do from the installed host source in the `src` cache, not from `@opencode/plugin` types.
+- Plugin edits go live on every save in every running OpenCode session.
+  Edit loaded plugins in a separate git worktree, then copy finished files into `config/opencode/plugins/` after checks pass.
 - Commit `config/opencode/cli.json` setting toggles, such as thinking or verbosity, without asking; fold them into a nearby opencode commit or commit them alone.
