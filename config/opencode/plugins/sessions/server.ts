@@ -61,7 +61,9 @@ const description = [
   "- text, reasoning: one session's text or reasoning excerpts, oldest first.",
   "- tools: one session's tool calls with status and a short input excerpt, without outputs.",
   "- part: one item's input, output, and error excerpts; page long output with `from`. Row IDs `<message ID>#<n>` address item n of an assistant message's content.",
-  "- sql: one read-only SELECT over session_v2, session_message (type, seq, data JSON; assistant data.content[] holds text, reasoning, and tool items; tool input is at `$.state.input`), and project; json_each is allowed; bind every value through `params`.",
+  "- sql: one read-only SELECT over session_v2, session_message (session_id, type, seq, data JSON), and project; json_each is allowed; bind every value through `params`; `offset` skips result rows.",
+  "  Filter session_message by session_id, as in `m.session_id = ?` or `m.session_id IN (SELECT id FROM session_v2 WHERE …)`; the tool rejects queries that would scan it.",
+  "  Assistant data.content[] holds items whose `$.type` is text, reasoning, or tool; a tool item has its tool name at `$.name` (not `$.tool`) and `$.state.status`, `$.state.input`, and `$.state.error`.",
 ].join("\n");
 
 async function query(input: Query, signal: AbortSignal) {

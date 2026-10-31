@@ -8,7 +8,7 @@ const tables = ["session_v2", "session_message", "project"];
 const store = `s_${crypto.randomUUID().replaceAll("-", "")}`;
 const filters: Record<string, string> = { session_v2: "id", session_message: "session_id" };
 const huge = new Set(["session_message"]);
-const scans = new Set(["Rewind", "Last", "Count"]);
+const scans = new Set(["Last", "Count"]);
 const seeks = new Set(["SeekGE", "SeekGT", "SeekLE", "SeekLT"]);
 const bounds = new Set(["IdxGE", "IdxGT", "IdxLE", "IdxLT"]);
 const harness = ["synthetic", "system", "skill", "compaction"];
@@ -18,6 +18,7 @@ const HUGE =
 
 type Row = Record<string, unknown>;
 type Op = { opcode: string; p1: number; p2: number; p3: number; p4: unknown };
+type Cursor = { table: string; keyed: boolean };
 
 class Slice {
   constructor(
@@ -89,7 +90,8 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
     const { item, ...head } = row;
     return [{ id: address, ...head, ...detail(JSON.parse(item), index === undefined, args.from ?? 0) }];
   },
-  sql: (db, args) => select(db, required(args.sql, "sql"), [...(args.params ?? [])], args.limit),
+  sql: (db, args) =>
+    select(db, required(args.sql, "sql"), [...(args.params ?? [])], { limit: args.limit, offset: args.offset ?? 0 }),
 };
 
 function excerpts(db: Database, args: Query) {
@@ -159,7 +161,7 @@ function detail(item: Item, whole: boolean, from: number) {
   };
 }
 
-function select(db: Database, source: string, params: SQLQueryBindings[], limit: number) {
+function select(db: Database, source: string, params: SQLQueryBindings[], page: { limit: number; offset: number }) {
   const sql = source.trim().replace(/;\s*$/u, "");
   if (!/^(select|with)\b/iu.test(sql)) throw new Error("sql must be one SELECT or WITH statement");
   if (sql.includes(";")) throw new Error("sql must be one statement; bind values that contain `;` through params");
@@ -167,9 +169,11 @@ function select(db: Database, source: string, params: SQLQueryBindings[], limit:
   guardScans(ops, inspect(db, ops));
 
   const rows: Row[] = [];
+  let skip = page.offset;
   for (const row of db.query<Row, SQLQueryBindings[]>(sql).iterate(...params)) {
+    if (skip-- > 0) continue;
     rows.push(row);
-    if (rows.length >= limit) break;
+    if (rows.length >= page.limit) break;
   }
   return rows;
 }
@@ -181,26 +185,30 @@ function inspect(db: Database, ops: Op[]) {
     .find((row) => row.name === store)?.seq;
   const roots = new Map(
     db
-      .query<{ rootpage: number; tbl_name: string }, []>(
-        `SELECT rootpage, tbl_name FROM ${store}.sqlite_schema WHERE rootpage > 0 AND tbl_name IN (${list(tables)})`,
+      .query<{ rootpage: number; tbl_name: string; lead: string | null }, []>(
+        `SELECT rootpage, tbl_name, (SELECT name FROM pragma_index_info(s.name, '${store}') WHERE seqno = 0) AS lead
+         FROM ${store}.sqlite_schema AS s WHERE rootpage > 0 AND tbl_name IN (${list(tables)})`,
       )
       .all()
-      .map((row) => [row.rootpage, row.tbl_name]),
+      .map((row) => [
+        row.rootpage,
+        { table: row.tbl_name, keyed: row.lead !== null && row.lead === filters[row.tbl_name] },
+      ]),
   );
   const json = jsonTables(db);
-  const opened = new Map<number, string>();
+  const opened = new Map<number, Cursor>();
   for (const op of ops) {
     if (op.opcode === "OpenWrite") throw new Error("sql must not write");
     if (op.opcode === "VOpen" && !json.has(op.p4))
       throw new Error("sql may use only json_each and json_tree as virtual tables or table-valued functions");
     if (op.opcode !== "OpenRead" && op.opcode !== "ReopenIdx") continue;
     if (op.p3 === 0) continue;
-    const table = op.p3 === attached ? roots.get(op.p2) : undefined;
-    if (!table)
+    const cursor = op.p3 === attached ? roots.get(op.p2) : undefined;
+    if (!cursor)
       throw new Error(
         `sql may read only ${[...tables, "sqlite_schema"].join(", ")}; it reads root page ${String(op.p2)}`,
       );
-    if (huge.has(table)) opened.set(op.p1, table);
+    if (huge.has(cursor.table)) opened.set(op.p1, cursor);
   }
   return opened;
 }
@@ -217,19 +225,36 @@ function jsonTables(db: Database) {
   );
 }
 
-function guardScans(ops: Op[], cursors: Map<number, string>) {
-  const seeked = new Set<number>();
-  const bounded = new Set<number>();
-  for (const op of ops) {
-    const table = cursors.get(op.p1);
-    if (!table) continue;
-    if (scans.has(op.opcode)) throw new Error(`sql scans ${table} (${op.opcode}); ${HUGE}`);
-    if (seeks.has(op.opcode)) seeked.add(op.p1);
-    if (bounds.has(op.opcode)) bounded.add(op.p1);
+function guardScans(ops: Op[], cursors: Map<number, Cursor>) {
+  const ephemeral = new Set(ops.filter((op) => op.opcode === "OpenEphemeral").map((op) => op.p1));
+  const seen = new Map<number, Set<string>>();
+  for (const [index, op] of ops.entries()) {
+    const cursor = cursors.get(op.p1);
+    if (!cursor) continue;
+    if (scans.has(op.opcode)) throw new Error(`sql scans ${cursor.table} (${op.opcode}); ${HUGE}`);
+    const codes = seen.get(op.p1) ?? new Set<string>();
+    seen.set(op.p1, codes.add(op.opcode));
+    if (op.opcode === "Column" && op.p2 === 0 && cursor.keyed && member(ops.slice(index + 1), op.p3, ephemeral))
+      codes.add("session");
   }
-  for (const cursor of seeked) {
-    if (!bounded.has(cursor)) throw new Error(`sql reads an open-ended range of ${cursors.get(cursor)}; ${HUGE}`);
+  for (const [cursor, codes] of seen) {
+    const problem = unbounded(codes);
+    if (problem) throw new Error(`sql ${problem} ${cursors.get(cursor)?.table}; ${HUGE}`);
   }
+}
+
+function unbounded(codes: Set<string>) {
+  const has = (set: Set<string>) => set.values().some((code) => codes.has(code));
+  // Skip-scans rewind the index; only accept them with a session_id membership check.
+  if (codes.has("Rewind") && !codes.has("SeekGT")) return "scans (Rewind)";
+  if (codes.has("Rewind") && !codes.has("session")) return "reads a range of every session in";
+  if (has(seeks) && !has(bounds)) return "reads an open-ended range of";
+  return undefined;
+}
+
+function member(next: Op[], register: number, sets: Set<number>) {
+  const test = next.find((op) => op.opcode !== "Affinity" && op.opcode !== "Filter");
+  return test?.opcode === "NotFound" && test.p3 === register && sets.has(test.p1);
 }
 
 function clip(value: unknown, redact: (text: string) => string) {
