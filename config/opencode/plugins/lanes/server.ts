@@ -3,15 +3,11 @@ import type { Session } from "@opencode/schema/session";
 import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import path from "node:path";
-import { claudeAccounts } from "../anthropic/accounts.ts";
+import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
 import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
 
 type Status = "running" | "idle" | "error" | "interrupted";
-type Window = { label: string; usedPercent?: number; resetAt?: string };
-type Account = { id: string; age?: number; known: boolean; capped: number[]; weekly: number };
 type Input = {
   agent: string;
   description: string;
@@ -23,8 +19,6 @@ type Input = {
 };
 
 const pool = "claude";
-const accounts = Object.values(claudeAccounts).map(({ id }) => id);
-const staleAfter = 10 * 60_000;
 
 const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
 
@@ -42,49 +36,9 @@ const readRouting = Effect.tryPromise({
     }),
 });
 
-function cacheFile(providerID: string) {
-  const xdg = process.env.XDG_CACHE_HOME?.trim();
-  return path.join(
-    xdg ? path.resolve(xdg) : path.join(homedir(), ".cache"),
-    "opencode",
-    "usage-sidebar",
-    `${providerID}.json`,
-  );
-}
-
-async function usage(id: string, modelID: string, now: number): Promise<Account> {
-  const unknown = { id, known: false, capped: [], weekly: Infinity };
-  const data = await readFile(cacheFile(id), "utf8").then(JSON.parse, () => undefined);
-  const fetchedAt = data?.fetchedAt;
-  const all: Window[] | undefined = data?.usage?.windows;
-  if (typeof fetchedAt !== "number" || !Array.isArray(all)) return unknown;
-  const age = now - fetchedAt;
-  const scoped = modelID
-    .split("-")
-    .find((part) => part !== "claude")?.[0]
-    ?.toUpperCase();
-  const windows = all
-    .filter(({ label }) => label === "H" || label === "W" || label === scoped)
-    .map((window) => {
-      const reset = window.resetAt ? Date.parse(window.resetAt) : undefined;
-      const stale = reset !== undefined && reset <= now && fetchedAt <= reset;
-      return { ...window, reset: reset ?? Infinity, known: !stale && typeof window.usedPercent === "number" };
-    });
-  if (!windows.length) return { ...unknown, age };
-  return {
-    id,
-    age,
-    known: age <= staleAfter && windows.every((window) => window.known),
-    capped: windows.filter((window) => window.known && window.usedPercent! >= 100).map((window) => window.reset),
-    weekly: windows.find((window) => window.label === "W" && window.known)?.reset ?? Infinity,
-  };
-}
-
 async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefined) {
-  const now = Date.now();
-  const list = await Promise.all(accounts.map((id) => usage(id, route.id, now)));
-  const open = list.filter((account) => !account.capped.length);
-  const sticky = open.find((account) => account.id === current?.providerID);
+  const list = await survey(route.id);
+  const open = ranked(list, current?.providerID);
   const stale = list
     .filter((account) => account.age !== undefined && account.age > staleAfter)
     .map((account) => `${account.id} ${Math.round(account.age! / 60_000)}m old`);
@@ -96,12 +50,7 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
     notes.push(`lanes: all Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`);
     return { ref, note: notes.join("\n") };
   }
-  const [account] =
-    sticky !== undefined
-      ? [sticky]
-      : open.length
-        ? open.toSorted((a, b) => Number(b.known) - Number(a.known) || a.weekly - b.weekly)
-        : list.toSorted((a, b) => Math.max(...a.capped) - Math.max(...b.capped));
+  const account = open[0] ?? list.toSorted((a, b) => reopens(a) - reopens(b))[0];
   return { ref: { ...route, providerID: account.id }, note: notes.join("\n") || undefined };
 }
 

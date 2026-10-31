@@ -28,7 +28,13 @@ This fixed path matters when testing with an isolated V2 data directory.
 
 Missing credentials or terminal refresh failures that CLI recovery cannot resolve return an authentication error with the account's login command.
 Transient refresh failures return a rate-limit error with a retry hint.
-Authentication errors do not trigger account-pool fallback; `lanes/server.ts` owns quota-based account selection.
+Authentication errors do not move a request to another account.
+
+## Usage caps and failover
+
+Only 429s identified as usage caps trigger failover to other open accounts.
+Sessions keep their replacement while the original account's in-memory cap mark lasts, unless the replacement is capped or unavailable.
+If every alternative is capped or lacks usable credentials, the original 429 is returned.
 
 ## Verification
 
