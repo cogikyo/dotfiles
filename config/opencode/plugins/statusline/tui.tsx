@@ -310,7 +310,7 @@ function load(context: Context, sessionID: string) {
   return { tokens, model };
 }
 
-function usage(context: Context, sessionID: string, buffer: number | undefined) {
+function usage(context: Context, sessionID: string, buffer: number | string | undefined) {
   const current = load(context, sessionID);
   if (!current?.model) return;
   const root = !context.data.session.get(sessionID)?.parentID;

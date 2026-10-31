@@ -3,16 +3,17 @@ import type { Plugin } from "@opencode/plugin/tui";
 type Limit = { input?: number; context: number };
 
 const reserve = 16_000;
-const buffers = new Map<string, Promise<number | undefined>>();
+const buffers = new Map<string, Promise<number | string | undefined>>();
 
 // Keep below opencode.json's limit.input - compaction.buffer so native compaction does not run first.
 export const ceiling = 300_000;
 
-export function threshold(limit: Limit, buffer: number | undefined, root: boolean) {
+export function threshold(limit: Limit, buffer: number | string | undefined, root: boolean) {
   const window = limit.input || limit.context;
+  const tokens = typeof buffer === "string" ? Math.round((window * Number.parseFloat(buffer)) / 100) : buffer;
   const native =
     window > 0
-      ? window - (buffer ?? Math.max(Math.floor(window * 0.1), window >= 2 * reserve ? reserve : 0))
+      ? window - (tokens ?? Math.max(Math.floor(window * 0.1), window >= 2 * reserve ? reserve : 0))
       : Number.POSITIVE_INFINITY;
   const value = root ? Math.min(native, ceiling) : native;
   return Number.isFinite(value) && value > 0 ? value : undefined;
@@ -23,7 +24,7 @@ export function configured(context: Plugin.Context, directory: string) {
   if (cached) return cached;
   const pending = context.client.config.get({ location: { directory } }).then(
     (entries) =>
-      entries.reduce<number | undefined>(
+      entries.reduce<number | string | undefined>(
         (value, entry) => (entry.type === "document" ? (entry.info.compaction?.buffer ?? value) : value),
         undefined,
       ),

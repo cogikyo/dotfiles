@@ -9,12 +9,12 @@
     "check": "tsc -p . && oxlint plugins && oxfmt --check plugins"
   },
   "devDependencies": {
-    "@opencode/plugin": "2.0.27",
-    "@opencode/theme": "2.0.27",
-    "@opentui/core": "0.6.8",
-    "@opentui/solid": "0.6.8",
+    "@opencode/plugin": "2.2.5",
+    "@opencode/theme": "2.2.5",
+    "@opentui/core": "0.8.0",
+    "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.0",
-    "effect": "4.0.1",
+    "effect": "4.0.6",
     "eslint-plugin-solid": "0.18.0",
     "oxfmt": "0.70.0",
     "oxlint": "1.85.0",

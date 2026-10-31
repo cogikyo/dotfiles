@@ -32,7 +32,7 @@ const lanes = new WeakMap<Renderable, Lane>();
 const pins = new WeakMap<Renderable, { text: TextRenderable; key: string }>();
 const leads = new WeakMap<TextNodeRenderable, { key: string; node: TextNodeRenderable }>();
 const shown = new WeakMap<TextNodeRenderable, { full: string; label: string }>();
-const buffers = new Map<string, number | undefined>();
+const buffers = new Map<string, number | string | undefined>();
 const asked = new Set<string>();
 const segments = new Intl.Segmenter();
 
