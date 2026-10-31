@@ -5,6 +5,7 @@ import { realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
+import { scratch, within } from "../guard/paths.ts";
 import { findBoxes } from "./boxes.ts";
 import { Layout } from "./layout.ts";
 import { connect, edges } from "./routes.ts";
@@ -17,7 +18,8 @@ const Input = Schema.Struct({
   text: Schema.optional(Schema.String.annotate({ description: "Layout rows, without Markdown fence lines." })),
   file: Schema.optional(
     Schema.String.annotate({
-      description: "File under the session directory that hosts the layout; use instead of text.",
+      description:
+        "File under the session directory or this session's scratch that hosts the layout; use instead of text.",
     }),
   ),
   start: lineNumber("First hosted line in file, 1-based."),
@@ -40,14 +42,17 @@ const description = [
   "Returns violations as line:cell positions in the bare layout, then box widths and the traced edges, or the tree's paths.",
 ].join(" ");
 
-async function inside(directory: string, target: string) {
+async function inside(directory: string, target: string, sessionID: string) {
   const root = await realpath(directory);
-  if (root === "/" || root === (await realpath(homedir())))
-    throw new Error(`file mode needs a project directory; the session directory is ${root}`);
   const file = await realpath(path.resolve(root, target));
-  const relative = path.relative(root, file);
-  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
-    throw new Error(`${file} is outside the session directory ${root}; pass the layout as text instead`);
+  const own = await realpath(path.join(scratch, sessionID)).catch(() => undefined);
+  if (own && within(file, own)) return file;
+  if (root === "/" || root === (await realpath(homedir())))
+    throw new Error(`file mode needs a project directory or this session's scratch; the session directory is ${root}`);
+  if (!within(file, root))
+    throw new Error(
+      `${file} is outside the session directory ${root} and this session's scratch; pass the layout as text instead`,
+    );
   return file;
 }
 
@@ -108,7 +113,7 @@ export default Plugin.define({
           if (args.start === undefined || args.end === undefined) throw new Error("file needs start and end lines");
           if (args.end < args.start) throw new Error("end is before start");
           const session = await ctx.session.get({ sessionID: context.sessionID });
-          const file = await inside(session.location.directory, args.file);
+          const file = await inside(session.location.directory, args.file, context.sessionID);
           const lines = await region(file, args.start, args.end);
           return { content: validate(lines, args.start, args.prefix ?? "", args.width) };
         },

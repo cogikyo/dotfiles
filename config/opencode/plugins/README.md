@@ -264,7 +264,7 @@ There is no persistent state, key, or TUI slot.
 
 `diagram/server.ts` exposes `diagram` for display-cell geometry and connectivity checks on documentation diagrams and trees.
 Pass `text`, or `file` with `start` and `end`; optional `prefix` and `width` describe the host layout.
-File mode requires a project session directory and rejects paths outside it; pass text for external layouts.
+File mode accepts files under the project session directory or the caller's own scratch directory; pass text for other layouts.
 There is no persistent state, key, or TUI slot.
 
 ## X search
