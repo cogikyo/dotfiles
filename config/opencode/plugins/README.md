@@ -121,18 +121,20 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 ## Guard
 
 `guard/server.ts` denies recognized shell Grok launches, OpenCode API calls, and credential or database reads.
-It denies recognized `cd`, `pushd`, and `popd` commands, including inside substitutions and `bash -c`.
+`cd` is allowed; the guard folds one leading `cd <literal path>` into `workdir` after checking that the directory exists.
 It also rejects broad home or secret-ancestor `grep` and `glob` roots and checks commit-message shape for agents outside the read-only set.
-For agents outside the read-only set, `rm` requires literal absolute paths whose parents resolve inside `/tmp/opencode/`; use `trash -- <path>` for other deletion.
+For agents outside the read-only set, `rm`, `find -delete`, and `find -exec rm` require paths inside `/tmp/opencode/`, written literally or through variables assigned earlier in the command, absolute or relative to a known `workdir` or `cd <dir> &&` target.
+They reject `..`, trailing slashes, and top-level globs; `xargs rm` is denied, and other deletion goes through `trash -- <path>`.
+Every agent except `collab` and `build/git` may run recognized read-only Git commands or Git in self-contained scratch repos under `/tmp/opencode`, subject to path and config checks; mutations in real repos are denied.
+Git checks use parsed commands, so Git text in `echo` arguments or data heredocs does not count as a command.
+For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo or arguments are uncertain, or for forced, destructive, or remote-program forms; other pushes pass this guard.
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.
 Use `x` for X search, `sessions` for history, and `session_create` for new sessions.
-Set the shell tool's `workdir` parameter; use absolute paths, `git -C`, or a separate call for other directories.
-V2 resolves each `cd` argument against `workdir`, so chained relative changes can cause false external-directory prompts.
-The `context`, `compaction`, and `generate` hooks add this rule to the shell tool's description for each request.
-Agents outside the read-only set also learn that the shell is zsh, where an unquoted `$var` does not word-split; read-only commands run under `bash -c` in cage.
+Prefer `workdir`; V2 resolves each remaining `cd` argument against it, so chained relative changes can cause false external-directory prompts.
+The `context`, `compaction`, and `generate` hooks describe parallel calls and the shell environment: zsh without unquoted `$var` word-splitting outside the read-only set, or offline `bash -c` in cage for read-only agents.
 
-For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, and `diagram`; agent permissions can restrict these further.
+For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, `diagram`, and `workflow`; agent permissions can restrict these further.
 Code Mode `execute` is excluded, and `verify/web` denies all shell calls.
 Each read-only shell runs through [cage](../../../cmds/cmd/cage/README.md) offline, with writes limited to `~/.local/state/opencode/scratch/<session-id>`.
 `$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.

@@ -2,19 +2,33 @@ import { Plugin } from "@opencode/plugin/effect";
 import type { Permission } from "@opencode/schema/permission";
 import { Tool } from "@opencode/schema/tool";
 import { Effect } from "effect";
+import { statSync } from "node:fs";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
 import { check, fetchPublic, type Request } from "./fetch.ts";
 import { confine, expand, home, scratch, secrets } from "./paths.ts";
-import { denial, readOnly, unchecked } from "./policy.ts";
-import { launches, opaque } from "./shell.ts";
+import { inspect, readOnly } from "./policy.ts";
+import { enter } from "./shell.ts";
 
 const cage = path.join(home, ".local/bin/cage");
+const ttl = 24 * 60 * 60 * 1000;
+const pushes = new Map<string, { reason: string; time: number }>();
 const runs = path.join(scratch, "runs.jsonl");
-const navigators = new Set(["cd", "pushd", "popd"]);
-const allowed = ["shell", "read", "grep", "glob", "webfetch", "websearch", "skill", "sessions", "x", "diagram"];
+const allowed = [
+  "shell",
+  "read",
+  "grep",
+  "glob",
+  "webfetch",
+  "websearch",
+  "skill",
+  "sessions",
+  "x",
+  "diagram",
+  "workflow",
+];
 const files: Record<string, { key: string; recursive: boolean; required: boolean }> = {
   read: { key: "path", recursive: false, required: true },
   grep: { key: "path", recursive: true, required: false },
@@ -53,6 +67,10 @@ function record(run: Record<string, unknown>) {
   });
 }
 
+function prune(now: number) {
+  for (const [key, held] of pushes) if (now - held.time > ttl) pushes.delete(key);
+}
+
 function broad(root: string) {
   const prefix = root.endsWith("/") ? root : `${root}/`;
   return root === home || secrets().some((secret) => secret === root || secret.startsWith(prefix));
@@ -60,10 +78,14 @@ function broad(root: string) {
 
 function describe(event: { agent: string; tools: Record<string, { description: string }> }) {
   return Effect.sync(() => {
-    const shell = event.tools.shell;
+    const { shell, webfetch } = event.tools;
+    const restricted = readOnly(event.agent);
+    if (webfetch && restricted) {
+      webfetch.description = `${webfetch.description} To fetch several URLs, batch them as parallel webfetch calls in one message.`;
+    }
     if (!shell) return;
-    shell.description = `${shell.description} Set the working directory with \`workdir\`; commands that run \`cd\`, \`pushd\`, or \`popd\` are rejected.`;
-    if (!readOnly(event.agent)) {
+    shell.description = `${shell.description} Calls in one message run in parallel, so read a command's output file in a later message.`;
+    if (!restricted) {
       shell.description = `${shell.description} The shell is zsh: an unquoted \`$var\` expands to one word, so pass lists as arrays.`;
       return;
     }
@@ -126,10 +148,15 @@ export default Plugin.define({
           const base = yield* directory(event.sessionID);
           input[file.key] = yield* Effect.tryPromise({
             try: () => confine(target ?? ".", base, file.recursive),
-            catch: (error) =>
-              new Tool.Error({
-                message: `${event.tool} cannot use ${target ?? base}: ${(error as Error).message}; read-only agents can read it only through the sandboxed shell, if at all`,
-              }),
+            catch: (error) => {
+              const code = (error as NodeJS.ErrnoException).code;
+              const missing = code === "ENOENT" || code === "ENOTDIR";
+              return new Tool.Error({
+                message: missing
+                  ? `${event.tool} cannot use ${target ?? base}: no such file or directory`
+                  : `${event.tool} cannot use ${target ?? base}: ${(error as Error).message}; read-only agents can read it only through the sandboxed shell, if at all`,
+              });
+            },
           });
         });
 
@@ -146,19 +173,6 @@ export default Plugin.define({
       yield* ctx.session.hook("context", describe);
       yield* ctx.session.hook("compaction", describe);
       yield* ctx.session.hook("generate", describe);
-
-      yield* ctx.permission.hook("evaluate", (event) =>
-        Effect.sync(() => {
-          if (event.action !== "shell") return;
-          for (const resource of event.resources) {
-            const message = denial(resource, event.agent);
-            if (!message) continue;
-            event.effect = "deny";
-            event.message = message;
-            return;
-          }
-        }),
-      );
 
       yield* ctx.tool.hook("execute.before", (event) =>
         Effect.gen(function* () {
@@ -193,24 +207,46 @@ export default Plugin.define({
             });
           }
           if (event.tool !== "shell") return;
-          const command = text(event.input, "command");
-          if (!command) return;
-          const commands = launches(command);
-          if (commands.includes(opaque)) return yield* new Tool.Error({ message: unchecked });
-          // The host asks external_directory before evaluating shell permissions, so reject navigation here.
-          if (commands.some(([name]) => navigators.has(name))) {
+          const requested = text(event.input, "command");
+          if (!requested) return;
+          const base = yield* resolve(event.sessionID, text(event.input, "workdir"));
+          const { source: command, dir: cwd } = enter(requested, base);
+          if (command !== requested) {
+            if (!statSync(cwd, { throwIfNoEntry: false })?.isDirectory()) {
+              return yield* new Tool.Error({ message: `cd: ${cwd} is not a directory` });
+            }
+            Object.assign(event.input as Record<string, unknown>, { command, workdir: cwd });
+          }
+          const known: Record<string, string> = restricted
+            ? { OPENCODE_SCRATCH: path.join(scratch, event.sessionID) }
+            : {};
+          const review = inspect(command, event.agent, cwd, known);
+          const { problems } = review;
+          if (!restricted && review.commits.includes(undefined)) {
+            problems.push("the guard can't tell which repo this commit runs in; set `workdir` to the repo");
+          } else if (!restricted) {
+            for (const dir of new Set(review.commits)) {
+              const rejection = yield* Effect.promise(() => commitRejection(command, dir ?? cwd));
+              if (!rejection) continue;
+              problems.push(rejection);
+              break;
+            }
+          }
+          if (problems.length === 1) return yield* new Tool.Error({ message: problems[0] });
+          if (problems.length > 1) {
+            const list = problems.map((problem) => `- ${problem.replaceAll("\n", "\n  ")}`).join("\n");
             return yield* new Tool.Error({
-              message:
-                "`cd`, `pushd`, and `popd` are disabled; set the shell tool's `workdir` parameter instead, and use absolute paths, `git -C`, or a separate call for other directories",
+              message: `the guard rejected this command for ${problems.length} reasons:\n${list}`,
             });
           }
-          if (!restricted && command.includes("commit")) {
-            const cwd = yield* resolve(event.sessionID, text(event.input, "workdir"));
-            const rejection = yield* Effect.promise(() => commitRejection(command, cwd));
-            if (rejection) return yield* new Tool.Error({ message: rejection });
+          if (!restricted) {
+            const now = Date.now();
+            prune(now);
+            if (review.push) {
+              pushes.set(`${event.sessionID} ${event.messageID} ${event.id}`, { reason: review.push, time: now });
+            }
+            return;
           }
-          if (!restricted) return;
-          const cwd = yield* resolve(event.sessionID, text(event.input, "workdir"));
           const dir = path.join(scratch, event.sessionID);
           (event.input as Record<string, unknown>).command = caged(command, dir);
           const session = yield* ctx.session.get({ sessionID: event.sessionID }).pipe(Effect.orDie);
@@ -230,7 +266,19 @@ export default Plugin.define({
         }),
       );
 
+      yield* ctx.permission.hook("evaluate", (event) =>
+        Effect.sync(() => {
+          prune(Date.now());
+          // Keep the record: an "always" reply re-evaluates pending requests.
+          const pending = event.source && pushes.get(`${event.sessionID} ${event.source.messageID} ${event.source.id}`);
+          if (event.action !== "shell" || !pending || event.effect !== "allow") return;
+          event.effect = "ask";
+          event.message = pending.reason;
+        }),
+      );
+
       yield* ctx.tool.hook("execute.after", (event) => {
+        if (event.tool === "shell") pushes.delete(`${event.sessionID} ${event.messageID} ${event.id}`);
         if ((event.tool !== "shell" && event.tool !== "x") || !readOnly(event.agent)) return Effect.void;
         return record({
           time: new Date().toISOString(),

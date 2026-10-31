@@ -19,6 +19,7 @@ permissions:
   - { "action": "shell", "resource": "git rev-list*", "effect": "allow" }
   - { "action": "shell", "resource": "git ls-files*", "effect": "allow" }
   - { "action": "shell", "resource": "git cat-file*", "effect": "allow" }
+  - { "action": "shell", "resource": "git for-each-ref*", "effect": "allow" }
   - { "action": "shell", "resource": "git merge-base*", "effect": "allow" }
   - { "action": "shell", "resource": "git range-diff*", "effect": "allow" }
   - { "action": "shell", "resource": "git reflog show*", "effect": "allow" }
@@ -39,6 +40,7 @@ permissions:
   - { "action": "shell", "resource": "git branch --merged*", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -a", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -vv", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -vv --list*", "effect": "allow" }
   - { "action": "shell", "resource": "git worktree list*", "effect": "allow" }
   - { "action": "shell", "resource": "git config --get*", "effect": "allow" }
   - { "action": "shell", "resource": "git add -- *", "effect": "allow" }
@@ -93,11 +95,6 @@ permissions:
   - { "action": "shell", "resource": "git config --list*", "effect": "allow" }
   - { "action": "shell", "resource": "git version", "effect": "allow" }
   - { "action": "shell", "resource": "git ls-tree *", "effect": "allow" }
-  - {
-      "action": "shell",
-      "resource": "git branch --show-current",
-      "effect": "allow",
-    }
   - { "action": "shell", "resource": "git check-ignore *", "effect": "allow" }
   - {
       "action": "shell",
@@ -118,12 +115,6 @@ permissions:
   - { "action": "shell", "resource": "*--ext-diff*", "effect": "deny" }
   - { "action": "shell", "resource": "*--textconv*", "effect": "deny" }
   - { "action": "shell", "resource": "*git apply *--index*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git push*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git reset*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git clean*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git checkout*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git switch*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git stash*", "effect": "deny" }
   - { "action": "shell", "resource": "git stash list", "effect": "allow" }
   - { "action": "shell", "resource": "*git add -- .", "effect": "deny" }
   - { "action": "shell", "resource": "*git add -- . *", "effect": "deny" }
@@ -197,6 +188,38 @@ permissions:
   - { "action": "shell", "resource": "*git fetch * -f*", "effect": "deny" }
   - { "action": "shell", "resource": "*git fetch -f*", "effect": "deny" }
   - { "action": "shell", "resource": "*git fetch * +*", "effect": "deny" }
+  - { "action": "shell", "resource": "git rm -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git rm --cached -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git rm -r -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git rm -r --cached -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git switch -c *", "effect": "allow" }
+  - { "action": "shell", "resource": "git switch --detach *", "effect": "allow" }
+  - { "action": "shell", "resource": "*git switch *--force*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git switch * -f*", "effect": "deny" }
+  - {
+      "action": "shell",
+      "resource": "*git switch *--discard-changes*",
+      "effect": "deny",
+    }
+  - { "action": "shell", "resource": "git reset --soft *", "effect": "allow" }
+  - { "action": "shell", "resource": "*git reset *--hard*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git reset *--mixed*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git reset *--merge*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git reset *--keep*", "effect": "deny" }
+  - { "action": "shell", "resource": "git push * ?*", "effect": "allow" }
+  - { "action": "shell", "resource": "*git push *--force*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push * -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push -f*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push * +*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push * :*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--delete*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push * -d*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push -d*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--mirror*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--prune*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--no-verify*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--exec*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git push *--receive-pack*", "effect": "deny" }
 ---
 
 You are build/git.
