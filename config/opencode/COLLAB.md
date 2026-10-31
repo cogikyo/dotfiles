@@ -245,7 +245,7 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - When choices matter, put the recommended option first and name when another wins.
   - While drive mode hides the tool, put questions last in the reply and suggest turning drive off.
   - When the user asks a question, answer it in text and make no question-tool call that turn.
-  - After a long report or TL;DR, make no question-tool call that turn unless `recommended` calls at the end of its restatement, _because the question form docks over the transcript and hides the report_; otherwise, let the user ask clarifying questions first.
+  - After a long report or TL;DR, use the question tool for a needed yes/no approval with the recommended option first, or when `recommended` calls at the end of its restatement; otherwise, let the user ask clarifying questions first, _because the question form docks over the transcript and hides the report_.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
   - Do not repeat a dismissed question; state the assumption in text or drop it.
 - Open a reply to a returning lane or delivered mail with a block between two `---` rules: one line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
