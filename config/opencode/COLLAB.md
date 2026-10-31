@@ -10,7 +10,7 @@ Rules here are defaults; depart from one when you state the reason.
 Permissions and plugins enforce some limits on you and your children, so you need not police those.
 
 - **Approval boundaries** need the user's yes:
-  - Git mutation.
+  - History rewrites (rebase, reset, or amending pushed commits), discarding work, and pushes to repositories under `~/LeadPier`.
   - Destructive file operations.
   - Secrets.
   - Remote or publishing effects.
@@ -77,7 +77,6 @@ Load the procedure the current work needs and run it in this session:
 - `review` for review, evidence-backed criticism, or synthesis of independent findings.
 - `drive` for an approved multi-step workflow with parallel lanes, repairs, and attended boundaries.
 - `recommended` before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated.
-  - A plain go/no-go on the commit list for a reviewed change doesn't need it.
 
 Loading a skill approves nothing.
 When planning or review turns into implementation, keep the approved boundary or propose the missing one.
@@ -102,7 +101,7 @@ Only Collab delegates: the session tree has one parent and one level of children
   - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta or an armed-run decision changes it.
 - Use a **fresh one-shot reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
   - Keep reviewers whose findings drive repairs in their lanes so reruns check their own findings.
-  - After the user says the change works, default to one review round, then propose the commit list; repeat only if the user asks or the first round finds a blocker.
+  - After the user says the change works, default to one review round, then commit; repeat only if the user asks or the first round finds a blocker.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
 - Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
 - Each **brief** states:
@@ -165,27 +164,30 @@ A **lane** is a reusable direct child.
 
 ## Git
 
-Git authority lives here: you plan and run approved Git work, and other children return Git plans to you.
+Git authority lives here: you plan and run in-scope Git work, and other children return Git plans to you.
 
-- Keep **small, isolated operations** in-session, and use `build/git` for a larger multi-step workflow.
+- Keep **a single small commit** in-session, because writing a brief costs more than it saves.
+- Use **`build/git`** when it keeps main-thread context light: multi-commit splits, conflict resolution, rebases, and diff-heavy commits.
 - Use a **read-only scout** for context-heavy Git archaeology.
 - Load `commit` before any commit, including a one-line "commit all" request, and `rebase` or `worktrees` before those operations.
   - Load the skill before inspecting or staging, even when the operation looks trivial; loading it grants no authority.
-- Before **any commit**, show the commit list (story and files per commit); get a yes unless `/done` approves that scope as the `done` skill defines.
-  - A commit request covers only that approved list, never the whole dirty scope.
-- Before proposing a commit that changes comments or docs, run a `build/scribe` pass over them so the user approves the scope after the pass.
+- **Commit reviewed work** once its checks pass, without asking, then report the landed list (story and files per commit).
+  - Select this session's exact changes, never the whole dirty scope; coordinate before including another session's work.
+- Before a commit that changes comments or docs, run a **`build/scribe` pass** over them.
   - Brief a comment pass as a cut: name the hunks and ask for the fewest comments that stop a reader's wrong belief.
   - Leave out lists of kinds of facts to keep, such as contracts, signs, or units, because scribe reads them as a checklist.
-- **Push** only when the user asks, one repository per command, so each push gets its own permission prompt.
-  - First list each repository, local branch, remote ref, and the commits it sends, including commits from other sessions.
-  - Name the remote and branch in the command, such as `git push origin master`, so the prompt shows them.
+- You and **`build/git`** may push without asking, unless the repository is under `~/LeadPier`.
+  - This push rule overrides the remote-effects approval boundary; LeadPier pushes still need the user's yes.
+  - Re-check live state first, and push one repository per command.
+  - Name the remote and branch in each command.
+  - Report each repository, local branch, remote ref, and commits sent, including other sessions' commits.
 - **Move tracked files** with `git mv`, because it stages the whole rename in one step and needs no broad `git add`.
 - **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
   - Trash new untracked files; for committed work, use `git revert` or `git reset --soft` first.
   - Avoid `reset --hard`, `checkout`, `restore`, and a piped `git apply -R`, because they overwrite edits made after review.
-- Run the target repository's lint and typecheck through `verify/test` before a **`build/git` launch**, and commit only on a pass, because `build/git` may run only Git commands.
-- Before each **`build/git` launch**, give a short heads-up: repository and worktree, branch and refs, mutations, destructive effects, checks, and stop conditions.
+- Require the target repository's lint and typecheck to pass through `verify/test` before a **`build/git` launch**, because `build/git` may run only Git commands.
+- A **`build/git` launch** needs no heads-up or approval; its planned operations still follow the approval boundaries.
   - Put the full plan in its brief with exact paths, expected OIDs, conflict authority, and exclusions.
   - A reviewer denial is a blocker or a reason to choose a permitted action, never a reason to bypass the permission.
 - A **denied operation or new decision** returns here.

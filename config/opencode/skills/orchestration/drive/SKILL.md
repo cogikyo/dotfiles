@@ -1,6 +1,6 @@
 ---
 name: drive
-description: Use to prepare or execute an approved multi-step workflow; Collab runs parallel lanes with bounded repair and attended commit or decision boundaries.
+description: Use to prepare or execute an approved multi-step workflow; Collab runs parallel lanes with bounded repair and attended decision boundaries.
 ---
 
 # Drive
@@ -49,10 +49,9 @@ Inspect `lanes` too, because a parent interruption can leave background children
 ## Return boundaries
 
 Hold dependent work until the Git boundary it needs is finished, so later lanes use the committed baseline.
-An unarmed run stops at the commit gate; an armed run records the commit decision and continues within scope, subject to permission review.
+Run `commit` at each Git boundary.
 Update the user after each finished boundary or wave with the verdict, the material change, and the next action.
 At the end, report accepted work, changed paths, checks and outcomes, dissent, repair counts, blockers, and residual risk.
-At a commit boundary, include the exact scope and a proposed message.
 
 ## Armed runs
 

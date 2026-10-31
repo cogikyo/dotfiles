@@ -6,8 +6,8 @@ description: Use when the user invokes /done or asks to finish and close the cur
 # Done
 
 Collab runs this procedure attended in the current session, in the order below.
-Invoking `/done` approves the comment pass, commits of this session's own work, a qualifying live retro, deleting this session tree's own scratch and stopping processes running from it, and closing finished lanes and the session.
-It approves nothing else, including committing other sessions' work or pushing.
+Invoking `/done` approves the comment pass, a qualifying live retro, deleting this session tree's own scratch and stopping processes running from it, and closing finished lanes and the session.
+It approves nothing else; Git operations follow Collab's `Git` rules.
 
 ## Comments
 
@@ -17,7 +17,7 @@ Skip when no code changed or a scribe pass already ran after the last edit.
 
 ## Commit
 
-Load `commit` and commit this session's own uncommitted work as atomic stories; `/done` approves those paths.
+Load `commit` and commit this session's reviewed work.
 Ask one question with the `question` tool only when ownership of a path or hunk is unclear.
 Leave other sessions' work dirty and skip when nothing is left.
 

@@ -6,6 +6,8 @@ description: Use for any commit, including "commit all" or "commit this", and fo
 # Commit
 
 Use this procedure to create atomic conventional commits or finish an already-started merge.
+**Approved scope** means this session's reviewed changes or the active brief's exact scope; it needs no user yes.
+Include another session's work only after coordinating with its owner.
 
 ## Preflight
 
@@ -35,7 +37,7 @@ Do not ask for a choice between Single and Partial when the diff makes the answe
 
 Single and Partial create exactly one commit.
 Complex repeats Single or Partial for one story at a time.
-Use Complex only when the approved dirty scope contains several atomic stories and the active brief approves multiple commits or the full dirty scope.
+Use Complex when the approved scope contains several atomic stories, unless the active brief limits the workflow to one commit.
 
 A clean worktree is not the success condition.
 Single and Partial preserve unrelated or later work as dirty state.
@@ -149,7 +151,8 @@ A merge commit may keep its generated subject when it already names both parents
 
 ## Create each commit
 
-Create the approved commit and run hooks normally.
+Create each reviewed commit without asking once its checks pass and Collab has run any required `build/scribe` pass for comments or docs.
+Run hooks normally.
 Only stage and return a command when the active brief explicitly requests manual execution.
 If an explicit instruction says to skip hooks, return a command with `--no-verify` and do not run it.
 
@@ -208,5 +211,6 @@ Inspect final status plus staged and unstaged diffs.
 - After a handoff, report the staged paths, exact command, and that no OID exists yet.
 
 Summarize the message, affected paths, hooks or checks, preserved dirty state, and residual risk.
+Report the landed commit list with the story and files per commit.
 Include merge resolutions when applicable.
 Surface any unresolved ambiguity without guessing.

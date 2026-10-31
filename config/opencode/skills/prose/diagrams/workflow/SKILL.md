@@ -19,7 +19,7 @@ Start each step at column zero as `number owner: headline`, with a unique positi
 Use sentence-case headlines under about 50 characters; keep checklist items under about 70, with no trailing periods.
 Headlines may use `main idea: context`; the renderer emphasizes the main idea.
 
-- **Owners:** `self` for Collab's work, `gate` only for Collab's own decisions, and `you` for user actions and approvals, including commit lists and route changes.
+- **Owners:** `self` for Collab's work, `gate` only for Collab's own decisions, and `you` for user actions and approvals, including route changes.
 - **Children:** use `role/scope [lane] provider/model[#variant]` as the owner.
   - Roles are `build`, `review`, `scout`, and `verify`; scope is the agent name after the slash.
   - The optional lane is a kebab-case name for its concern, such as `preset-tests`; omit it for a one-shot child.
