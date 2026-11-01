@@ -38,6 +38,7 @@ function top(node: Renderable) {
 function hide(node: Renderable) {
   const transcript = locate(node);
   if (!transcript) return;
+  // Byline paints after render, so z-index alone cannot cover the transcript.
   transcript.visible = false;
   return () => {
     if (!transcript.isDestroyed) transcript.visible = true;
