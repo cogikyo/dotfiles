@@ -126,7 +126,7 @@ export class Preview {
       throw new Error(`preview sign-in failed: unrecognized error code (HTTP ${response.status})`);
     if (body.errorCode !== "NO_ERROR")
       throw new Error(
-        `preview sign-in failed as ${this.account.user}: ${body.errorCode} (HTTP ${response.status}); check the \`${entry}\` keyring entry`,
+        `preview sign-in failed as ${this.account.user}: ${body.errorCode} (HTTP ${response.status}); if the password changed, Cullyn needs to re-store it with \`cogictl secret set ${entry}\``,
       );
     if (!Schema.is(Session)(body.data)) throw new Error("preview sign-in failed: the response carried no token");
     return JSON.stringify({ ...body.data, isAuthenticated: true });
@@ -134,18 +134,18 @@ export class Preview {
 }
 
 export async function keyring() {
-  const missing = `preview sign-in unavailable: no keyring entry \`${entry}\`; ask Cullyn to run \`cogictl secret set ${entry}\``;
+  const timeout = AbortSignal.timeout(10_000);
   let proc: Bun.Subprocess<"ignore", "pipe", "pipe">;
   try {
-    proc = Bun.spawn(["secret-tool", "lookup", "service", "cogictl", "secret", entry], {
+    proc = Bun.spawn(["cogictl", "--plain", "secret", "get", entry, "--for", "browser QA"], {
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      signal: AbortSignal.timeout(10_000),
+      signal: timeout,
     });
   } catch (error) {
     throw new Error(
-      `preview sign-in unavailable: cannot run secret-tool (${error instanceof Error ? error.message : "spawn failed"})`,
+      `preview sign-in unavailable: cannot run cogictl (${error instanceof Error ? error.message : "spawn failed"}); is cogictl installed on PATH?`,
       { cause: error },
     );
   }
@@ -154,12 +154,13 @@ export async function keyring() {
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  if (proc.signalCode) throw new Error("preview sign-in unavailable: secret-tool timed out; is the keyring unlocked?");
-  if (code !== 0 && stderr.trim())
-    throw new Error(`preview sign-in unavailable: secret-tool exited ${code}: ${stderr.trim().slice(-500)}`);
-  const password = stdout.replace(/\r?\n$/, "");
-  if (code !== 0 || !password) throw new Error(missing);
-  return password;
+  if (code === 0) return stdout;
+  if (timeout.aborted) throw new Error("preview sign-in unavailable: cogictl timed out; is the keyring unlocked?");
+  if (stderr.includes("secret not stored"))
+    throw new Error(
+      `preview sign-in unavailable: no \`${entry}\` secret is stored; Cullyn needs to run \`cogictl secret set ${entry}\``,
+    );
+  throw new Error(`preview sign-in unavailable: cogictl exited ${code}: ${stderr.trim().slice(-500) || "no stderr"}`);
 }
 
 async function open(mcp: MCP, input: typeof Navigation.Type, seed: string) {
