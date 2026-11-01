@@ -149,6 +149,7 @@
     { "action": "skill", "resource": "x", "effect": "deny" },
     { "action": "question", "resource": "*", "effect": "deny" },
     { "action": "shell", "resource": "sudo *", "effect": "ask" },
+    { "action": "shell", "resource": "sudo -n true", "effect": "allow" },
     { "action": "shell", "resource": "su *", "effect": "ask" },
     { "action": "shell", "resource": "*hyprd opencode now*", "effect": "ask" },
     { "action": "shell", "resource": "*hyprd opencode recycle*", "effect": "ask" },
