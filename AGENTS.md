@@ -69,6 +69,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
 - OpenCode applies `opencode.json`, `cli.json`, and plugin edits (including new plugin directories) live; test the change live before suggesting `/reload`.
+  - Edit `opencode.json` only when no lanes are running: host live reload has twice raced running children and killed them with `Agent not found`; no upstream fix is planned.
   - Claim a restart is needed only after a reload failed, and quote the log line.
   - Judge what a plugin can do from the installed host source in the `src` cache, not from `@opencode/plugin` types.
 - Plugin edits go live on every save in every running OpenCode session.
