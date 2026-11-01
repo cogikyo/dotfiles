@@ -14,6 +14,7 @@ export type Post = {
   body: Renderable;
 };
 export type Scene = {
+  scroll: Renderable;
   content: Renderable;
   viewport: Renderable;
   base: RGBA;
@@ -100,7 +101,7 @@ export class Stage {
 
   #draw(buffer: OptimizedBuffer) {
     const scene = this.#scene;
-    if (!scene || scene.content.isDestroyed || scene.viewport.isDestroyed) return;
+    if (!scene || !scene.scroll.visible || scene.content.isDestroyed || scene.viewport.isDestroyed) return;
     const pen = Pen.open(buffer, bounds(scene.viewport), scene.base);
     if (!pen) return;
     const origin = Math.trunc(scene.content.screenX);

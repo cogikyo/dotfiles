@@ -17,9 +17,9 @@ import { compose, flatten, match, notice } from "./notice.ts";
 import { question } from "./question.ts";
 import { native, owned, textual, type Ledger, type Text } from "./ledger.ts";
 import * as mail from "./mail.ts";
+import { locate } from "./scroll.ts";
 
 type Frame = Renderable & { readonly border: unknown };
-type Scroll = Renderable & { readonly content: Renderable; readonly viewport: Renderable };
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
@@ -76,7 +76,7 @@ function metadata(anchor: Renderable) {
 
 export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { context, sessionID, stage }: Host) {
   if (stage.broken) halt(ledger, stage);
-  const scroll = scroller(anchor.parent?.parent, 2);
+  const scroll = locate(anchor);
   if (!scroll || failed.has(ledger)) {
     stage.clear();
     return false;
@@ -131,6 +131,7 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
       return item.kind === "notice" ? [{ lane: item.lane, reply, mark }] : [];
     });
     return stage.update({
+      scroll,
       content: scroll.content,
       viewport: scroll.viewport,
       base: theme.background.base,
@@ -307,17 +308,6 @@ function read(node: Text) {
 
 function marked(node: Renderable | undefined): node is MarkdownRenderable {
   return node !== undefined && "_blockStates" in node;
-}
-
-function scroller(node: Renderable | null | undefined, depth: number): Scroll | undefined {
-  for (const child of node?.getChildren() ?? []) {
-    const found = scrollable(child) ? child : depth > 1 ? scroller(child, depth - 1) : undefined;
-    if (found) return found;
-  }
-}
-
-function scrollable(node: Renderable | undefined): node is Scroll {
-  return node !== undefined && "content" in node && "viewport" in node;
 }
 
 function framed(node: Renderable): node is Frame {
