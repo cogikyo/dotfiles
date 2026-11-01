@@ -385,6 +385,9 @@ The child can tick only its own items with `workflow({ check: [n…] })`; Collab
 Status distinguishes running and returned children; `Ready:` excludes both.
 Compaction carries status into the summary and tells the agent to call `workflow` first afterward; the store remains the source of step state.
 
+Starting a revision in parallel with `subagent({ …, step: n })` can link a child to the new revision with the old checklist, so its ticks land on the new step.
+Start a revision and launch its children in separate turns.
+
 The user's `/replan` pauses dispatch and sends Collab workflow status plus each lane's step, status, idle time, context size, and cache warmth.
 The [drive skill](../skills/orchestration/drive/SKILL.md#replan) owns lane verdicts, questions, pre-approved compaction, and the next revision that unpauses dispatch.
 
