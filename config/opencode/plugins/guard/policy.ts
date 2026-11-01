@@ -599,9 +599,7 @@ export function inspect(
   }
   return {
     problems: [...found],
-    push:
-      calls.map(push).find(Boolean) ??
-      (blind ? "the command runs a shell script the guard cannot inspect, so it may push" : undefined),
+    push: calls.map(push).find(Boolean),
     commits: calls.filter(({ args: words }) => words[locate(words, undefined).at] === "commit").map(({ cwd }) => cwd),
   };
 }
