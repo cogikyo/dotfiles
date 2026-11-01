@@ -2,9 +2,11 @@ import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
 import { Catalog, MCP, version, type Tool } from "./mcp.ts";
+import { leadpier, Preview } from "./preview.ts";
 
 const Target = Schema.Struct({ url: Schema.String });
 const web = new Set(["http:", "https:"]);
+const hidden = new Set(["take_heapsnapshot"]); // Heap snapshots can expose the seeded authentication token.
 
 export default Plugin.define({
   id: "browser",
@@ -13,6 +15,7 @@ export default Plugin.define({
     if (!fiber) throw new Error("browser: setup started outside the plugin fiber");
     const log = Effect.runForkWith(fiber.context);
     const browsers = new Map<string, Promise<MCP>>();
+    const preview = new Preview(leadpier);
     let catalog: readonly Tool[] = [];
 
     const forget = (sessionID: string, browser: Promise<MCP>) => {
@@ -37,6 +40,7 @@ export default Plugin.define({
     const closing = new Set<Promise<void>>();
 
     const close = (sessionID: string) => {
+      preview.forget(sessionID);
       const browser = browsers.get(sessionID);
       if (!browser) return;
       browsers.delete(sessionID);
@@ -51,7 +55,7 @@ export default Plugin.define({
     };
 
     await ctx.tool.transform((editor) => {
-      for (const item of catalog)
+      for (const item of catalog.filter((tool) => !hidden.has(tool.name)))
         editor.add({
           name: `chrome-devtools_${item.name}`,
           description: item.description ?? item.name,
@@ -61,7 +65,7 @@ export default Plugin.define({
             const url = Schema.is(Target)(input) ? input.url : undefined;
             if (url !== undefined && url !== "about:blank" && !web.has(URL.parse(url)?.protocol ?? ""))
               throw new Error(`${item.name} only opens http(s) URLs: ${url}`);
-            const result = await (await open(context.sessionID)).call(item.name, input ?? {});
+            const result = await preview.call(context.sessionID, () => open(context.sessionID), item.name, input ?? {});
             const text = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
             if (result.isError) throw new Error(text || `${item.name} failed`);
             return {
@@ -98,6 +102,7 @@ export default Plugin.define({
 
     return async () => {
       controller.abort();
+      preview.clear();
       for (const sessionID of browsers.keys()) close(sessionID);
       await Promise.all(closing);
     };

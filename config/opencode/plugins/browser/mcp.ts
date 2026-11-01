@@ -45,6 +45,7 @@ export class MCP {
         "--executablePath=/usr/bin/chromium",
         "--chromeArg=--opencode-browser-qa",
         "--no-usage-statistics",
+        "--redactNetworkHeaders",
         ...["http", "https", "ws", "wss"].map((scheme) => `--allowedUrlPattern=${scheme}://*:*`),
         ...(headless ? ["--headless", "--viewport=1920x1080"] : []),
       ],

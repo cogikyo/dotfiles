@@ -283,12 +283,23 @@ There is no key, TUI slot, or separate state file.
 ## Browser
 
 `browser/server.ts` exposes `chrome-devtools_*` tools from `chrome-devtools-mcp` 1.7.0 with one isolated Chromium process per session.
-It opens headless at 1920×1080 under an armed drive root and closes the MCP process on execution success, failure, interruption, or session deletion.
+It opens headless at 1920×1080 under an armed drive root and closes the MCP process and forgets the preview login on execution success, failure, interruption, or session deletion.
 The user `headless-reap.timer` also kills headless Chromium and Firefox older than 3 hours on a 15-minute schedule; headed browsers are excluded.
 URL-bearing calls accept HTTP(S) or `about:blank`; MCP launch patterns restrict network schemes.
 The tool catalog lives in plugin KV `catalog/1.7.0`.
 `browser/tui.tsx` places browser workspaces after `sidebar.content`, subscribes through `hyprd`, and focuses a workspace when clicked.
 It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; there is no key or separate plugin state file.
+
+`browser/preview.ts` signs in automatically on `navigate_page` URL calls or `new_page` calls to `https://lpadmin.cullyn.dev` or `https://lpuser.cullyn.dev`.
+It reads the `leadpier-preview` keyring entry that Cullyn sets with `cogictl secret set leadpier-preview` and authenticates as preview user 12919 (`cullyn@trendcapital.com`, admin).
+Each execution logs in again on its first matching navigation and caches the login until execution ends.
+Each matching URL navigation seeds the page's `authentication` localStorage entry before the app loads, only when the entry is absent, including after browser relaunches or in new browser contexts.
+Clicked links, redirects, and back/forward/reload do not seed the session; navigate to the URL directly.
+If the app logs out, the next matching URL navigation seeds the session again.
+
+The plugin hides `take_heapsnapshot` from agents.
+`browser/mcp.ts` launches MCP with `--redactNetworkHeaders`, which hides headers such as `Authorization` but does not redact request or response bodies.
+Agents must still avoid reading or returning authentication data and sensitive page content.
 
 ## Statusline
 
