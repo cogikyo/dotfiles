@@ -89,6 +89,7 @@ func spawn() error {
 	cmd.Args = append([]string{inner}, os.Args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	cmd.ExtraFiles = []*os.File{os.NewFile(uintptr(alive[0]), "alive")}
+	// Query Go before cloning: its detached telemetry helper can block the read-only remount with EBUSY.
 	if proxy := modProxy(); proxy != "" {
 		cmd.Env = append(os.Environ(), "GOPROXY="+proxy)
 	}
@@ -205,6 +206,7 @@ func confine(hides []string, arg string, argv []string) error {
 		}
 	}
 	if gocache != "" {
+		// Shared-cache links could redirect host-side tools; omit MAKE_SYM and REFER.
 		if err := r.beneath(cached, read|cache); err != nil {
 			return &fs.PathError{Op: "allow", Path: gocache, Err: err}
 		}
@@ -291,6 +293,7 @@ func modProxy() string {
 		return ""
 	}
 	cmd := exec.Command("go", "env", "GOMODCACHE")
+	// Avoid cwd go.mod/go.work triggering a toolchain switch outside the sandbox.
 	cmd.Dir = "/"
 	out, err := cmd.Output()
 	mods := strings.TrimSpace(string(out))
