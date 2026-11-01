@@ -4,6 +4,9 @@ import { Event } from "@opencode/schema/event";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { Effect, Fiber, Schema } from "effect";
 import { api as drive } from "../drive/rpc.ts";
+import { api as workflow } from "../workflow/rpc.ts";
+import { children } from "../workflow/progress.ts";
+import { status } from "../workflow/state.ts";
 import { ceiling } from "./limits.ts";
 
 const tiers = [150_000, 250_000] as const;
@@ -14,7 +17,7 @@ const SUMMARY = [
   '- Record whether each plan or workflow is approved, proposed, or pending, and quote the user words that approved it. A harness "Continue if you have next steps" message is not approval.',
   '- Keep user decisions in their own words and at their own firmness; keep hedges such as "maybe" or "idk" as hedges.',
   "- Keep standing user instructions verbatim, especially instructions about what to do after compaction.",
-  "- List the remaining workflow steps with their status, and state the exact next step.",
+  "- When a stored workflow status appears below, record its rev and the exact next step; otherwise list the remaining workflow steps with their status, and state the exact next step.",
   "- List uncommitted work by path, and mark each path as this session's work to commit, another session's work, or work to leave alone.",
   "- Drop items carried from the previous summary that are finished, superseded, or no longer relevant.",
 ].join("\n");
@@ -26,6 +29,10 @@ const RECOMMENDED = "Load the `recommended` skill and follow it.";
 
 const DRIVE =
   "Drive is armed. Load the `recommended` skill and write its restatement and workflow card, but decide each open item yourself and record it under Decided. Then, in this same turn, continue the armed drive run from the handoff brief or summary.";
+
+const FLOW = "A workflow is stored for this session: call the `workflow` tool first to read its step state.";
+const UNREAD =
+  "The workflow status could not be read during compaction: call the `workflow` tool first to check for stored step state.";
 
 const Input = Schema.Struct({
   brief: Schema.String.annotate({
@@ -149,23 +156,42 @@ export default Plugin.define({
       await forget(done.map((entry) => entry.key));
     };
 
+    const tracked = (sessionID: string) =>
+      ctx
+        .rpc(workflow)
+        .state({ sessionID })
+        .then(
+          async ({ flow }) => ({
+            text: flow && status(flow, await children((id) => ctx.session.get({ sessionID: id }), flow.links)),
+          }),
+          (error: unknown) => {
+            fail("workflow status", error);
+            return { failed: true as const };
+          },
+        );
+
     const resume = async (sessionID: string, request: Request, since: number) => {
       try {
         if (!(await primary(sessionID))) return;
         await ctx.session.wait({ sessionID });
         const session = await ctx.session.get({ sessionID });
         if (request.halted || session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
-        const armed = await guard(
-          "drive state",
-          ctx
-            .rpc(drive)
-            .state({ sessionID })
-            .then((state) => state.armed),
-          false,
-        );
+        const [armed, flow] = await Promise.all([
+          guard(
+            "drive state",
+            ctx
+              .rpc(drive)
+              .state({ sessionID })
+              .then((state) => state.armed),
+            false,
+          ),
+          tracked(sessionID),
+        ]);
         const [marker, ...after] = await ctx.session.context({ sessionID });
         if (marker?.id !== request.id || request.steered || after.some((message) => message.type === "user")) return;
-        await ctx.session.synthetic({ sessionID, text: armed ? DRIVE : RECOMMENDED, delivery: "queue" });
+        const lead = "failed" in flow ? UNREAD : flow.text && FLOW;
+        const text = [lead, armed ? DRIVE : RECOMMENDED].filter(Boolean).join(" ");
+        await ctx.session.synthetic({ sessionID, text, delivery: "queue" });
       } finally {
         if (requests.get(sessionID) === request) requests.delete(sessionID);
       }
@@ -213,6 +239,17 @@ export default Plugin.define({
       try {
         const child = !(await primary(event.sessionID));
         event.system.push({ type: "text", text: child ? `${SUMMARY}\n${CHILD}` : SUMMARY });
+        const flow = await tracked(event.sessionID);
+        if ("failed" in flow)
+          event.system.push({
+            type: "text",
+            text: "The stored workflow status could not be read. Record that, and say to call `workflow` first after compaction.",
+          });
+        else if (flow.text)
+          event.system.push({
+            type: "text",
+            text: `Stored workflow status; the \`workflow\` tool holds the step state:\n\n${flow.text}`,
+          });
         const brief = (await stored(event.sessionID)).at(-1)?.value.brief;
         if (brief === undefined) return;
         event.system.push({

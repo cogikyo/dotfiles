@@ -1,14 +1,23 @@
-const roles = ["build", "review", "scout", "verify"] as const;
+export const roles = ["build", "review", "scout", "verify"] as const;
 const plain = ["self", "gate", "you"] as const;
 const texts = ["done", "if", "why"] as const;
 
 export type Role = (typeof roles)[number];
 
+export const titled = 20;
+
+export function topic(text: string) {
+  const at = text.indexOf(": ");
+  return at === -1 ? text : text.slice(0, at);
+}
+
 export type Owner =
   | { kind: (typeof plain)[number] }
   | { kind: "lane"; role?: Role; scope: string; lane?: string; model?: string; variant?: string };
 
-export type Detail = { kind: "item" | (typeof texts)[number]; text: string };
+export type Item = { kind: "item"; n: number; text: string };
+
+export type Detail = Item | { kind: (typeof texts)[number]; text: string };
 
 export type Step = {
   n: number;
@@ -47,6 +56,26 @@ export function parse(source: string, partial = false): Workflow {
   return tentative ? settled : flow;
 }
 
+export function fences(input: string) {
+  const lines = input.split("\n");
+  const found: { text: string; partial: boolean }[] = [];
+  for (let at = 0; at < lines.length; at++) {
+    const [, fence, info = ""] = /^ {0,3}(`{3,}|~{3,})workflow(?:\s(.*))?$/.exec(lines[at]) ?? [];
+    if (!fence || (fence[0] === "`" && info.includes("`"))) continue;
+    const close = lines.findIndex(
+      (line, index) => index > at && /^ {0,3}(`{3,}|~{3,})\s*$/.test(line) && line.trim().startsWith(fence),
+    );
+    const stop = close === -1 ? lines.length : close;
+    found.push({ text: lines.slice(at + 1, stop).join("\n"), partial: close === -1 });
+    at = stop;
+  }
+  return found;
+}
+
+export function items({ details }: Pick<Step, "details">) {
+  return details.filter((item): item is Item => item.kind === "item");
+}
+
 export function conditional(step: Step) {
   return step.details.some(({ kind }) => kind === "if");
 }
@@ -76,8 +105,11 @@ function read(lines: readonly string[], partial: boolean): Workflow {
     const fail = (message: string) => flow.errors.push({ line, message });
     if (!text.trim()) continue;
     if (/^\s/.test(text)) indented(reader, text.trim(), line, fail);
-    else if (!flow.title) flow.title = text;
-    else unindented(reader, text, line, fail);
+    else if (flow.title) unindented(reader, text, line, fail);
+    else {
+      flow.title = text;
+      short(text, fail);
+    }
   }
   flow.steps = link(reader.drafts, { errors: flow.errors, partial });
   flow.errors.sort((a, b) => a.line - b.line);
@@ -104,10 +136,17 @@ function unindented(reader: Reader, text: string, line: number, fail: Fail) {
     return;
   }
   if (step.issue) fail(step.issue);
+  short(step.draft.headline, fail);
   reader.dropped = drafts.some(({ n }) => n === step.draft.n);
   if (reader.dropped) fail(`duplicate step ${step.draft.n}`);
   reader.current = reader.dropped ? undefined : step.draft;
   if (reader.current) drafts.push(reader.current);
+}
+
+function short(headline: string, fail: Fail) {
+  const title = topic(headline);
+  if (title !== headline && Bun.stringWidth(title) > titled)
+    fail(`title \`${title}\` is over ${titled} cells; shorten it`);
 }
 
 function head([, number, agent, headline = ""]: RegExpExecArray, line: number) {
@@ -145,7 +184,7 @@ function seat(owner: Lane, words: readonly string[]) {
 function detail(draft: Draft, body: string, line: number, fail: Fail) {
   if (body.startsWith("- ") || body === "-") {
     const text = body.slice(1).trim();
-    if (text) draft.details.push({ kind: "item", text });
+    if (text) draft.details.push({ kind: "item", n: items(draft).length + 1, text });
     else fail("empty checklist item");
     return;
   }
