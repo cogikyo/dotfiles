@@ -390,6 +390,7 @@ export default Plugin.define({
       journal: async ({ sessionID, limit }) => entries(await drive.root(sessionID), limit ?? 50),
     });
 
+    // Poll for asks raised by later evaluate hooks, such as guard's push check.
     let polling = false;
     const timer = setInterval(() => {
       if (polling) return;

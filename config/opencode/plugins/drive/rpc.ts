@@ -11,7 +11,7 @@ export const Entry = Schema.Struct({
   agent: Schema.optional(Schema.String),
   action: Schema.String,
   resources: Schema.Array(Schema.String),
-  decision: Schema.Union([Decision, Schema.Literal("ask")]),
+  decision: Schema.Union([Decision, Schema.Literal("ask")]), // Older journal entries can contain "ask".
   reason: Schema.String,
   model: Schema.String,
 });
