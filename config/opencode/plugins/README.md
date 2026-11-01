@@ -127,7 +127,8 @@ For agents outside the read-only set, `rm`, `find -delete`, and `find -exec rm` 
 They reject `..`, trailing slashes, and top-level globs; `xargs rm` is denied, and other deletion goes through `trash -- <path>`.
 Every agent except `collab` and `build/git` may run recognized read-only Git commands or Git in self-contained scratch repos under `/tmp/opencode`, subject to path and config checks; mutations in real repos are denied.
 Git checks use parsed commands, so Git text in `echo` arguments or data heredocs does not count as a command.
-For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo or arguments are uncertain, or for forced, destructive, or remote-program forms; other pushes pass this guard.
+For agents outside the read-only set, the guard rejects pushes whose repo paths (`-C`, `--git-dir`, or `--work-tree`) or arguments expand at run time; write them literally or through variables assigned earlier in the command.
+For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo is otherwise undeterminable, with `-c` or `--config-env`, or for forced, destructive, or remote-program forms; other pushes pass this guard.
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.
 Use `x` for X search, `sessions` for history, and `session_create` for new sessions.

@@ -53,6 +53,7 @@ const rewrites = ["--force", "--force-with-lease", "--force-if-includes", "--del
 const remotes = ["--exec", "--receive-pack"];
 const copiers = new Set(["tee", "cp", "mv", "ln", "install"]);
 const nonliteral = /[$`*?[{]|^~/u;
+const expansion = /[$`]/u;
 const entries = 20_000;
 const attended = path.join(home, "LeadPier");
 const dangerous =
@@ -423,6 +424,7 @@ type Invocation = { args: string[]; cwd: string | undefined; local: boolean };
 function locate(args: string[], cwd: string | undefined) {
   let dir = cwd;
   const dirs: (string | undefined)[] = [];
+  const written: string[] = [];
   const configs: string[] = [];
   let at = 0;
   for (; at < args.length && args[at].startsWith("-"); at++) {
@@ -432,15 +434,16 @@ function locate(args: string[], cwd: string | undefined) {
     const value = attached ?? args[++at];
     if (value === undefined) break;
     if (flag === "-c" || flag === "--config-env") configs.push(value.split("=")[0]);
+    if (flag === "-C" || flag === "--git-dir" || flag === "--work-tree") written.push(value);
     const target = resolved(value, dir);
     if (flag === "-C") dir = target;
     if (flag === "--git-dir" || flag === "--work-tree") dirs.push(target);
   }
-  return { at, dir, places: [dir, ...dirs], configs };
+  return { at, dir, places: [dir, ...dirs], written, configs };
 }
 
 function resolved(place: string | undefined, dir: string | undefined) {
-  if (place === undefined || /[$`]/u.test(place)) return undefined;
+  if (place === undefined || expansion.test(place)) return undefined;
   const full = expand(place);
   return path.isAbsolute(full) ? full : dir && path.resolve(dir, full);
 }
@@ -529,13 +532,18 @@ function push({ args, cwd, local }: Invocation) {
   const forced = rewrite(rest);
   if (forced) return forced;
   if (configs.length > 0) return "`git push` with `-c` or `--config-env` can change what it pushes";
-  if (rest.some((arg) => /[$`]/u.test(arg))) return "`git push` has arguments that expand at run time";
   if (!local || places.some((place) => place === undefined)) {
     return "`git push` runs in a repo the guard cannot determine";
   }
   const place = places.find((dir) => dir !== undefined && within(located(dir), located(attended)));
   if (place) return `\`git push\` from ${place} needs approval for repos under ${attended}`;
   return undefined;
+}
+
+function expanded({ args }: Invocation) {
+  const { at, written } = locate(args, undefined);
+  if (args[at] !== "push") return [];
+  return [...written, ...args.slice(at + 1)].filter((word) => expansion.test(word));
 }
 
 export function inspect(
@@ -596,6 +604,12 @@ export function inspect(
   }
   if (!owners.has(agent ?? "")) {
     for (const problem of calls.map(git)) if (problem) found.add(problem);
+  }
+  const expansions = readOnly(agent) ? [] : [...new Set(calls.flatMap(expanded))];
+  if (expansions.length > 0) {
+    found.add(
+      `the \`git push\` repo path or argument ${expansions.map((word) => `\`${word}\``).join(", ")} is expanded at run time; write it literally, or through a variable assigned earlier in the command, so the guard can check the push`,
+    );
   }
   return {
     problems: [...found],
