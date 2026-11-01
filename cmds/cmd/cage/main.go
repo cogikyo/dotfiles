@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -23,10 +26,10 @@ const (
 	handled = resolveUnix<<1 - 1
 	read    = unix.LANDLOCK_ACCESS_FS_READ_FILE | unix.LANDLOCK_ACCESS_FS_READ_DIR | unix.LANDLOCK_ACCESS_FS_EXECUTE
 	write   = unix.LANDLOCK_ACCESS_FS_MAKE_REG | unix.LANDLOCK_ACCESS_FS_MAKE_DIR | unix.LANDLOCK_ACCESS_FS_WRITE_FILE
-	churn   = write | unix.LANDLOCK_ACCESS_FS_REMOVE_FILE | unix.LANDLOCK_ACCESS_FS_REMOVE_DIR |
-		unix.LANDLOCK_ACCESS_FS_REFER | unix.LANDLOCK_ACCESS_FS_TRUNCATE | unix.LANDLOCK_ACCESS_FS_MAKE_SYM
-	device = unix.LANDLOCK_ACCESS_FS_READ_FILE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE
-	file   = unix.LANDLOCK_ACCESS_FS_EXECUTE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE | unix.LANDLOCK_ACCESS_FS_READ_FILE |
+	cache   = write | unix.LANDLOCK_ACCESS_FS_REMOVE_FILE | unix.LANDLOCK_ACCESS_FS_REMOVE_DIR | unix.LANDLOCK_ACCESS_FS_TRUNCATE
+	churn   = cache | unix.LANDLOCK_ACCESS_FS_REFER | unix.LANDLOCK_ACCESS_FS_MAKE_SYM
+	device  = unix.LANDLOCK_ACCESS_FS_READ_FILE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE
+	file    = unix.LANDLOCK_ACCESS_FS_EXECUTE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE | unix.LANDLOCK_ACCESS_FS_READ_FILE |
 		unix.LANDLOCK_ACCESS_FS_TRUNCATE | unix.LANDLOCK_ACCESS_FS_IOCTL_DEV
 )
 
@@ -86,6 +89,9 @@ func spawn() error {
 	cmd.Args = append([]string{inner}, os.Args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	cmd.ExtraFiles = []*os.File{os.NewFile(uintptr(alive[0]), "alive")}
+	if proxy := modProxy(); proxy != "" {
+		cmd.Env = append(os.Environ(), "GOPROXY="+proxy)
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags:  syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC,
 		UidMappings: []syscall.SysProcIDMap{{ContainerID: os.Getuid(), HostID: os.Getuid(), Size: 1}},
@@ -132,23 +138,41 @@ func confine(hides []string, arg string, argv []string) error {
 	if scratch == "/" {
 		return errors.New("scratch resolves to /")
 	}
+	pinned, err := unix.Open(scratch, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return &fs.PathError{Op: "open", Path: scratch, Err: err}
+	}
+	writable := map[string]int{scratch: pinned}
+	gocache, cached, err := buildCache()
+	if err != nil {
+		return err
+	}
+	if gocache != "" {
+		writable[gocache] = cached
+	}
 	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("make mounts private: %w", err)
 	}
 	if err := unix.Mount("proc", "/proc", "proc", unix.MS_NOSUID|unix.MS_NODEV|unix.MS_NOEXEC, ""); err != nil {
 		return fmt.Errorf("mount /proc: %w", err)
 	}
-	tree, err := unix.OpenTree(unix.AT_FDCWD, scratch, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_RECURSIVE)
-	if err != nil {
-		return fmt.Errorf("clone scratch mount: %w", err)
+	trees := map[string]int{}
+	for dir, fd := range writable {
+		tree, err := unix.OpenTree(fd, "", unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_RECURSIVE|unix.AT_EMPTY_PATH)
+		if err != nil {
+			return fmt.Errorf("clone mount %s: %w", dir, err)
+		}
+		trees[dir] = tree
 	}
 	if err := unix.MountSetattr(unix.AT_FDCWD, "/", unix.AT_RECURSIVE, &unix.MountAttr{Attr_set: unix.MOUNT_ATTR_RDONLY}); err != nil {
 		return fmt.Errorf("make mounts read-only: %w", err)
 	}
-	if err := unix.MoveMount(tree, "", unix.AT_FDCWD, scratch, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
-		return fmt.Errorf("mount scratch: %w", err)
+	for dir, tree := range trees {
+		if err := unix.MoveMount(tree, "", writable[dir], "", unix.MOVE_MOUNT_F_EMPTY_PATH|unix.MOVE_MOUNT_T_EMPTY_PATH); err != nil {
+			return fmt.Errorf("mount %s: %w", dir, err)
+		}
+		unix.Close(tree)
 	}
-	unix.Close(tree)
 	bin, err := exec.LookPath(argv[0])
 	if err != nil {
 		return err
@@ -180,6 +204,11 @@ func confine(hides []string, arg string, argv []string) error {
 			return err
 		}
 	}
+	if gocache != "" {
+		if err := r.beneath(cached, read|cache); err != nil {
+			return &fs.PathError{Op: "allow", Path: gocache, Err: err}
+		}
+	}
 
 	caps := unix.CapUserHeader{Version: unix.LINUX_CAPABILITY_VERSION_3}
 	var none [2]unix.CapUserData
@@ -195,6 +224,9 @@ func confine(hides []string, arg string, argv []string) error {
 	os.Setenv("TMPDIR", filepath.Join(scratch, "tmp"))
 	os.Setenv("XDG_CACHE_HOME", filepath.Join(scratch, "cache"))
 	os.Setenv("OPENCODE_SCRATCH", scratch)
+	if gocache != "" {
+		os.Setenv("GOCACHE", gocache)
+	}
 	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{}); err != nil {
 		return fmt.Errorf("disable core dumps: %w", err)
 	}
@@ -215,6 +247,66 @@ func confine(hides []string, arg string, argv []string) error {
 			exit(status)
 		}
 	}
+}
+
+func buildCache() (string, int, error) {
+	if _, err := exec.LookPath("go"); err != nil {
+		return "", -1, nil
+	}
+	base, err := os.UserCacheDir()
+	if err != nil {
+		return "", -1, err
+	}
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		return "", -1, err
+	}
+	dir, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		return "", -1, err
+	}
+	fd, err := unix.Open(dir, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return "", -1, &fs.PathError{Op: "open", Path: dir, Err: err}
+	}
+	for _, name := range []string{"cage", "go-build"} {
+		dir = filepath.Join(dir, name)
+		if err := unix.Mkdirat(fd, name, 0o700); err != nil && !errors.Is(err, unix.EEXIST) {
+			return "", -1, &fs.PathError{Op: "mkdir", Path: dir, Err: err}
+		}
+		next, err := unix.Openat2(fd, name, &unix.OpenHow{Flags: unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC, Resolve: unix.RESOLVE_NO_SYMLINKS})
+		unix.Close(fd)
+		if errors.Is(err, unix.ELOOP) {
+			return "", -1, fmt.Errorf("build cache %s is a symlink", dir)
+		}
+		if err != nil {
+			return "", -1, &fs.PathError{Op: "open", Path: dir, Err: err}
+		}
+		fd = next
+	}
+	return dir, fd, nil
+}
+
+func modProxy() string {
+	if _, err := exec.LookPath("go"); err != nil {
+		return ""
+	}
+	cmd := exec.Command("go", "env", "GOMODCACHE")
+	cmd.Dir = "/"
+	out, err := cmd.Output()
+	mods := strings.TrimSpace(string(out))
+	if err == nil && !filepath.IsAbs(mods) {
+		err = fmt.Errorf("GOMODCACHE %q is not absolute", mods)
+	}
+	if err != nil {
+		var failed *exec.ExitError
+		if errors.As(err, &failed) {
+			err = fmt.Errorf("%w: %s", err, bytes.TrimSpace(failed.Stderr))
+		}
+		fmt.Fprintf(os.Stderr, "cage: go env GOMODCACHE: %v; setting GOPROXY=off\n", err)
+		return "off"
+	}
+	proxy := url.URL{Scheme: "file", Path: filepath.Join(mods, "cache", "download")}
+	return proxy.String()
 }
 
 func start(cmd *exec.Cmd) error {
@@ -301,18 +393,22 @@ func (r ruleset) path(path string, access uint64) error {
 		return &fs.PathError{Op: "open", Path: path, Err: err}
 	}
 	defer unix.Close(fd)
+	if err := r.beneath(fd, access); err != nil {
+		return &fs.PathError{Op: "allow", Path: path, Err: err}
+	}
+	return nil
+}
+
+func (r ruleset) beneath(fd int, access uint64) error {
 	var st unix.Stat_t
 	if err := unix.Fstat(fd, &st); err != nil {
-		return &fs.PathError{Op: "stat", Path: path, Err: err}
+		return err
 	}
 	if st.Mode&unix.S_IFMT != unix.S_IFDIR {
 		access &= file
 	}
 	rule := unix.LandlockPathBeneathAttr{Allowed_access: access, Parent_fd: int32(fd)}
-	if err := r.add(unix.LANDLOCK_RULE_PATH_BENEATH, unsafe.Pointer(&rule)); err != nil {
-		return &fs.PathError{Op: "allow", Path: path, Err: err}
-	}
-	return nil
+	return r.add(unix.LANDLOCK_RULE_PATH_BENEATH, unsafe.Pointer(&rule))
 }
 
 func (r ruleset) add(kind int, rule unsafe.Pointer) error {
