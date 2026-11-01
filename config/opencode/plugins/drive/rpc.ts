@@ -1,7 +1,7 @@
 import { Rpc } from "@opencode/plugin/rpc";
 import { Schema } from "effect";
 
-export const Decision = Schema.Literals(["allow", "deny", "ask"]);
+export const Decision = Schema.Literals(["allow", "deny"]);
 export type Decision = typeof Decision.Type;
 
 export const Entry = Schema.Struct({
@@ -11,7 +11,7 @@ export const Entry = Schema.Struct({
   agent: Schema.optional(Schema.String),
   action: Schema.String,
   resources: Schema.Array(Schema.String),
-  decision: Decision,
+  decision: Schema.Union([Decision, Schema.Literal("ask")]),
   reason: Schema.String,
   model: Schema.String,
 });
