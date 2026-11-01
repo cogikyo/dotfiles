@@ -1,6 +1,6 @@
 return {
 	"cogikyo/harpoon",
-	dir = "~/cogikyo/harpoon",
+	dir = "~/harpoon",
 	keys = {
 		{ "<leader>nn", function() require("harpoon.mark").add_file() end, desc = "Pin file" },
 		{ "<leader>nl", function() require("harpoon.ui").toggle_quick_menu() end, desc = "Quick menu" },
