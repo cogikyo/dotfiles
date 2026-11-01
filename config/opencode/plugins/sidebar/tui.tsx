@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui";
-import type { Renderable } from "@opentui/core";
+import { ScrollBoxRenderable, type Renderable } from "@opentui/core";
 
 type Direction = "row" | "row-reverse";
 
@@ -8,10 +8,7 @@ const poll = 250;
 
 const applied = new WeakMap<Renderable, Direction>();
 
-function place(root: Renderable, left: boolean) {
-  const pane = root.findDescendantById("session-pane");
-  const row = pane?.parent;
-  if (!row || row.isDestroyed) return;
+function place(row: Renderable, pane: Renderable, left: boolean) {
   const sidebar = row.getChildren().some((child) => child !== pane && Math.round(child.width) === width);
   const direction: Direction = left && sidebar ? "row-reverse" : "row";
   if (applied.get(row) === direction) return;
@@ -19,17 +16,34 @@ function place(root: Renderable, left: boolean) {
   applied.set(row, direction);
 }
 
+function hide(node: Renderable) {
+  if (node.id === "session-pane" || node.id === "session-panel") return;
+  if (node instanceof ScrollBoxRenderable) {
+    if (node.verticalScrollBar.visible) node.verticalScrollBar.visible = false;
+    return;
+  }
+  for (const child of node.getChildren()) hide(child);
+}
+
+function apply(root: Renderable, left: boolean) {
+  const pane = root.findDescendantById("session-pane");
+  const row = pane?.parent;
+  if (!pane || !row || row.isDestroyed) return;
+  place(row, pane, left);
+  hide(row);
+}
+
 export default Plugin.define({
   id: "sidebar",
   setup(context) {
     const [side, update] = context.storage.store("side", { initial: { left: false } });
-    const apply = () => place(context.renderer.root, side.left);
+    const sync = () => apply(context.renderer.root, side.left);
 
     const flip = async () => {
       await update((draft) => {
         draft.left = !draft.left;
       });
-      apply();
+      sync();
       context.renderer.requestRender();
     };
     context.keymap.layer(() => ({
@@ -50,7 +64,7 @@ export default Plugin.define({
       commands: [{ bind: "<leader>a", title: "Toggle sidebar side", group: "Session", run: flip }],
     }));
 
-    const timer = setInterval(apply, poll);
+    const timer = setInterval(sync, poll);
     return () => clearInterval(timer);
   },
 });
