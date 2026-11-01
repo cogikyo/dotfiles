@@ -214,24 +214,23 @@ function kin(from: Step, to: Step) {
 function match(old: readonly Step[], next: readonly Step[]) {
   const pool = new Set(old);
   const found = new Map<Step, Step>();
-  const pass = (fits: (from: Step, to: Step) => boolean) => {
+  const pass = (fits: (from: Step, to: Step) => boolean, sole = true) => {
     for (const to of next) {
       if (found.has(to)) continue;
-      const from = [...pool].find((from) => fits(from, to));
+      const fit = [...pool].filter((step) => fits(step, to));
+      const from = fit[0];
       if (!from) continue;
+      if (sole && (fit.length > 1 || next.filter((step) => !found.has(step) && fits(from, step)).length > 1)) continue;
       pool.delete(from);
       found.set(to, from);
     }
   };
   const lanes = (from: Step, to: Step) => lane(from) !== undefined && lane(from) === lane(to) && kin(from, to);
-  const alone = (from: Step, to: Step) =>
-    kin(from, to) &&
-    [...pool].filter((step) => kin(step, to)).length === 1 &&
-    next.filter((step) => !found.has(step) && kin(from, step)).length === 1;
+  pass((from, to) => kin(from, to) && from.headline === to.headline, false);
   pass((from, to) => lanes(from, to) && similar(from, to));
   pass(lanes);
   pass((from, to) => kin(from, to) && similar(from, to));
-  pass(alone);
+  pass(kin);
   return next.flatMap((to) => {
     const from = found.get(to);
     if (!from) return [];

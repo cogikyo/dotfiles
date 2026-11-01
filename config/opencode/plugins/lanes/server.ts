@@ -252,16 +252,17 @@ export default Plugin.define({
         existing: Session.Info | undefined,
       ) {
         const build = agent.startsWith("build/");
-        if (n === undefined && !build) return {};
+        if (n === undefined && !build && !existing) return {};
         const state = yield* flowOf(parentID);
         const linked = existing ? state?.flow?.links[existing.id] : undefined;
-        if (n === undefined)
-          return linked === undefined && state?.flow?.status === "active"
+        const step = n ?? linked;
+        if (step === undefined)
+          return build && state?.flow?.status === "active"
             ? { nudge: "lanes: a workflow is active; does this work belong on a `step`, or in a new revision?" }
             : {};
-        const verdict = admit(state, n, linked === n);
+        const verdict = admit(state, step, linked === step);
         if ("error" in verdict) return yield* new Tool.Error({ message: verdict.error });
-        return linked === n ? {} : { brief: checklist(verdict.step), target: n };
+        return linked === step ? {} : { brief: checklist(verdict.step), target: step };
       });
 
       const run = Effect.fn("lanes.subagent")(function* (
