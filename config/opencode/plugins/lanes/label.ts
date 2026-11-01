@@ -98,7 +98,7 @@ export function strain({ limit, tokens }: Usage, buffer: number | string | undef
   return stop ? pressure((tokens / stop) * 100) : undefined;
 }
 
-function latest(messages: readonly Message[]) {
+export function latest(messages: readonly Message[]) {
   const compaction = messages.findLastIndex(
     (message) => message.type === "compaction" && message.status === "completed",
   );

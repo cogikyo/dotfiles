@@ -4,8 +4,10 @@ import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
 import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
+import { api as workflow } from "../workflow/rpc.ts";
 import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
+import { admit, checklist, cold, coldAfter, loaded } from "./step.ts";
 
 type Status = "running" | "idle" | "error" | "interrupted";
 type Input = {
@@ -16,11 +18,10 @@ type Input = {
   sessionID?: Session.ID;
   background?: boolean;
   lane?: string;
+  step?: number;
 };
 
 const pool = "claude";
-const coldAfter = 60 * 60_000;
-const coldSize = 100_000;
 
 const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
 
@@ -197,9 +198,8 @@ export default Plugin.define({
         if (latest?.type !== "idle") return;
         const idle = now - DateTime.toEpochMillis(latest.time.created);
         const step = messages.findLast((message) => message.type === "assistant" && message.tokens !== undefined);
-        const tokens = step?.type === "assistant" ? step.tokens : undefined;
-        const size = tokens ? tokens.input + tokens.cache.read + tokens.cache.write : 0;
-        if (idle <= coldAfter || size <= coldSize) return;
+        const size = loaded(step?.type === "assistant" ? step.tokens : undefined);
+        if (!cold(idle, size)) return;
         yield* seal(child, "cache");
         const lane = laneOf(child);
         return yield* new Tool.Error({
@@ -226,12 +226,50 @@ export default Plugin.define({
         return { model: format(ref), note };
       });
 
+      const flowOf = (sessionID: string) =>
+        ctx
+          .rpc(workflow)
+          .state({ sessionID })
+          .pipe(
+            Effect.catchCause((cause) =>
+              Effect.logError("lanes: workflow state failed", cause).pipe(Effect.as(undefined)),
+            ),
+          );
+
+      const bind = (childID: string, step: number) =>
+        ctx
+          .rpc(workflow)
+          .link({ sessionID: childID, step })
+          .pipe(
+            Effect.asVoid,
+            Effect.catchCause((cause) => Effect.logError(`lanes: linking ${childID} to step ${step} failed`, cause)),
+          );
+
+      const gate = Effect.fn("lanes.gate")(function* (
+        parentID: string,
+        agent: string,
+        n: number | undefined,
+        existing: Session.Info | undefined,
+      ) {
+        const build = agent.startsWith("build/");
+        if (n === undefined && !build) return {};
+        const state = yield* flowOf(parentID);
+        const linked = existing ? state?.flow?.links[existing.id] : undefined;
+        if (n === undefined)
+          return linked === undefined && state?.flow?.status === "active"
+            ? { nudge: "lanes: a workflow is active; does this work belong on a `step`, or in a new revision?" }
+            : {};
+        const verdict = admit(state, n, linked === n);
+        if ("error" in verdict) return yield* new Tool.Error({ message: verdict.error });
+        return linked === n ? {} : { brief: checklist(verdict.step), target: n };
+      });
+
       const run = Effect.fn("lanes.subagent")(function* (
         execute: Tool.Info["execute"],
         raw: Input,
         context: Tool.Context,
       ) {
-        const { lane: named, ...input } = raw;
+        const { lane: named, step: n, ...input } = raw;
         const lane = named?.trim() || undefined;
         const key = `${context.sessionID}/${lane}`;
         if (lane && creating.has(key))
@@ -254,10 +292,17 @@ export default Plugin.define({
             return yield* new Tool.Error({
               message: `Session ${existing.id} is ${closed.lane ? `closed lane "${closed.lane}"` : "closed"} and cannot resume; start a fresh lane by name instead.`,
             });
+          const { brief, target, nudge } = yield* gate(context.sessionID, input.agent, n, existing);
           if (existing) yield* expire(existing, context.sessionID);
-          const { model, note } = yield* resolve(input, existing);
+          const { model, note: routed } = yield* resolve(input, existing);
+          const note = [routed, nudge].filter(Boolean).join("\n") || undefined;
           const { model: _, ...rest } = input;
-          const call = { ...rest, ...(sessionID ? { sessionID } : {}), ...(model ? { model } : {}) };
+          const call = {
+            ...rest,
+            ...(brief ? { prompt: `${rest.prompt}\n\n${brief}` } : {}),
+            ...(sessionID ? { sessionID } : {}),
+            ...(model ? { model } : {}),
+          };
 
           let tagged = false;
           const progress = (update: Tool.Metadata) =>
@@ -265,6 +310,7 @@ export default Plugin.define({
               if (!tagged && typeof update.sessionID === "string") {
                 tagged = true;
                 yield* tag(context.sessionID, update.sessionID, lane);
+                if (target !== undefined) yield* bind(update.sessionID, target);
                 if (lane && creating.has(key)) prompting.set(update.sessionID, key);
               }
               yield* context.progress(update);
@@ -311,6 +357,9 @@ export default Plugin.define({
             lane: Schema.optionalKey(Schema.String).annotate({
               description:
                 "Stable name for this subagent conversation. Reusing a lane name continues the same child session; naming a running child steers it.",
+            }),
+            step: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))).annotate({
+              description: "The workflow step this child carries out; links the child to that step.",
             }),
           });
           tool.execute = (raw, context) => run(execute, raw as Input, context);
