@@ -28,8 +28,10 @@ Stop and report when two scopes turn out to need the same design change.
 
 ## Execute
 
-1. Reconcile the tree and Git state, and find the steps whose inputs are ready. Dispatch them.
-2. Judge each result and take the approved next step: continue, repair, or return.
+1. After approval, call **`workflow({ start: true })`** to store the fence; the `workflow` skill owns fence rules.
+2. Reconcile the tree and Git state, then launch ready children with **`subagent({ …, step: n })`**.
+3. Judge results at gates and record accepted, skipped, or failed steps with **`workflow`**.
+4. Continue, repair through the gate, or return within the approved plan.
 
 Dispatch ready steps in the background; release dependent work only after required results arrive and are accepted.
 The approval covers the internal steps, so continue between them without asking again.
@@ -42,9 +44,20 @@ In an armed run, these conditions are your decisions; record each one and contin
 Builders own formatting, lint, and other cheap checks inside their scope.
 Later edits invalidate affected review and verification evidence; repeat only the affected checks.
 Resume only lanes with findings for repairs, sending each finding as a delta to the lane that built the change.
+Mark the rejecting gate failed and call **`workflow({ repair: [n…] })`** for its repair targets before relaunching them.
+This spends the gate's repair round and reopens the targets and all downstream steps, whose evidence must be renewed.
 Use a fresh review leaf when the verdict needs independence from earlier rounds.
 After an interruption, reconcile the tree before you reissue write work, because the earlier attempt may have changed files.
 Inspect `lanes` too, because a parent interruption can leave background children running.
+
+## Replan
+
+The user's **`/replan`** pauses dispatch and supplies workflow status and each lane's step, status, idle time, context size, and cache warmth.
+Load `recommended` and give each lane a reasoned verdict: **resume**, **start fresh**, or **close**.
+Use its result and remaining task to judge relevance, and its running state and cache facts to judge reuse; `COLLAB.md` owns cold-lane expiry.
+Give fresh children full briefs, and reconcile running children before replacing or closing them.
+Ask the open questions, then compact; `/replan` pre-approves that compaction.
+After compaction, read stored status first, then start the next workflow revision to unpause dispatch.
 
 ## Return boundaries
 
@@ -67,4 +80,4 @@ When the line disappears, attended boundaries apply again from the next step.
 - Follow denial reasons to adapt or retry as directed; when you need the user, use `notify-send` (dunst) or `bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts ask bob "<message>"` (both always allowed by the reviewer), then continue independent permitted work.
 - The plugin journals reviewer decisions, and the user can inspect them with `/drive-log`.
 - Do not call `question` or stop only to request routine approval while armed.
-- Recover the workflow state from the summary, lanes, and tree before new writes.
+- Recover step state from **`workflow`**, and reconcile the summary, lanes, and tree before new writes.

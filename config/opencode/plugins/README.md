@@ -3,7 +3,7 @@
 This guide covers the local plugins for OpenCode V2.
 OpenCode discovers immediate plugin directories and loads their server and TUI entrypoints from source.
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
-The sidebar shows usage, lanes, Mail, then browser, with Markdown Context collapsed below them; claims that share a placement render in plugin directory-name order.
+The sidebar shows usage, lanes, Mail, Workflow, then browser, with Markdown Context collapsed below them; claims that share a placement render in plugin directory-name order.
 Run `bun run check` from `config/opencode` for type, lint, and format checks.
 For renderer checks, `uv run plugins/capture.py SESSION [--dir DIR] [--seconds N] [--keys TEXT] [--size COLSxROWS] [--out FILE]` captures a real TUI screen in a pty; offscreen fixtures can miss host render nodes.
 `dctl update bun` installs plugin dependencies from `config/opencode/bun.lock` with `bun install --frozen-lockfile --ignore-scripts`.
@@ -375,7 +375,24 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 ## Workflow
 
-`plugins/workflow/` registers a renderer for `workflow` fences and draws a card with an automatic dependency graph.
+`workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
+The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
+A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
+Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.
+
+`subagent({ …, step: n })` links a child and appends the step's checklist to its brief.
+The child can tick only its own items with `workflow({ check: [n…] })`; Collab owns step marks and repairs.
+Status distinguishes running and returned children; `Ready:` excludes both.
+Compaction carries status into the summary and tells the agent to call `workflow` first afterward; the store remains the source of step state.
+
+The user's `/replan` pauses dispatch and sends Collab workflow status plus each lane's step, status, idle time, context size, and cache warmth.
+The [drive skill](../skills/orchestration/drive/SKILL.md#replan) owns lane verdicts, questions, pre-approved compaction, and the next revision that unpauses dispatch.
+
+The sidebar shows the heading's short title and progress count, groups done steps into a `✓ 1, 2, 3` row, and lists remaining steps with agent icons and colors.
+Click the section or press `<leader>w` to replace only the chat with the full card, including checklists, repair rounds, and revision diff; the sidebar and prompt stay visible.
+Press `<leader>w` again to return to chat.
+
+`workflow/tui.ts` also renders `workflow` fences as cards with an automatic dependency graph.
 Graph nodes are numbers in the owner's color; lane steps are role-color pills, and gates use `◆N`.
 Rows lead with the scope icon and scope name in the role color, then the number, a square lane pill for lane steps, and the headline.
 A headline's main idea, before any `: `, takes the owner's color, bold for lanes and italic for one-shots; the rest is regular text.
@@ -385,6 +402,15 @@ The renderer reads `ROUTING.md` and shows a brain glyph and the variant left of 
 Gate checklist items get a distinct watching-for glyph; `if:` steps show an `only if` row.
 Only the summary wraps; other rows clip, and bad specs show red error lines.
 From `config/opencode`, run `bun plugins/workflow/preview.ts [file] --width N` to print the card with ANSI color.
+
+Files under `workflow/` divide the work by role:
+
+- `server.ts` owns storage and the tool; `state.ts` owns revisions, marks, ticks, and repair rules.
+- `parse.ts` reads fences and dependencies; `progress.ts` derives step phases from child state.
+- `rpc.ts` defines state, pause, link, and change events; `live.ts` keeps the TUI state current.
+- `tui.ts` registers fence rendering and commands; `replan.ts` builds the paused-run brief.
+- `sidebar.tsx` shows compact progress; `view.tsx` swaps the chat for the full card.
+- `card.ts`, `graph.ts`, and `style.ts` draw cards; `preview.ts` prints them for inspection.
 
 ## Bullets
 

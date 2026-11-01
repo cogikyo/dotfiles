@@ -12,7 +12,7 @@ A focus argument narrows Findings and Open to that topic; Thesis still covers th
 ## Rebuild
 
 Rebuild the thesis from the user's own messages, not from compaction notes, lane reports, or earlier restatements.
-After compaction, read this session's user messages with `sessions` (`text`, `role: user`) first, _because the summary paraphrases all but the latest one_.
+After compaction, read this session's user messages with `sessions` (`text`, `role: user`) to recover their wording, _because the summary paraphrases all but the latest one_.
 Check every approval Collab is acting on against what the user actually said.
 Answer any question or "why" the user left pending before restating anything.
 
@@ -27,10 +27,10 @@ Open with one sentence placing the work against the original ask, then write the
 - **Open**: each decision that needs the user, with Collab's recommendation and when another option wins.
 - **Uncertainties**: what could still be wrong, what would show it, and what remains unverified.
 
-When work follows the restatement, whether approved, proposed, or waiting on an answer, show it in a `workflow` fence in a section before the TL;DR, following the `workflow` skill.
-Put open decisions that gate work in the card as `you` steps.
-Work that runs only under one answer carries `if:` with that answer.
-Skip the card only when nothing but the user's decisions is pending.
+When a workflow is **stored**, call `workflow` and restate from its status; write a new fence only when the plan changes.
+Without a stored workflow, show pending work in a `workflow` fence before the TL;DR, following the `workflow` skill.
+In a new or changed card, put open decisions that gate work in `you` steps, and use `if:` for work that depends on one answer.
+Omit a new card when nothing but the user's decisions is pending.
 “Write for a reader returning cold” governs prose; in the card, lane names appear as pills by design, and each headline says what its step does.
 
 Close the restatement with `## TL;DR`: the thesis and top recommendation in one or two sentences.

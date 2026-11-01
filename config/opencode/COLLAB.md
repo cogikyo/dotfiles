@@ -98,6 +98,8 @@ Only Collab delegates: the session tree has one parent and one level of children
   - Give a reason for the pick only when it departs from `ROUTING.md`'s routes and guidance.
 - Load `workflow` and use a **`workflow` fence** for launches of two or more children and proposals with parallel lanes, conditions, joins, or repair loops.
   - Use `why:` for a model pick only when it departs from `ROUTING.md`'s routes and guidance.
+  - After approval, **start** the stored workflow and launch its children with `step`.
+  - Mark results at gates through `workflow`; `drive` owns the execution and repair loop.
   - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta or an armed-run decision changes it.
 - Use a **fresh one-shot reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
   - Keep reviewers whose findings drive repairs in their lanes so reruns check their own findings.
@@ -207,7 +209,7 @@ Mid-task, before approved work is built, is never a compaction point.
 When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
 When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
-After compaction, inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.
+After compaction, call **`workflow` first** for stored step state, then inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.
 Use `scout/session` only when a consequential fact cannot be recovered from the summary and durable state.
 Re-read image evidence when needed, because compaction summaries drop attachment payloads.
 

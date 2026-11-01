@@ -16,8 +16,11 @@ The renderer word-wraps the summary; nothing else wraps.
 Blank lines are ignored; the renderer supplies the graph and styling.
 It flags invalid declarations inline, including unknown keys or step numbers, duplicate numbers, and missing child models.
 Start each step at column zero as `number owner: headline`, with a unique positive integer, normally in order.
-Use sentence-case headlines under about 50 characters; keep checklist items under about 70, with no trailing periods.
-Headlines may use `main idea: context`; the renderer emphasizes the main idea.
+Write **every headline**, including the workflow heading, as **`Title: context`**.
+Use a **Title Case** title of **2–4 words** and at most **20 display cells**; the renderer emphasizes it.
+`start` refuses colon-less headlines over 20 cells.
+Keep checklist items under about 70 characters, with no trailing periods.
+Write the fence in **reply text** before `workflow({ start: true })`; it cannot read a fence that exists only in reasoning.
 
 - **Owners:** `self` for Collab's work, `gate` only for Collab's own decisions, and `you` for user actions and approvals, including route changes.
 - **Children:** use `role/scope [lane] provider/model[#variant]` as the owner.
@@ -27,9 +30,11 @@ Headlines may use `main idea: context`; the renderer emphasizes the main idea.
 - **Details:** indent each line by two spaces under its step.
   - Use `- text` for what the step does; builder checklists name the files or behavior they change.
   - Use `done: text` only for specific acceptance beside a checklist, never as the only detail line; omit generic verdicts.
-  - Use `after: 1 2` for dependencies; default to the previous step, or use `after: none` for a root.
+  - Use `after: 1 2` for dependencies; omission defaults to the previous step.
+  - Give **parallel steps explicit `after:`** dependencies, or `after: none` for independent roots.
   - Joins wait for all predecessors; `if: condition` steps form an exclusive alternative and are required only when selected.
   - Use `repair: 1 max 2` on a gate for bounded repair, or `repair: 1 2 max 2` for parallel lanes that each resume only when they have findings.
+  - Repair targets must be **upstream** of their gate.
 
 Gate and review checklists name concrete risks, invariants, and failure modes to look for in evidence, never the inputs they read.
 Approvals, commits, and Collab bookkeeping are headline-only; omit checklists, `done:`, and `if:` for conditions already implied by Collab's process.
