@@ -14,8 +14,14 @@ export function spinner(active: () => boolean) {
   return () => frames[active() ? Math.floor(clock() / tick) % frames.length : 0];
 }
 
-export function Section(props: { context: Plugin.Context; title: string; detail: string; children: JSX.Element }) {
-  const [open, setOpen] = createSignal(true);
+export function Section(props: {
+  context: Plugin.Context;
+  title: string;
+  detail: string;
+  defaultOpen?: boolean;
+  children: JSX.Element;
+}) {
+  const [open, setOpen] = createSignal(props.defaultOpen ?? true);
   const theme = () => props.context.theme.text;
 
   return (

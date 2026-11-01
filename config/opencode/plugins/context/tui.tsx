@@ -79,7 +79,7 @@ export default Plugin.define({
   setup(context) {
     const prompts = agentPrompts();
     context.ui.slot({
-      append: "sidebar.content",
+      after: "sidebar.content",
       render: (input) => <Sidebar context={context} sessionID={input.sessionID} prompts={prompts} />,
     });
   },
@@ -99,7 +99,7 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
 
   return (
     <Show when={list().length > 0}>
-      <Section context={props.context} title="Markdown Context" detail={`${list().length} read`}>
+      <Section context={props.context} title="Markdown Context" detail={`${list().length} read`} defaultOpen={false}>
         <For each={list()}>{(entry) => <Row context={props.context} entry={entry} />}</For>
       </Section>
     </Show>
