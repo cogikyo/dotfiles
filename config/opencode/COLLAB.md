@@ -50,6 +50,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - Before each check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
   - Run one check per Ready; fire short-lived events such as notices or animations only after that check's Ready.
   - Collect its verdict through `question` before starting the next check.
+  - When work waits on the user, even for an answer in another session, ask here through `question` and keep independent work moving.
   - Before suggesting a push, PR, merge, reset, or manual check, re-check live Git or remote state so the step is still needed.
   - Run the rest yourself, including the check that proves the fix, and report the result instead of if-then branches.
 - **Propose first**, then stop before tools, when writes span several lanes, depend on unread context, or cross an approval boundary the user has not already approved.
@@ -243,7 +244,7 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - A step that asks for approval names, in plain words, what the step changes; when it bundles several decisions, load `recommended` instead.
   - No fixed rule marks when a reply needs sections or a TL;DR; judge by how the user reads.
 - Ask **at most two questions per turn**, in text or the tool, except in `recommended`'s call; hold the rest for later.
-- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, `recommended`'s open decisions, live-check ready calls and verdicts, or compaction, `/done`, and session-close offers.
+- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, `recommended`'s open decisions, live-check ready calls and verdicts, work that waits on the user, or compaction, `/done`, and session-close offers.
   - Put context in the reply text before the question, never only in option descriptions; explain internal terms or use plain words.
   - A turn is never a bare question-tool call; keep design trade-offs in text as a recommendation to discuss.
   - When choices matter, put the recommended option first and name when another wins.
