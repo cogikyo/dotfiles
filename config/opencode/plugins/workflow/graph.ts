@@ -1,5 +1,6 @@
 import { ancestors, conditional, type Step } from "./parse.ts";
-import { ink, pill, type Row, type Segment } from "./style.ts";
+import type { Progress } from "./progress.ts";
+import { ink, pill, shades, type Row, type Segment } from "./style.ts";
 
 type Tree =
   | { kind: "step"; step: Step }
@@ -16,21 +17,51 @@ type Side = { kind: "node" | "fork" | "rail"; dashed: boolean };
 
 const rail: Tree = { kind: "rail" };
 const junctions: Partial<Record<string, string>> = { "─│": "┼", "╭│": "├", "╮│": "┤", "┬│": "┼" };
-const reduced = new WeakMap<readonly Step[], Tree | null>();
+type Shape = { tree: Tree; hidden: ReadonlyMap<number, readonly number[]> };
+export type Graph = { rows: Row[]; looped: boolean; hidden: Shape["hidden"] };
+
+const reduced = new WeakMap<readonly Step[], Shape | null>();
 const sizes = new WeakMap<Tree, Size>();
 
-export function draw(steps: readonly Step[], width: number): Row[] | undefined {
+export function draw(steps: readonly Step[], width: number, progress?: Progress): Graph | undefined {
   if (steps.length < 2 || 5 * chain(steps) - 4 > width) return;
-  if (!reduced.has(steps)) reduced.set(steps, reduce(steps) ?? null);
-  const tree = reduced.get(steps);
-  if (!tree) return;
+  if (!reduced.has(steps)) reduced.set(steps, shape(steps) ?? null);
+  const { tree, hidden } = reduced.get(steps) ?? {};
+  if (!tree || !hidden) return;
   const loops = steps.filter(({ repair }) => repair).length;
-  const top = loops ? loops + 1 : 0;
-  const sketch = new Sketch();
-  sketch.place(tree, 0, top, { open: true, close: true });
-  if (!sketch.loop(steps, top) || sketch.canvas.broken || sketch.canvas.width > width) return;
-  return sketch.canvas.rows();
+  const fits = (canvas: Canvas) => !canvas.broken && canvas.width <= width;
+  if (loops) {
+    const sketch = new Sketch(progress);
+    sketch.place(tree, 0, loops + 1, { open: true, close: true });
+    if (sketch.loop(steps, loops + 1) && fits(sketch.canvas))
+      return { rows: sketch.canvas.rows(), looped: true, hidden };
+  }
+  const sketch = new Sketch(progress);
+  sketch.place(tree, 0, 0, { open: true, close: true });
+  if (!fits(sketch.canvas)) return;
+  return { rows: sketch.canvas.rows(), looped: !loops, hidden };
 }
+
+function shape(steps: readonly Step[]): Shape | undefined {
+  const hidden = new Map<number, number[]>();
+  let current = steps;
+  let { tree, left } = reduce(current);
+  while (!tree) {
+    const tried = [...trim(current)].flatMap(([n, deps]) =>
+      deps.map((dep) => {
+        const next = current.map((step) => (step.n === n ? without(step, dep) : step));
+        return { n, dep, next, ...reduce(next) };
+      }),
+    );
+    const best = tried.find((option) => option.tree) ?? tried.toSorted((a, b) => a.left - b.left)[0];
+    if (!best || (!best.tree && best.left >= left)) return;
+    hidden.set(best.n, [...(hidden.get(best.n) ?? []), best.dep]);
+    ({ tree, left, next: current } = best);
+  }
+  return { tree, hidden };
+}
+
+const without = (step: Step, dep: number): Step => ({ ...step, after: step.after.filter((n) => n !== dep) });
 
 function chain(steps: readonly Step[]) {
   const deps = new Map(steps.map(({ n, after }) => [n, after]));
@@ -46,14 +77,16 @@ function chain(steps: readonly Step[]) {
   return Math.max(...steps.map(({ n }) => length(n)));
 }
 
-function reduce(steps: readonly Step[]): Tree | undefined {
+function reduce(steps: readonly Step[]): { tree?: Tree; left: number } {
   const order = new Map(steps.map(({ n }, index) => [n, index]));
   const rank = (tree: Tree) => Math.min(Infinity, ...members(tree).map(({ n }) => order.get(n) ?? Infinity));
   const edges = wire(steps);
   let joins = 0;
   while (merge(edges, rank) || (joins < steps.length && factor(edges, `j${joins++}`)));
   const [only] = edges;
-  return edges.length === 1 && only.from === "S" && only.to === "E" ? only.tree : undefined;
+  return edges.length === 1 && only.from === "S" && only.to === "E"
+    ? { tree: only.tree, left: 1 }
+    : { left: edges.length };
 }
 
 function wire(steps: readonly Step[]): Edge[] {
@@ -201,8 +234,8 @@ function leave(tree: Tree) {
   return `${tail.kind === "node" ? " " : ""}${tail.dashed ? "╌" : "─"}`;
 }
 
-function label({ n, owner }: Step): { pieces: Segment[]; offset: number } {
-  const style = ink(owner);
+function label({ n, owner }: Step, progress?: Progress): { pieces: Segment[]; offset: number } {
+  const style = progress ? { ...ink(owner), tone: shades[progress.phases[n]] } : ink(owner);
   if (owner.kind === "gate") return { pieces: [{ text: `◆${n}`, ...style }], offset: 1 };
   if (owner.kind === "you") return { pieces: [{ text: `\u{f007} ${n}`, ...style }], offset: 2 };
   if (owner.kind === "lane" && owner.lane) return { pieces: pill(String(n), style.tone), offset: 1 };
@@ -293,10 +326,16 @@ class Sketch {
   private readonly nodes = new Map<number, Point>();
   private readonly forks: { point: Point; heads: (number | undefined)[] }[] = [];
 
+  private readonly progress?: Progress;
+
+  constructor(progress?: Progress) {
+    this.progress = progress;
+  }
+
   place(tree: Tree, x: number, y: number, ends: Ends) {
     switch (tree.kind) {
       case "step": {
-        const { pieces, offset } = label(tree.step);
+        const { pieces, offset } = label(tree.step, this.progress);
         let at = x;
         for (const { text, ...style } of pieces) {
           this.canvas.put(at, y, text, style);
@@ -317,7 +356,8 @@ class Sketch {
   loop(steps: readonly Step[], top: number) {
     const arcs = steps.flatMap(({ n, repair }) => {
       if (!repair) return [];
-      return [{ gate: this.nodes.get(n), drops: this.drops(repair.to, top), tag: `repair ≤${repair.max}` }];
+      const tag = this.progress ? `repair ${this.progress.rounds[n] ?? 0}/${repair.max}` : `repair ≤${repair.max}`;
+      return [{ gate: this.nodes.get(n), drops: this.drops(repair.to, top), tag }];
     });
     const span = ({ gate, drops = [] }: (typeof arcs)[number]) => (gate?.x ?? 0) - Math.min(...drops);
     const placed: { left: number; right: number; level: number }[] = [];

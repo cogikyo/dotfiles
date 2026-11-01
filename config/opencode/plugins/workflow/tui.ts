@@ -1,19 +1,14 @@
 import { Plugin } from "@opencode/plugin/tui";
-import {
-  BoxRenderable,
-  CodeRenderable,
-  StyledText,
-  TextAttributes,
-  TextRenderable,
-  type RGBA,
-  type Renderable,
-  type TextChunk,
-} from "@opentui/core";
+import { BoxRenderable, CodeRenderable, TextRenderable, type Renderable } from "@opentui/core";
 import { readFileSync } from "node:fs";
 import { parseRouting, routingPath } from "../lanes/routing.ts";
 import { card, type Routes } from "./card.ts";
+import { live } from "./live.ts";
 import { parse, type Workflow } from "./parse.ts";
-import { palette, type Row, type Tone } from "./style.ts";
+import { replan } from "./replan.ts";
+import { sidebar } from "./sidebar.tsx";
+import { palette, styled } from "./style.ts";
+import { view } from "./view.tsx";
 
 type Room = { width: number };
 
@@ -37,6 +32,50 @@ export default Plugin.define({
         return fallback;
       }
     });
+
+    const store = live(context);
+    const session = () => {
+      const route = context.ui.router.current();
+      return route.type === "session" ? route.sessionID : undefined;
+    };
+    const overlay = view(context, store, routing);
+    const toggle = () => {
+      const id = session();
+      if (!id) return context.ui.toast.show({ variant: "warning", message: "Open a session to show its workflow" });
+      overlay.toggle(id);
+    };
+
+    sidebar(context, store, overlay.open);
+
+    context.keymap.layer(() => ({
+      mode: "global",
+      commands: [
+        {
+          id: "workflow.view",
+          title: "Toggle workflow view",
+          description: "Show this session's stored workflow with step and checklist progress",
+          group: "Session",
+          palette: true,
+          bind: "<leader>w",
+          run: toggle,
+        },
+        {
+          id: "workflow.replan",
+          title: "Replan workflow",
+          description: "Pause the workflow and ask Collab to review lanes, compact, and write the next revision",
+          group: "Session",
+          palette: true,
+          slash: { name: "replan" },
+          async run() {
+            const id = session();
+            if (!id) return context.ui.toast.show({ variant: "warning", message: "Open a session to replan" });
+            await replan(context, store, id).catch(store.fail);
+          },
+        },
+      ],
+    }));
+
+    return store.dispose;
   },
 });
 
@@ -82,19 +121,4 @@ function frame(context: Plugin.Context, { flow, routes }: { flow: Workflow; rout
   show(room.width);
   box.add(text);
   return box;
-}
-
-function styled(rows: readonly Row[], tones: Record<Tone, RGBA>) {
-  return new StyledText(
-    rows.flatMap((row, index): TextChunk[] => [
-      ...(index ? [{ __isChunk: true as const, text: "\n" }] : []),
-      ...row.map(({ text, tone, bg, bold, italic }) => ({
-        __isChunk: true as const,
-        text,
-        fg: tones[tone],
-        bg: bg && tones[bg],
-        attributes: (bold ? TextAttributes.BOLD : 0) | (italic ? TextAttributes.ITALIC : 0),
-      })),
-    ]),
-  );
 }

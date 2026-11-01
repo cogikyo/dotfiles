@@ -3,7 +3,7 @@ import { migrateV1, resolveThemeDocument } from "@opencode/theme/tui";
 import type { RGBA } from "@opentui/core";
 import { parseRouting, routingPath } from "../lanes/routing.ts";
 import { card } from "./card.ts";
-import { parse } from "./parse.ts";
+import { fences, parse } from "./parse.ts";
 import { palette, type Row } from "./style.ts";
 
 const inset = 2;
@@ -25,28 +25,12 @@ const routes = await Bun.file(routingPath)
   .text()
   .then((text) => parseRouting(text).routes)
   .catch(() => undefined);
+const found = fences(source);
+const blocks = found.length ? found : [{ text: source, partial: false }];
 
 console.log(
-  blocks(source)
-    .map(({ text, partial }) => paint(card(parse(text, partial), width - 2 * inset, routes)))
-    .join("\n\n"),
+  blocks.map(({ text, partial }) => paint(card(parse(text, partial), width - 2 * inset, routes))).join("\n\n"),
 );
-
-function blocks(input: string) {
-  const lines = input.split("\n");
-  const found: { text: string; partial: boolean }[] = [];
-  for (let at = 0; at < lines.length; at++) {
-    const fence = /^ {0,3}(`{3,}|~{3,})workflow\b/.exec(lines[at])?.[1];
-    if (!fence) continue;
-    const close = lines.findIndex(
-      (line, index) => index > at && /^ {0,3}(`{3,}|~{3,})\s*$/.test(line) && line.trim().startsWith(fence),
-    );
-    const stop = close === -1 ? lines.length : close;
-    found.push({ text: lines.slice(at + 1, stop).join("\n"), partial: close === -1 });
-    at = stop;
-  }
-  return found.length ? found : [{ text: input, partial: false }];
-}
 
 function paint(rows: readonly Row[]) {
   const inner = width - 2 * inset;
