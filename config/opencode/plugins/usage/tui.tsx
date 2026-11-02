@@ -14,6 +14,7 @@ const DURATION_WIDTH = 7;
 const EXACT_WIDTH = 10;
 const PERCENT_WIDTH = 3;
 const DASH = "--";
+const SAME_RESET_MS = 5 * 60_000;
 const PLACEHOLDER_LABELS = ["H", "W"];
 const PRESSURE = [
   "#7492ef",
@@ -161,9 +162,10 @@ function Dashboard(props: {
                   </For>
                 }
               >
-                <For each={provider.windows}>
-                  {(window) => {
-                    const reset = () => (window.resetAt ? formatReset(window.resetAt, props.now) : undefined);
+                <For each={rows(provider.windows)}>
+                  {({ window, scoped }) => {
+                    const reset = () =>
+                      window.resetAt && !scoped ? formatReset(window.resetAt, props.now) : undefined;
                     const pct = window.usedPercent;
                     return (
                       <Row
@@ -277,6 +279,17 @@ function Row(props: {
       </text>
     </box>
   );
+}
+
+// Anthropic can report weekly sub-limit resets minutes apart from W.
+function rows(windows: Usage["windows"]) {
+  const weekly = Date.parse(windows.find((window) => window.label === "W")?.resetAt ?? "");
+  return windows
+    .map((window) => ({
+      window,
+      scoped: window.label !== "W" && Math.abs(Date.parse(window.resetAt ?? "") - weekly) <= SAME_RESET_MS,
+    }))
+    .filter(({ window, scoped }) => !scoped || Math.round(window.usedPercent ?? 0) > 0);
 }
 
 function formatReset(resetAt: string, now: number) {
