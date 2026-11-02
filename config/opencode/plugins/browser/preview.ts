@@ -1,5 +1,5 @@
 import { hostname } from "node:os";
-import { Schema } from "effect";
+import { Option, Schema } from "effect";
 import type { MCP } from "./mcp.ts";
 
 type Result = Awaited<ReturnType<MCP["call"]>>;
@@ -32,11 +32,13 @@ const Reply = Schema.Struct({
 
 const Session = Schema.Struct({ token: Schema.NonEmptyString });
 
+const Agent = Schema.fromJsonString(Schema.NonEmptyString);
+
 const codes = new Set(["ERROR", "DENIED_ACCESS", "NOT_IMPLEMENTED", "UNAUTHORIZED"]);
 
 interface Lane {
   tail: Promise<unknown>;
-  auth?: string;
+  auth: Map<string, { token: string; value: string }>;
 }
 
 export class Preview {
@@ -48,7 +50,7 @@ export class Preview {
   }
 
   call(sessionID: string, browser: () => Promise<MCP>, name: string, input: unknown) {
-    const lane = this.lanes.get(sessionID) ?? { tail: Promise.resolve() };
+    const lane = this.lanes.get(sessionID) ?? { tail: Promise.resolve(), auth: new Map() };
     this.lanes.set(sessionID, lane);
     // Closing during authentication must not reopen the browser when the login resolves.
     const live = () => {
@@ -63,12 +65,27 @@ export class Preview {
         live();
         return mcp.call(name, input);
       }
-      lane.auth ??= await this.authenticate(target.origin);
-      const seed = script(target.origin, lane.auth);
+      const password = lane.auth.size === 0 ? await this.account.secret() : undefined;
       live();
       const mcp = await browser();
       live();
-      if (name === "new_page") return open(mcp, target.input, seed);
+      if (name === "new_page") {
+        const opened = await mcp.call("new_page", { ...target.input, url: "about:blank" });
+        if (opened.isError) return opened;
+      }
+      const agent = await userAgent(mcp);
+      let auth = lane.auth.get(agent);
+      if (auth === undefined) {
+        auth = await this.authenticate(target.origin, password ?? (await this.account.secret()), agent);
+        lane.auth.set(agent, auth);
+      }
+      live();
+      const seed = script(
+        target.origin,
+        auth.value,
+        [...lane.auth.values()].map((a) => a.token),
+      );
+      if (name === "new_page") return land(mcp, target.input, seed);
       const initScript = target.input.initScript === undefined ? seed : `${seed}\n${target.input.initScript}`;
       return mcp.call(name, { ...target.input, initScript });
     });
@@ -93,8 +110,7 @@ export class Preview {
     return { input, origin };
   }
 
-  private async authenticate(origin: string) {
-    const password = await this.account.secret();
+  private async authenticate(origin: string, password: string, agent: string) {
     let response: Response;
     try {
       response = await fetch(`${origin}/v1/frontend/authenticate`, {
@@ -103,7 +119,7 @@ export class Preview {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "User-Agent": "opencode-browser-qa",
+          "User-Agent": agent,
         },
         body: JSON.stringify({ username: this.account.user, password }),
         signal: AbortSignal.timeout(15_000),
@@ -129,7 +145,7 @@ export class Preview {
         `preview sign-in failed as ${this.account.user}: ${body.errorCode} (HTTP ${response.status}); if the password changed, Cullyn needs to re-store it with \`cogictl secret set ${entry}\``,
       );
     if (!Schema.is(Session)(body.data)) throw new Error("preview sign-in failed: the response carried no token");
-    return JSON.stringify({ ...body.data, isAuthenticated: true });
+    return { token: body.data.token, value: JSON.stringify({ ...body.data, isAuthenticated: true }) };
   }
 }
 
@@ -163,9 +179,18 @@ export async function keyring() {
   throw new Error(`preview sign-in unavailable: cogictl exited ${code}: ${stderr.trim().slice(-500) || "no stderr"}`);
 }
 
-async function open(mcp: MCP, input: typeof Navigation.Type, seed: string) {
-  const opened = await mcp.call("new_page", { ...input, url: "about:blank" });
-  if (opened.isError) return opened;
+async function userAgent(mcp: MCP) {
+  const result = await mcp.call("evaluate_script", { function: "() => navigator.userAgent" });
+  const text = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n");
+  const agent = Schema.decodeUnknownOption(Agent)(/```json\n(.*)\n```/.exec(text)?.[1]);
+  if (result.isError || Option.isNone(agent))
+    throw new Error(
+      "preview sign-in unavailable: cannot read the browser's User-Agent, which the preview binds its session to",
+    );
+  return agent.value;
+}
+
+async function land(mcp: MCP, input: typeof Navigation.Type, seed: string) {
   const result = await mcp.call("navigate_page", {
     type: "url",
     url: input.url,
@@ -175,9 +200,14 @@ async function open(mcp: MCP, input: typeof Navigation.Type, seed: string) {
   return { ...result, isError: failed(result) };
 }
 
-function script(origin: string, auth: string) {
+function script(origin: string, auth: string, issued: string[]) {
   // A process-side seeded flag goes stale after Chromium relaunches or new browser contexts.
-  return `if (location.origin === ${JSON.stringify(origin)} && localStorage.getItem("authentication") === null) localStorage.setItem("authentication", ${JSON.stringify(auth)});`;
+  return `if (location.origin === ${JSON.stringify(origin)}) {
+  const stored = localStorage.getItem("authentication");
+  let token;
+  try { token = JSON.parse(stored)?.token; } catch {}
+  if (stored === null || ${JSON.stringify(issued)}.includes(token)) localStorage.setItem("authentication", ${JSON.stringify(auth)});
+}`;
 }
 
 function failed(result: Result) {
