@@ -27,6 +27,7 @@ type EventLoop struct {
 	share           *session.Share
 	subs            *daemon.SubscriptionManager
 	accent          *Accent
+	view            *View
 	done            <-chan struct{}
 	browserQAPlaced map[string]bool
 	settle          *time.Timer
@@ -37,13 +38,14 @@ const (
 	fallbackMonitor = "FALLBACK"
 )
 
-func NewEventLoop(hypr *hypr.Client, state *state.State, share *session.Share, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
+func NewEventLoop(hypr *hypr.Client, state *state.State, share *session.Share, subs *daemon.SubscriptionManager, accent *Accent, view *View, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:            hypr,
 		state:           state,
 		share:           share,
 		subs:            subs,
 		accent:          accent,
+		view:            view,
 		done:            done,
 		browserQAPlaced: make(map[string]bool),
 	}
@@ -140,6 +142,9 @@ func (e *EventLoop) handleEvent(line string) {
 	event, data, ok := strings.Cut(line, ">>")
 	if !ok {
 		return
+	}
+	if viewEvents[event] {
+		defer e.view.Mark()
 	}
 
 	switch event {

@@ -85,6 +85,8 @@ func main() {
 		cmdOpenCode()
 	case "accent":
 		cmdAccent()
+	case "view":
+		cmdView()
 	case "vpn":
 		cli.VPN()
 	case "screenshot":
@@ -273,6 +275,7 @@ func cmdNotify() {
 }
 func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
+func cmdView()    { sendCommand("view") }
 func cmdHealth()  { sendCommand(strings.TrimSpace("health " + strings.Join(os.Args[2:], " "))) }
 
 func cmdOpenCode() {
@@ -475,7 +478,8 @@ Browser:
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|display|three-body|all)
-  hyprd subscribe [...]  Stream events (workspace split)
+  hyprd subscribe [...]  Stream events (workspace split view)
+  hyprd view             Recompute which Kitty panes are in view
 
 Screenshot:
   hyprd screenshot              Region screenshot to clipboard

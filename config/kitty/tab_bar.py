@@ -140,6 +140,7 @@ _active_ssh_cache: tuple[str, str] | None = None
 _last_hyprd_accent: tuple[int, str] | None = None
 _last_hyprd_accent_sent_at = 0.0
 _last_hyprd_accent_failed_at = 0.0
+_active_tabs: dict[int, int] = {}
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
@@ -179,6 +180,21 @@ def _push_hyprd_accent(accent_hex: str) -> None:
 
     _last_hyprd_accent = current
     _last_hyprd_accent_sent_at = now
+
+
+def _push_hyprd_view(tab: TabBarData) -> None:
+    # Hyprland emits no Kitty tab-switch event, so the tab bar marks view changes.
+    if not tab.is_active or _active_tabs.get(tab.os_window_id) == tab.tab_id:
+        return
+    _active_tabs[tab.os_window_id] = tab.tab_id
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(HYPRD_SOCKET_TIMEOUT_SECONDS)
+            sock.connect(HYPRD_SOCKET_PATH)
+            sock.sendall(b"view")
+            sock.recv(64)
+    except OSError:
+        return
 
 
 def _git_depth(path: str) -> int:
@@ -614,6 +630,7 @@ def draw_tab(
     accent = get_accent()
     if index == 1:
         _push_hyprd_accent(get_accent_hex())
+    _push_hyprd_view(tab)
 
     cells = [
         (colors.active_bg, colors.bar_bg, SEP_RIGHT),

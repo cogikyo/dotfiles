@@ -14,8 +14,17 @@ type LocatedPane struct {
 	KittyPID   int
 	OSWindowID int
 	TabID      int
-	Focused    bool
+	TabActive  bool
 	Pane       Pane
+}
+
+type PaneKey struct {
+	KittyPID int `json:"kitty_pid"`
+	PaneID   int `json:"kitty_pane_id"`
+}
+
+func (p LocatedPane) Key() PaneKey {
+	return PaneKey{KittyPID: p.KittyPID, PaneID: p.Pane.ID}
 }
 
 // Inventory returns the panes exposed by all live per-PID Kitty sockets.
@@ -37,25 +46,31 @@ func Inventory() ([]LocatedPane, error) {
 			continue
 		}
 		answered++
-		for _, window := range windows {
-			for _, tab := range window.Tabs {
-				for _, pane := range tab.Windows {
-					panes = append(panes, LocatedPane{
-						KittyPID:   pid,
-						OSWindowID: window.ID,
-						TabID:      tab.ID,
-						Focused:    window.IsFocused && tab.IsFocused && pane.IsFocused,
-						Pane:       pane,
-					})
-				}
-			}
-		}
+		panes = append(panes, locate(pid, windows)...)
 	}
 	err = errors.Join(errs...)
 	if answered == 0 {
 		return nil, err
 	}
 	return panes, err
+}
+
+func locate(pid int, windows []OSWindow) []LocatedPane {
+	var panes []LocatedPane
+	for _, window := range windows {
+		for _, tab := range window.Tabs {
+			for _, pane := range tab.Windows {
+				panes = append(panes, LocatedPane{
+					KittyPID:   pid,
+					OSWindowID: window.ID,
+					TabID:      tab.ID,
+					TabActive:  tab.IsActive,
+					Pane:       pane,
+				})
+			}
+		}
+	}
+	return panes
 }
 
 func socketPIDs() ([]int, error) {

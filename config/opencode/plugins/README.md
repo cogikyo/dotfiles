@@ -199,10 +199,11 @@ Only the displayed root gets idle reminders every 15 minutes, unless its title s
 Each root's clock pauses while Hyprland reports the screen locked and resets while the TUI is focused on that root, leaving other roots' clocks unchanged.
 Clocks are dropped when their roots are no longer open.
 
-`hyprd/context.ts` publishes the displayed root session to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json` once per second when the selection changes.
-It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records `session` or `null` with the process `start` time from `/proc/self/stat`, and removes the file on disposal.
+`hyprd/context.ts` checks the displayed root, prompt text, tab count, and pending input each second and publishes changes to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json`, with a heartbeat each minute.
+Pending input covers current permissions and forms plus unresolved forms seen before navigation, whose partial answers remain in host memory.
+It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records the process `start` time from `/proc/self/stat` and report time `at`, and removes the file on disposal.
 It creates the directory with mode `0700` and the file with mode `0600`, then publishes by atomic rename.
-Hyprd matches the record to a discovered TUI pane and checks the process start time before using its session for relaunch.
+Hyprd matches the record to a discovered TUI pane and checks the process start time before using it for [recycling gates and relaunch](../../../cmds/cmd/hyprd/README.md#opencode).
 There is no tool, key, or TUI slot.
 
 ## Sessions
@@ -321,6 +322,7 @@ It replaces the built-in sidebar footer, also disabled, with the OpenCode versio
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
 The border pulse, fire fade, and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
+`statusline/view.ts` shares one `hyprd subscribe view` process per TUI to pause these animations in out-of-view panes; unknown view state leaves them running.
 
 `statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
 In queue mode, Enter dispatches `prompt.queue` only while the session runs, the prompt is in normal mode, and the prompt has text.

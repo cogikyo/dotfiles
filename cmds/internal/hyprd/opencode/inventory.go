@@ -24,61 +24,35 @@ type Snapshot struct {
 }
 
 type Pane struct {
-	KittyPaneID int    `json:"kitty_pane_id"`
-	KittyPID    int    `json:"kitty_pid"`
-	TUIPID      int    `json:"tui_pid"`
-	Directory   string `json:"directory"`
-	SessionID   string `json:"session_id,omitempty"`
-	Focused     bool   `json:"focused"`
-	PromptDirty *bool  `json:"prompt_dirty,omitempty"`
+	KittyPaneID int       `json:"kitty_pane_id"`
+	KittyPID    int       `json:"kitty_pid"`
+	TUIPID      int       `json:"tui_pid"`
+	Directory   string    `json:"directory"`
+	SessionID   string    `json:"session_id,omitempty"`
+	Started     time.Time `json:"started"`
+	Shell       bool      `json:"shell"`
+	Shown       *bool     `json:"shown"`
+	Hidden      time.Time `json:"hidden_since,omitzero"`
+	Report      *Report   `json:"report"`
 }
 
-type paneKey struct {
-	KittyPID int
-	PaneID   int
-}
-
-func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
-	panes, err := kitty.Inventory()
-	if err != nil && panes == nil {
+func takeSnapshot(views *kitty.Tracker, jobID string, mode Mode) (Snapshot, []string, error) {
+	panes, seen, err := views.View()
+	if panes == nil {
 		return Snapshot{}, nil, fmt.Errorf("kitty inventory: %w", err)
 	}
 	var warnings []string
 	if err != nil {
-		warnings = append(warnings, "kitty inventory incomplete: "+err.Error())
+		warnings = append(warnings, "kitty view incomplete: "+err.Error())
 	}
 
 	snapshot := Snapshot{JobID: jobID, Mode: mode, CreatedAt: time.Now()}
 	for _, located := range panes {
-		tui, found := tuiProcess(located.Pane)
-		if !found {
-			continue
+		pane, found, paneWarnings := inspect(located, seen)
+		warnings = append(warnings, paneWarnings...)
+		if found {
+			snapshot.Panes = append(snapshot.Panes, pane)
 		}
-
-		directory := tui.CWD
-		if directory == "" {
-			directory = located.Pane.CWD
-		}
-
-		sessionID, recorded, contextErr := shownSession(tui.PID)
-		if contextErr != nil {
-			warnings = append(warnings, fmt.Sprintf("TUI %d context unavailable: %v", tui.PID, contextErr))
-		}
-		if !recorded {
-			sessionID = option(tui.Cmdline, "--session", "-s")
-		}
-		if !validSessionID(sessionID) {
-			sessionID = ""
-		}
-
-		snapshot.Panes = append(snapshot.Panes, Pane{
-			KittyPaneID: located.Pane.ID,
-			KittyPID:    located.KittyPID,
-			TUIPID:      tui.PID,
-			Directory:   cleanDirectory(directory),
-			SessionID:   sessionID,
-			Focused:     located.Focused,
-		})
 	}
 
 	sort.Slice(snapshot.Panes, func(i, j int) bool {
@@ -92,6 +66,72 @@ func takeSnapshot(jobID string, mode Mode) (Snapshot, []string, error) {
 		return Snapshot{}, nil, err
 	}
 	return snapshot, warnings, nil
+}
+
+func inspect(located kitty.LocatedPane, seen map[kitty.PaneKey]kitty.Seen) (Pane, bool, []string) {
+	tui, found := tuiProcess(located.Pane)
+	if !found {
+		return Pane{}, false, nil
+	}
+
+	var warnings []string
+	directory := tui.CWD
+	if directory == "" {
+		directory = located.Pane.CWD
+	}
+	started, err := processStarted(tui.PID)
+	if err != nil {
+		warnings = append(warnings, fmt.Sprintf("TUI %d start time unavailable: %v", tui.PID, err))
+	}
+	report, err := readReport(tui.PID)
+	if err != nil {
+		warnings = append(warnings, fmt.Sprintf("TUI %d report unavailable: %v", tui.PID, err))
+	}
+
+	sessionID := option(tui.Cmdline, "--session", "-s")
+	if report != nil {
+		sessionID = ""
+		if report.Session != nil {
+			sessionID = *report.Session
+		}
+	}
+	if !validSessionID(sessionID) {
+		sessionID = ""
+	}
+
+	pane := Pane{
+		KittyPaneID: located.Pane.ID,
+		KittyPID:    located.KittyPID,
+		TUIPID:      tui.PID,
+		Directory:   cleanDirectory(directory),
+		SessionID:   sessionID,
+		Started:     started,
+		Shell:       loginZshCommand(located.Pane.Cmdline),
+		Report:      report,
+	}
+	if view, known := seen[located.Key()]; known {
+		pane.Shown = &view.Shown
+		pane.Hidden = view.Hidden
+	}
+	return pane, true, warnings
+}
+
+func current(views *kitty.Tracker, target Pane) (Pane, string) {
+	panes, seen, err := views.View()
+	for _, located := range panes {
+		if located.Key() != target.key() {
+			continue
+		}
+		pane, found, _ := inspect(located, seen)
+		if !found || pane.TUIPID != target.TUIPID {
+			return Pane{}, "foreground changed"
+		}
+		return pane, ""
+	}
+	if err != nil {
+		return Pane{}, "foreground unknown"
+	}
+	return Pane{}, "pane closed"
 }
 
 func tuiProcess(pane kitty.Pane) (kitty.Process, bool) {
@@ -159,50 +199,82 @@ func validSessionID(id string) bool {
 	return true
 }
 
-func shownSession(pid int) (string, bool, error) {
+func readReport(pid int) (*Report, error) {
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	if runtimeDir == "" {
-		return "", false, fmt.Errorf("XDG_RUNTIME_DIR is unset")
+		return nil, fmt.Errorf("XDG_RUNTIME_DIR is unset")
 	}
 	path := filepath.Join(runtimeDir, "opencode", "tui", strconv.Itoa(pid)+".json")
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return "", false, nil
+		return nil, nil
 	}
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
-	var shown struct {
-		Start   string  `json:"start"`
-		Session *string `json:"session"`
+	var report Report
+	if err := json.Unmarshal(data, &report); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
-	if err := json.Unmarshal(data, &shown); err != nil {
-		return "", false, fmt.Errorf("parse %s: %w", path, err)
-	}
-	start, err := processStart(pid)
+	fields, err := processStat(pid)
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
-	if shown.Start != start {
-		return "", false, nil
+	if report.Start != fields[19] {
+		return nil, nil
 	}
-	if shown.Session == nil {
-		return "", true, nil
-	}
-	return *shown.Session, true, nil
+	return &report, nil
 }
 
-func processStart(pid int) (string, error) {
+func processStarted(pid int) (time.Time, error) {
+	fields, err := processStat(pid)
+	if err != nil {
+		return time.Time{}, err
+	}
+	ticks, err := strconv.ParseInt(fields[19], 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parse /proc/%d/stat start: %w", pid, err)
+	}
+	boot, err := bootTime()
+	if err != nil {
+		return time.Time{}, err
+	}
+	return boot.Add(time.Duration(ticks) * (time.Second / clockTicks)), nil
+}
+
+const clockTicks = 100
+
+func bootTime() (time.Time, error) {
+	data, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return time.Time{}, err
+	}
+	for line := range strings.Lines(string(data)) {
+		if value, ok := strings.CutPrefix(line, "btime "); ok {
+			seconds, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("parse /proc/stat btime: %w", err)
+			}
+			return time.Unix(seconds, 0), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("/proc/stat has no btime")
+}
+
+func processStat(pid int) ([]string, error) {
 	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	end := strings.LastIndexByte(string(data), ')')
-	fields := strings.Fields(string(data)[end+1:])
-	if end < 0 || len(fields) < 20 {
-		return "", fmt.Errorf("unexpected /proc/%d/stat", pid)
+	if end < 0 {
+		return nil, fmt.Errorf("unexpected /proc/%d/stat", pid)
 	}
-	return fields[19], nil
+	fields := strings.Fields(string(data)[end+1:])
+	if len(fields) < 20 {
+		return nil, fmt.Errorf("unexpected /proc/%d/stat", pid)
+	}
+	return fields, nil
 }
 
 func persistSnapshot(snapshot Snapshot) error {

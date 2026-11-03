@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { hook, locate, type Prompt } from "./prompt.ts";
+import { reveal, shown, watch } from "./view.ts";
 
 type Context = Plugin.Context;
 type Hold = { readonly renderer?: CliRenderer };
@@ -18,6 +19,7 @@ const [clock, setClock] = createSignal(0);
 
 let moving = true;
 let timer: ReturnType<typeof setInterval> | undefined;
+let unwatch: (() => void) | undefined;
 
 export const motion = () => moving;
 export { clock };
@@ -60,20 +62,32 @@ export function animate(renderer?: CliRenderer) {
   const begin = async () => {
     if (!(await refresh()) || stopped) return;
     holds.add(hold);
-    timer ??= setInterval(beat, tick);
+    renderer?.on("focus", reveal);
+    unwatch ??= watch(run);
+    run();
   };
   void begin();
   renderer?.requestRender();
   return () => {
     stopped = true;
-    holds.delete(hold);
+    if (holds.delete(hold)) renderer?.off("focus", reveal);
     if (holds.size === 0) {
-      clearInterval(timer);
-      timer = undefined;
+      unwatch?.();
+      unwatch = undefined;
+      run();
       setClock(0);
     }
     renderer?.requestRender();
   };
+}
+
+function run() {
+  if (holds.size > 0 && shown()) {
+    timer ??= setInterval(beat, tick);
+    return;
+  }
+  clearInterval(timer);
+  timer = undefined;
 }
 
 function beat() {

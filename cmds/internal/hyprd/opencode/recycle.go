@@ -17,27 +17,28 @@ const (
 	shellWait = 5 * time.Second
 )
 
-func recycle(snapshot Snapshot, skip map[paneKey]string, force bool) []string {
-	closed, details := closeTUIs(snapshot, skip, force)
+func recycle(views *kitty.Tracker, snapshot Snapshot, minAge time.Duration) []string {
+	closed, details := closeTUIs(views, snapshot, nil, false, minAge)
 	return append(details, relaunch(closed)...)
 }
 
-func closeTUIs(snapshot Snapshot, skip map[paneKey]string, force bool) ([]Pane, []string) {
+func closeTUIs(views *kitty.Tracker, snapshot Snapshot, skip map[kitty.PaneKey]string, force bool, minAge time.Duration) ([]Pane, []string) {
 	var closed []Pane
 	var details []string
 	for _, pane := range snapshot.Panes {
-		key := paneKey{KittyPID: pane.KittyPID, PaneID: pane.KittyPaneID}
-		if reason := skip[key]; reason != "" {
+		if reason := skip[pane.key()]; reason != "" {
 			details = append(details, pane.label()+": skipped ("+reason+")")
 			continue
 		}
 		if !force {
-			if reason := currentPaneGate(pane); reason != "" {
+			live, reason := recheck(views, pane, minAge)
+			if reason != "" {
 				details = append(details, pane.label()+": skipped ("+reason+")")
 				continue
 			}
+			pane = live
 		}
-		skipped, err := closeTUI(pane)
+		skipped, err := closeTUI(views, pane, !force)
 		switch {
 		case err != nil:
 			details = append(details, pane.label()+": failed ("+err.Error()+")")
@@ -48,6 +49,17 @@ func closeTUIs(snapshot Snapshot, skip map[paneKey]string, force bool) ([]Pane, 
 		}
 	}
 	return closed, details
+}
+
+func recheck(views *kitty.Tracker, pane Pane, minAge time.Duration) (Pane, string) {
+	if reason := pane.gate(time.Now(), minAge); reason != "" {
+		return Pane{}, reason
+	}
+	live, reason := current(views, pane)
+	if reason == "" {
+		reason = live.gate(time.Now(), minAge)
+	}
+	return live, reason
 }
 
 func relaunch(panes []Pane) []string {
@@ -66,49 +78,41 @@ func (p Pane) label() string {
 	return fmt.Sprintf("kitty %d pane %d", p.KittyPID, p.KittyPaneID)
 }
 
-func currentPaneGate(target Pane) string {
-	if target.PromptDirty != nil && *target.PromptDirty {
-		return "draft present"
-	}
-	panes, inventoryErr := kitty.Inventory()
-	for _, pane := range panes {
-		if pane.KittyPID == target.KittyPID && pane.Pane.ID == target.KittyPaneID {
-			if pane.Focused {
-				return "focused pane may contain a draft"
-			}
-			return ""
-		}
-	}
-	if inventoryErr != nil {
-		return "foreground unknown"
-	}
-	return ""
-}
-
-func closeTUI(snapshot Pane) (string, error) {
+func closeTUI(views *kitty.Tracker, snapshot Pane, gated bool) (string, error) {
 	client := kitty.NewClient(snapshot.KittyPID)
-	pane, found, err := client.Pane(snapshot.KittyPaneID)
+	located, found, err := client.Locate(snapshot.KittyPaneID)
 	if err != nil {
 		return "", err
 	}
 	if !found {
 		return "pane closed", nil
 	}
+	pane := located.Pane
+	if !loginZshCommand(pane.Cmdline) {
+		return "no login shell to relaunch into", nil
+	}
 
 	if !loginZshReady(pane) {
 		if !tuiIsForeground(snapshot, pane) {
 			return "foreground changed", nil
 		}
+		// Recheck view before each signal; the snapshot can outlive a tab switch.
+		if reason := hiddenNow(views, located, gated); reason != "" {
+			return reason, nil
+		}
 		if err := signal(snapshot.TUIPID, syscall.SIGTERM); err != nil {
 			return "", fmt.Errorf("SIGTERM TUI %d: %w", snapshot.TUIPID, err)
 		}
 		if !waitTUIExit(client, snapshot, termWait) {
-			current, found, err := client.Pane(snapshot.KittyPaneID)
+			current, found, err := client.Locate(snapshot.KittyPaneID)
 			if err != nil {
 				return "", fmt.Errorf("inspect TUI before SIGKILL: %w", err)
 			}
-			if !found || !tuiIsForeground(snapshot, current) {
+			if !found || !tuiIsForeground(snapshot, current.Pane) {
 				return "foreground changed before SIGKILL", nil
+			}
+			if reason := hiddenNow(views, current, gated); reason != "" {
+				return reason + " before SIGKILL", nil
 			}
 			if err := signal(snapshot.TUIPID, syscall.SIGKILL); err != nil {
 				return "", fmt.Errorf("SIGKILL TUI %d: %w", snapshot.TUIPID, err)
@@ -120,6 +124,20 @@ func closeTUI(snapshot Pane) (string, error) {
 		return "login zsh did not become ready", nil
 	}
 	return "", nil
+}
+
+func hiddenNow(views *kitty.Tracker, pane kitty.LocatedPane, gated bool) string {
+	if !gated {
+		return ""
+	}
+	shown, known := views.Shown(pane)
+	switch {
+	case !known:
+		return "view unknown"
+	case shown:
+		return "in view"
+	}
+	return ""
 }
 
 func launchTUI(snapshot Pane) (string, error) {
@@ -134,10 +152,10 @@ func launchTUI(snapshot Pane) (string, error) {
 	if !loginZshReady(pane) {
 		return "skipped (foreground changed before relaunch)", nil
 	}
-	command := "c\n"
+	command := " c\n"
 	result := "recycled (home)"
 	if validSessionID(snapshot.SessionID) {
-		command = "c --session " + snapshot.SessionID + "\n"
+		command = " c --session " + snapshot.SessionID + "\n"
 		result = "recycled " + snapshot.SessionID
 	}
 	if err := client.SendText(snapshot.KittyPaneID, command); err != nil {
@@ -220,31 +238,18 @@ func waitTUIExit(client *kitty.Client, snapshot Pane, timeout time.Duration) boo
 	}
 }
 
-func paneGates(snapshot Snapshot) (block, skip map[paneKey]string) {
-	block = make(map[paneKey]string)
-	skip = make(map[paneKey]string)
-	panes, inventoryErr := kitty.Inventory()
-	live := make(map[paneKey]kitty.LocatedPane, len(panes))
-	for _, pane := range panes {
-		live[paneKey{KittyPID: pane.KittyPID, PaneID: pane.Pane.ID}] = pane
-	}
-	for _, target := range snapshot.Panes {
-		key := paneKey{KittyPID: target.KittyPID, PaneID: target.KittyPaneID}
-		pane, found := live[key]
-		if !found {
-			if inventoryErr != nil {
-				block[key] = "foreground unknown"
-				continue
-			}
-			skip[key] = "pane closed"
-			continue
-		}
-		if target.PromptDirty != nil && *target.PromptDirty {
-			block[key] = "draft present"
-			continue
-		}
-		if pane.Focused {
-			block[key] = "focused pane may contain a draft"
+func paneGates(snapshot Snapshot) (block, skip map[kitty.PaneKey]string) {
+	block = make(map[kitty.PaneKey]string)
+	skip = make(map[kitty.PaneKey]string)
+	now := time.Now()
+	for _, pane := range snapshot.Panes {
+		reason := pane.gate(now, 0)
+		switch {
+		case reason == "":
+		case !pane.Shell:
+			skip[pane.key()] = reason
+		default:
+			block[pane.key()] = reason
 		}
 	}
 	return block, skip

@@ -22,6 +22,12 @@ export function locate(host: Renderable): Prompt | undefined {
   return editor && { frame, cap, editor, row };
 }
 
+export function prompts(root: Renderable): Editor[] {
+  const editor = framed(root) ? root.getChildren()[0]?.getChildren().find(editable) : undefined;
+  if (editor) return [editor];
+  return root.getChildren().flatMap(prompts);
+}
+
 export function hook(node: Renderable, draw: (buffer: OptimizedBuffer) => void) {
   const previous = node.renderAfter;
   const after: Draw = function (buffer, deltaTime) {

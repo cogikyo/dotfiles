@@ -11,11 +11,12 @@ import (
 
 // Client talks to one Kitty instance through its per-PID Unix remote-control socket.
 type Client struct {
+	pid        int
 	socketPath string
 }
 
 func NewClient(pid int) *Client {
-	return &Client{socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
+	return &Client{pid: pid, socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
 }
 
 type OSWindow struct {
@@ -99,20 +100,21 @@ func (k *Client) SendText(id int, text string) error {
 
 // Pane returns the current state of one pane.
 func (k *Client) Pane(id int) (Pane, bool, error) {
+	located, found, err := k.Locate(id)
+	return located.Pane, found, err
+}
+
+func (k *Client) Locate(id int) (LocatedPane, bool, error) {
 	windows, err := k.FullState()
 	if err != nil {
-		return Pane{}, false, err
+		return LocatedPane{}, false, err
 	}
-	for _, window := range windows {
-		for _, tab := range window.Tabs {
-			for _, pane := range tab.Windows {
-				if pane.ID == id {
-					return pane, true, nil
-				}
-			}
+	for _, located := range locate(k.pid, windows) {
+		if located.Pane.ID == id {
+			return located, true, nil
 		}
 	}
-	return Pane{}, false, nil
+	return LocatedPane{}, false, nil
 }
 
 // ForegroundProcesses inspects one pane's foreground process group.

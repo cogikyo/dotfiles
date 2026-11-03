@@ -138,6 +138,27 @@ hyprd tabs refresh <name> <pid>  # close and recreate the selected tab
 **Tab refresh closes the tab and its running processes before creating the replacement.**
 Save work before running it.
 
+### OpenCode
+
+**`now` bypasses input-safety gates and can discard unsaved input or interrupt running work.**
+`queue` and `now` stop the shared OpenCode service; relaunched TUIs start it again.
+
+```bash
+hyprd opencode queue          # wait for three quiet polls, refresh, notify on completion
+hyprd opencode now            # bypass gates, refresh immediately, watch progress
+hyprd opencode recycle        # recycle eligible TUIs without stopping the service
+hyprd opencode status [job]   # show active or named job as JSON
+hyprd opencode cancel [job]   # cancel a waiting or queued job
+```
+
+Every 10 minutes, hyprd silently attempts to recycle OpenCode TUIs at least 4 hours old, unless a refresh job or hyprd restart is in progress.
+It closes each eligible TUI and sends ` c --session <id>` to its pane's login zsh, or ` c` for Home when no valid session is selected.
+Manual `recycle` uses the same gates without the age limit; `hyprd opencode status` shows auto results and per-pane skip reasons in `last_auto`.
+
+Recycling skips panes in view or out of view for less than 60 seconds, panes with prompt text, displayed unresolved permissions or forms, previously displayed unresolved forms, multiple OpenCode tabs, or no login zsh.
+Unknown gate facts and missing or stale TUI reports block recycling.
+The statusline's working animations pause while the pane is out of view.
+
 ### Lock
 
 ```bash
@@ -288,12 +309,17 @@ It prompts for a missing VPN password or IPsec PSK, stores and verifies the secr
 
 ### Query and subscribe
 
-Used by eww widgets for real-time state.
+Used by eww widgets and OpenCode for real-time state.
 
 ```bash
 hyprd query [topic]      # get state as JSON (workspace|hidden|split|display|three-body|all)
-hyprd subscribe [...]    # stream events (workspace split)
+hyprd subscribe [...]    # stream events (workspace split view)
+hyprd view               # recompute which Kitty panes are in view
 ```
+
+`view` reports panes in active Kitty tabs on visible workspaces, regardless of focus.
+Panes whose view cannot be mapped are omitted.
+Kitty's tab bar sends `view` on tab switches because Hyprland emits no event for them.
 
 `hyprd query display` returns the widest non-mirrored monitor's `monitor` name, `description`, and `ppi`, the resolved `profile` with its eww `layout` and `font_size`, and `hidden` (share mode or full lock is active).
 Copy `description` into a profile's `match` to pin a screen to it.

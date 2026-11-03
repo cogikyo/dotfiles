@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"dotfiles/cmds/internal/hyprd/kitty"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 	ModeRecycle Mode = "recycle"
 
 	queueCeiling  = 30 * time.Minute
+	autoInterval  = 10 * time.Minute
 	quietPoll     = 2 * time.Second
 	healthCeiling = 30 * time.Second
 	maxDetails    = 80
@@ -30,6 +32,7 @@ type Mode string
 type Status struct {
 	ID        string    `json:"id,omitempty"`
 	Mode      Mode      `json:"mode,omitempty"`
+	Auto      bool      `json:"auto,omitempty"`
 	State     string    `json:"state"`
 	Phase     string    `json:"phase,omitempty"`
 	Message   string    `json:"message,omitempty"`
@@ -45,6 +48,11 @@ func (s Status) Terminal() bool {
 	default:
 		return false
 	}
+}
+
+type overview struct {
+	Status
+	LastAuto *Status `json:"last_auto,omitempty"`
 }
 
 type job struct {
@@ -67,20 +75,40 @@ type Controller struct {
 	pending *job
 	recent  map[string]Status
 	order   []string
+	auto    *Status
 	next    atomic.Uint64
 	api     *apiClient
+	views   *kitty.Tracker
+	closed  bool
 	notify  func(title, body string)
 }
 
-func New(notify func(title, body string)) *Controller {
+func New(views *kitty.Tracker, notify func(title, body string)) *Controller {
 	controller := &Controller{
 		ready:  make(chan struct{}, 1),
 		recent: make(map[string]Status),
 		api:    newAPIClient(),
+		views:  views,
 		notify: notify,
 	}
 	go controller.worker()
+	go controller.ticker()
 	return controller
+}
+
+func (c *Controller) ticker() {
+	for range time.Tick(autoInterval) {
+		c.tick()
+	}
+}
+
+func (c *Controller) tick() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed || c.current != nil || c.pending != nil {
+		return
+	}
+	c.queueLocked(ModeRecycle, true)
 }
 
 func (c *Controller) Handle(args string) string {
@@ -120,6 +148,9 @@ func (c *Controller) Handle(args string) string {
 func (c *Controller) enqueue(mode Mode) string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return "error: hyprd is restarting"
+	}
 
 	if mode == ModeNow {
 		if existing := c.fullJobLocked(); existing != nil {
@@ -150,17 +181,28 @@ func (c *Controller) enqueue(mode Mode) string {
 			return "already " + existing.status.ID
 		}
 		if existing := c.recycleJobLocked(); existing != nil {
-			return "already " + existing.status.ID
+			switch {
+			case !existing.status.Auto:
+				return "already " + existing.status.ID
+			case existing == c.pending:
+				existing.status.Auto = false
+				existing.status.UpdatedAt = time.Now()
+				return "job " + existing.status.ID
+			}
 		}
 	}
 
 	if c.pending != nil {
 		return "error: refresh queue is full"
 	}
+	return c.queueLocked(mode, false)
+}
+
+func (c *Controller) queueLocked(mode Mode, auto bool) string {
 	now := time.Now()
 	id := "oc" + strconv.FormatUint(c.next.Add(1), 36)
 	c.pending = &job{
-		status: Status{ID: id, Mode: mode, State: "queued", Phase: "queued", Message: "waiting for worker", CreatedAt: now, UpdatedAt: now},
+		status: Status{ID: id, Mode: mode, Auto: auto, State: "queued", Phase: "queued", Message: "waiting for worker", CreatedAt: now, UpdatedAt: now},
 		notify: mode == ModeQueue,
 		wake:   make(chan struct{}, 1),
 	}
@@ -187,7 +229,11 @@ func (c *Controller) status(id string) string {
 	default:
 		status = Status{State: "idle"}
 	}
-	data, err := json.Marshal(status)
+	var view any = status
+	if id == "" {
+		view = overview{Status: status, LastAuto: c.auto}
+	}
+	data, err := json.Marshal(view)
 	if err != nil {
 		return "error: encode opencode status: " + err.Error()
 	}
@@ -256,6 +302,10 @@ func (c *Controller) take() *job {
 
 func (c *Controller) run(job *job) result {
 	mode := c.mode(job)
+	minAge := time.Duration(0)
+	if c.isAuto(job) {
+		minAge = autoAge
+	}
 	if mode == ModeRecycle {
 		c.update(job, "running", "health", "checking OpenCode service health")
 		if err := c.api.health(context.Background()); err != nil {
@@ -264,20 +314,18 @@ func (c *Controller) run(job *job) result {
 	}
 
 	c.update(job, "running", "snapshot", "capturing OpenCode TUI panes")
-	snapshot, details, err := takeSnapshot(job.status.ID, mode)
+	snapshot, details, err := takeSnapshot(c.views, job.status.ID, mode)
 	if err != nil {
 		return result{state: "error", message: "snapshot failed: " + err.Error()}
 	}
 
 	if mode == ModeRecycle {
-		block, skip := paneGates(snapshot)
-		maps.Copy(skip, block)
 		c.update(job, "running", "recycle", fmt.Sprintf("recycling %d TUI panes", len(snapshot.Panes)))
-		details = append(details, recycle(snapshot, skip, false)...)
+		details = append(details, recycle(c.views, snapshot, minAge)...)
 		return result{state: "done", message: recycleSummary(snapshot), details: details}
 	}
 
-	skip := make(map[paneKey]string)
+	skip := make(map[kitty.PaneKey]string)
 	if c.mode(job) == ModeQueue {
 		var gateResult result
 		snapshot, skip, gateResult = c.waitForQuiet(job, snapshot)
@@ -289,7 +337,7 @@ func (c *Controller) run(job *job) result {
 	}
 
 	c.update(job, "running", "snapshot", "recapturing OpenCode TUI panes")
-	fresh, snapDetails, err := takeSnapshot(job.status.ID, c.mode(job))
+	fresh, snapDetails, err := takeSnapshot(c.views, job.status.ID, c.mode(job))
 	if err != nil {
 		return result{state: "error", message: "snapshot failed: " + err.Error(), details: details}
 	}
@@ -301,7 +349,7 @@ func (c *Controller) run(job *job) result {
 	}
 	active, activeErr := c.api.active(context.Background())
 	c.update(job, "running", "close", fmt.Sprintf("closing %d TUI panes", len(snapshot.Panes)))
-	closed, closeDetails := closeTUIs(snapshot, skip, c.mode(job) == ModeNow)
+	closed, closeDetails := closeTUIs(c.views, snapshot, skip, c.mode(job) == ModeNow, 0)
 	details = append(details, closeDetails...)
 
 	c.update(job, "running", "stop", "stopping the OpenCode service")
@@ -330,7 +378,7 @@ func (c *Controller) run(job *job) result {
 	return result{state: "done", message: message + "; " + recycleSummary(snapshot), details: details}
 }
 
-func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[paneKey]string, result) {
+func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[kitty.PaneKey]string, result) {
 	deadline := time.Now().Add(queueCeiling)
 	quiet := 0
 	lastReason := "quiet window was incomplete"
@@ -339,7 +387,7 @@ func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[pa
 			return snapshot, nil, result{state: "canceled", message: "queued refresh canceled"}
 		}
 		if c.mode(job) == ModeNow {
-			return snapshot, map[paneKey]string{}, result{}
+			return snapshot, map[kitty.PaneKey]string{}, result{}
 		}
 		if !time.Now().Before(deadline) {
 			if quiet < 3 {
@@ -380,7 +428,7 @@ func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[pa
 			message = "busy: " + reason
 		}
 		if len(block) > 0 {
-			message += fmt.Sprintf("; %d focused or unknown panes deferred", len(block))
+			message += fmt.Sprintf("; %d gated panes deferred", len(block))
 		}
 		c.update(job, "waiting", "gate", message)
 
@@ -388,20 +436,12 @@ func (c *Controller) waitForQuiet(job *job, snapshot Snapshot) (Snapshot, map[pa
 			return snapshot, skip, result{}
 		}
 
-		wait := min(quietPoll, time.Until(deadline))
-		timer := time.NewTimer(wait)
 		select {
-		case <-timer.C:
+		case <-time.After(min(quietPoll, time.Until(deadline))):
 		case <-job.wake:
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
-				}
-			}
 		}
 
-		fresh, _, snapErr := takeSnapshot(job.status.ID, ModeQueue)
+		fresh, _, snapErr := takeSnapshot(c.views, job.status.ID, ModeQueue)
 		if snapErr != nil {
 			continue
 		}
@@ -436,6 +476,32 @@ func (c *Controller) update(job *job, state, phase, message string) {
 func (c *Controller) RebuildBlocked() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.blockedLocked()
+}
+
+// BeginRestart reserves an idle controller against manual and auto jobs.
+// On success, the rebuild caller owns the reservation until exec or CancelRestart.
+func (c *Controller) BeginRestart() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if msg := c.blockedLocked(); msg != "" {
+		return msg
+	}
+	c.closed = true
+	return ""
+}
+
+// CancelRestart releases the caller's successful BeginRestart after rebuild fails.
+func (c *Controller) CancelRestart() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.closed = false
+}
+
+func (c *Controller) blockedLocked() string {
+	if c.closed {
+		return "hyprd restart already in progress"
+	}
 	job := c.current
 	if job == nil {
 		job = c.pending
@@ -463,6 +529,12 @@ func (c *Controller) mode(job *job) Mode {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return job.status.Mode
+}
+
+func (c *Controller) isAuto(job *job) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return job.status.Auto
 }
 
 func (c *Controller) canceled(job *job) bool {
@@ -504,6 +576,9 @@ func (c *Controller) dropPendingRecycleLocked(message string) {
 }
 
 func (c *Controller) rememberLocked(status Status) {
+	if status.Auto {
+		c.auto = &status
+	}
 	c.recent[status.ID] = status
 	c.order = append(c.order, status.ID)
 	for len(c.order) > 16 {

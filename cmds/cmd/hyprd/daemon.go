@@ -50,6 +50,7 @@ type Daemon struct {
 	pickerCtl *session.Picker
 	accentCtl *Accent
 	opencode  *opencodepkg.Controller
+	view      *View
 	health    *health.Monitor
 	restartCh chan struct{}
 }
@@ -78,7 +79,8 @@ func New() (*Daemon, error) {
 	if err := d.lockCtl.Adopt(); err != nil {
 		return nil, fmt.Errorf("adopt lock: %w", err)
 	}
-	d.opencode = opencodepkg.New(func(title, body string) {
+	views := kitty.NewTracker(hyprClient)
+	d.opencode = opencodepkg.New(views, func(title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 		if err := notifier.Handle(notifypkg.NotifyRequest{
 			Source:  "send",
@@ -96,6 +98,7 @@ func New() (*Daemon, error) {
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
+	d.view = NewView(views, d.server.Subs)
 
 	return d, nil
 }
@@ -113,7 +116,7 @@ func (d *Daemon) Run() error {
 	}
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
-	events := NewEventLoop(d.hypr, d.state, d.shareCtl, d.server.Subs, d.accentCtl, d.server.Done())
+	events := NewEventLoop(d.hypr, d.state, d.shareCtl, d.server.Subs, d.accentCtl, d.view, d.server.Done())
 	go func() {
 		if err := events.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
@@ -121,6 +124,8 @@ func (d *Daemon) Run() error {
 	}()
 
 	go d.watchConfig(d.server.Done())
+	go d.view.Run(d.server.Done())
+	d.view.Mark()
 	go session.WatchPower(d.server.Done(), d.state, d.lockCtl)
 	stopHealth := d.startHealth()
 
@@ -151,6 +156,10 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 
 	if sub.WantsTopic("split") {
 		sub.SendEvent("split", wm.NewSplit(d.hypr, d.state).Preset())
+	}
+
+	if sub.WantsTopic("view") {
+		sub.SendEvent("view", d.view.Payload())
 	}
 }
 
@@ -371,6 +380,9 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "opencode":
 		return d.opencode.Handle(arg)
+	case "view":
+		d.view.Mark()
+		return "ok"
 	case "health":
 		return d.handleHealth(arg)
 	case "rebuild":
@@ -539,30 +551,33 @@ func (d *Daemon) handleRebuild() string {
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
 	}
-	if !d.lockCtl.BeginRestart() {
-		os.Remove(tmpBin)
-		return "error: full lock active; unlock before rebuilding"
-	}
-	if msg := d.opencode.RebuildBlocked(); msg != "" {
-		d.lockCtl.CancelRestart()
+	if msg := d.opencode.BeginRestart(); msg != "" {
 		os.Remove(tmpBin)
 		return "error: " + msg
+	}
+	if !d.lockCtl.BeginRestart() {
+		d.opencode.CancelRestart()
+		os.Remove(tmpBin)
+		return "error: full lock active; unlock before rebuilding"
 	}
 
 	stateData, err := d.state.JSON()
 	if err != nil {
 		d.lockCtl.CancelRestart()
+		d.opencode.CancelRestart()
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: state dump: %v", err)
 	}
 	if err := os.WriteFile(stateFile, stateData, 0600); err != nil {
 		d.lockCtl.CancelRestart()
+		d.opencode.CancelRestart()
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: state write: %v", err)
 	}
 
 	if err := os.Rename(tmpBin, binPath); err != nil {
 		d.lockCtl.CancelRestart()
+		d.opencode.CancelRestart()
 		os.Remove(tmpBin)
 		os.Remove(stateFile)
 		return fmt.Sprintf("error: install: %v", err)
