@@ -122,7 +122,8 @@ func links(r paths.Root) ([]link, error) {
 	}
 	var out []link
 	for _, e := range entries {
-		if e.Name() == "firefox" || e.Name() == "obs-studio" {
+		switch e.Name() {
+		case "android", "firefox", "obs-studio":
 			continue
 		}
 		out = append(out, link{r.Config(e.Name()), filepath.Join(r.Home, ".config", e.Name())})
@@ -132,6 +133,7 @@ func links(r paths.Root) ([]link, error) {
 		link{r.Config(profile), filepath.Join(r.Home, ".config", profile)},
 		link{r.Config("zsh", "zshrc"), filepath.Join(r.Home, ".zshrc")},
 		link{r.Config("zsh", "zshenv"), filepath.Join(r.Home, ".zshenv")},
+		link{r.Config("android", "androidrc"), filepath.Join(r.Home, ".androidrc")},
 		link{r.Share("fonts"), filepath.Join(r.Home, ".local", "share", "fonts")},
 		link{r.Share("themes"), filepath.Join(r.Home, ".local", "share", "themes")},
 	)

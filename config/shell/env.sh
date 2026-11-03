@@ -4,7 +4,11 @@
 export PATH="$HOME/.config/opencode/clipboard:$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
 case $OSTYPE in
 darwin*) eval "$(/opt/homebrew/bin/brew shellenv)" ;;
-*) export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ;;
+*)
+	export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+	export ANDROID_HOME="$HOME/.local/share/android-sdk"
+	export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+	;;
 esac
 export GOPATH="$HOME/.go"
 export GOPRIVATE="git.linecode.dev/*"

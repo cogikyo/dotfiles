@@ -248,6 +248,7 @@ Independent stages can still run.
   - **Skip online steps** leaves `network` as `FIX` with `online steps skipped`, rather than a failure.
 - For blocked phase-1 stages, summary `WAIT` rows list every unmet prerequisite.
 - Home linking backs up conflicting files but refuses to replace real directories.
+  - `home` links `config/android/androidrc` to `~/.androidrc` to disable Android CLI metrics and crash reports.
 - Secrets ask for the YubiKey's PIV PIN or the age recovery phrase.
 - Enter the SSH key's passphrase when prompted.
   - Register rejected keys with GitHub; review changed host-key fingerprints manually.
@@ -285,6 +286,8 @@ Missing AUR and local base packages need manual installation.
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
   - Its `extra-docker` items enable `docker.socket` and add you to the `docker` group, which takes effect at your next login.
   - Its `extra-bun` item runs `bun install --frozen-lockfile --ignore-scripts` when a locked OpenCode dependency for this platform is missing or has the wrong version.
+  - Its last item, `extra-android`, installs platform-tools, platform 37.0, build-tools 36.0.0, and the emulator in `$ANDROID_HOME` (`~/.local/share/android-sdk`).
+    It creates the `medium_phone` AVD if missing; the CLI selects its API 36 Play Store image.
   - Output: `~/.local/state/dctl/extra.log`; failures show up to eight recent lines with progress output and terminal codes removed.
   - An interrupted install shows `WARN` with `interrupted`, without a log tail.
   - Setup waits before later root work, before `certs`, and at the end.
@@ -452,6 +455,7 @@ Named steps omit that prompt and retain this order.
 8. `bridge`: repair the checkout and service as in `setup bridge`.
 9. `go`: update eligible module-release tools.
 10. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
+11. `android`: run `android sdk update` in `$ANDROID_HOME`; skip if android-cli is absent.
 
 - `--all` or global `--yes` skips step/recipe prompts, accepts the setup plan, and passes `--noconfirm`.
   - It never installs or removes package-list drift.

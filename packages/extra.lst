@@ -19,6 +19,7 @@ gopls
 govulncheck
 imagemagick
 inkscape
+jdk21-openjdk
 lazydocker
 libreoffice-still
 linux-headers
@@ -47,6 +48,7 @@ zathura
 zathura-pdf-mupdf
 
 # aur
+android-cli
 brave-bin
 claude-code
 clickhouse-client-bin

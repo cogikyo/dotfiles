@@ -16,6 +16,7 @@ func sandbox(t *testing.T) paths.Root {
 	t.Helper()
 	r := paths.Root{Dotfiles: t.TempDir(), Home: t.TempDir()}
 	for _, rel := range []string{
+		"config/android/androidrc",
 		"config/kitty/kitty.conf",
 		"config/firefox/user.js",
 		"config/obs-studio/basic/profiles/Costello/basic.ini",
@@ -69,10 +70,12 @@ func TestLinks(t *testing.T) {
 	if err := c.Check(t.Context()); err != nil {
 		t.Fatalf("after fix: %v", err)
 	}
-	if _, err := os.Lstat(filepath.Join(r.Home, ".config", "firefox")); err == nil {
-		t.Error("firefox linked wholesale")
+	for _, dir := range []string{"android", "firefox"} {
+		if _, err := os.Lstat(filepath.Join(r.Home, ".config", dir)); err == nil {
+			t.Errorf("%s linked wholesale", dir)
+		}
 	}
-	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv", ".local/share/themes"} {
+	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv", ".androidrc", ".local/share/themes"} {
 		if st, err := os.Lstat(filepath.Join(r.Home, dst)); err != nil || st.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("%s not a symlink: %v", dst, err)
 		}

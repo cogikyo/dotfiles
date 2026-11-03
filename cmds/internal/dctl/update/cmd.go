@@ -325,3 +325,18 @@ func rust(ctx context.Context, u *ui.UI, run execx.Runner) error {
 	}
 	return errors.Join(errs...)
 }
+
+func android(ctx context.Context, u *ui.UI, run execx.Runner) error {
+	sdk, err := packages.AndroidSDK()
+	if errors.Is(err, exec.ErrNotFound) {
+		u.Info("skipped: android-cli is not installed")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return u.Spin(ctx, "android sdk update", func(ctx context.Context) error {
+		_, err := packages.Android(ctx, run, sdk, "sdk", "update")
+		return err
+	})
+}

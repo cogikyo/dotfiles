@@ -111,6 +111,13 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 				return rust(ctx, u, run)
 			},
 		},
+		{
+			Name: "android",
+			Plan: "Android SDK packages in $ANDROID_HOME",
+			Run: func(ctx context.Context) error {
+				return android(ctx, u, run)
+			},
+		},
 	}
 }
 

@@ -91,6 +91,7 @@ func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 			Check: func(context.Context) error { return bunLocked(opencode) },
 			Fix:   func(ctx context.Context) error { return Bun(ctx, run, opencode) },
 		},
+		androidItem(run),
 	}}
 }
 
