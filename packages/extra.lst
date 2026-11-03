@@ -53,6 +53,7 @@ clickhouse-client-bin
 grok-bot-desktop
 pandoc-bin
 slack-desktop
+stripe-cli-bin
 tailwindcss-bin
 vial-appimage
 zoom
