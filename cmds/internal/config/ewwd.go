@@ -53,6 +53,8 @@ type AudioConfig struct {
 	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied by reset_volume
 	NameMappings        map[string]string `yaml:"name_mappings"`         // node.nick or node.name -> display alias
 	FallbackSink        string            `yaml:"fallback_sink"`
+	HeadphonesSource    string            `yaml:"headphones_source"`
+	FallbackSource      string            `yaml:"fallback_source"`
 }
 
 // DateConfig provides reference dates for date-based widgets (age, countdowns).

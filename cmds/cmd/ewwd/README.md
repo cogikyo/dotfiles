@@ -74,8 +74,9 @@ ewwd action weather refresh               # refetch unless fetched <10m ago
 
 The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
 Cycling skips disconnected ports and output monitors, and keeps each device's volume and mute state.
-When the tracked headphones' wear state changes, the default sink follows: putting them on selects their Bluetooth sink once it appears, and taking them off selects `audio.fallback_sink`.
-Unknown wear state and disconnects leave the default sink alone, and cycling the sink by hand cancels a pending switch to the headphones.
+When the tracked headphones' wear state changes, the default sink and source follow: putting them on selects their Bluetooth sink once it appears and `audio.headphones_source` as the source.
+Taking them off or disconnecting while worn selects `audio.fallback_sink` and `audio.fallback_source`.
+Unknown wear state and other disconnects leave the defaults alone, and cycling the sink by hand cancels a pending switch to the headphones.
 In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.
 
 Brightness changes made outside these actions, such as the brightness keys, open the `backlight-osd` window for 1.5 s while any widgets are open.

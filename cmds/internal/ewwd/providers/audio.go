@@ -47,8 +47,9 @@ type pendingAudioAction struct {
 }
 
 type wearChange struct {
-	address string
-	state   string
+	address      string
+	state        string
+	sourcePinned bool
 }
 
 type audioNode struct {
@@ -75,6 +76,7 @@ type Audio struct {
 	notify   func(data any)
 	last     AudioState
 	hasLast  bool
+	source   audioDevice
 }
 
 func NewAudio(state StateSetter, cfg config.AudioConfig) *Audio {
@@ -109,6 +111,12 @@ func (a *Audio) latestWear() (wearChange, uint64) {
 	return a.wear, a.wearSeq
 }
 
+func (a *Audio) pinSource() {
+	a.wearMu.Lock()
+	defer a.wearMu.Unlock()
+	a.wear.sourcePinned = true
+}
+
 func (a *Audio) Name() string { return "audio" }
 
 func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
@@ -135,7 +143,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 		if headphones == "" {
 			return
 		}
-		found, err := a.setDefaultSink(ctx, func(n audioNode) bool { return strings.HasPrefix(n.Name, headphones) })
+		found, err := a.selectNode(ctx, "sink", func(n audioNode) bool { return strings.HasPrefix(n.Name, headphones) })
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ewwd: audio: select headphones: %v\n", err)
 			return
@@ -185,6 +193,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 			if connected {
 				a.refresh(ctx)
 				followHeadphones()
+				a.reconcileSource(ctx)
 			} else {
 				a.publish(AudioState{})
 				finishPending(errors.New("audio event stream unavailable"))
@@ -212,29 +221,35 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 			if burstTargets["sink"] || burstTargets["server"] {
 				followHeadphones()
 			}
+			if burstTargets["source"] || burstTargets["server"] {
+				a.reconcileSource(ctx)
+			}
 			clear(burstTargets)
 		case <-actionTimerC:
 			actionTimerC = nil
 			a.refresh(ctx)
 			finishPending(nil)
 		case <-a.wearSent:
+			a.reconcileSource(ctx)
 			change, seq := a.latestWear()
 			if seq == wearHandled {
 				continue
 			}
 			wearHandled = seq
 			headphones = ""
-			switch change.state {
-			case "worn":
+			if change.state == "worn" {
 				headphones = "bluez_output." + strings.ReplaceAll(strings.ToUpper(change.address), ":", "_") + "."
 				followHeadphones()
-			case "not_worn":
-				a.selectFallback(ctx)
+			} else {
+				a.selectConfigured(ctx, "sink", "fallback_sink", a.config.FallbackSink)
 			}
 		case req := <-a.requests:
-			if slices.Equal(req.args, []string{"cycle_device", "sink"}) {
+			switch {
+			case slices.Equal(req.args, []string{"cycle_device", "sink"}):
 				_, wearHandled = a.latestWear()
 				headphones = ""
+			case slices.Equal(req.args, []string{"cycle_device", "source"}):
+				a.pinSource()
 			}
 			queue = append(queue, req)
 			startNext()
@@ -250,6 +265,7 @@ func (a *Audio) Stop() error {
 func (a *Audio) refresh(ctx context.Context) {
 	sink, sinkOK := a.readDevice(ctx, "sink")
 	source, sourceOK := a.readDevice(ctx, "source")
+	a.source = source
 	a.publish(AudioState{
 		SinkAvailable:   sinkOK,
 		Sink:            sink.volume,
@@ -278,6 +294,12 @@ type audioDevice struct {
 	volume int
 	name   string
 	muted  bool
+	node   string
+	nick   string
+}
+
+func (d audioDevice) is(name string) bool {
+	return name != "" && (d.node == name || d.nick == name)
 }
 
 func (a *Audio) readDevice(ctx context.Context, deviceType string) (audioDevice, bool) {
@@ -305,7 +327,7 @@ func (a *Audio) readDevice(ctx context.Context, deviceType string) (audioDevice,
 			break
 		}
 	}
-	return audioDevice{volume: percent, name: displayName, muted: muted}, true
+	return audioDevice{volume: percent, name: displayName, muted: muted, node: name, nick: nick}, true
 }
 
 func parseAudioIdentity(output string) (name, nick, displayName string, ok bool) {
@@ -525,26 +547,42 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 	return a.setDefault(ctx, deviceType, next)
 }
 
-func (a *Audio) selectFallback(ctx context.Context) {
-	name := a.config.FallbackSink
-	if name == "" {
-		fmt.Fprintln(os.Stderr, "ewwd: audio: headphones removed but audio.fallback_sink is unset")
+func (a *Audio) reconcileSource(ctx context.Context) {
+	wear, _ := a.latestWear()
+	key, want, other := "fallback_source", a.config.FallbackSource, a.config.HeadphonesSource
+	if wear.state == "worn" {
+		if wear.sourcePinned {
+			return
+		}
+		key, want, other = "headphones_source", a.config.HeadphonesSource, a.config.FallbackSource
+	}
+	if !a.source.is(other) {
 		return
 	}
-	found, err := a.setDefaultSink(ctx, func(n audioNode) bool {
+	a.selectConfigured(ctx, "source", key, want)
+}
+
+func (a *Audio) selectConfigured(ctx context.Context, deviceType, key, name string) {
+	if name == "" {
+		fmt.Fprintf(os.Stderr, "ewwd: audio: headphones changed but audio.%s is unset\n", key)
+		return
+	}
+	found, err := a.selectNode(ctx, deviceType, func(n audioNode) bool {
 		return n.Properties["node.nick"] == name || n.Name == name
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: audio: select fallback sink: %v\n", err)
+		fmt.Fprintf(os.Stderr, "ewwd: audio: select %s %q: %v\n", key, name, err)
 		return
 	}
 	if !found {
-		fmt.Fprintf(os.Stderr, "ewwd: audio: fallback sink %q is not available\n", name)
+		fmt.Fprintf(os.Stderr, "ewwd: audio: %s %q is not available\n", key, name)
+		return
 	}
+	fmt.Fprintf(os.Stderr, "ewwd: audio: default %s set to %s %q\n", deviceType, key, name)
 }
 
-func (a *Audio) setDefaultSink(ctx context.Context, match func(audioNode) bool) (bool, error) {
-	nodes, err := listAudioNodes(ctx, "sink")
+func (a *Audio) selectNode(ctx context.Context, deviceType string, match func(audioNode) bool) (bool, error) {
+	nodes, err := listAudioNodes(ctx, deviceType)
 	if err != nil {
 		return false, err
 	}
@@ -552,7 +590,7 @@ func (a *Audio) setDefaultSink(ctx context.Context, match func(audioNode) bool) 
 	if index < 0 {
 		return false, nil
 	}
-	return true, a.setDefault(ctx, "sink", nodes[index])
+	return true, a.setDefault(ctx, deviceType, nodes[index])
 }
 
 func (a *Audio) setDefault(ctx context.Context, deviceType string, node audioNode) error {

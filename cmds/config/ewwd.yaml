@@ -21,6 +21,8 @@ audio:
   default_sink_volume: 69
   default_source_volume: 100
   fallback_sink: LG TV SSCR2
+  headphones_source: AirPodsHiRes
+  fallback_source: alsa_input.usb-Seeed_Studio_reSpeaker_XVF3800_4-Mic_Array_114993701262801368-00.analog-stereo
   name_mappings:
     AirPodsHiRes: AirPods Max
     "LG TV SSCR2": LG TV
