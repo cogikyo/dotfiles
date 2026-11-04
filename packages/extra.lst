@@ -53,6 +53,7 @@ brave-bin
 claude-code
 clickhouse-client-bin
 grok-bot-desktop
+hex-bin
 pandoc-bin
 slack-desktop
 stripe-cli-bin
