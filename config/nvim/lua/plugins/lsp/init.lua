@@ -61,6 +61,8 @@ return {
 			end,
 		})
 
+		vim.lsp.config("gopls", { cmd = { "gopls", "-debug=localhost:0" } })
+
 		vim.lsp.enable(servers)
 	end,
 }
