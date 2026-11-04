@@ -50,7 +50,6 @@ const fixed = [
   ".config/BraveSoftware",
   ".config/Slack",
   ".config/Grok Bot",
-  ".config/tea",
   ".zoom",
   ".tableplus/settings/connections.json",
   ".claude.json",
