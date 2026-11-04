@@ -493,7 +493,7 @@ It changes package reasons before prompting, so cancelling is not a complete und
 1. Mark listed packages explicit and unlisted packages needed by others as dependencies.
 2. Offer missing packages in an all-checked install checklist.
 3. Install selected official/AUR packages via yay; give build instructions for locals.
-4. Offer unlisted explicit packages and orphans in an all-checked removal checklist.
+4. Offer unlisted explicit packages and orphans in a removal checklist that pre-checks only orphans.
 5. Save unchecked entries to `packages/extra.lst` and mark them explicit.
 6. Send selected removals to pacman, which asks again.
 

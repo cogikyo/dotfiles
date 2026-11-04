@@ -53,14 +53,14 @@ func Reconcile(ctx context.Context, u *ui.UI, dir string, run execx.Runner, all 
 	if err := fill(ctx, u, run, l, d.Missing); err != nil {
 		return err
 	}
-	return prune(ctx, u, dir, run, unlisted)
+	return prune(ctx, u, dir, run, unlisted, d.Orphans)
 }
 
 func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []string) error {
 	if len(missing) == 0 {
 		return nil
 	}
-	checked, err := u.Checklist(fmt.Sprintf("Install %d listed packages?", len(missing)), missing)
+	checked, err := u.Checklist(fmt.Sprintf("Install %d listed packages?", len(missing)), missing, slices.Repeat([]bool{true}, len(missing)))
 	if errors.Is(err, ui.ErrCanceled) {
 		return nil
 	}
@@ -85,11 +85,15 @@ func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []st
 	return nil
 }
 
-func prune(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names []string) error {
+func prune(ctx context.Context, u *ui.UI, dir string, run execx.Runner, names, orphans []string) error {
 	if len(names) == 0 {
 		return nil
 	}
-	checked, err := u.Checklist(fmt.Sprintf("Select packages to remove (%d unlisted); unselected packages are added to extra.lst", len(names)), names)
+	checked := make([]bool, len(names))
+	for i, name := range names {
+		checked[i] = slices.Contains(orphans, name)
+	}
+	checked, err := u.Checklist(fmt.Sprintf("Select packages to remove (%d unlisted); unselected packages are added to extra.lst", len(names)), names, checked)
 	if errors.Is(err, ui.ErrCanceled) {
 		return nil
 	}

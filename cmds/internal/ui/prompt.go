@@ -42,14 +42,11 @@ func (u *UI) Select(title string, options []string, initial int) (int, error) {
 	return m.cursor, nil
 }
 
-func (u *UI) Checklist(title string, options []string) ([]bool, error) {
+func (u *UI) Checklist(title string, options []string, checked []bool) ([]bool, error) {
 	if len(options) == 0 {
 		return nil, errors.New("checklist: no options")
 	}
-	m := &checklist{lead: u.lead(), pad: u.pad(), title: title, options: options, checked: make([]bool, len(options))}
-	for i := range m.checked {
-		m.checked[i] = true
-	}
+	m := &checklist{lead: u.lead(), pad: u.pad(), title: title, options: options, checked: checked}
 	if err := u.run(m, &m.canceled); err != nil {
 		return nil, err
 	}
