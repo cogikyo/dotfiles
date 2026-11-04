@@ -29,12 +29,17 @@ When any candidate qualifies, load `retro` and run live mode now without asking 
 Commit approved retro changes under the Commit rules above.
 When nothing qualifies, say so in one line.
 
+## Knowledge base
+
+Mail COGIKYO SCRIBE any cogikyo decisions or facts this session has not already sent, following `cogikyo`; skip when there are none.
+
 ## Cleanup
 
 Run [cleanup.sql](cleanup.sql) unchanged through `sessions` with `?1` = root session ID and `?2` = now − 3 days in epoch milliseconds.
 Select existing `/tmp/opencode/<name>` paths with `shared = 0`; keep `shared = 1` paths and any of unclear ownership without asking (`REFUSALS` hides sessions from the shared check).
 Add `~/.local/state/opencode/scratch/<sessionID>/` for each session in the tree.
 Keep both scratch roots and the shared `runs.jsonl`.
+Keep any scratch or `/tmp/opencode` path that `grep -r` finds cited in `/home/cullyn/cogikyo/docs/`, including the containing directory selected for deletion.
 Record count and size, then stop processes whose working directory or arguments point into the selected paths.
 Delete with literal `rm -rf -- /tmp/opencode/<name> …` paths; send sandbox directories to `trash -- <path>`.
 
