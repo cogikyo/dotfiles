@@ -58,6 +58,9 @@
   },
   "diffs": {},
   "mouse": true,
+  "prompt": {
+    "paste": "full"
+  },
   "plugins": [
     "-opencode.notifications",
     "-opencode.sidebar.mcp",
