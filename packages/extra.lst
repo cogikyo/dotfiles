@@ -10,6 +10,7 @@ discord
 docker
 docker-compose
 fuse-overlayfs
+gitea-cli
 github-cli
 go
 go-tools
@@ -41,7 +42,6 @@ spotify-launcher
 sqlc
 staticcheck
 tailwindcss-language-server
-tea
 uv
 yarn
 zathura
