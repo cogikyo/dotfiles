@@ -336,7 +336,10 @@ hl.layer_rule({
 })
 
 hl.workspace_rule({ workspace = "special:stash", gaps_out = 120 })
-hl.workspace_rule({ workspace = "special:dropdown", on_created_empty = "kitty --class dropdown -o tab_bar_min_tabs=2 -o background_opacity=0.92 -o 'window_padding_width=24 9 9 9'" })
+hl.workspace_rule({
+	workspace = "special:dropdown",
+	on_created_empty = "kitty --class dropdown -o tab_bar_min_tabs=2 -o background_opacity=0.92 -o 'window_padding_width=24 9 9 9'",
+})
 
 require("binds")
 
@@ -432,4 +435,10 @@ hl.animation({ leaf = "layersIn", enabled = true, speed = 2.5, bezier = "easeOut
 hl.animation({ leaf = "layersOut", enabled = true, speed = 2.2, bezier = "easeInCubic" })
 hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 2.6, bezier = "easeInCubic" })
 hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slide top" })
-hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 2.2, bezier = "easeInCubic", style = "slide bottom" })
+hl.animation({
+	leaf = "specialWorkspaceOut",
+	enabled = true,
+	speed = 2.2,
+	bezier = "easeInCubic",
+	style = "slide bottom",
+})
