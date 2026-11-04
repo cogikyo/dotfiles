@@ -1,0 +1,13 @@
+[Unit]
+Description=PipeWire AirPods Max voice chain
+After=pipewire.service
+BindsTo=pipewire.service
+ConditionHost=costello
+
+[Service]
+ExecStart=/usr/bin/pipewire -c airpods-voice.conf
+Restart=on-failure
+Slice=session.slice
+
+[Install]
+WantedBy=pipewire.service
