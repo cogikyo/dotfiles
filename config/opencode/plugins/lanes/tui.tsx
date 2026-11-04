@@ -20,6 +20,8 @@ const glyph = {
 
 const laneOf = (session: Session) => (typeof session.metadata?.lane === "string" ? session.metadata.lane : undefined);
 
+const nameOf = (session: Session) => laneOf(session) ?? session.title ?? session.id;
+
 function status(context: Context, session: Session): Status {
   if (context.data.session.status(session.id) === "running") return "running";
   if (session.outcome === "failed") return "error";
@@ -36,24 +38,25 @@ function lanes(context: Context, rootID: string) {
 function row(context: Context, session: Session): Row {
   return {
     session,
-    name: laneOf(session) ?? session.title ?? session.id,
+    name: nameOf(session),
     status: status(context, session),
     ...usage(context, session),
   };
 }
 
-async function close(context: Context, rootID: string, names: string[]) {
+async function close(context: Context, rootID: string, sessions: Session[]) {
   const directory = context.data.session.get(rootID)?.location.directory;
+  const names = new Map(sessions.map((session) => [session.id, nameOf(session)]));
   try {
     const outcomes = await context.client
       .rpc(api)
-      .close({ sessionID: rootID, lanes: names }, directory ? { location: { directory } } : undefined);
+      .close({ sessionID: rootID, lanes: [...names.keys()] }, directory ? { location: { directory } } : undefined);
     const skipped = outcomes.filter((outcome) => outcome.skipped !== undefined);
     const closed = outcomes.length - skipped.length;
     context.ui.toast.show({
       message: [
         `Closed ${closed} lane${closed === 1 ? "" : "s"}`,
-        ...skipped.map((outcome) => `Skipped ${outcome.lane}: ${outcome.skipped}`),
+        ...skipped.map((outcome) => `Skipped ${names.get(outcome.lane) ?? outcome.lane}: ${outcome.skipped}`),
       ].join("\n"),
       variant: skipped.length ? "warning" : "info",
     });
@@ -67,7 +70,7 @@ async function close(context: Context, rootID: string, names: string[]) {
 }
 
 async function act(context: Context, session: Session) {
-  const name = laneOf(session) ?? session.title ?? session.id;
+  const name = nameOf(session);
   const action = await context.ui.dialog.select<Action>({
     title: `Lane ${name}`,
     options: [
@@ -129,7 +132,7 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
   );
   const theme = () => props.context.theme.text;
   const named = () => laneOf(entry().session) !== undefined;
-  const closable = () => named() && entry().status !== "running";
+  const closable = () => entry().status !== "running";
   const icon = () => {
     if (aimed() && closable()) return glyph.error;
     if (entry().status === "running") return props.frame;
@@ -175,9 +178,8 @@ function Lane(props: { context: Context; session: Session; width: { model: numbe
         onMouseUp={(event) => {
           if (!closable() || event.button === MouseButton.RIGHT) return;
           event.stopPropagation();
-          const { parentID } = entry().session;
-          const lane = laneOf(entry().session);
-          if (parentID && lane) void close(props.context, parentID, [lane]);
+          const { session } = entry();
+          if (session.parentID) void close(props.context, session.parentID, [session]);
         }}
       >{`${icon()} `}</text>
       <box
@@ -228,7 +230,7 @@ export default Plugin.define({
             const session = await context.ui.dialog.select<Session>({
               title: "Lanes",
               options: lanes(context, rootID).map((child) => ({
-                title: laneOf(child) ?? child.title ?? child.id,
+                title: nameOf(child),
                 value: child,
                 description: `${status(context, child)} · ${child.agent ?? ""}`,
               })),
@@ -240,7 +242,7 @@ export default Plugin.define({
           id: "lanes.close",
           title: "Close idle lanes",
           description:
-            "Close idle named lanes so they cannot resume; the next call with a closed name starts a fresh child",
+            "Close idle lanes and failed or interrupted one-shots so they cannot resume; the next call with a closed name starts a fresh child",
           group: "Session",
           palette: true,
           slash: { name: "lanes-close" },
@@ -248,10 +250,7 @@ export default Plugin.define({
             const route = context.ui.router.current();
             if (route.type !== "session") return;
             const rootID = context.data.session.root(route.sessionID);
-            const idle = lanes(context, rootID).flatMap((child) => {
-              const lane = laneOf(child);
-              return lane !== undefined && status(context, child) !== "running" ? [lane] : [];
-            });
+            const idle = lanes(context, rootID).filter((child) => status(context, child) !== "running");
             await close(context, rootID, idle);
           },
         },

@@ -159,19 +159,24 @@ export default Plugin.define({
       const close = Effect.fn("lanes.close")(function* (parentID: string, names: readonly string[], by: Closed["by"]) {
         const list = yield* children(parentID);
         const outcomes: Outcome[] = [];
-        for (const lane of new Set(names.map((name) => name.trim()).filter(Boolean))) {
-          const child = list.find((session) => laneOf(session) === lane);
-          if (!child) {
-            const closed = list.some((session) => closedOf(session)?.lane === lane);
-            outcomes.push({ lane, skipped: closed ? "already closed" : "missing" });
+        const sealed = new Set<string>();
+        for (const key of new Set(names.map((name) => name.trim()).filter(Boolean))) {
+          const child = list.find((session) => session.id === key) ?? list.find((session) => laneOf(session) === key);
+          const closed = child
+            ? sealed.has(child.id) || closedOf(child) !== undefined
+            : list.some((session) => closedOf(session)?.lane === key);
+          if (!child || closed) {
+            outcomes.push({ lane: key, skipped: closed ? "already closed" : "missing" });
             continue;
           }
-          if (status(child) === "running" || creating.has(`${parentID}/${lane}`)) {
-            outcomes.push({ lane, skipped: "running" });
+          const lane = laneOf(child);
+          if (status(child) === "running" || (lane !== undefined && creating.has(`${parentID}/${lane}`))) {
+            outcomes.push({ lane: key, skipped: "running" });
             continue;
           }
           yield* seal(child, by);
-          outcomes.push({ lane });
+          sealed.add(child.id);
+          outcomes.push({ lane: key });
         }
         return outcomes;
       });
@@ -395,9 +400,9 @@ export default Plugin.define({
         editor.add({
           name: "lanes_close",
           description:
-            "Close named lanes under this session so they cannot resume; running lanes are skipped. Naming a closed lane again starts a fresh child.",
+            "Close subagent children under this session so they cannot resume; running children are skipped. Pass lane names, or session IDs for unnamed children. Naming a closed lane again starts a fresh child.",
           input: Schema.Struct({
-            lanes: Schema.Array(Schema.String).annotate({ description: "Lane names to close." }),
+            lanes: Schema.Array(Schema.String).annotate({ description: "Lane names or child session IDs to close." }),
           }),
           options: { codemode: false },
           execute: (input, context) =>
@@ -406,7 +411,7 @@ export default Plugin.define({
                 content:
                   outcomes
                     .map(({ lane, skipped }) => (skipped ? `skipped ${lane}: ${skipped}` : `closed ${lane}`))
-                    .join("\n") || "No lane names given.",
+                    .join("\n") || "No lane names or session IDs given.",
               })),
             ),
         });

@@ -31,9 +31,9 @@ User arguments override this judgment: close exactly the lanes they name, or kee
 
 ## Close
 
-Call `lanes_close` once with a `lanes` array of every name to close.
+Call `lanes_close` once with a `lanes` array of every lane name or session ID to close.
 Report skipped lanes with the reason the tool returned.
-It accepts only named lanes; do not claim it ended an unnamed one-shot.
+Pass an unnamed one-shot by its session ID.
 
 ## Report
 
