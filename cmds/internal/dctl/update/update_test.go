@@ -3,12 +3,15 @@ package update
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/ui"
@@ -19,6 +22,7 @@ type fake struct {
 	builds  map[string]string
 	dirty   string
 	rebuild string
+	unit    string
 	calls   []string
 }
 
@@ -42,6 +46,8 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 	switch line {
 	case "git status --porcelain --untracked-files=all -- cmds":
 		return f.dirty, nil
+	case "systemctl --user show ewwd.service --timestamp=us+utc -p ActiveState -p ActiveEnterTimestamp":
+		return f.unit, nil
 	case "hyprd rebuild":
 		if strings.HasPrefix(f.rebuild, "error:") {
 			return f.rebuild, errors.New("exit status 1")
@@ -153,12 +159,47 @@ func TestCommands(t *testing.T) {
 	if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err != nil {
 		t.Fatal(err)
 	}
-	if slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, "systemctl") || c == "hyprd rebuild" }) {
+	restarted := func() bool {
+		return slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, "systemctl --user restart") || c == "hyprd rebuild" })
+	}
+	if restarted() {
 		t.Errorf("second run calls %q, want no rebuild or restart", f.calls)
 	}
 	if entries, _ := os.ReadDir(bin); len(entries) != len(binaries.Names) {
 		t.Errorf("bin holds %d entries, want only the %d commands", len(entries), len(binaries.Names))
 	}
+
+	start := time.Now().Add(-time.Hour).UTC().Truncate(time.Microsecond)
+	cfg := filepath.Join(root.Home, config.ConfigPath("hyprd"))
+	if err := os.MkdirAll(filepath.Dir(cfg), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		state string
+		mtime time.Time
+		want  bool
+	}{
+		{"active", start.Add(time.Millisecond), true},
+		{"active", start, false},
+		{"active", start.Add(-time.Millisecond), false},
+		{"inactive", start.Add(time.Minute), false},
+	} {
+		if err := os.Chtimes(cfg, c.mtime, c.mtime); err != nil {
+			t.Fatal(err)
+		}
+		f.unit, f.calls = fmt.Sprintf("ActiveState=%s\nActiveEnterTimestamp=%s", c.state, start.Format("Mon 2006-01-02 15:04:05.000000 MST")), nil
+		if err := commands(t.Context(), quiet(), root, f, false, false, binaries.Names); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"systemctl --user restart ewwd.service", "ewwd status"}
+		if got := slices.DeleteFunc(slices.Clone(f.calls), func(c string) bool { return !slices.Contains(want, c) }); c.want != slices.Equal(got, want) || c.want != restarted() {
+			t.Errorf("%s ewwd, config %v after start: calls %q, want restart %v", c.state, c.mtime.Sub(start), f.calls, c.want)
+		}
+	}
+	f.unit = ""
 
 	f.builds["hyprd"] = "hyprd v2"
 	f.rebuild = "error: full lock active; unlock before rebuilding"

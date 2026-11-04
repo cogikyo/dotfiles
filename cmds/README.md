@@ -66,8 +66,9 @@ internal/daemon/
 ## Installation
 
 The dctl ISO installs prebuilt commands into `~/.local/bin/`.
-`dctl update cmd` builds from the working tree, replaces only changed commands, and restarts ewwd, newtab, and keys only when replaced.
+`dctl update cmd` builds from the working tree, replaces only changed commands, and restarts ewwd, newtab, and keys when replaced.
 It uses `hyprd rebuild` for hyprd so the daemon owns its state-preserving restart and lock refusal.
+A running ewwd also restarts when `ewwd.yaml` or `hyprd.yaml` is newer than its start time.
 
 To build dctl on an existing machine, run from `cmds/` with Go 1.26.2 or later and an existing `~/.local/bin/` directory:
 

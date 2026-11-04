@@ -470,7 +470,8 @@ Restart Firefox after policy or profile configuration changes; update does not r
 ### Command and tool rebuilds
 
 Dotfiles binaries are replaced only when their bytes differ.
-Ewwd, newtab, and keys restart only when replaced.
+Ewwd, newtab, and keys restart when replaced.
+A running ewwd also restarts when `ewwd.yaml` or `hyprd.yaml` is newer than its start time.
 
 - **hyprd** replaces itself via `hyprd rebuild`.
   - Skips during full lock, an OpenCode refresh job, or when the daemon is stopped.

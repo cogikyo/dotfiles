@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/packages"
@@ -24,7 +25,8 @@ import (
 )
 
 var (
-	services = []string{"ewwd", "newtab", "keys"}
+	services    = []string{"ewwd", "newtab", "keys"}
+	ewwdConfigs = []string{config.ConfigPath("ewwd"), config.ConfigPath("hyprd")}
 	// refusals matches the text protocol returned by hyprd's rebuildBlocked.
 	refusals = []string{"error: full lock active", "error: opencode refresh job "}
 )
@@ -98,6 +100,13 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 	for _, name := range names {
 		fresh, dst := filepath.Join(tmp, name), filepath.Join(bin, name)
 		if same(fresh, dst) {
+			if name == "ewwd" {
+				restarted, err := reconfigure(ctx, u, root, run)
+				if restarted {
+					changed++
+				}
+				errs = append(errs, err)
+			}
 			continue
 		}
 		changed++
@@ -115,7 +124,7 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 			_, err := run.Output(ctx, "", "systemctl", "--user", "restart", name+".service")
 			errs = append(errs, err)
 			if name == "ewwd" && err == nil {
-				errs = append(errs, awaitEwwd(ctx, u, run))
+				errs = append(errs, awaitEwwd(ctx, u, run, "restarted ewwd"))
 			}
 		}
 	}
@@ -134,7 +143,46 @@ func same(a, b string) bool {
 	return err == nil && bytes.Equal(x, y)
 }
 
-func awaitEwwd(ctx context.Context, u *ui.UI, run execx.Runner) error {
+func reconfigure(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) (bool, error) {
+	out, err := run.Output(ctx, "", "systemctl", "--user", "show", "ewwd.service", "--timestamp=us+utc", "-p", "ActiveState", "-p", "ActiveEnterTimestamp")
+	if err != nil {
+		return false, err
+	}
+	props := map[string]string{}
+	for l := range strings.Lines(out) {
+		k, v, _ := strings.Cut(strings.TrimSpace(l), "=")
+		props[k] = v
+	}
+	if props["ActiveState"] != "active" {
+		return false, nil
+	}
+	start, err := time.Parse("Mon 2006-01-02 15:04:05.000000 MST", props["ActiveEnterTimestamp"])
+	if err != nil {
+		return false, fmt.Errorf("ewwd start time: %w", err)
+	}
+	var stale []string
+	for _, rel := range ewwdConfigs {
+		info, err := os.Stat(filepath.Join(root.Home, rel))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return false, err
+		}
+		if info.ModTime().After(start) {
+			stale = append(stale, filepath.Base(rel))
+		}
+	}
+	if len(stale) == 0 {
+		return false, nil
+	}
+	if _, err := run.Output(ctx, "", "systemctl", "--user", "restart", "ewwd.service"); err != nil {
+		return true, err
+	}
+	return true, awaitEwwd(ctx, u, run, "restarted ewwd: "+strings.Join(stale, ", ")+" changed")
+}
+
+func awaitEwwd(ctx context.Context, u *ui.UI, run execx.Runner, done string) error {
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		_, err := run.Output(ctx, "", "ewwd", "status")
@@ -146,7 +194,7 @@ func awaitEwwd(ctx context.Context, u *ui.UI, run execx.Runner) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	u.OK("restarted ewwd")
+	u.OK("%s", done)
 	return nil
 }
 
