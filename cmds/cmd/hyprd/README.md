@@ -2,12 +2,12 @@
 
 Hyprland daemon and CLI.
 Connects to Hyprland's IPC sockets to manage windows, workspaces, and sessions, then exposes commands over a Unix socket.
-CLI-only tools (screenshot and VPN) run directly without the daemon.
+CLI-only tools (dictation, screenshot, and VPN) run directly without the daemon socket.
 
 ## Structure
 
 The entrypoint, daemon, and event dispatch live in `cmds/cmd/hyprd/`.
-Domain packages live in `cmds/internal/hyprd/`, with direct screenshot and VPN commands under `cli/`.
+Domain packages live in `cmds/internal/hyprd/`, with direct dictation, screenshot, and VPN commands under `cli/`.
 The user unit is `config/systemd/user/hyprd.service` at the repo root.
 In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypoint files to `cmds/cmd/hyprd/`, and config paths to `cmds/`.
 
@@ -21,7 +21,8 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 | Window types that make up a session                | `cmds/internal/config/hyprd.go` → compiled `ThreeBody` map                     |
 | Which session opens on which workspace at boot     | `config/hyprd.yaml` → `sessions` entries with `init: true`                     |
 | Command routing (CLI → daemon)                     | `main.go` → `daemon.go` dispatch table                                         |
-| CLI-only tools (no daemon needed)                  | `cli/` — screenshot, VPN                                                       |
+| CLI-only tools (no daemon socket)                  | `cli/` — dictation, screenshot, VPN                                            |
+| Dictation placement / caret reporting              | `cli/dictate.go` → `ime/`                                                      |
 | Hyprland event → state update                      | `events.go`                                                                    |
 | Adding a new daemon command                        | add file in `wm/`, register in `daemon.go`                                     |
 | Adding a new CLI-only tool                         | add file in `cli/`, register in `main.go`                                      |
@@ -240,6 +241,24 @@ All snapshots share the main Firefox profile, including cookies, logins, extensi
 Each snapshot remains isolated as a separate Firefox window with its own pinned tabs, groups, and tabs.
 Opening a layout while Firefox runs stops and relaunches Firefox, preserving existing windows and adding the requested snapshot window.
 Opening a layout reuses an existing Firefox window when its selected tab title already matches the snapshot.
+
+### Dictation
+
+```bash
+hyprd dictate                # toggle Hex dictation near the text cursor
+```
+
+Super+' runs `hyprd dictate`, which reads the focused app's text-cursor box through the `caret` Hyprland plugin's `hyprctl caret` command.
+It puts Hex's pill above the cursor, or below it near the top edge, and clamps it to the focused monitor's usable area.
+Without a caret on that monitor, it uses the pointer; without a focused monitor, it runs a plain toggle.
+XWayland apps (including Spotify and Zoom) and rofi report no caret.
+
+Positioning needs Hex's patched `--hud-at` option ([anomalyco/hex#1320](https://github.com/anomalyco/hex/issues/1320)); a stock Hex that refuses it falls back to a plain toggle.
+Build the plugin with `dctl update plugin`; see [plugin rebuilds](../dctl/README.md#command-and-tool-rebuilds).
+
+Apps report their text-cursor boxes only while an input method is registered, so the daemon holds a passive input method in `ime/`.
+It never grabs the keyboard or types.
+It answers each input-method `done` with an empty `commit(serial)` so Hyprland acknowledges text-input state; Chromium/Electron withhold cursor boxes until that acknowledgement arrives.
 
 ### Screenshot
 

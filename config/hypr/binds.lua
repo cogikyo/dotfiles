@@ -80,7 +80,7 @@ super("F", "Toggle floating",    "hyprd float")
 super("V", "Screen share mode",   "hyprd share")
 super("SHIFT + V", "Silence notifications", "hyprd quiet")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
-hl.bind("SUPER + semicolon", hl.dsp.exec_cmd("hex dictation toggle"), { description = "Dictate", release = true })
+hl.bind("SUPER + apostrophe", hl.dsp.exec_cmd("hyprd dictate"), { description = "Dictate at text cursor", release = true })
 
 hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
 hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })

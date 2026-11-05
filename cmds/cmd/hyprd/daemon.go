@@ -7,6 +7,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/browser"
 	"dotfiles/cmds/internal/hyprd/health"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/ime"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
 	opencodepkg "dotfiles/cmds/internal/hyprd/opencode"
@@ -127,6 +128,7 @@ func (d *Daemon) Run() error {
 	go d.view.Run(d.server.Done())
 	d.view.Mark()
 	go session.WatchPower(d.server.Done(), d.state, d.lockCtl)
+	go ime.Run(d.server.Done())
 	stopHealth := d.startHealth()
 
 	sigCh := make(chan os.Signal, 1)

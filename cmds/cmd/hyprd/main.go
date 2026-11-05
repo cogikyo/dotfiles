@@ -93,6 +93,8 @@ func main() {
 		cli.VPN()
 	case "screenshot":
 		cli.Screenshot()
+	case "dictate":
+		cli.Dictate()
 	case "health":
 		cmdHealth()
 	case "rebuild":
@@ -521,6 +523,9 @@ Query/Subscribe (for eww):
 Screenshot:
   hyprd screenshot              Region screenshot to clipboard
   hyprd screenshot annotate     Region screenshot → satty annotation → clipboard
+
+Dictation:
+  hyprd dictate                 Toggle Hex dictation with the pill at the text cursor (pointer fallback)
 
 VPN:
   hyprd vpn Trend               Toggle configured NetworkManager VPN connection
