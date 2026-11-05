@@ -161,6 +161,7 @@ func reconfigure(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runne
 		return false, fmt.Errorf("ewwd start time: %w", err)
 	}
 	var stale []string
+	// ewwd reads both files at startup from ~/dotfiles, ignoring DOTFILES.
 	for _, rel := range ewwdConfigs {
 		info, err := os.Stat(filepath.Join(root.Home, rel))
 		if errors.Is(err, fs.ErrNotExist) {
