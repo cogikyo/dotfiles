@@ -424,6 +424,7 @@ hl.config({
 	misc = {
 		allow_session_lock_restore = true,
 		session_lock_xray = true,
+		new_float_force_onscreen = 1,
 	},
 })
 
