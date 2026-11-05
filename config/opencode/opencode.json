@@ -308,6 +308,22 @@
         }
       }
     },
+    "neumann": {
+      "name": "neumann",
+      "package": "aisdk:@ai-sdk/openai-compatible",
+      "settings": {
+        "baseURL": "http://192.168.0.113:8100/v1",
+        "apiKey": "{file:~/.local/state/neumann/api-key}"
+      },
+      "models": {
+        "Qwen3.6-35B-A3B-oQ4e-mtp": {
+          "name": "Qwen3.6 35B A3B"
+        },
+        "gemma-4-E4B-it-oQ4e-mtp": {
+          "name": "Gemma 4 E4B"
+        }
+      }
+    },
     "openai": {
       "models": {
         "gpt-6.1-sol": {
@@ -409,7 +425,8 @@
       { "action": "provider.use", "resource": "openai", "effect": "allow" },
       { "action": "provider.use", "resource": "xai", "effect": "allow" },
       { "action": "provider.use", "resource": "opencode-go", "effect": "allow" },
-      { "action": "provider.use", "resource": "cursor", "effect": "allow" }
+      { "action": "provider.use", "resource": "cursor", "effect": "allow" },
+      { "action": "provider.use", "resource": "neumann", "effect": "allow" }
     ]
   }
 }
