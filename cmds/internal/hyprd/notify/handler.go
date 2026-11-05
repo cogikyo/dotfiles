@@ -504,6 +504,9 @@ func (n *Notifier) playSound(name string, volume int) error {
 
 func soundWorker() {
 	for req := range soundQueue {
+		if DunstPaused() {
+			continue
+		}
 		paVolume := req.volume * 65536 / 100
 		_ = exec.Command("paplay", "--volume="+strconv.Itoa(paVolume), req.path).Run()
 	}
@@ -621,6 +624,12 @@ func notificationKey(ctx *kittyContext, group string) (paneNotificationKey, bool
 
 func isPaneAckGroup(group string) bool {
 	return slices.Contains(opencodePaneAckGroups, group)
+}
+
+// DunstPaused reports dunst's pause, which also mutes hyprd's sounds.
+func DunstPaused() bool {
+	out, err := exec.Command("dunstctl", "is-paused").Output()
+	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
 
 func closeDunstNotification(id int) {

@@ -79,6 +79,8 @@ func main() {
 		cmdLock()
 	case "share":
 		cmdShare()
+	case "quiet":
+		cmdQuiet()
 	case "notify":
 		cmdNotify()
 	case "opencode":
@@ -227,6 +229,40 @@ func cmdLock() {
 	sendCommand("lock " + strings.Join(os.Args[2:], " "))
 }
 func cmdShare() { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
+
+func cmdQuiet() {
+	paused := notifypkg.DunstPaused()
+	on := !paused
+	switch strings.Join(os.Args[2:], " ") {
+	case "", "toggle":
+	case "on":
+		on = true
+	case "off":
+		on = false
+	case "status":
+		printQuiet(paused)
+		return
+	default:
+		fmt.Fprintln(os.Stderr, "usage: hyprd quiet [toggle|on|off|status]")
+		os.Exit(1)
+	}
+	if on {
+		_ = exec.Command("dunstctl", "close-all").Run()
+	}
+	if err := exec.Command("dunstctl", "set-paused", strconv.FormatBool(on)).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd quiet: %v\n", err)
+		os.Exit(1)
+	}
+	printQuiet(on)
+}
+
+func printQuiet(on bool) {
+	if on {
+		fmt.Println("quiet: on")
+		return
+	}
+	fmt.Println("quiet: off")
+}
 func cmdQuery() { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()    { sendCommand("bg " + requireArg("usage: hyprd bg {static|video}")) }
 func cmdWS()    { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
@@ -459,6 +495,7 @@ Lock:
   hyprd lock full        Full lock (supervises the Quickshell lock with pre/post hooks)
   hyprd share            Toggle screen-share mode
   hyprd share on|off     Enter/exit screen-share mode explicitly
+  hyprd quiet [on|off|status]  Toggle notification popups and sounds
 
 OpenCode:
   hyprd opencode queue          Refresh after three quiet polls; notify on completion
