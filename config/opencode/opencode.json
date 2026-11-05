@@ -313,7 +313,8 @@
       "package": "aisdk:@ai-sdk/openai-compatible",
       "settings": {
         "baseURL": "http://192.168.0.113:8100/v1",
-        "apiKey": "{file:~/.local/state/neumann/api-key}"
+        "apiKey": "{file:~/.local/state/neumann/api-key}",
+        "headerTimeout": 5000
       },
       "models": {
         "Qwen3.6-35B-A3B-oQ4e-mtp": {
