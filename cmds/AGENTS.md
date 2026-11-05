@@ -10,6 +10,7 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 | `cmd/`      | Binary entrypoints                  |
 | `internal/` | Shared and command-private packages |
 | `config/`   | Runtime YAML                        |
+| `plugins/`  | Hyprland C++ plugins                |
 
 `internal/config/` loads daemon YAML from `~/dotfiles/cmds/config/`, independently of dctl's `DOTFILES` override.
 

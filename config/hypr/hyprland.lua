@@ -25,6 +25,13 @@ hl.env("GDK_DPI_SCALE", "1.25")
 hl.env("SDL_VIDEODRIVER", "wayland")
 hl.env("PATH", home .. "/.local/bin:" .. path)
 
+local caret = home .. "/.local/lib/hyprland/caret-" .. hl.version() .. ".so"
+local caretFile = io.open(caret)
+if caretFile then
+	caretFile:close()
+	hl.plugin.load(caret)
+end
+
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                   autostart                                   │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯

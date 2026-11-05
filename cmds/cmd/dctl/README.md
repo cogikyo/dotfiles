@@ -451,11 +451,12 @@ Named steps omit that prompt and retain this order.
 4. `setup`: reapply drifted `system`, `home`, and `firefox` setup stages.
 5. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
 6. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
-7. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
-8. `bridge`: repair the checkout and service as in `setup bridge`.
-9. `go`: update eligible module-release tools.
-10. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
-11. `android`: run `android sdk update` in `$ANDROID_HOME`; skip if android-cli is absent.
+7. `plugin`: build Hyprland plugins for the installed Hyprland version.
+8. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
+9. `bridge`: repair the checkout and service as in `setup bridge`.
+10. `go`: update eligible module-release tools.
+11. `rust`: run `rustup update`, or `rustup default stable` when no default is set, then update crates; skip if rustup is absent.
+12. `android`: run `android sdk update` in `$ANDROID_HOME`; skip if android-cli is absent.
 
 - `--all` or global `--yes` skips step/recipe prompts, accepts the setup plan, and passes `--noconfirm`.
   - It never installs or removes package-list drift.
@@ -480,10 +481,17 @@ A running ewwd also restarts when `ewwd.yaml` or `hyprd.yaml` is newer than its 
   - With none of these flags, a terminal asks for consent, default **No**; without a terminal, the build fails and names `--dirty`.
 - **Local recipes** with different installed versions ask separately, default **Yes**.
   - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
+- **Hyprland plugin**: `dctl update plugin` builds `cmds/plugins/caret/` against the installed headers.
+  - Needs a C++ compiler, `make`, and pkg-config metadata for `hyprland`, `pixman-1`, and `libdrm`.
+  - Uncommitted plugin sources are skipped unless `--dirty` is set.
+  - If installed and running Hyprland versions differ, the new plugin waits for a Hyprland restart.
 - **Go tools** need module-proxy checksum metadata; locally built tools are skipped.
   - Scans `GOBIN`, or the first GOPATH's `bin`; installs eligible tools at `@latest`.
 - **Cargo crates** from `cargo install --list` are reinstalled with `cargo install --locked`; path, git, and other-registry installs are skipped.
   - Cargo skips a crate already at its latest version, but rebuilds one installed with custom features or profile using the defaults.
+
+The plugin install path in `internal/dctl/update/plugin.go`, `~/.local/lib/hyprland/caret-<version>.so`, must match the load path in `config/hypr/hyprland.lua` at the repo root.
+Lua loads `caret-<hl.version()>.so` when present; the plugin refuses to initialize if its API hash differs from the running compositor's.
 
 ### Package reconciliation
 

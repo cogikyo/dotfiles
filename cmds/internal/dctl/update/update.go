@@ -80,6 +80,13 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 			},
 		},
 		{
+			Name: "plugin",
+			Plan: "Hyprland plugins for the installed Hyprland version",
+			Run: func(ctx context.Context) error {
+				return plugins(ctx, u, root, run, dirty)
+			},
+		},
+		{
 			Name: "bun",
 			Plan: "OpenCode plugin dependencies from config/opencode/bun.lock",
 			Run: func(ctx context.Context) error {
