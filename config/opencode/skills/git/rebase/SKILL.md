@@ -28,7 +28,8 @@ Do not use `git pull`.
 
 Run an explicit non-interactive rebase onto the approved upstream or onto commit.
 Resolve both onto and upstream to OIDs; use `git rebase --onto <onto-OID> <upstream-OID>` on the verified current branch.
-Inspect effective rebase configuration before starting; stop if it would autostash, update other refs, execute commands, or enable unapproved transforms.
+Add `--update-refs` to `--onto`, or run `git branch -f <ref> <OID>` after a plain rebase, only for refs the caller names explicitly; verify each moved ref afterwards.
+Inspect effective rebase configuration before starting; stop if it would autostash, update unnamed refs, execute commands, or enable unapproved transforms.
 Inspect patch-equivalent and empty commits before starting; stop if replay could silently drop an approved commit.
 Do not start a merge.
 Keep the operation in this workflow until it completes, safely aborts, or pauses on a semantic decision.

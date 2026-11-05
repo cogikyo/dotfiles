@@ -40,7 +40,11 @@ permissions:
   - { "action": "shell", "resource": "git branch --merged*", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -a", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -vv", "effect": "allow" }
-  - { "action": "shell", "resource": "git branch -vv --list*", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git branch -vv --list*",
+      "effect": "allow",
+    }
   - { "action": "shell", "resource": "git worktree list*", "effect": "allow" }
   - { "action": "shell", "resource": "git config --get*", "effect": "allow" }
   - { "action": "shell", "resource": "git add -- *", "effect": "allow" }
@@ -55,6 +59,11 @@ permissions:
   - { "action": "shell", "resource": "git commit --no-edit", "effect": "allow" }
   - { "action": "shell", "resource": "git commit --fixup=*", "effect": "allow" }
   - { "action": "shell", "resource": "git rebase --onto *", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git rebase --update-refs --onto *",
+      "effect": "allow",
+    }
   - {
       "action": "shell",
       "resource": "git rebase --autosquash --onto *",
@@ -73,6 +82,7 @@ permissions:
   - { "action": "shell", "resource": "git rebase --abort", "effect": "allow" }
   - { "action": "shell", "resource": "git fetch *", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -- *", "effect": "allow" }
+  - { "action": "shell", "resource": "git branch -f *", "effect": "allow" }
   - { "action": "shell", "resource": "git branch -d -- *", "effect": "allow" }
   - {
       "action": "shell",
@@ -157,11 +167,6 @@ permissions:
     }
   - {
       "action": "shell",
-      "resource": "*git rebase *--update-refs*",
-      "effect": "deny",
-    }
-  - {
-      "action": "shell",
       "resource": "*git rebase *--rebase-merges*",
       "effect": "deny",
     }
@@ -191,9 +196,17 @@ permissions:
   - { "action": "shell", "resource": "git rm -- *", "effect": "allow" }
   - { "action": "shell", "resource": "git rm --cached -- *", "effect": "allow" }
   - { "action": "shell", "resource": "git rm -r -- *", "effect": "allow" }
-  - { "action": "shell", "resource": "git rm -r --cached -- *", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git rm -r --cached -- *",
+      "effect": "allow",
+    }
   - { "action": "shell", "resource": "git switch -c *", "effect": "allow" }
-  - { "action": "shell", "resource": "git switch --detach *", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git switch --detach *",
+      "effect": "allow",
+    }
   - { "action": "shell", "resource": "*git switch *--force*", "effect": "deny" }
   - { "action": "shell", "resource": "*git switch * -f*", "effect": "deny" }
   - {
@@ -217,9 +230,17 @@ permissions:
   - { "action": "shell", "resource": "*git push -d*", "effect": "deny" }
   - { "action": "shell", "resource": "*git push *--mirror*", "effect": "deny" }
   - { "action": "shell", "resource": "*git push *--prune*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git push *--no-verify*", "effect": "deny" }
+  - {
+      "action": "shell",
+      "resource": "*git push *--no-verify*",
+      "effect": "deny",
+    }
   - { "action": "shell", "resource": "*git push *--exec*", "effect": "deny" }
-  - { "action": "shell", "resource": "*git push *--receive-pack*", "effect": "deny" }
+  - {
+      "action": "shell",
+      "resource": "*git push *--receive-pack*",
+      "effect": "deny",
+    }
 ---
 
 You are build/git.
