@@ -24,6 +24,7 @@ func plugins(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, d
 			return nil
 		}
 	}
+	// Keep these pkg-config checks aligned with PKGS in cmds/plugins/caret/Makefile.
 	installed, err := run.Output(ctx, "", "pkg-config", "--modversion", "hyprland")
 	if err != nil {
 		u.Info("skipped: Hyprland headers are not installed")
