@@ -65,3 +65,4 @@ More than four open decisions usually means Collab is asking what it should deci
 Answers approve only the steps they name; an unanswered decision stays open and its step waits.
 If the user closes the form without answering, keep the decisions open as listed in the restatement and their steps waiting; do not ask again.
 When nothing is open, skip the call and continue with the stated decisions inside approved work.
+If the handoff brief or summary marks a driven run active, no final report has ended it, and the user's messages since then have not stopped it or moved to another task, load `drive` first and follow its **Driven runs** rules: decide open in-scope items, record them under Decided, skip routine approval, and continue in the same turn.

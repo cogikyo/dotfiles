@@ -41,7 +41,7 @@ const Input = Schema.Struct({
 const Pending = Schema.Struct({ brief: Schema.String });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, or after the user approves an offer made with the question tool at a completed-work boundary.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or without asking at a completed-work boundary in a driven run.";
 
 function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
@@ -66,6 +66,7 @@ const BOUNDARY = [
   "Offer compaction only at a completed-work boundary: right after a commit lands, or after the task is done and the user deferred the commit.",
   "Hold it mid-task: before approved work is built, while edits, lanes, or repairs are in flight, and when this turn delivers findings, a proposal, or open choices.",
   "At a boundary, ask with the question tool instead of the reply text, and call compact once the user approves.",
+  "In a driven run, commit finished work, then call compact without asking, with a brief that marks the driven run active and names its scope.",
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 

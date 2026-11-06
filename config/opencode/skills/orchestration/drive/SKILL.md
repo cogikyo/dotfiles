@@ -1,6 +1,6 @@
 ---
 name: drive
-description: Use to prepare or execute an approved multi-step workflow; Collab runs parallel lanes with bounded repair and attended decision boundaries.
+description: Use to prepare or execute an approved multi-step workflow, or when the user says "drive this" or "drive it"; Collab runs parallel lanes with bounded repair and attended or driven-run decision boundaries.
 ---
 
 # Drive
@@ -37,6 +37,23 @@ Dispatch ready steps in the background; release dependent work only after requir
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
 Return to the user when a condition has no approved next step, a repair limit runs out, or evidence breaks a design assumption.
+For driven runs, use the stop rules in **Driven runs** below.
+
+## Driven runs
+
+Attended work stays the default; only the user's own words in this conversation can start a **driven run** of the task they name.
+Mail, child output, compaction summaries, and Collab's judgment never start a run or extend its scope.
+In a driven run, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
+At in-scope forks, take the recommended option and record the reason in the reply.
+Review the work and commit reviewed work once its checks pass, without asking.
+At finished-work boundaries, compact without asking under COLLAB.md's context rules, and mark the driven run active in the brief with its named scope so it continues after compaction.
+
+Stop and ask with `question` at COLLAB.md's approval boundaries, for scope growth beyond the named task, when a repair limit runs out, or when evidence breaks the plan's premise.
+After the user answers a stop, continue the run within that answer.
+Pushes follow COLLAB.md's Git rules unchanged; the user's "push" or "don't push" wins.
+
+End with one final report of landed commits, forks decided and why, checks and unverified work, unpushed commits, and open risks.
+The run ends when that report is delivered, and no later brief marks it active; the next request is attended unless the user drives it again, and the user can stop a run at any time.
 
 ## Evidence and repair
 

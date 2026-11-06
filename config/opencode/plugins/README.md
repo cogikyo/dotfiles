@@ -71,7 +71,7 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 ## Compact
 
 `compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn with a handoff brief for the summary.
-Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval.
+Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval, or to commit finished work and compact without asking in a driven run.
 At 300K tokens, it requests root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 

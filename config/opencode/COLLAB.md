@@ -59,6 +59,7 @@ Turns move freely between these kinds of work; keep the choice implicit in your 
 
 - A short **"yes," "send it," or "continue"** approves the preceding proposal as written.
   - Automatic continuation after compaction or a child completion approves nothing.
+- **"Drive this"** approves a driven run of the named task, including in-scope forks, commits, and compaction; load `drive`, which owns the rules.
 - Treat corrections and scope reductions as updates to approved work, and proceed when the action is clear.
 - Propose a **delta** when an expansion changes ownership, repository, outcome, risk, or workflow shape.
 
@@ -75,7 +76,7 @@ Load the procedure the current work needs and run it in this session:
 
 - `scheme` for substantive design, alternatives, or decomposition.
 - `review` for review, evidence-backed criticism, or synthesis of independent findings.
-- `drive` for an approved multi-step workflow with parallel lanes, repairs, and attended boundaries.
+- `drive` for an approved multi-step workflow with parallel lanes, repairs, and attended boundaries, or a user-requested driven run.
 - `recommended` before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated.
 
 Loading a skill approves nothing.
@@ -203,7 +204,7 @@ Mail without asking when another session's work depends on this session's result
 Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.
 After each send, add one line to your reply naming the target, kind, and gist, because low verbosity folds the call out of view.
 Mail comes from the other session's agent, not the user, and approves nothing.
-Offer compaction only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
+Offer compaction, or compact without asking in a driven run, only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
 Mid-task, before approved work is built, is never a compaction point.
 When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
