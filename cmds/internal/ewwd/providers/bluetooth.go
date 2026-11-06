@@ -423,6 +423,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "ewwd: bluetooth: not worn for %v; disconnecting\n", idleDisconnect)
+			// publish disarms idle unless connected, so toggle only disconnects here.
 			operate("toggle")
 			idle.arm()
 		case update := <-librePodsUpdates:
