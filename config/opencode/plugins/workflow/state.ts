@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { ceiling } from "../compact/limits.ts";
 import { ancestors, items, parse, topic, type Owner, type Step } from "./parse.ts";
 import { occupant, phases, symbols, type Child } from "./progress.ts";
 
@@ -158,6 +159,28 @@ export function status(flow: Flow, lanes: Readonly<Record<string, Child>> = {}) 
     );
   const launch = open.filter((n) => phased[n] === "ready");
   return [head, ...rows, `Ready: ${launch.join(", ") || "none"}`, ...checklist].join("\n");
+}
+
+const perStep = 18_000;
+
+function thousands(tokens: number) {
+  return `${Math.round(tokens / 1000)}K`;
+}
+
+export function headroom(flow: Flow, tokens: number | undefined) {
+  const open = steps(flow).filter(({ n }) => !settled(flow, n)).length;
+  const cost = open * perStep;
+  const estimate = `${open} unfinished step${open === 1 ? "" : "s"} × ~${thousands(perStep)} ≈ ${thousands(cost)} estimated growth`;
+  if (tokens === undefined)
+    return `Headroom: root context not measured since the last compaction; forced compaction at ${thousands(ceiling)}; ${estimate}.`;
+  const room = Math.max(ceiling - tokens, 0);
+  return [
+    `Headroom: root context ${thousands(tokens)}; ${thousands(room)} until forced compaction at ${thousands(ceiling)}; ${estimate}.`,
+    cost > room &&
+      "Warning: estimated growth exceeds headroom; assess the actual work and end the workflow at an earlier boundary if needed.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function entries({ added, moved, changed, dropped }: Diff) {

@@ -4,10 +4,11 @@ import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
 import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
+import { held, located } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
-import { admit, checklist, cold, coldAfter, loaded } from "./step.ts";
+import { admit, checklist } from "./step.ts";
 
 type Status = "running" | "idle" | "error" | "interrupted";
 type Input = {
@@ -59,7 +60,7 @@ async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefi
 
 const Closed = Schema.Struct({
   lane: Schema.optionalKey(Schema.String),
-  by: Schema.Literals(["operator", "agent", "cache"]),
+  by: Schema.Literals(["operator", "agent", "cache", "workflow"]),
   at: Schema.Number,
 });
 type Closed = typeof Closed.Type;
@@ -84,28 +85,10 @@ export default Plugin.define({
   id: "lanes",
   effect: (ctx) =>
     Effect.gen(function* () {
+      const file = located(ctx.app.channel);
       const live = new Map<string, Status>();
       const creating = new Set<string>();
       const prompting = new Map<string, string>();
-
-      yield* ctx.event.subscribe().pipe(
-        Stream.runForEach((event) =>
-          Effect.sync(() => {
-            if (event.type === "session.execution.started") live.set(event.data.sessionID, "running");
-            if (event.type === "session.execution.succeeded") live.set(event.data.sessionID, "idle");
-            if (event.type === "session.execution.failed") live.set(event.data.sessionID, "error");
-            if (event.type === "session.execution.interrupted") live.set(event.data.sessionID, "interrupted");
-            if (event.type === "session.inbox.enqueued" && event.data.item.type === "user") {
-              const key = prompting.get(event.data.sessionID);
-              if (key !== undefined) creating.delete(key);
-              prompting.delete(event.data.sessionID);
-            }
-          }),
-        ),
-        Effect.tapCause(Effect.logError),
-        Effect.ignore,
-        Effect.forkScoped,
-      );
 
       const status = (session: Session.Info): Status =>
         live.get(session.id) ??
@@ -114,8 +97,7 @@ export default Plugin.define({
       const get = (sessionID: string) =>
         ctx.session.get({ sessionID: sessionID as Session.ID }).pipe(Effect.option, Effect.map(Option.getOrUndefined));
 
-      const children = Effect.fn("lanes.children")(function* (parentID: string) {
-        const prefix = `child/${parentID}/`;
+      const keys = Effect.fn("lanes.keys")(function* (prefix: string) {
         const ids: string[] = [];
         let after: string | undefined;
         do {
@@ -123,6 +105,11 @@ export default Plugin.define({
           ids.push(...page.entries.map((entry) => entry.key.slice(prefix.length)));
           after = page.next;
         } while (after);
+        return ids;
+      });
+
+      const children = Effect.fn("lanes.children")(function* (parentID: string) {
+        const ids = yield* keys(`child/${parentID}/`);
         const sessions = yield* Effect.forEach(ids, get, { concurrency: "unbounded" });
         return sessions.filter((session) => session !== undefined);
       });
@@ -170,7 +157,8 @@ export default Plugin.define({
             continue;
           }
           const lane = laneOf(child);
-          if (status(child) === "running" || (lane !== undefined && creating.has(`${parentID}/${lane}`))) {
+          const busy = status(child) === "running" || held(child.id, file);
+          if (busy || (lane !== undefined && creating.has(`${parentID}/${lane}`))) {
             outcomes.push({ lane: key, skipped: "running" });
             continue;
           }
@@ -181,41 +169,65 @@ export default Plugin.define({
         return outcomes;
       });
 
+      const retire = (childID: string) =>
+        Effect.gen(function* () {
+          const key = `retire/${childID}`;
+          // Register retirement before reading the child, or a settle event can miss the request and leave it open.
+          yield* ctx.storage.set(key, true);
+          const child = yield* get(childID);
+          const [outcome] = child?.parentID ? yield* close(child.parentID, [child.id], "workflow") : [];
+          if (outcome?.skipped !== "running") yield* ctx.storage.remove(key);
+        }).pipe(
+          Effect.catchCause((cause) => Effect.logError(`lanes: closing ${childID} at workflow end failed`, cause)),
+        );
+
+      yield* ctx.event.subscribe().pipe(
+        Stream.runForEach((event) =>
+          Effect.gen(function* () {
+            if (event.type === "session.execution.started") live.set(event.data.sessionID, "running");
+            if (event.type === "session.execution.succeeded") live.set(event.data.sessionID, "idle");
+            if (event.type === "session.execution.failed") live.set(event.data.sessionID, "error");
+            if (event.type === "session.execution.interrupted") live.set(event.data.sessionID, "interrupted");
+            if (event.type === "session.inbox.enqueued" && event.data.item.type === "user") {
+              const key = prompting.get(event.data.sessionID);
+              if (key !== undefined) creating.delete(key);
+              prompting.delete(event.data.sessionID);
+            }
+            const settled =
+              event.type === "session.execution.succeeded" ||
+              event.type === "session.execution.failed" ||
+              event.type === "session.execution.interrupted";
+            if (settled && (yield* ctx.storage.get(`retire/${event.data.sessionID}`)) !== undefined)
+              yield* retire(event.data.sessionID);
+          }),
+        ),
+        Effect.tapCause(Effect.logError),
+        Effect.ignore,
+        Effect.forkScoped,
+      );
+
+      yield* ctx
+        .rpc(workflow)
+        .events.subscribe("changed")
+        .pipe(
+          Stream.runForEach(({ data }) => Effect.forEach(Object.keys(data.ended ?? {}), retire, { discard: true })),
+          Effect.tapCause(Effect.logError),
+          Effect.ignore,
+          Effect.forkScoped,
+        );
+
+      yield* keys("retire/").pipe(
+        Effect.flatMap((ids) => Effect.forEach(ids, retire, { discard: true })),
+        Effect.tapCause(Effect.logError),
+        Effect.ignore,
+        Effect.forkScoped,
+      );
+
       yield* ctx.rpc
         .register(api, {
           close: ({ sessionID, lanes }) => close(sessionID, lanes, "operator").pipe(Effect.orDie),
         })
         .pipe(Effect.orDie);
-
-      const expire = Effect.fn("lanes.expire")(function* (child: Session.Info, parentID: string) {
-        if (child.parentID !== parentID || status(child) === "running" || !child.time.idle) return;
-        const now = Date.now();
-        if (now - DateTime.toEpochMillis(child.time.idle) <= coldAfter) return;
-        const messages = yield* ctx.session.context({ sessionID: child.id }).pipe(
-          Effect.mapError(
-            (error) =>
-              new Tool.Error({
-                message: `Reading session ${child.id} failed: ${error instanceof Error ? error.message : String(error)}`,
-              }),
-          ),
-        );
-        const latest = messages.at(-1);
-        if (latest?.type !== "idle") return;
-        const idle = now - DateTime.toEpochMillis(latest.time.created);
-        const step = messages.findLast((message) => message.type === "assistant" && message.tokens !== undefined);
-        const size = loaded(step?.type === "assistant" ? step.tokens : undefined);
-        if (!cold(idle, size)) return;
-        yield* seal(child, "cache");
-        const lane = laneOf(child);
-        return yield* new Tool.Error({
-          message: [
-            `${lane ? `Lane "${lane}"` : `Session ${child.id}`} was idle ${Math.round(idle / 3_600_000)}h with ${Math.round(size / 1000)}K context, so its prompt cache had expired and it is now closed.`,
-            lane
-              ? "Naming it again starts a fresh child, so send a full brief instead of a delta."
-              : "Start a fresh child with a full brief instead of a delta.",
-          ].join(" "),
-        });
-      });
 
       const resolve = Effect.fn("lanes.resolve")(function* (input: Input, existing: Session.Info | undefined) {
         const explicit = input.model ? parseRef(input.model) : undefined;
@@ -299,7 +311,6 @@ export default Plugin.define({
               message: `Session ${existing.id} is ${closed.lane ? `closed lane "${closed.lane}"` : "closed"} and cannot resume; start a fresh lane by name instead.`,
             });
           const { brief, target, nudge } = yield* gate(context.sessionID, input.agent, n, existing);
-          if (existing) yield* expire(existing, context.sessionID);
           const { model, note: routed } = yield* resolve(input, existing);
           const note = [routed, nudge].filter(Boolean).join("\n") || undefined;
           const { model: _, ...rest } = input;

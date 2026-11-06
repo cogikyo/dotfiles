@@ -3,19 +3,6 @@ import { settled, waits, type Flow } from "../workflow/state.ts";
 
 export type Verdict = { step: Step } | { error: string };
 
-type Tokens = { input: number; cache: { read: number; write: number } };
-
-export const coldAfter = 60 * 60_000;
-const coldSize = 100_000;
-
-export function loaded(tokens: Tokens | undefined) {
-  return tokens ? tokens.input + tokens.cache.read + tokens.cache.write : 0;
-}
-
-export function cold(idle: number, size: number) {
-  return idle > coldAfter && size > coldSize;
-}
-
 export function admit(state: { flow?: Flow } | undefined, n: number, linked: boolean): Verdict {
   if (!state)
     return {

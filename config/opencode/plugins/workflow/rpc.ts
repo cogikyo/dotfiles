@@ -19,6 +19,13 @@ export const api = Rpc.define({
     },
   },
   events: {
-    changed: { schema: Schema.toStandardSchemaV1(Schema.Struct({ root: Schema.String })) },
+    changed: {
+      schema: Schema.toStandardSchemaV1(
+        Schema.Struct({
+          root: Schema.String,
+          ended: Schema.optionalKey(Schema.Record(Schema.String, Schema.Int)),
+        }),
+      ),
+    },
   },
 });

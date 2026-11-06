@@ -1,6 +1,5 @@
 import type { Plugin } from "@opencode/plugin/tui";
-import { latest } from "../lanes/label.ts";
-import { cold, loaded } from "../lanes/step.ts";
+import { usage } from "../lanes/label.ts";
 import type { Live } from "./live.ts";
 import { status } from "./state.ts";
 
@@ -30,14 +29,12 @@ function fact(context: Context, session: Session, step: number | undefined) {
   const messages = context.data.session.message.list(session.id);
   const last = messages.at(-1);
   const idle = !running && last?.type === "idle" ? Date.now() - last.time.created : undefined;
-  const size = loaded(latest(messages)?.tokens);
   return [
     lane(session) ?? `unnamed "${session.title ?? session.id}"`,
     step === undefined ? "no step" : `step ${step}`,
     running ? "running" : (session.outcome ?? "idle"),
     ...(idle === undefined ? [] : [`idle ${Math.floor(idle / 60_000)}m`]),
-    `${Math.round(size / 1000)}K context`,
-    `cache ${idle !== undefined && cold(idle, size) ? "cold" : "warm"}`,
+    `${Math.round(usage(context, session).tokens / 1000)}K context`,
   ].join(" · ");
 }
 

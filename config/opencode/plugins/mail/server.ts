@@ -25,6 +25,7 @@ const Input = Schema.Struct({
 });
 
 const wakeAfter = 3 * 60_000;
+const probe = 1_000;
 const sweepEvery = 60_000;
 
 const description = [
@@ -56,10 +57,10 @@ function text(mail: Mail, directory: string) {
   ].join("\n");
 }
 
-function resolve(to: string) {
+function resolve(to: string, file: string) {
   if (to.startsWith("ses_")) return to;
   const roots = store
-    .sessions()
+    .sessions(file)
     .filter(mailable)
     .map((row) => ({ id: row.id, name: retag(row.title ?? "", { flags: [] }) }))
     .filter((row) => row.name.trim());
@@ -111,6 +112,32 @@ async function hide(
   }
 }
 
+function sweeper(ctx: Plugin.Context, file: string, fail: (what: string, error: unknown) => void) {
+  const probing = new Set<string>();
+  const idle = async (sessionID: string) => {
+    if (probing.has(sessionID)) return false;
+    probing.add(sessionID);
+    const settled = ctx.session
+      .wait({ sessionID })
+      .then(
+        () => true,
+        () => false,
+      )
+      .finally(() => probing.delete(sessionID));
+    return Promise.race([settled, Bun.sleep(probe).then(() => false)]);
+  };
+  return async () =>
+    Promise.all(
+      store.stale(Date.now() - wakeAfter, file).map(async ({ mail, stranded, ...input }) => {
+        // Another process can start a run between this query and the wake; wait() is local and claims have no owner.
+        if (stranded && !(await idle(input.sessionID))) return;
+        await ctx.session
+          .synthetic({ ...input, metadata: mail, delivery: "steer" })
+          .catch((error: unknown) => fail(`wake ${input.sessionID}`, error));
+      }),
+    );
+}
+
 export default Plugin.define({
   id: "mail",
   async setup(ctx) {
@@ -119,16 +146,8 @@ export default Plugin.define({
     const log = Effect.runForkWith(fiber.context);
     const fail = (what: string, error: unknown) =>
       log(Effect.logError(`mail: ${what} failed`, { error: String(error) }));
-    const sweep = async () =>
-      Promise.all(
-        store
-          .stale(Date.now() - wakeAfter)
-          .map(({ mail, ...input }) =>
-            ctx.session
-              .synthetic({ ...input, metadata: mail, delivery: "steer" })
-              .catch((error: unknown) => fail(`wake ${input.sessionID}`, error)),
-          ),
-      );
+    const file = store.located(ctx.app.channel);
+    const sweep = sweeper(ctx, file, fail);
     const wake = () => void sweep().catch((error: unknown) => fail("sweep", error));
     await Promise.all(
       (["context", "compaction", "generate"] as const).map((name) =>
@@ -136,8 +155,8 @@ export default Plugin.define({
       ),
     );
     await ctx.rpc.register(api, {
-      ledger: async ({ sessionID }) => store.ledger(sessionID),
-      parked: async () => store.inboxes(),
+      ledger: async ({ sessionID }) => store.ledger(sessionID, file),
+      parked: async () => store.inboxes(file),
     });
     await ctx.tool.transform((editor) =>
       editor.add({
@@ -148,7 +167,7 @@ export default Plugin.define({
         execute: async (input, context) => {
           const caller = await ctx.session.get({ sessionID: context.sessionID });
           refuse(caller, "caller");
-          const to = resolve(input.to);
+          const to = resolve(input.to, file);
           if (to === caller.id) throw new Error("mail: a session cannot mail itself");
           const target = await ctx.session.get({ sessionID: to }).catch(() => undefined);
           if (!target) throw new Error(`mail: no session ${to}`);
@@ -156,7 +175,7 @@ export default Plugin.define({
           const { replyTo } = input;
           if (
             replyTo &&
-            !store.ledger(caller.id).received.some(({ mail }) => mail.id === replyTo && mail.from === target.id)
+            !store.ledger(caller.id, file).received.some(({ mail }) => mail.id === replyTo && mail.from === target.id)
           )
             throw new Error(`mail: ${replyTo} is not a mail this session received from ${target.id}`);
 

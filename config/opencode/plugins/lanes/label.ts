@@ -4,9 +4,6 @@ import { pressure } from "../statusline/palette.ts";
 
 type Context = Plugin.Context;
 type Session = ReturnType<Context["data"]["session"]["list"]>[number];
-type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
-type Assistant = Extract<Message, { type: "assistant" }>;
-type Measured = Assistant & { tokens: NonNullable<Assistant["tokens"]> };
 type Model = NonNullable<ReturnType<Context["data"]["location"]["model"]["list"]>>[number];
 
 export type Usage = {
@@ -75,9 +72,7 @@ function label(agent: string) {
 }
 
 export function usage(context: Context, session: Session): Usage {
-  const last = latest(context.data.session.message.list(session.id));
-  const used = last?.tokens;
-  const tokens = used ? used.input + used.output + used.reasoning + used.cache.read + used.cache.write : 0;
+  const { last, tokens } = measured(context.data.session.message.list(session.id)) ?? { tokens: 0 };
   const model =
     last &&
     context.data.location.model
@@ -89,7 +84,7 @@ export function usage(context: Context, session: Session): Usage {
     variant: last?.model.variant ?? session.model?.variant,
     limit: model?.limit,
     tokens,
-    spent: used ? count(tokens) : "",
+    spent: last ? count(tokens) : "",
   };
 }
 
@@ -98,14 +93,19 @@ export function strain({ limit, tokens }: Usage, buffer: number | string | undef
   return stop ? pressure((tokens / stop) * 100) : undefined;
 }
 
-export function latest(messages: readonly Message[]) {
+type Tokens = { input: number; output: number; reasoning: number; cache: { read: number; write: number } };
+type Entry = { type: string; status?: unknown; tokens?: Tokens };
+
+export function measured<M extends Entry>(messages: readonly M[]) {
   const compaction = messages.findLastIndex(
     (message) => message.type === "compaction" && message.status === "completed",
   );
-  return messages.findLast(
-    (message, at): message is Measured =>
+  const last = messages.findLast(
+    (message, at): message is Extract<M, { type: "assistant" }> & { tokens: Tokens } =>
       message.type === "assistant" && message.tokens !== undefined && at > compaction,
   );
+  const used = last?.tokens;
+  return used && { last, tokens: used.input + used.output + used.reasoning + used.cache.read + used.cache.write };
 }
 
 export function family(model: string) {

@@ -1,9 +1,10 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
 import { fences, parse, titled, topic } from "./parse.ts";
+import { measured } from "../lanes/label.ts";
 import { children } from "./progress.ts";
 import { api, type State } from "./rpc.ts";
-import { describe, Flow, link, ready, start, status, unlink, update, type Change } from "./state.ts";
+import { describe, Flow, headroom, link, ready, start, status, unlink, update, type Change } from "./state.ts";
 
 const Steps = Schema.Array(Schema.Int);
 
@@ -113,16 +114,23 @@ export default Plugin.define({
       return run;
     };
 
-    const edit = (top: string, change: (flow: Flow | undefined) => Flow | undefined) =>
+    const edit = (top: string, change: (flow: Flow | undefined) => Flow | { end: Flow } | undefined) =>
       serial(top, async () => {
         const before = await load(top);
-        const after = change(before);
-        if (after === before) return { before, after };
+        const next = change(before);
+        const ended = next && "end" in next ? next.end : undefined;
+        const after = next && "end" in next ? undefined : next;
+        if (after === before) return { before, after, ended };
         if (after) await ctx.storage.set(key(top), Schema.encodeSync(Flow)(after));
         else await ctx.storage.remove(key(top));
-        await rpc.events.emit("changed", { root: top });
-        return { before, after };
+        await rpc.events.emit("changed", {
+          root: top,
+          ...(ended ? { ended: ended.links } : {}),
+        });
+        return { before, after, ended };
       });
+
+    const measure = async (top: string) => measured(await ctx.session.context({ sessionID: top }))?.tokens;
 
     const show = async (flow: Flow) =>
       status(flow, await children((sessionID) => ctx.session.get({ sessionID }), flow.links));
@@ -146,7 +154,9 @@ export default Plugin.define({
         const flow = await load(top);
         if (!flow) throw new Error(NONE);
         const own = child ? flow.links[sessionID] : undefined;
-        return [await show(flow), own === undefined ? "" : `Your step: ${own}`].filter(Boolean).join("\n");
+        return [await show(flow), headroom(flow, await measure(top)), own === undefined ? "" : `Your step: ${own}`]
+          .filter(Boolean)
+          .join("\n");
       }
       const target = (flow: Flow) => {
         if (!child) {
@@ -163,8 +173,7 @@ export default Plugin.define({
         return own;
       };
       const source = adopt !== undefined && scans(adopt) ? latest(await ctx.session.context({ sessionID })) : adopt;
-      let ended: number | undefined;
-      const { before, after } = await edit(top, (flow) => {
+      const { before, after, ended } = await edit(top, (flow) => {
         let next = source === undefined ? flow : start(flow, source);
         if (source !== undefined) untitled(source);
         if (!next) throw new Error(NONE);
@@ -176,11 +185,9 @@ export default Plugin.define({
           check: check && { step: target(next), items: check },
         };
         next = update(next, change);
-        if (!end) return next;
-        ended = next.rev;
-        return undefined;
+        return end ? { end: next } : next;
       });
-      if (!after) return `Ended rev ${ended} and deleted the stored workflow; the next \`start\` begins at rev 1.`;
+      if (!after) return `Ended rev ${ended?.rev} and deleted the stored workflow; the next \`start\` begins at rev 1.`;
       const flow = after;
       const open = new Set(before && before.rev === flow.rev ? ready(before) : []);
       const fresh = ready(flow).filter((n) => !open.has(n));
@@ -190,6 +197,7 @@ export default Plugin.define({
         source !== undefined && unlinked(before, flow),
         source === undefined && fresh.length > 0 && `Now ready: ${fresh.join(", ")}`,
         await show(flow),
+        source !== undefined && headroom(flow, await measure(top)),
       ]
         .filter((line) => typeof line === "string")
         .join("\n");
