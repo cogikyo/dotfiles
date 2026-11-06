@@ -280,6 +280,7 @@ func hasDefaultRoute(routes string) bool {
 
 var errUnlocked = errors.New("vpn lock not held")
 
+// held owns the vpn-keep flock; NetworkManager writes must use its methods.
 type held struct{ f *os.File }
 
 func lock() (*held, error) {

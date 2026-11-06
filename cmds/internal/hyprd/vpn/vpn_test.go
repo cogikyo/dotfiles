@@ -220,6 +220,8 @@ func TestMutationsRefuseWithoutLock(t *testing.T) {
 }
 
 func TestOnlyHeldLockMutatesNetworkManager(t *testing.T) {
+	// nmcliOutput and export do not write NetworkManager state.
+	// authorize runs sudo -v before install takes the lock.
 	readOnly := map[string]bool{"nmcliOutput": true, "export": true, "authorize": true}
 	mutating := map[string]bool{"modify": true, "up": true, "down": true, "load": true, "delete": true, "add": true, "reload": true, "import": true, "edit": true, "clone": true}
 	fset := token.NewFileSet()
