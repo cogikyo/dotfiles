@@ -98,7 +98,7 @@ function tail(text: string, cut: boolean) {
   return { text: line < 0 ? rest : rest.slice(line + 1), cut: true };
 }
 
-type Run = { kitty: string; cwd: string; title: string; reason: string; command: string };
+type Run = { kitty: string; cwd: string; session: string; reason: string; command: string };
 
 async function popup(dir: string, run: Run, signal: AbortSignal) {
   await rm(dir, { recursive: true, force: true });
@@ -110,7 +110,7 @@ async function popup(dir: string, run: Run, signal: AbortSignal) {
       "--class",
       "opencode-terminal",
       "--title",
-      run.title,
+      `${run.session} — ${run.reason}`,
       "-o",
       "allow_remote_control=no",
       "-o",
@@ -120,6 +120,7 @@ async function popup(dir: string, run: Run, signal: AbortSignal) {
       runner,
       dir,
       shell(),
+      run.session,
       run.reason,
       run.command,
     ],
@@ -200,9 +201,9 @@ export default Plugin.define({
                 source: { type: "tool", messageID: context.messageID, id: context.id },
               });
               const dir = path.join(root, context.id.replace(/[^\w.-]/gu, "_"));
-              const title = [session.title, input.reason].filter(Boolean).join(" — ");
+              const label = (session.title ?? "").replace(/\p{Cc}+/gu, " ").trim() || "OpenCode";
               return yield* Effect.tryPromise({
-                try: (signal) => popup(dir, { ...input, kitty, cwd, title }, signal),
+                try: (signal) => popup(dir, { ...input, kitty, cwd, session: label }, signal),
                 catch: (error) => new Tool.Error({ message: `terminal failed: ${(error as Error).message}` }),
               });
             }),

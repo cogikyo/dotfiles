@@ -166,10 +166,14 @@ Before calling, state your results and what the user must do in your reply, beca
 Before the permission ask, the plugin rejects control characters except newline and tab in `command`; `reason` and `workdir` allow none.
 The plugin changes permission `allow` to `ask` for `terminal`, including under the global allow-all rule.
 
-Approval opens a fresh Kitty window with class `opencode-terminal`, the session title plus reason as its title, and remote control disabled.
+Approval opens a fresh Kitty window with class `opencode-terminal`, `--title` set to `<session title> — <reason>`, and remote control disabled.
+Session-title control characters become spaces; a title that is empty after trimming becomes `OpenCode`.
 `config/hypr/hyprland.lua` floats and centers it with a red border.
-`terminal/run.sh` prints the reason, working directory, and `$ command`, then runs the command in a real tty without another confirmation.
-After the command or a runner failure, the window says “press Enter to close” and discards queued input; only a fresh Enter or closing the window dismisses it.
+`terminal/run.sh` sets the Kitty tab title to the session title with OSC 2 and prints a header with the session badge, wrapped reason, and working directory (`~`-abbreviated and `%q`-escaped).
+The command uses `bat` highlighting with a plain-text fallback and `$` on its first line; a rule separates the header from command output.
+The runner executes the command in a real tty without another confirmation.
+The footer shows `✓ exit N · Enter to close`, with `✗` for a nonzero exit; runner failures show a separate message.
+Queued input is discarded before the Enter wait; only a fresh Enter or closing the window dismisses it.
 The call blocks until the window exits, then returns the recorded command exit code, cleaned output tail, and log path under `/tmp/opencode/terminal/<call id>/` when available.
 The report distinguishes a window closed before startup from one closed during execution without an exit code.
 For debugging, inspect the call directory's `result` record and `runner.err`; runner failures are reported separately from command exit codes.
