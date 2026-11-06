@@ -23,6 +23,7 @@ const (
 	noiseOperationTimeout = 4 * time.Second
 	a2dpGrace             = 30 * time.Second
 	a2dpHeals             = 2
+	idleDisconnect        = 10 * time.Minute
 )
 
 var a2dpUUIDs = []string{
@@ -91,6 +92,12 @@ type a2dpWatch struct {
 	seen      bool
 	healing   bool
 	heals     int
+}
+
+type idleWatch struct {
+	timer   *time.Timer
+	C       <-chan time.Time
+	session string
 }
 
 type Bluetooth struct {
@@ -172,6 +179,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	var noiseDeadline *time.Timer
 	var noiseDeadlineC <-chan time.Time
 	var audio a2dpWatch
+	var idle idleWatch
 	var wear string
 
 	clearNoise := func() {
@@ -205,6 +213,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	publish := func() {
 		snapshot := mergeBluetoothState(bluez, b.address, metadata, noise)
 		b.publish(snapshot)
+		idle.track(idleSession(snapshot, metadata))
 		if !audio.connected {
 			if wear != "" {
 				wear = ""
@@ -408,6 +417,14 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 			fmt.Fprintf(os.Stderr, "ewwd: bluetooth: connected without A2DP for %v; reconnecting (%d/%d)\n", a2dpGrace, audio.heals, a2dpHeals)
 			operate("reconnect")
 			audio.arm()
+		case <-idle.C:
+			if pending != nil {
+				idle.arm()
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "ewwd: bluetooth: not worn for %v; disconnecting\n", idleDisconnect)
+			operate("toggle")
+			idle.arm()
 		case update := <-librePodsUpdates:
 			metadata = update.state
 			metadataRevision++
@@ -681,6 +698,41 @@ func (w *a2dpWatch) arm() {
 }
 
 func (w *a2dpWatch) disarm() {
+	if w.timer != nil {
+		w.timer.Stop()
+	}
+	w.C = nil
+}
+
+func idleSession(snapshot BluetoothState, metadata *librePodsState) string {
+	if snapshot.WearState != "not_worn" {
+		return ""
+	}
+	return metadata.Owner + "/" + metadata.Generation
+}
+
+func (w *idleWatch) track(session string) {
+	if session == w.session {
+		return
+	}
+	w.session = session
+	if session == "" {
+		w.disarm()
+		return
+	}
+	w.arm()
+}
+
+func (w *idleWatch) arm() {
+	if w.timer == nil {
+		w.timer = time.NewTimer(idleDisconnect)
+	} else {
+		w.timer.Reset(idleDisconnect)
+	}
+	w.C = w.timer.C
+}
+
+func (w *idleWatch) disarm() {
 	if w.timer != nil {
 		w.timer.Stop()
 	}

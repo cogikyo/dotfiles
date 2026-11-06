@@ -77,6 +77,8 @@ Cycling skips disconnected ports and output monitors, and keeps each device's vo
 When the tracked headphones' wear state changes, the default sink and source follow: putting them on selects their Bluetooth sink once it appears and `audio.headphones_source` as the source.
 Taking them off or disconnecting while worn selects `audio.fallback_sink` and `audio.fallback_source`.
 Unknown wear state and other disconnects leave the defaults alone, and cycling the sink by hand cancels a pending switch to the headphones.
+If the tracked headphones stay connected and not worn for 10 minutes, ewwd disconnects them to save battery.
+Each new connection restarts the countdown, since the headphones can reconnect on their own while off-head.
 In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.
 
 Brightness changes made outside these actions, such as the brightness keys, open the `backlight-osd` window for 1.5 s while any widgets are open.
