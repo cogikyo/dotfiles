@@ -29,6 +29,17 @@ export function resolveToolRepairMode(env = process.env) {
     return value === "drop" ? "drop" : "placeholder";
 }
 const THINKING_TYPES = new Set(["thinking", "redacted_thinking"]);
+const MAX_BREAKPOINTS = 4; // Anthropic's cap spans tools, system, and messages.
+function countBreakpoints(parsed) {
+    const blocks = [
+        ...(Array.isArray(parsed.tools) ? parsed.tools : []),
+        ...(Array.isArray(parsed.system) ? parsed.system : []),
+        ...(Array.isArray(parsed.messages) ? parsed.messages : []).flatMap((message) => Array.isArray(message.content)
+            ? message.content.flatMap((block) => Array.isArray(block?.content) ? [block, ...block.content] : [block])
+            : []),
+    ];
+    return blocks.filter((block) => block && typeof block === "object" && block.cache_control).length;
+}
 function toolUseIdOf(block) {
     return block.type === "tool_use" && typeof block["id"] === "string"
         ? block["id"]
@@ -322,6 +333,7 @@ export function transformBody(body, mode = resolveToolRepairMode()) {
         const BILLING_PREFIX = "x-anthropic-billing-header";
         const keptSystem = [];
         const movedTexts = [];
+        let movedCache;
         for (const entry of parsed.system) {
             const txt = typeof entry === "string" ? entry : (entry.text ?? "");
             if (txt.startsWith(BILLING_PREFIX) || txt.startsWith(SYSTEM_IDENTITY)) {
@@ -329,6 +341,7 @@ export function transformBody(body, mode = resolveToolRepairMode()) {
             }
             else if (txt.length > 0) {
                 movedTexts.push(txt);
+                movedCache = entry.cache_control ?? movedCache;
             }
         }
         if (movedTexts.length > 0 && Array.isArray(parsed.messages)) {
@@ -336,11 +349,19 @@ export function transformBody(body, mode = resolveToolRepairMode()) {
             if (firstUser) {
                 parsed.system = keptSystem;
                 const prefix = movedTexts.join("\n\n");
+                const cache = movedCache && countBreakpoints(parsed) < MAX_BREAKPOINTS
+                    ? { cache_control: movedCache }
+                    : undefined;
                 if (typeof firstUser.content === "string") {
-                    firstUser.content = prefix + "\n\n" + firstUser.content;
+                    firstUser.content = cache
+                        ? [
+                            { type: "text", text: prefix, ...cache },
+                            ...(firstUser.content ? [{ type: "text", text: firstUser.content }] : []),
+                        ]
+                        : prefix + "\n\n" + firstUser.content;
                 }
                 else if (Array.isArray(firstUser.content)) {
-                    firstUser.content.unshift({ type: "text", text: prefix });
+                    firstUser.content.unshift({ type: "text", text: prefix, ...cache });
                 }
             }
         }
