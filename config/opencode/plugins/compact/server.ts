@@ -3,7 +3,6 @@ import { Plugin } from "@opencode/plugin";
 import { Event } from "@opencode/schema/event";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { Effect, Fiber, Schema } from "effect";
-import { api as drive } from "../drive/rpc.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { children } from "../workflow/progress.ts";
 import { status } from "../workflow/state.ts";
@@ -27,9 +26,6 @@ const CHILD =
 
 const RECOMMENDED = "Load the `recommended` skill and follow it.";
 
-const DRIVE =
-  "Drive is armed. Load the `recommended` skill and write its restatement and workflow card, but decide each open item yourself and record it under Decided. Then, in this same turn, continue the armed drive run from the handoff brief or summary.";
-
 const FLOW = "A workflow is stored for this session: call the `workflow` tool first to read its step state.";
 const UNREAD =
   "The workflow status could not be read during compaction: call the `workflow` tool first to check for stored step state.";
@@ -45,7 +41,7 @@ const Input = Schema.Struct({
 const Pending = Schema.Struct({ brief: Schema.String });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or in an armed drive run at a completed-work boundary.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, or after the user approves an offer made with the question tool at a completed-work boundary.";
 
 function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
@@ -70,7 +66,6 @@ const BOUNDARY = [
   "Offer compaction only at a completed-work boundary: right after a commit lands, or after the task is done and the user deferred the commit.",
   "Hold it mid-task: before approved work is built, while edits, lanes, or repairs are in flight, and when this turn delivers findings, a proposal, or open choices.",
   "At a boundary, ask with the question tool instead of the reply text, and call compact once the user approves.",
-  "In an armed drive run, commit finished work, then call compact without asking; the run continues from the brief after compaction.",
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 
@@ -176,21 +171,11 @@ export default Plugin.define({
         await ctx.session.wait({ sessionID });
         const session = await ctx.session.get({ sessionID });
         if (request.halted || session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
-        const [armed, flow] = await Promise.all([
-          guard(
-            "drive state",
-            ctx
-              .rpc(drive)
-              .state({ sessionID })
-              .then((state) => state.armed),
-            false,
-          ),
-          tracked(sessionID),
-        ]);
+        const flow = await tracked(sessionID);
         const [marker, ...after] = await ctx.session.context({ sessionID });
         if (marker?.id !== request.id || request.steered || after.some((message) => message.type === "user")) return;
         const lead = "failed" in flow ? UNREAD : flow.text && FLOW;
-        const text = [lead, armed ? DRIVE : RECOMMENDED].filter(Boolean).join(" ");
+        const text = [lead, RECOMMENDED].filter(Boolean).join(" ");
         await ctx.session.synthetic({ sessionID, text, delivery: "queue" });
       } finally {
         if (requests.get(sessionID) === request) requests.delete(sessionID);

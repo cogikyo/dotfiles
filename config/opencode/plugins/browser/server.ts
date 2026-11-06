@@ -1,6 +1,5 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
-import { api as drive } from "../drive/rpc.ts";
 import { Catalog, MCP, version, type Tool } from "./mcp.ts";
 import { leadpier, Preview } from "./preview.ts";
 
@@ -25,10 +24,7 @@ export default Plugin.define({
     const open = (sessionID: string) => {
       const existing = browsers.get(sessionID);
       if (existing) return existing;
-      const opening = ctx
-        .rpc(drive)
-        .state({ sessionID })
-        .then(({ armed }) => MCP.connect(armed));
+      const opening = MCP.connect();
       browsers.set(sessionID, opening);
       opening.then(
         (browser) => browser.exited.then(() => forget(sessionID, opening)),
@@ -113,7 +109,7 @@ async function discover(ctx: Plugin.Context) {
   const key = `catalog/${version}`;
   const cached = await ctx.storage.get(key);
   if (Schema.is(Catalog)(cached)) return cached;
-  const client = await MCP.connect(true);
+  const client = await MCP.connect();
   try {
     const tools = await client.tools();
     await ctx.storage.set(key, tools);

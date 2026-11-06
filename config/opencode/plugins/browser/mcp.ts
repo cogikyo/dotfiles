@@ -35,7 +35,7 @@ export class MCP {
   private readonly done = Promise.withResolvers<void>();
   private readonly pending = new Map<number, { resolve: (value: unknown) => void; reject: (cause: Error) => void }>();
 
-  private constructor(headless: boolean) {
+  private constructor() {
     this.child = spawn(
       "npx",
       [
@@ -47,7 +47,6 @@ export class MCP {
         "--no-usage-statistics",
         "--redactNetworkHeaders",
         ...["http", "https", "ws", "wss"].map((scheme) => `--allowedUrlPattern=${scheme}://*:*`),
-        ...(headless ? ["--headless", "--viewport=1920x1080"] : []),
       ],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
@@ -58,8 +57,8 @@ export class MCP {
     this.child.once("close", (code) => this.fail(new Error(`Chrome DevTools MCP exited with ${code}`)));
   }
 
-  static async connect(headless: boolean) {
-    const client = new MCP(headless);
+  static async connect() {
+    const client = new MCP();
     try {
       await client.request("initialize", {
         protocolVersion: "2025-06-18",
