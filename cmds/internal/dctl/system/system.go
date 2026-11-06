@@ -37,6 +37,11 @@ func Stage(root, overlay string) setup.Stage {
 			Fix:   func(ctx context.Context) error { return addUsers(ctx, root) },
 		},
 		{
+			Name:  "system-tmpfiles",
+			Check: func(context.Context) error { return checkTmpfiles(root, overlay) },
+			Fix:   func(ctx context.Context) error { return createTmpfiles(ctx, execx.OSRunner{}, root, overlay) },
+		},
+		{
 			Name:  "system-units",
 			Check: func(ctx context.Context) error { return checkUnits(ctx, root, overlay) },
 			Fix:   func(ctx context.Context) error { return enable(ctx, root, overlay) },

@@ -179,6 +179,7 @@ The optional `vpn` stage does not gate security enrollment.
 | totp       | secureboot                  | Seal the boot TOTP                |
 
 The `system` stage creates users declared in `system/etc/sysusers.d/*.conf` with `systemd-sysusers`.
+It creates missing paths from `system/etc/tmpfiles.d/*.conf` during setup with `systemd-tmpfiles --create` (`f`/`d` entries, literal absolute paths only).
 It checks units in its `running` list, currently only `sshd.service`, and starts them if inactive.
 
 - Root stages other than lock stages are checked as the user first; only stages that are not OK and lock stages need sudo.
