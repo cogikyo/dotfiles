@@ -32,7 +32,7 @@ const Output = Schema.Struct({
 const description = [
   "Create a new top-level session in a directory, and optionally send its first message to start a turn.",
   "Call it only when the user asks in this conversation for a new session; that request is the approval, because this tool cannot ask for permission.",
-  "The new session is independent of this one: it is not a lane, drive mode does not carry over, and it runs unattended until the user opens it.",
+  "The new session is independent of this one: it is not a lane and it runs unattended until the user opens it.",
   "Only primary sessions can call it.",
 ].join(" ");
 

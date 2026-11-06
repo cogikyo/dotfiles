@@ -5,7 +5,7 @@ description: Use to prepare or execute an approved multi-step workflow; Collab r
 
 # Drive
 
-Design an execution workflow, get approval unless the run is armed, then carry it through its dependencies, evidence, and bounded repairs.
+Design an execution workflow, get approval, then carry it through its dependencies, evidence, and bounded repairs.
 Collab runs this procedure in-session and conserves main-thread context for the user conversation, integration, Git, and gates.
 File edits, repairs, and long-output test runs go to lanes by default.
 A tiny one-line config or record edit may stay in-session.
@@ -37,7 +37,6 @@ Dispatch ready steps in the background; release dependent work only after requir
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
 Return to the user when a condition has no approved next step, a repair limit runs out, or evidence breaks a design assumption.
-In an armed run, these conditions are your decisions; record each one and continue, as `Armed runs` describes.
 
 ## Evidence and repair
 
@@ -65,19 +64,3 @@ Hold dependent work until the Git boundary it needs is finished, so later lanes 
 Run `commit` at each Git boundary.
 Update the user after each finished boundary or wave with the verdict, the material change, and the next action.
 At the end, report accepted work, changed paths, checks and outcomes, dissent, repair counts, blockers, and residual risk.
-
-## Armed runs
-
-The user arms drive mode with `<leader>d` or `/drive`, and a glyph in the session title marks the armed state, with a `DRIVE` badge as a fallback when the title cannot be decorated.
-The plugin adds a system line while armed and hides the `question` tool.
-Only the user can change it, and loading this skill yourself does not arm drive mode.
-When the line disappears, attended boundaries apply again from the next step.
-
-- Make in-scope execution decisions and record the reason and any dissent in your reply and the final report.
-- Expect the reviewer to answer every permission ask with `allow` or `deny`, without waiting for the user.
-- Deny rules and explicit user limits still apply; drive mode does not expand scope or grant every permission.
-- Adapt to a denial when a permitted action meets the same approved objective, and never retry it through a bypass.
-- Follow denial reasons to adapt or retry as directed; when you need the user, use `notify-send` (dunst) or `bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts ask bob "<message>"` (both always allowed by the reviewer), then continue independent permitted work.
-- The plugin journals reviewer decisions, and the user can inspect them with `/drive-log`.
-- Do not call `question` or stop only to request routine approval while armed.
-- Recover step state from **`workflow`**, and reconcile the summary, lanes, and tree before new writes.

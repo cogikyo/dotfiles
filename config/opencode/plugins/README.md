@@ -14,8 +14,8 @@ Plugin types under-declare the host; some extra fields, such as `titleView` on `
 The server runs one copy of each plugin per loaded location, and a copy's `ctx.event.subscribe` can receive other locations' session events, so a handler that acts on a session should first check that `event.location` matches `ctx.location`.
 Execution and inbox events can omit `event.location`; `compact/server.ts` handles those with state that is safe to update in any copy.
 
-Drive, sidebar, and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
-Their four leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
+Sidebar and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
+Their three leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
 
 ## Lanes
 
@@ -68,27 +68,14 @@ Received history is filtered by `to` and sent history by `from`, so forks do not
 This plugin has no key or separate state file.
 See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notices.
 
-## Drive
-
-`drive/server.ts` sends every permission ask in an armed session tree to `openai/gpt-6-sol-fast` for `allow` or `deny`, so none waits for the user.
-Denial reasons say what to do instead; reviewer failure or timeout denies with instructions to retry once later or notify the user and continue other work.
-Configured denials remain denied, and the plugin hides `question` while armed.
-`drive/tui.tsx` adds `<leader>d`, `/drive`, and `/drive-log` for recent decisions.
-It marks an armed tree on the native sidebar title with a steering-wheel glyph, blue text, and the title shimmer while any session in the tree runs.
-V2 has no slot for that title, so `drive/title.ts` polls every 250 ms from the `session-pane` row, finds the node by its `_rename` and `pendingTitle` fields, and intercepts its `rename` setter to keep the shimmer on.
-When that title is hidden or not found, such as a closed sidebar, a terminal or panel pane, a child session, or an upstream change, a DRIVE badge before `prompt.footer.status` shows instead.
-Arming reviews pending permission asks and cancels pending question forms in the tree; the server also polls armed trees every 3 s for pending asks raised after drive's hook, such as the guard's push check.
-Armed state is plugin KV `armed/<root>`, and decisions go to `${XDG_DATA_HOME:-~/.local/share}/opencode/drive.jsonl`, rotated to `.1` after 2 MiB.
-
 ## Compact
 
 `compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn with a handoff brief for the summary.
-Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval; armed drive runs commit finished work and compact without asking.
+Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval.
 At 300K tokens, it requests root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
 After root compaction from any trigger, the plugin waits for a successful idle session and queues a synthetic `recommended` follow-up.
-If drive is confirmed armed, the follow-up instead asks the agent to restate, decide open items, and continue in the same turn; a drive lookup failure uses the normal follow-up.
 User input, including queued input, suppresses the follow-up, as does a superseding compaction or a failure or non-shutdown interruption between the compaction request and idle.
 
 Summary instructions cover user wording, approvals, remaining work, file ownership, and stored handoff briefs, plus the delegate's objective, scope, limits, and checks for child sessions.
@@ -258,7 +245,7 @@ Review the selection and navigation assumptions after an OpenCode update.
 Inputs are `directory`, `title`, and optional `prompt` and `agent`; the directory must be absolute or start with `~` and must exist.
 It creates a top-level session with session metadata `origin` set to the caller's session ID, then sends `prompt` as the first message to start a turn.
 Without `agent`, the session uses the configured default primary agent; a named agent must be a visible primary agent at that directory.
-Only top-level sessions can call it, and the new session is not a lane and is not armed for drive.
+Only top-level sessions can call it, and the new session is not a lane.
 V2 gives plugins no permission-ask path, so the user's request in chat is the approval; the guard's `opencode api` denial points here.
 If the prompt fails, the error names the created session, so the agent does not retry and create a duplicate.
 There is no persistent state, key, or TUI slot.
@@ -285,7 +272,7 @@ There is no key, TUI slot, or separate state file.
 ## Browser
 
 `browser/server.ts` exposes `chrome-devtools_*` tools from `chrome-devtools-mcp` 1.7.0 with one isolated Chromium process per session.
-It opens headless at 1920×1080 under an armed drive root and closes the MCP process and forgets the preview login on execution success, failure, interruption, or session deletion.
+It opens headed and closes the MCP process and forgets the preview login on execution success, failure, interruption, or session deletion.
 The user `headless-reap.timer` also kills headless Chromium and Firefox older than 3 hours on a 15-minute schedule; headed browsers are excluded.
 URL-bearing calls accept HTTP(S) or `about:blank`; MCP launch patterns restrict network schemes.
 The tool catalog lives in plugin KV `catalog/1.7.0`.
@@ -340,7 +327,6 @@ A footer row shows `+N more` and the action when present.
 The countdown bar assumes the native 5000 ms default and hides if the toast lasts longer; hover is forwarded to pause the native timer and the bar.
 It finds the core toast by its layout shape before each frame's layout pass, so an unrecognized upstream toast or a hidden sidebar falls back to the stock top-right toast.
 Git polling and configuration caches live in memory; this plugin has no tool or state file.
-Drive owns its own toggle and badge.
 
 ## Byline
 

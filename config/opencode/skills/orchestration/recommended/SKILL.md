@@ -65,4 +65,3 @@ More than four open decisions usually means Collab is asking what it should deci
 Answers approve only the steps they name; an unanswered decision stays open and its step waits.
 If the user closes the form without answering, keep the decisions open as listed in the restatement and their steps waiting; do not ask again.
 When nothing is open, skip the call and continue with the stated decisions inside approved work.
-When drive mode hides the question tool, list the open decisions last in text, numbered, and suggest turning drive off to get the form.

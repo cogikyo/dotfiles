@@ -18,12 +18,12 @@ Do not edit permissions, skills, or agents unless the user asks after the report
 Default to today and the current workspace.
 Treat `$ARGUMENTS` as the window: a session id, directory, agent, or time bound.
 
-Start with the `sessions` tool and any log or `/drive-log` evidence supplied by the user.
+Start with the `sessions` tool and any log evidence supplied by the user.
 Select sessions by directory and time, then inspect `tools` with `tool: "shell"` for failed calls.
 Use `part` with the returned `<message ID>#<index>` address to read the command, error, and output.
 Include `subagent` failures when the question concerns agent use or dispatch.
 Compare later calls from the same command family to see whether a legal form succeeded.
-Tool history does not prove every permission ask or reviewer decision; report missing permission evidence instead of inferring it from a failed command.
+Tool history does not prove every permission ask; report missing permission evidence instead of inferring it from a failed command.
 
 Ignore read-only git that already has an allowed twin unless the agent never switched to it.
 

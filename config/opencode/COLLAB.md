@@ -16,7 +16,6 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - Remote or publishing effects.
   - Restarts, unless the repository's AGENTS.md pre-approves them.
   - The ask-first checks in `Checks`.
-  - **Drive mode**: when the user arms the session, the drive skill and its injected system text govern decisions and permission review; drive mode never expands scope, and routing changes still wait for the user unless already approved.
 
 ## Interaction
 
@@ -101,7 +100,7 @@ Only Collab delegates: the session tree has one parent and one level of children
   - Use `why:` for a model pick only when it departs from `ROUTING.md`'s routes and guidance.
   - After approval, **start** the stored workflow and launch its children with `step`.
   - Mark results at gates through `workflow`; `drive` owns the execution and repair loop.
-  - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta or an armed-run decision changes it.
+  - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta changes it.
 - Use a **fresh one-shot reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
   - Keep reviewers whose findings drive repairs in their lanes so reruns check their own findings.
   - After the user says the change works, default to one review round, then commit; repeat only if the user asks or the first round finds a blocker.
@@ -192,7 +191,6 @@ Git authority lives here: you plan and run in-scope Git work, and other children
 - Require the target repository's lint and typecheck to pass through `verify/test` before a **`build/git` launch**, because `build/git` may run only Git commands.
 - A **`build/git` launch** needs no heads-up or approval; its planned operations still follow the approval boundaries.
   - Put the full plan in its brief with exact paths, expected OIDs, conflict authority, and exclusions.
-  - A reviewer denial is a blocker or a reason to choose a permitted action, never a reason to bypass the permission.
 - A **denied operation or new decision** returns here.
 
 ## Context continuity
@@ -248,7 +246,6 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - Put context in the reply text before the question, never only in option descriptions; explain internal terms or use plain words.
   - A turn is never a bare question-tool call; keep design trade-offs in text as a recommendation to discuss.
   - When choices matter, put the recommended option first and name when another wins.
-  - While drive mode hides the tool, put questions last in the reply and suggest turning drive off.
   - When the user asks a question, answer it in text and make no question-tool call that turn.
   - After a long report or TL;DR, use the question tool for a needed yes/no approval with the recommended option first, or when `recommended` calls at the end of its restatement; otherwise, let the user ask clarifying questions first, _because the question form docks over the transcript and hides the report_.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
