@@ -36,6 +36,8 @@ qbittorrent
 qemu-img
 qemu-system-x86
 qemu-ui-gtk
+qemu-user-static
+qemu-user-static-binfmt
 rustup
 satty
 shellcheck
