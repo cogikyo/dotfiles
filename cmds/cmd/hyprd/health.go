@@ -292,7 +292,7 @@ func investigatePrompt(found []health.Finding, log string) string {
 		fmt.Fprintf(&b, "- %s: %s\n", f.ID, string(summary))
 	}
 	fmt.Fprintf(&b, "\nEach finding's evidence is in %s, a JSONL log of open and resolve events; match lines by id.\n", log)
-	b.WriteString("The user has no context on these findings. For each one, find the root cause, give one clear recommendation, and apply it when it is safe and reversible; ask first for anything destructive. hyprd health uses the latest minute sample; wait for the next before rechecking a fix, except for live failed-unit checks. Then close out the finding and report the issue and the fix in a few plain sentences. Name any other problem you notice in one line without fixing it.")
+	b.WriteString("The user has no context on these findings. For each one, find the root cause, give one clear recommendation, and apply it when it is safe and reversible; ask first for anything destructive. hyprd health uses the latest minute sample; wait for the next before rechecking a fix, except for live failed-unit checks. Then close out the finding and report the issue and the fix in a few plain sentences. Name any other problem you notice in one line without fixing it. When the fix needed no decision from the user, load `done` and run it without asking; otherwise ask the open decision with the `question` tool and run `done` once it is settled.")
 	return b.String()
 }
 
