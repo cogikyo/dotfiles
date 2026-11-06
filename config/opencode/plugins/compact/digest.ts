@@ -8,6 +8,8 @@ export const Message = Schema.toEncoded(
 );
 export type Message = typeof Message.Type;
 
+export type Session = { id: string; messages: readonly Message[] };
+
 export type Workflow = { text?: string } | { failed: true };
 
 export type Lane = { id: string; name: string; agent?: string; state: string };
@@ -20,6 +22,7 @@ export type Live = {
 };
 
 const PASTE = 4_000;
+const USER = 5_000 * 4;
 const REPLIES = 15_000 * 4;
 const NOTE = 80;
 const DIRTY = 40;
@@ -32,33 +35,34 @@ function precedence(last: string) {
 }
 
 const HEAD = "# Compaction digest";
+const NEWEST = "User and Replies are newest first.";
 const UNBRIEFED = "No brief was written: the plugin compacted this session automatically when its workflow ended.";
 
-export function digest(messages: readonly Message[], brief: string | undefined, workflow: Workflow, live: Live) {
+export function digest(session: Session, brief: string | undefined, workflow: Workflow, live: Live) {
   return [
     HEAD,
     [
       "The compact plugin built this digest from session history and live probes without a model call.",
       precedence("the brief"),
-      "User and Replies are newest first.",
+      "User and Replies are oldest first.",
     ].join(" "),
-    `## User\n\n${said(messages)}`,
-    `## Replies\n\n${replies(messages)}`,
+    `## User\n\n${said(session)}`,
+    `## Replies\n\n${replies(session.messages)}`,
     `## Brief\n\n${brief ?? UNBRIEFED}`,
     `## Workflow\n\n${flow(workflow)}`,
     probe(live),
   ].join("\n\n");
 }
 
-export function recall(messages: readonly Message[], workflow: Workflow, live: Live) {
+export function recall(session: Session, workflow: Workflow, live: Live) {
   return [
     [
       "This compaction used a model summary without a handoff brief.",
       "The compact plugin added these records from session history and live probes at compaction time.",
       precedence("the summary"),
-      "User is newest first.",
+      "User is oldest first.",
     ].join(" "),
-    `## User\n\n${said(messages)}`,
+    `## User\n\n${said(session)}`,
     `## Workflow\n\n${flow(workflow)}`,
     probe(live),
   ].join("\n\n");
@@ -73,19 +77,41 @@ export function objective(summary: string) {
   const start = summary.indexOf("\n## Brief\n\n") + "\n## Brief\n\n".length;
   const brief = summary.slice(start, summary.lastIndexOf("\n\n## Workflow\n\n")).trim();
   if (brief && brief !== UNBRIEFED) return brief;
-  const user = summary.slice(0, summary.indexOf("\n\n## Replies\n\n"));
-  return [...user.matchAll(/<message at="[^"]*">\n([\s\S]*?)\n<\/message>/gu)].at(-1)?.[1];
+  const head = summary.slice(0, summary.indexOf("\n\n## User\n\n"));
+  const user = summary.slice(head.length, summary.indexOf("\n\n## Replies\n\n"));
+  const asks = [...user.matchAll(/<message at="[^"]*">\n\n?([\s\S]*?)\n\n?<\/message>/gu)];
+  return asks.at(head.includes(NEWEST) ? -1 : 0)?.[1];
 }
 
-function said(messages: readonly Message[]) {
-  const entries = messages.flatMap((message) => {
-    if (message.type === "user") return [tagged("message", message.time.created, clip(message.text))];
+function said(session: Session) {
+  const entries = session.messages.flatMap((message) => {
+    if (message.type === "user")
+      return [{ user: true, text: tagged("message", message.time.created, clip(message.text)) }];
     if (message.type !== "assistant") return [];
     return message.content.flatMap((part) =>
-      part.type === "tool" && part.name === "question" ? [tagged("question", message.time.created, asked(part))] : [],
+      part.type === "tool" && part.name === "question"
+        ? [{ user: false, text: tagged("question", message.time.created, asked(part)) }]
+        : [],
     );
   });
-  return entries.toReversed().join("\n\n") || "No user messages.";
+  const pin = entries.findIndex((entry) => entry.user);
+  const ask = entries[pin]?.text;
+  if (entries.length === 0) return "No user messages.";
+  const note = (omitted: number) =>
+    [
+      `${omitted} older user messages and questions omitted to fit the ~5K-token budget; the session store keeps them.`,
+      `Read them with the \`sessions\` tool: \`query: "text"\`, \`role: "user"\`, \`session: "${session.id}"\`, paging with \`offset\`;`,
+      `questions are tool calls under \`query: "tools"\`, \`tool: "question"\`.`,
+    ].join(" ");
+  const rest = entries.flatMap((entry, index) => (index === pin ? [] : [entry.text]));
+  const room = USER - "## User\n\n".length - (ask?.length ?? 0) - note(rest.length).length - 4;
+  const omitted = rest.length - newest(rest, room, pin < rest.length ? 1 : 0).length;
+  const from = pin < 0 || omitted < pin ? omitted : omitted + 1;
+  return [
+    ...(ask !== undefined && pin < from ? [ask] : []),
+    ...(omitted > 0 ? [note(omitted)] : []),
+    ...entries.slice(from).map((entry) => entry.text),
+  ].join("\n\n");
 }
 
 type Part = Extract<Extract<Message, { type: "assistant" }>["content"][number], { type: "tool" }>;
@@ -127,18 +153,22 @@ function replies(messages: readonly Message[]) {
     if (text) last = { at: message.time.created, text };
   }
   if (last) finals.push(last);
-  const newest = finals.toReversed();
-  const kept: string[] = [];
-  let used = "## Replies\n\n".length + NOTE;
-  for (const reply of newest) {
-    const entry = tagged("reply", reply.at, reply.text);
-    if (kept.length > 0 && used + entry.length + 2 > REPLIES) break;
-    kept.push(entry);
-    used += entry.length + 2;
-  }
-  const omitted = newest.length - kept.length;
+  const entries = finals.map((reply) => tagged("reply", reply.at, reply.text));
+  const kept = newest(entries, REPLIES - "## Replies\n\n".length - NOTE);
+  const omitted = entries.length - kept.length;
   const note = omitted > 0 ? [`${omitted} older replies omitted to fit the ~15K-token budget.`] : [];
-  return [...kept, ...note].join("\n\n") || "No replies.";
+  return [...note, ...kept].join("\n\n") || "No replies.";
+}
+
+function newest(entries: readonly string[], room: number, least = 1) {
+  let left = room;
+  let kept = 0;
+  for (const entry of entries.toReversed()) {
+    if (kept >= least && entry.length + 2 > left) break;
+    left -= entry.length + 2;
+    kept += 1;
+  }
+  return entries.slice(entries.length - kept);
 }
 
 function flow(workflow: Workflow) {
@@ -175,7 +205,7 @@ function letter(open: Open) {
 }
 
 function tagged(name: string, at: number, text: string) {
-  return `<${name} at="${stamp(at)}">\n${text}\n</${name}>`;
+  return `<${name} at="${stamp(at)}">\n\n${text}\n\n</${name}>`;
 }
 
 function clip(text: string) {

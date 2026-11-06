@@ -238,14 +238,14 @@ export default Plugin.define({
       );
       if (!running) throw new Error("no running compaction in the session context");
       const entry = await ctx.storage.get(key(sessionID, running.id));
-      const messages = history(sessionID, file, skipped(sessionID));
+      const session = { id: sessionID, messages: history(sessionID, file, skipped(sessionID)) };
       const [flow, live] = await Promise.all([tracked(sessionID), probe(ctx, sessionID, file)]);
       if (Schema.is(Pending)(entry)) {
         await ctx.storage.remove(forced(sessionID));
-        return digest(messages, entry.brief, flow, live);
+        return digest(session, entry.brief, flow, live);
       }
       // Bind recall to its compaction so a failed or superseded one cannot replay stale user intent.
-      await ctx.storage.set(forced(sessionID), { id: running.id, text: recall(messages, flow, live) });
+      await ctx.storage.set(forced(sessionID), { id: running.id, text: recall(session, flow, live) });
       return undefined;
     };
 

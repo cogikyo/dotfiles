@@ -80,8 +80,10 @@ At 300K tokens, it requests root-session compaction at a step boundary, even mid
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
 For brief and workflow-end root compactions, `digest.ts` builds the summary without a model call: User, Replies, Brief, Workflow, then Live.
-`history.ts` reads the session's full stored history: User keeps user messages and question answers verbatim, newest first, clipping each message or answer after 4,000 characters.
-Replies keeps final reply text newest first within a rough 15K-token budget, always keeping the newest reply whole.
+`history.ts` reads the session's full stored history: User keeps user messages and question answers verbatim, oldest first, clipping each message or answer after 4,000 characters.
+User always keeps the first user message, then the newest entries within a rough 5K-token budget.
+An omission note between them counts skipped entries and explains how to read them with `sessions`.
+Replies keeps the newest final reply text within a rough 15K-token budget, always keeping the newest reply whole, and prints it oldest first after any omission note.
 `live.ts` probes Git branch, HEAD, dirty paths, open lanes, and delivered but unanswered mail asks.
 Live and the workflow store take precedence over later user words, which take precedence over the brief.
 Forced compaction keeps the host's model summary for tool-result context and adds User and Live through the context hook; child sessions keep model summaries and delegate-scope instructions.
