@@ -1,5 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber } from "effect";
+import { objective } from "../compact/digest.ts";
 import { tag } from "../sessions/tags.ts";
 import { api, pinned } from "./rpc.ts";
 
@@ -69,11 +70,9 @@ function transcript(messages: readonly Message[]) {
   ]
     .filter((index) => index >= 0 && index < said.length)
     .toSorted((a, b) => a - b);
-  const objective = summary?.split(/\n(?=#{1,6} )/u).find((section) => section.trim());
+  const goal = summary && objective(summary);
   return [
-    ...(objective
-      ? ["Summary of the session's earlier work:", "<summary>", clip(objective.trim(), SUMMARY_CHARS), "</summary>"]
-      : []),
+    ...(goal ? ["Summary of the session's earlier work:", "<summary>", clip(goal, SUMMARY_CHARS), "</summary>"] : []),
     ...(picks.length > 0
       ? [
           `The user has sent ${said.length} messages${summary ? " since that summary" : ""}; a selection follows, oldest first, numbered by position:`,

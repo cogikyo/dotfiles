@@ -1,17 +1,11 @@
 import { Plugin } from "@opencode/plugin";
 import { Option, Schema } from "effect";
-import { homedir } from "node:os";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { located } from "../mail/store.ts";
 import { flags, retag, states, tag, title } from "./tags.ts";
 
 const cap = 20;
 const timeout = 30_000;
-const store = path.join(
-  process.env.XDG_DATA_HOME || path.join(homedir(), ".local", "share"),
-  "opencode",
-  "opencode.db",
-);
 
 const text = (description: string) => Schema.optional(Schema.String.annotate({ description }));
 const flag = (description: string) => Schema.optional(Schema.Boolean.annotate({ description }));
@@ -66,7 +60,7 @@ const description = [
   "  Assistant data.content[] holds items whose `$.type` is text, reasoning, or tool; a tool item has its tool name at `$.name` (not `$.tool`) and `$.state.status`, `$.state.input`, and `$.state.error`.",
 ].join("\n");
 
-async function query(input: Query, signal: AbortSignal) {
+async function query(input: Query, store: string, signal: AbortSignal) {
   const deadline = AbortSignal.timeout(timeout);
   const proc = Bun.spawn([process.execPath, fileURLToPath(new URL("./query.ts", import.meta.url)), store], {
     env: { ...process.env, BUN_BE_BUN: "1" },
@@ -111,6 +105,7 @@ const tagDescription = [
 export default Plugin.define({
   id: "sessions",
   async setup(ctx) {
+    const store = located(ctx.app.channel);
     await ctx.tool.transform((editor) => {
       editor.add({
         name: "sessions",
@@ -118,7 +113,11 @@ export default Plugin.define({
         input: Input,
         options: { codemode: false },
         execute: async (input, context) => ({
-          content: await query({ ...input, limit: input.limit ?? (input.query === "list" ? 12 : cap) }, context.signal),
+          content: await query(
+            { ...input, limit: input.limit ?? (input.query === "list" ? 12 : cap) },
+            store,
+            context.signal,
+          ),
         }),
       });
       editor.add({
