@@ -29,6 +29,7 @@ The `lanes` tool lists children, including closed ones; `subagent` reuses a lane
 `lanes_close` takes `{ lanes }` with lane names or child session IDs and returns `closed <entry>` or `skipped <entry>: <reason>` per entry; it never closes a running child.
 Closing moves the name from `lane` to `closed: { lane, by, at }` in child metadata and appends a session rule that denies every permission.
 `subagent` refuses the `sessionID` of a closed child; naming the old lane starts a fresh child.
+Children linked through `step` close when their workflow ends; running children close when they settle, and unlinked children stay open.
 
 `lanes/tui.tsx` appends to `sidebar.content` and adds `/lanes` with Steer, Interrupt, Continue, and Open actions.
 Continue sends `Continue.` directly without a parent completion notice.
@@ -51,6 +52,7 @@ Mail comes from the sending session's agent and carries no user approval.
 
 Mail waits for the target's next turn; a running target gets it at its next step.
 At setup and every 60 seconds, the server wakes idle, mailable targets with mail parked for at least 3 minutes.
+A dismissed question or permission prompt can leave a stale execution claim; the server probes `session.wait` for up to one second and wakes the target only if no run is live.
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
@@ -70,15 +72,25 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 
 ## Compact
 
-`compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn with a handoff brief for the summary.
-Its root-session reminders at 150K and 250K tokens tell the agent to wait for a finished-work boundary and user approval, or to commit finished work and compact without asking in a driven run.
+`compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn.
+The brief names in-flight work, waiting items with check commands, and the driven-run marker and scope when active.
+One root-session nudge per compaction cycle at 150K tokens asks for compaction at a finished-work boundary, with approval outside driven runs.
+When a workflow ends at or above 150K, the plugin queues compaction at turn end without asking; a pending brief takes precedence.
 At 300K tokens, it requests root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
-After root compaction from any trigger, the plugin waits for a successful idle session and queues a synthetic `recommended` follow-up.
+For brief and workflow-end root compactions, `digest.ts` builds the summary without a model call: User, Replies, Brief, Workflow, then Live.
+`history.ts` reads the session's full stored history: User keeps user messages and question answers verbatim, newest first, clipping each message or answer after 4,000 characters.
+Replies keeps final reply text newest first within a rough 15K-token budget, always keeping the newest reply whole.
+`live.ts` probes Git branch, HEAD, dirty paths, open lanes, and delivered but unanswered mail asks.
+Live and the workflow store take precedence over later user words, which take precedence over the brief.
+Forced compaction keeps the host's model summary for tool-result context and adds User and Live through the context hook; child sessions keep model summaries and delegate-scope instructions.
+Digest failures fall back to model-summary instructions and log the error.
+
+After root compaction from any trigger, the plugin waits for a successful idle session and queues a follow-up to re-check waiting items with their commands, continue a ready workflow step needing no user input, or load `recommended`.
 User input, including queued input, suppresses the follow-up, as does a superseding compaction or a failure or non-shutdown interruption between the compaction request and idle.
 
-Summary instructions cover user wording, approvals, remaining work, file ownership, and stored handoff briefs, plus the delegate's objective, scope, limits, and checks for child sessions.
+`limits.ts` treats a missing configuration location as no configured buffer and caches that result without a toast; other config errors still show one.
 
 ## Usage
 
@@ -96,6 +108,8 @@ Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/
 It uses local credential refresh and vendored request-shaping modules from `opencode-claude-auth` 2.2.1.
 See [account state and login](anthropic/README.md) before changing auth code.
 This plugin has no tool, key, or TUI slot.
+
+`anthropic/claude-auth/transforms.js` moves non-core system text to the first user message and keeps its cache breakpoint when fewer than four other breakpoints remain.
 
 `anthropic/clearing.ts` adds `clear_tool_uses_20250919` to root and child primary requests: trigger at 150K input tokens, keep the latest five tool uses, and clear at least 50K tokens per batch.
 Compaction, title, and generate requests receive no clearing policy.
@@ -152,7 +166,7 @@ A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session.
 
 Context comes from stored history through `ctx.session.context`, using the first two qualifying user messages, up to four spread samples, and the latest three.
-After compaction, it includes the completed summary's first nonempty section and samples the user messages since that summary.
+After compaction, it includes the summary's objective (a digest's brief or oldest user message, or a model summary's first nonempty section) and samples the user messages since that summary.
 The trigger and message context skip non-user items and messages under three words after removing image markers.
 
 Generated titles are Title Case and at most 36 characters, so they fit on one sidebar line; words that already contain a capital keep their casing.
@@ -380,18 +394,19 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
+Start and status show root context, headroom to forced compaction at 300K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.
 
 `subagent({ …, step: n })` links a child and appends the step's checklist to its brief.
 The child can tick only its own items with `workflow({ check: [n…] })`; Collab owns step marks and repairs.
 Status distinguishes running and returned children; `Ready:` excludes both.
-Compaction carries status into the summary and tells the agent to call `workflow` first afterward; the store remains the source of step state.
+The compaction digest includes workflow status; the store remains the source of step state.
 
 Starting a revision in parallel with `subagent({ …, step: n })` can link a child to the new revision with the old checklist, so its ticks land on the new step.
 Start a revision and launch its children in separate turns.
 
-The user's `/replan` pauses dispatch and sends Collab workflow status plus each lane's step, status, idle time, context size, and cache warmth.
+The user's `/replan` pauses dispatch and sends Collab workflow status plus each lane's step, status, idle time, and context size.
 The [drive skill](../skills/orchestration/drive/SKILL.md#replan) owns lane verdicts, questions, pre-approved compaction, and the next revision that unpauses dispatch.
 
 The sidebar shows the heading's short title and progress count, groups done steps into a `✓ 1, 2, 3` row, and lists remaining steps with agent icons and colors.

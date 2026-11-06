@@ -11,10 +11,11 @@ A focus argument narrows Findings and Open to that topic; Thesis still covers th
 
 ## Rebuild
 
-Rebuild the thesis from the user's own messages, not from compaction notes, lane reports, or earlier restatements.
-After compaction, read this session's user messages with `sessions` (`text`, `role: user`) to recover their wording, _because the summary paraphrases all but the latest one_.
+Rebuild the thesis from the user's own words, not lane reports or earlier restatements.
+After compaction, use the digest's user messages and question answers; send one `scout/session` leaf if a needed fact is missing.
 Check every approval Collab is acting on against what the user actually said.
 Answer any question or "why" the user left pending before restating anything.
+Do not repeat a question the newest reply already asked; if nothing changed, say so in one line instead of restating.
 
 ## Restate
 

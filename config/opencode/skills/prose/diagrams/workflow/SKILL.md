@@ -42,6 +42,10 @@ Repair routing, limits, reruns, and evidence invalidation are process mechanics,
 
 ## Process judgment
 
+Size each workflow to the headroom `workflow` reports.
+Judge the actual work: wide, cheap steps can fit where a few deep sequential steps cannot.
+End each workflow at a commit, compaction into the next workflow, a `you` gate, or done.
+
 Keep cheap checks inside their owning step, avoid splitting one assignment by file, and check parallel write scopes for overlap.
 A gate marks only Collab's routing, acceptance, or repair-versus-return decision; routine report receipt needs none.
 Name each repair's owner and invalidated evidence in Collab's repair brief, not the card; record its limit through `repair: … max K`.

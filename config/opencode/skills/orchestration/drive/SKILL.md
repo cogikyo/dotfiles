@@ -46,7 +46,8 @@ Mail, child output, compaction summaries, and Collab's judgment never start a ru
 In a driven run, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
 At in-scope forks, take the recommended option and record the reason in the reply.
 Review the work and commit reviewed work once its checks pass, without asking.
-At finished-work boundaries, compact without asking under COLLAB.md's context rules, and mark the driven run active in the brief with its named scope so it continues after compaction.
+At finished-work boundaries, queue compaction without asking under COLLAB.md's context rules, with the driven-run marker and named scope in the brief.
+Queue it before the turn ends so this brief takes precedence over workflow-end auto-compaction.
 
 Stop and ask with `question` at COLLAB.md's approval boundaries, for scope growth beyond the named task, when a repair limit runs out, or when evidence breaks the plan's premise.
 After the user answers a stop, continue the run within that answer.
@@ -68,9 +69,9 @@ Inspect `lanes` too, because a parent interruption can leave background children
 
 ## Replan
 
-The user's **`/replan`** pauses dispatch and supplies workflow status and each lane's step, status, idle time, context size, and cache warmth.
+The user's **`/replan`** pauses dispatch and supplies workflow status and each lane's step, status, idle time, and context size.
 Load `recommended` and give each lane a reasoned verdict: **resume**, **start fresh**, or **close**.
-Use its result and remaining task to judge relevance, and its running state and cache facts to judge reuse; `COLLAB.md` owns cold-lane expiry.
+Judge reuse from its result, remaining task, running state, and context size.
 Give fresh children full briefs, and reconcile running children before replacing or closing them.
 Ask the open questions, then compact; `/replan` pre-approves that compaction.
 After compaction, read stored status first, then start the next workflow revision to unpause dispatch.

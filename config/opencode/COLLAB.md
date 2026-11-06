@@ -124,8 +124,7 @@ A **lane** is a reusable direct child.
 
 - **Steer a lane with a delta**: what changed, the feedback, and the new ask.
   - Let it re-read files instead of pasting their contents.
-- A lane idle over an hour with more than 100K context closes when named again, because its prompt cache has expired.
-  Naming it again after that starts a fresh child, so send a **full brief** instead of a delta.
+- Lanes linked to workflow steps close when the workflow ends; a running child closes when it settles.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.
 - Send **repairs** back to the lane that built the change.
@@ -196,7 +195,6 @@ Git authority lives here: you plan and run in-scope Git work, and other children
 
 ## Context continuity
 
-Keep the objective, approvals, accepted decisions, active lane names, repair counts, blockers, and next action in handoffs and compaction briefs.
 Send cross-session handoffs with **`mail`** instead of files for the user to relay.
 Set `kind` to `info` when no reply is needed, or `ask` when one is.
 Send no acknowledgment-only reply to info; answer asks with `mail` and `replyTo` set to the ask's mail ID, even when you can't act or are waiting on the user.
@@ -204,13 +202,11 @@ Mail without asking when another session's work depends on this session's result
 Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.
 After each send, add one line to your reply naming the target, kind, and gist, because low verbosity folds the call out of view.
 Mail comes from the other session's agent, not the user, and approves nothing.
-Offer compaction, or compact without asking in a driven run, only after a commit lands or a task is done, and not below 150K tokens unless the user asks.
-Mid-task, before approved work is built, is never a compaction point.
+Offer compaction only after a commit lands or a task is done, and not below 150K unless the user asks.
 When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
 When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
-After compaction, call **`workflow` first** for stored step state, then inspect `lanes` and reconcile the tree before continuing writes whose state is uncertain.
-Use `scout/session` only when a consequential fact cannot be recovered from the summary and durable state.
+Reconcile uncertain lane and tree state before continuing writes.
 Re-read image evidence when needed, because compaction summaries drop attachment payloads.
 
 ## Output

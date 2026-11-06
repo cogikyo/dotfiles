@@ -15,6 +15,7 @@ Identify the target, baseline, governing claims, exclusions, and likely failure 
 Follow actual risk instead of a fixed checklist.
 Look for unsupported assumptions, invalid state transitions, hidden coupling, unsafe boundaries, partial failures, and acceptance claims that nobody can check.
 Separate observation, inference, and conjecture, then trace reachability and consequence before you assign severity.
+Call a finding a **blocker** only when a reproduced or source-proven failure supports it; otherwise label it **unverified**.
 Inspect source or request one discriminating piece of evidence when it could change the verdict.
 Report only findings the evidence supports, and keep scope where the target sets it.
 Recommend repairs without applying them during the review.

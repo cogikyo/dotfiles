@@ -42,7 +42,7 @@ Critique the named plan, options, or acceptance criteria for consequential error
 
 ## Judgment
 
-- Block on a supported path to any of these consequences:
+- A **blocker** needs a reproduced or source-proven failure with one of these consequences; otherwise label the finding **unverified**:
   - Violating a hard constraint.
   - Damaging user work or corrupting state.
   - Invalidating the objective or its acceptance evidence.
