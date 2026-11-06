@@ -122,7 +122,7 @@ How often ewwd looks it up depends on `form` in `/etc/dctl/machine`.
 A desktop, or a machine with a missing or invalid record, looks it up once at startup and falls back to `LAT LON` in `~/.local/.location`.
 
 On a laptop, each poll and each `refresh` looks up the location before fetching.
-While a NetworkManager VPN connection is active, the lookup is skipped because it would return the VPN server's city.
+With a NetworkManager VPN on the IPv4 default route, lookup is skipped to avoid the VPN server's city.
 Each successful lookup is saved to `~/.cache/ewwd/location`.
 A skipped or failed lookup keeps the last known location; with none yet, as after a restart, ewwd reads `LAT LON` from `~/.cache/ewwd/location`, then from `~/.local/.location`.
 `refresh` runs in the background and does nothing while another fetch runs or when the last successful fetch is under 10 minutes old.

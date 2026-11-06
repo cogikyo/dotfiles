@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -78,26 +77,39 @@ func (n *Network) Stop() error {
 	return nil
 }
 
-// activeConnections lists NetworkManager's active connections as TYPE:NAME:DEVICE lines.
 func activeConnections() ([]string, error) {
-	out, err := exec.Command("nmcli", "-t", "-f", "TYPE,NAME,DEVICE", "connection", "show", "--active").Output()
+	out, err := exec.Command("nmcli", "-t", "-f", "TYPE,UUID,NAME,DEVICE", "connection", "show", "--active").Output()
 	if err != nil {
 		return nil, err
 	}
 	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
 }
 
-func isVPN(connection string) bool {
-	return strings.HasPrefix(connection, "vpn")
+func tunneled(lines []string) (bool, error) {
+	for _, line := range lines {
+		typ, rest, _ := strings.Cut(line, ":")
+		if typ != "vpn" {
+			continue
+		}
+		uuid, _, _ := strings.Cut(rest, ":")
+		out, err := exec.Command("nmcli", "-g", "GENERAL.DEFAULT", "connection", "show", "uuid", uuid).Output()
+		if err != nil {
+			return false, err
+		}
+		if strings.TrimSpace(string(out)) == "yes" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
-// vpnActive reports whether NetworkManager has an active VPN connection, the same signal as NetworkState.VPN.
-func vpnActive() (bool, error) {
+// vpnTunneled and NetworkState.VPN require a VPN IPv4 default route.
+func vpnTunneled() (bool, error) {
 	lines, err := activeConnections()
 	if err != nil {
 		return false, err
 	}
-	return slices.ContainsFunc(lines, isVPN), nil
+	return tunneled(lines)
 }
 
 func (n *Network) read() *NetworkState {
@@ -117,19 +129,18 @@ func (n *Network) read() *NetworkState {
 	}
 
 	var connType, connName, iface string
-	var hasVPN bool
+	hasVPN, _ := tunneled(lines)
 
 	for _, line := range lines {
-		if isVPN(line) {
-			hasVPN = true
+		if strings.HasPrefix(line, "vpn:") {
 			continue
 		}
 		if strings.Contains(line, "ethernet") || strings.Contains(line, "wireless") {
 			parts := strings.Split(line, ":")
-			if len(parts) >= 3 {
+			if len(parts) >= 4 {
 				connType = parts[0]
-				connName = parts[1]
-				iface = parts[2]
+				connName = parts[2]
+				iface = parts[3]
 				break
 			}
 		}

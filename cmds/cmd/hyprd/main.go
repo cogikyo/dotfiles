@@ -528,11 +528,14 @@ Dictation:
   hyprd dictate                 Toggle Hex dictation with the pill at the text cursor (pointer fallback)
 
 VPN:
-  hyprd vpn Trend               Toggle configured NetworkManager VPN connection
-  hyprd vpn Trend up|down       Connect/disconnect explicitly
+  hyprd vpn Trend               Toggle full/split; off goes to full
+  hyprd vpn Trend up|full       Full tunnel; enable keeper
+  hyprd vpn Trend down|split    Split tunnel; enable keeper
+  hyprd vpn Trend off           Disconnect and disable keeper
+  hyprd vpn Trend status        Report the mode: split, full, or off
   hyprd vpn install [Trend]     Load staged .nmconnection profiles
   hyprd vpn install Trend --reset-secrets
-  hyprd vpn export Trend        Export NetworkManager profile to staged file
+  hyprd vpn export Trend        Stage the live system keyfile with autoconnect off
 
 Notifications:
   hyprd notify hook opencode           Read OpenCode notify JSON from argv/stdin

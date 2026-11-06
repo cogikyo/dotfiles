@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep NetworkManager VPNs set to autoconnect up
+
+[Timer]
+OnBootSec=0
+OnUnitInactiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

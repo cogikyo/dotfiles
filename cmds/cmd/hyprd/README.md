@@ -310,21 +310,33 @@ Quitting OpenCode closes the overlay.
 ### VPN
 
 ```bash
-hyprd vpn Trend            # toggle configured NetworkManager VPN connection
-hyprd vpn Trend up|down    # connect/disconnect explicitly
-hyprd vpn Trend status     # status for one connection
+hyprd vpn Trend            # toggle full/split; off goes to full
+hyprd vpn Trend split      # keep it up; only the profile's routes use the tunnel
+hyprd vpn Trend full       # keep it up; all traffic and DNS use the tunnel
+hyprd vpn Trend off        # disconnect and stop keeping it up
+hyprd vpn Trend status     # mode (split, full, or off) and connection state
 hyprd vpn install Trend    # load staged .nmconnection into NetworkManager
 hyprd vpn install          # load all configured staged VPN profiles
 hyprd vpn install Trend --no-replace
 hyprd vpn install Trend --reset-secrets
-hyprd vpn export Trend     # export NetworkManager profile to staged file
+hyprd vpn export Trend     # stage the live system keyfile, autoconnect off
 hyprd vpn status           # active VPN summary
 hyprd vpn list             # list NetworkManager VPN connections
 ```
 
+`up` aliases `full`, `down` aliases `split`; both enable the keeper.
+Shell aliases: `uvpn` (full), `dvpn` (split), `ovpn` (off).
+
+The profile stores the mode: `connection.autoconnect=no` means off; otherwise `ipv4.never-default=yes` means split and `no` means full.
+The system `vpn-keep.timer` retries inactive VPNs with autoconnect enabled about once a minute; `off` disables those retries.
+Switching between split and full reconnects the tunnel (about 10 seconds with L2TP).
+The bar's VPN icon lights only while a VPN carries the IPv4 default route.
+
 Configured VPN profile paths live in `cmds/config/hyprd.yaml` under `vpn.connections`.
 `hyprd vpn install` copies a complete staged profile to `/etc/NetworkManager/system-connections/<name>.nmconnection` as root-owned mode 600, loads it, and checks that NetworkManager knows its UUID; an incomplete profile requires an existing connection.
 It prompts for a missing VPN password or IPsec PSK, stores and verifies the secrets in NetworkManager, then deletes the staged copy after success.
+`hyprd vpn export` stages the live keyfile through sudo, preserving routes and secrets but setting `autoconnect=false` so imports start off.
+Run `dctl secrets sync`, then delete the staged file.
 
 ### Query and subscribe
 

@@ -13,3 +13,4 @@ enable systemd-resolved.service
 enable systemd-timesyncd.service
 enable tmp-opencode.mount
 enable tuned.service
+enable vpn-keep.timer

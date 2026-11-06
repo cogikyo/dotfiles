@@ -289,11 +289,11 @@ func (w *Weather) locate() error {
 		return nil
 	}
 
-	switch vpn, err := vpnActive(); {
+	switch vpn, err := vpnTunneled(); {
 	case err != nil:
 		fmt.Fprintf(os.Stderr, "ewwd: weather vpn check failed (%v), skipping geolocation\n", err)
 	case vpn:
-		fmt.Fprintf(os.Stderr, "ewwd: vpn active, skipping geolocation\n")
+		fmt.Fprintf(os.Stderr, "ewwd: vpn carries the default route, skipping geolocation\n")
 	default:
 		if err = w.geolocate(); err == nil {
 			if err := saveLocation(w.lat, w.lon); err != nil {

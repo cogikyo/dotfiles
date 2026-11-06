@@ -155,11 +155,12 @@ style = "orn_2"
 # when = true
 
 [custom.vpn]
-when = "nmcli -t -f TYPE connection show --active | grep -q '^vpn'"
-command = "nmcli -t -f TYPE,NAME connection show --active | while IFS=: read -r type name; do [ \"$type\" = vpn ] && printf '%s' \"$name\" && break; done"
+os = "linux"
+when = true
+command = '''nmcli -t -f TYPE,NAME connection show --active | while IFS=: read -r type name; do [ "$type" = vpn ] && [ "$(nmcli -g GENERAL.DEFAULT connection show id "$name")" = yes ] && printf '%s' "$name" && break; done'''
 symbol = "󰖂 "
 style = "cy2_3"
-format = "[ ╼╾](blu_2) [$symbol$output]($style)"
+format = "([ ╼╾](blu_2) [$symbol$output]($style))"
 
 
 [custom.golang]

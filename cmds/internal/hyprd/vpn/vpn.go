@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -22,7 +24,11 @@ const (
 	nmUpdateToDisk = 0x1
 
 	systemConnections = "/etc/NetworkManager/system-connections"
+
+	settleTimeout = 30 * time.Second
 )
+
+var lockPath = "/run/vpn-keep.lock"
 
 // VPN dispatches VPN subcommands against NetworkManager.
 type VPN struct {
@@ -65,33 +71,6 @@ func (v *VPN) Execute(arg string) (string, error) {
 			return "", err
 		}
 		return v.status(conn)
-	case "up", "connect":
-		if len(fields) < 2 {
-			return "", fmt.Errorf("usage: vpn up <connection>")
-		}
-		conn, err := v.resolve(fields[1])
-		if err != nil {
-			return "", err
-		}
-		return v.up(conn)
-	case "down", "disconnect":
-		if len(fields) < 2 {
-			return "", fmt.Errorf("usage: vpn down <connection>")
-		}
-		conn, err := v.resolve(fields[1])
-		if err != nil {
-			return "", err
-		}
-		return v.down(conn)
-	case "toggle":
-		if len(fields) < 2 {
-			return "", fmt.Errorf("usage: vpn toggle <connection>")
-		}
-		conn, err := v.resolve(fields[1])
-		if err != nil {
-			return "", err
-		}
-		return v.toggle(conn)
 	case "install", "import":
 		options, fields := parseInstallOptions(fields)
 		if len(fields) == 1 {
@@ -111,32 +90,29 @@ func (v *VPN) Execute(arg string) (string, error) {
 			return "", err
 		}
 		return v.export(conn)
-	default:
-		conn, err := v.resolve(fields[0])
-		if err != nil {
-			return "", err
-		}
-		if len(fields) > 1 {
-			switch fields[1] {
-			case "up", "connect":
-				return v.up(conn)
-			case "down", "disconnect":
-				return v.down(conn)
-			case "status":
-				return v.status(conn)
-			case "toggle":
-				return v.toggle(conn)
-			case "install", "import":
-				options, _ := parseInstallOptions(fields[1:])
-				return v.install(conn, options)
-			case "export":
-				return v.export(conn)
-			default:
-				return "", fmt.Errorf("usage: vpn [list|status] | vpn <connection> [toggle|up|down|status|install|export]")
-			}
-		}
-		return v.toggle(conn)
 	}
+
+	conn, err := v.resolve(fields[0])
+	if err != nil {
+		return "", err
+	}
+	verb := "toggle"
+	if len(fields) > 1 {
+		verb = fields[1]
+	}
+	if next, ok := modes[verb]; ok {
+		return v.apply(conn, next)
+	}
+	switch verb {
+	case "status":
+		return v.status(conn)
+	case "install", "import":
+		options, _ := parseInstallOptions(fields[1:])
+		return v.install(conn, options)
+	case "export":
+		return v.export(conn)
+	}
+	return "", fmt.Errorf("usage: vpn [list|status] | vpn <connection> [toggle|split|full|off|up|status|install|export]")
 }
 
 func parseInstallOptions(fields []string) (installOptions, []string) {
@@ -182,46 +158,232 @@ func normalizeConnection(key string, cfg config.VPNConnection) (connection, erro
 	}, nil
 }
 
-func (v *VPN) toggle(conn connection) (string, error) {
-	active, err := v.active(conn.Name)
+type profile struct {
+	keep  bool
+	split bool
+}
+
+func (p profile) mode() string {
+	switch {
+	case !p.keep:
+		return "off"
+	case p.split:
+		return "split"
+	}
+	return "full"
+}
+
+var modes = map[string]func(profile) profile{
+	"split":  func(profile) profile { return profile{keep: true, split: true} },
+	"down":   func(profile) profile { return profile{keep: true, split: true} },
+	"full":   func(profile) profile { return profile{keep: true} },
+	"up":     func(profile) profile { return profile{keep: true} },
+	"off":    func(p profile) profile { return profile{split: p.split} },
+	"toggle": func(p profile) profile { return profile{keep: true, split: p.mode() == "full"} },
+}
+
+func readProfile(name string) (profile, error) {
+	out, err := nmcliOutput("-g", "connection.autoconnect,ipv4.never-default", "connection", "show", "id", name)
+	if err != nil {
+		return profile{}, err
+	}
+	values := strings.Fields(out)
+	if len(values) != 2 {
+		return profile{}, fmt.Errorf("nmcli: unexpected profile fields for %s: %q", name, out)
+	}
+	return profile{keep: values[0] == "yes", split: values[1] == "yes"}, nil
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
+
+func (v *VPN) apply(conn connection, next func(profile) profile) (string, error) {
+	exists, err := connectionExists(conn.Name)
 	if err != nil {
 		return "", err
 	}
+	if !exists {
+		return "", fmt.Errorf("vpn connection not found: %s", conn.Name)
+	}
+	h, err := lock()
+	if err != nil {
+		return "", err
+	}
+	defer h.unlock()
+	have, err := readProfile(conn.Name)
+	if err != nil {
+		return "", err
+	}
+	want := next(have)
+	if want != have {
+		if _, err := h.run("nmcli", "connection", "modify", "id", conn.Name,
+			"connection.autoconnect", yesNo(want.keep),
+			"ipv4.never-default", yesNo(want.split)); err != nil {
+			return "", err
+		}
+	}
+	if err := v.converge(h, conn.Name, want); err != nil {
+		return "", err
+	}
+	return v.status(conn)
+}
+
+func (v *VPN) converge(h *held, name string, want profile) error {
+	active, err := v.active(name)
+	if err != nil {
+		return err
+	}
+	routed := false
 	if active {
-		return v.down(conn)
+		out, err := nmcliOutput("-g", "IP4.ROUTE", "connection", "show", "id", name)
+		if err != nil {
+			return err
+		}
+		routed = hasDefaultRoute(out)
 	}
-	return v.up(conn)
+	down, up := reconcile(want, active, routed)
+	if down {
+		if _, err := h.run("nmcli", "connection", "down", "id", name); err != nil {
+			return err
+		}
+	}
+	if up {
+		if err := settle(name); err != nil {
+			return err
+		}
+		if _, err := h.run("nmcli", "connection", "up", "id", name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (v *VPN) up(conn connection) (string, error) {
-	if _, err := connectionExists(conn.Name); err != nil {
-		return "", err
-	}
-	if err := runNMCLI("connection", "up", "id", conn.Name); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("vpn connected: %s", conn.Name), nil
+func reconcile(want profile, active, routed bool) (down, up bool) {
+	down = active && (!want.keep || want.split == routed)
+	up = want.keep && (!active || down)
+	return down, up
 }
 
-func (v *VPN) down(conn connection) (string, error) {
-	if _, err := connectionExists(conn.Name); err != nil {
+func hasDefaultRoute(routes string) bool {
+	for route := range strings.SplitSeq(routes, "|") {
+		dst, _, _ := strings.Cut(strings.TrimSpace(route), ",")
+		if strings.TrimSpace(dst) == "dst = 0.0.0.0/0" {
+			return true
+		}
+	}
+	return false
+}
+
+var errUnlocked = errors.New("vpn lock not held")
+
+type held struct{ f *os.File }
+
+func lock() (*held, error) {
+	f, err := os.Open(lockPath)
+	if err != nil {
+		return nil, fmt.Errorf("open vpn lock: %w (installed by system/etc/tmpfiles.d/vpn-keep.conf)", err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("lock %s: %w", lockPath, err)
+	}
+	return &held{f: f}, nil
+}
+
+func (h *held) unlock() {
+	if h.f != nil {
+		h.f.Close()
+		h.f = nil
+	}
+}
+
+func (h *held) check() error {
+	if h == nil || h.f == nil {
+		return errUnlocked
+	}
+	return nil
+}
+
+func (h *held) run(name string, args ...string) (string, error) {
+	if err := h.check(); err != nil {
 		return "", err
 	}
-	if err := runNMCLI("connection", "down", "id", conn.Name); err != nil {
-		return "", err
+	return combined(exec.Command(name, args...))
+}
+
+func (h *held) storeSecrets(obj dbus.BusObject, secrets map[string]string) error {
+	if err := h.check(); err != nil {
+		return err
 	}
-	return fmt.Sprintf("vpn disconnected: %s", conn.Name), nil
+	var settings map[string]map[string]dbus.Variant
+	if err := obj.Call(nmConnection+".GetSettings", 0).Store(&settings); err != nil {
+		return fmt.Errorf("read VPN settings: %w", err)
+	}
+	vpn, ok := settings["vpn"]
+	if !ok {
+		return errors.New("connection has no vpn setting")
+	}
+	vpn["secrets"] = dbus.MakeVariant(secrets)
+	if err := obj.Call(nmConnection+".Update2", 0, settings, uint32(nmUpdateToDisk), map[string]dbus.Variant{}).Err; err != nil {
+		return fmt.Errorf("store VPN secrets: %w", err)
+	}
+	return nil
+}
+
+func authorize() error {
+	cmd := exec.Command("sudo", "-v")
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stderr, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("sudo -v: %w", err)
+	}
+	return nil
+}
+
+func settle(name string) error {
+	out, err := nmcliOutput("-g", "vpn.service-type", "connection", "show", "id", name)
+	if err != nil {
+		return err
+	}
+	service := strings.TrimSpace(out)
+	bus, err := dbus.ConnectSystemBus()
+	if err != nil {
+		return fmt.Errorf("connect system bus: %w", err)
+	}
+	defer bus.Close()
+	deadline := time.Now().Add(settleTimeout)
+	for {
+		var owned bool
+		if err := bus.BusObject().Call("org.freedesktop.DBus.NameHasOwner", 0, service).Store(&owned); err != nil {
+			return fmt.Errorf("check vpn plugin %s: %w", service, err)
+		}
+		if !owned {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("vpn plugin %s still running %s after disconnecting %s", service, settleTimeout, name)
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 func (v *VPN) status(conn connection) (string, error) {
+	p, err := readProfile(conn.Name)
+	if err != nil {
+		return "", err
+	}
 	active, err := v.active(conn.Name)
 	if err != nil {
 		return "", err
 	}
+	state := "disconnected"
 	if active {
-		return fmt.Sprintf("vpn connected: %s", conn.Name), nil
+		state = "connected"
 	}
-	return fmt.Sprintf("vpn disconnected: %s", conn.Name), nil
+	return fmt.Sprintf("vpn %s: %s (%s)", conn.Name, p.mode(), state), nil
 }
 
 func (v *VPN) statusAll() (string, error) {
@@ -281,6 +443,16 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	if completeProfile && uuid == "" {
 		return "", fmt.Errorf("profile has no [connection] uuid: %s", conn.Profile)
 	}
+	if completeProfile {
+		if err := authorize(); err != nil {
+			return "", err
+		}
+	}
+	h, err := lock()
+	if err != nil {
+		return "", err
+	}
+	defer h.unlock()
 	exists, err := connectionExists(conn.Name)
 	if err != nil {
 		return "", err
@@ -300,16 +472,16 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		}
 		var deleteErr error
 		if loaded {
-			_, deleteErr = sudo("nmcli", "connection", "delete", "uuid", uuid)
+			_, deleteErr = h.run("sudo", "nmcli", "connection", "delete", "uuid", uuid)
 		}
-		_, removeErr := sudo("rm", "-f", system)
+		_, removeErr := h.run("sudo", "rm", "-f", system)
 		return errors.Join(err, deleteErr, removeErr)
 	}
 	if completeProfile {
-		if _, err := sudo("install", "-m", "600", "-o", "root", "-g", "root", conn.Profile, system); err != nil {
+		if _, err := h.run("sudo", "install", "-m", "600", "-o", "root", "-g", "root", conn.Profile, system); err != nil {
 			return "", undo(err)
 		}
-		out, err := sudo("nmcli", "connection", "load", system)
+		out, err := h.run("sudo", "nmcli", "connection", "load", system)
 		if err != nil {
 			return "", undo(err)
 		}
@@ -338,7 +510,7 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		lines = append(lines, "profile incomplete; using installed NetworkManager connection as base")
 	}
 
-	if err := v.ensureSecrets(conn.Name, uuid, options.ResetSecrets); err != nil {
+	if err := v.ensureSecrets(h, conn.Name, uuid, options.ResetSecrets); err != nil {
 		return "", undo(err)
 	}
 	lines = append(lines, "VPN secrets stored in NetworkManager")
@@ -346,6 +518,18 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		return "", fmt.Errorf("remove staged profile: %w", err)
 	}
 	lines = append(lines, "staged profile removed")
+	want, err := readProfile(conn.Name)
+	if err != nil {
+		return "", err
+	}
+	if err := v.converge(h, conn.Name, want); err != nil {
+		return "", fmt.Errorf("vpn %s installed, but reaching %s failed: %w", conn.Name, want.mode(), err)
+	}
+	status, err := v.status(conn)
+	if err != nil {
+		return "", err
+	}
+	lines = append(lines, status)
 	return strings.Join(lines, "\n"), nil
 }
 
@@ -355,8 +539,13 @@ func readKeyfile(path string) (uuid string, complete bool, err error) {
 	if err != nil {
 		return "", false, err
 	}
+	uuid, complete = parseKeyfile(string(data))
+	return uuid, complete, nil
+}
+
+func parseKeyfile(data string) (uuid string, complete bool) {
 	inConnection := false
-	for line := range strings.Lines(string(data)) {
+	for line := range strings.Lines(data) {
 		line = strings.TrimSpace(line)
 		switch {
 		case line == "[connection]":
@@ -369,10 +558,32 @@ func readKeyfile(path string) (uuid string, complete bool, err error) {
 			uuid = strings.TrimSpace(strings.TrimPrefix(line, "uuid="))
 		}
 	}
-	return uuid, complete, nil
+	return uuid, complete
 }
 
-func (v *VPN) ensureSecrets(name, uuid string, reset bool) error {
+func autoconnectOff(data string) string {
+	var out strings.Builder
+	inConnection := false
+	for line := range strings.Lines(data) {
+		trimmed := strings.TrimSpace(line)
+		if inConnection && strings.HasPrefix(trimmed, "autoconnect=") {
+			continue
+		}
+		out.WriteString(line)
+		if strings.HasPrefix(trimmed, "[") {
+			inConnection = trimmed == "[connection]"
+			if inConnection {
+				if !strings.HasSuffix(line, "\n") {
+					out.WriteString("\n")
+				}
+				out.WriteString("autoconnect=false\n")
+			}
+		}
+	}
+	return out.String()
+}
+
+func (v *VPN) ensureSecrets(h *held, name, uuid string, reset bool) error {
 	bus, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return fmt.Errorf("connect system bus: %w", err)
@@ -401,7 +612,7 @@ func (v *VPN) ensureSecrets(name, uuid string, reset bool) error {
 		changed = true
 	}
 	if changed {
-		if err := storeVPNSecrets(obj, secrets); err != nil {
+		if err := h.storeSecrets(obj, secrets); err != nil {
 			return err
 		}
 	}
@@ -437,22 +648,6 @@ func vpnSecrets(obj dbus.BusObject) (map[string]string, error) {
 		}
 	}
 	return secrets, nil
-}
-
-func storeVPNSecrets(obj dbus.BusObject, secrets map[string]string) error {
-	var settings map[string]map[string]dbus.Variant
-	if err := obj.Call(nmConnection+".GetSettings", 0).Store(&settings); err != nil {
-		return fmt.Errorf("read VPN settings: %w", err)
-	}
-	vpn, ok := settings["vpn"]
-	if !ok {
-		return errors.New("connection has no vpn setting")
-	}
-	vpn["secrets"] = dbus.MakeVariant(secrets)
-	if err := obj.Call(nmConnection+".Update2", 0, settings, uint32(nmUpdateToDisk), map[string]dbus.Variant{}).Err; err != nil {
-		return fmt.Errorf("store VPN secrets: %w", err)
-	}
-	return nil
 }
 
 func (v *VPN) prompt(name, key string) (string, error) {
@@ -516,17 +711,45 @@ func (v *VPN) export(conn connection) (string, error) {
 	if conn.Profile == "" {
 		return "", fmt.Errorf("vpn.%s.profile is required", conn.Name)
 	}
-	if err := os.MkdirAll(filepath.Dir(conn.Profile), 0o700); err != nil {
-		return "", err
-	}
-	data, err := nmcliOutput("connection", "export", conn.Name)
+	exists, err := connectionExists(conn.Name)
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(conn.Profile, []byte(data), 0o600); err != nil {
+	if !exists {
+		return "", fmt.Errorf("vpn connection not found: %s", conn.Name)
+	}
+	system := filepath.Join(systemConnections, conn.Name+".nmconnection")
+	out, err := exec.Command("sudo", "cat", system).Output()
+	if err != nil {
+		msg := err.Error()
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok && len(exit.Stderr) > 0 {
+			msg = strings.TrimSpace(string(exit.Stderr))
+		}
+		return "", fmt.Errorf("sudo cat %s: %s", system, msg)
+	}
+	data := string(out)
+	clear(out)
+	if uuid, complete := parseKeyfile(data); !complete || uuid == "" {
+		return "", fmt.Errorf("%s is not a complete NetworkManager keyfile with a uuid", system)
+	}
+	dir := filepath.Dir(conn.Profile)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("vpn exported: %s\nprofile: %s\nwarning: NetworkManager exports can omit keyring secrets; verify the profile before syncing it\nnext: add '%s:%s:600:staged' to secrets/manifest, then run dctl secrets sync", conn.Name, conn.Profile, secretName(conn), manifestTarget(conn.Profile)), nil
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(conn.Profile)+".*")
+	if err != nil {
+		return "", err
+	}
+	_, err = tmp.WriteString(autoconnectOff(data))
+	err = errors.Join(err, tmp.Sync(), tmp.Close())
+	if err == nil {
+		err = os.Rename(tmp.Name(), conn.Profile)
+	}
+	if err != nil {
+		_ = os.Remove(tmp.Name())
+		return "", err
+	}
+	return fmt.Sprintf("vpn exported: %s from %s\nprofile: %s (autoconnect off)\nnext: run dctl secrets sync for '%s', then delete the staged profile", conn.Name, system, conn.Profile, manifestTarget(conn.Profile)), nil
 }
 
 func (v *VPN) active(name string) (bool, error) {
@@ -577,41 +800,18 @@ func manifestTarget(path string) string {
 	return path
 }
 
-func runNMCLI(args ...string) error {
-	cmd := exec.Command("nmcli", args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if msg == "" {
-			msg = err.Error()
-		}
-		return fmt.Errorf("nmcli %s: %s", strings.Join(args, " "), msg)
-	}
-	return nil
-}
-
-func sudo(args ...string) (string, error) {
-	cmd := exec.Command("sudo", args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if msg == "" {
-			msg = err.Error()
-		}
-		return "", fmt.Errorf("sudo %s: %s", strings.Join(args, " "), msg)
-	}
-	return string(out), nil
-}
-
 func nmcliOutput(args ...string) (string, error) {
-	cmd := exec.Command("nmcli", args...)
+	return combined(exec.Command("nmcli", args...))
+}
+
+func combined(cmd *exec.Cmd) (string, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", fmt.Errorf("nmcli %s: %s", strings.Join(args, " "), msg)
+		return "", fmt.Errorf("%s: %s", strings.Join(cmd.Args, " "), msg)
 	}
 	return string(out), nil
 }

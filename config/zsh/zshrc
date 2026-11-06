@@ -182,8 +182,9 @@ function lazygit() {
 }
 alias lg='lazygit'
 alias ld='lazydocker'
-alias uvpn='hyprd vpn Trend up'
-alias dvpn='hyprd vpn Trend down'
+alias uvpn='hyprd vpn Trend full'
+alias dvpn='hyprd vpn Trend split'
+alias ovpn='hyprd vpn Trend off'
 alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'

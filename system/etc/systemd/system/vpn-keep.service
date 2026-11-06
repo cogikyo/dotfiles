@@ -1,0 +1,8 @@
+[Unit]
+Description=Bring up NetworkManager VPNs set to autoconnect
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/vpn-keep
