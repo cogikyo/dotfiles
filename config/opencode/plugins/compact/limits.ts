@@ -1,3 +1,4 @@
+import { isLocationNotFoundError } from "@opencode/client/promise";
 import type { Plugin } from "@opencode/plugin/tui";
 
 type Limit = { input?: number; context: number };
@@ -31,6 +32,7 @@ export function configured(context: Plugin.Context, directory: string) {
         undefined,
       ),
     (error: unknown) => {
+      if (isLocationNotFoundError(error)) return undefined;
       buffers.delete(directory);
       context.ui.toast.show({
         message: `Read compaction config: ${error instanceof Error ? error.message : String(error)}`,
