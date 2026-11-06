@@ -3,7 +3,7 @@
 This guide covers the local plugins for OpenCode V2.
 OpenCode discovers immediate plugin directories and loads their server and TUI entrypoints from source.
 `opencode.json` owns agents and permissions; `cli.json` owns terminal settings and built-in plugin exclusions.
-The sidebar shows usage, lanes, Mail, Workflow, then browser, with Markdown Context collapsed below them; claims that share a placement render in plugin directory-name order.
+The sidebar shows usage, lanes, Mail, Workflow, then browser, with Markdown Context below them; claims that share a placement render in plugin directory-name order.
 Run `bun run check` from `config/opencode` for type, lint, and format checks.
 For renderer checks, `uv run plugins/capture.py SESSION [--dir DIR] [--seconds N] [--keys TEXT] [--size COLSxROWS] [--out FILE]` captures a real TUI screen in a pty; offscreen fixtures can miss host render nodes.
 `dctl update bun` installs plugin dependencies from `config/opencode/bun.lock` with `bun install --frozen-lockfile --ignore-scripts`.
@@ -425,9 +425,10 @@ An opentui upgrade can break this private `getListItemInputs` override; the plug
 
 ## Markdown context
 
-`context/tui.tsx` places Markdown Context after `sidebar.content`, collapsed by default, with root and project instructions, the agent prompt, skills, and observed Markdown loads.
+`context/tui.tsx` places Markdown Context after `sidebar.content`, with root and project instructions, the agent prompt, skills, and observed Markdown loads.
+The list opens by default and collapses only when expanding it would make the sidebar scroll, re-checking on sidebar resize and as other sections grow.
 Rows before the latest completed compaction use a compacted marker; the list is a view of recorded loads rather than proof that every body remains in active context.
-Click the heading to fold the list or a row to open its file with `hyprd edit`.
+Click the heading to toggle the list and pin that choice until the sidebar remounts, or a row to open its file with `hyprd edit`.
 The plugin does not change loaded context and has no tool, key, or state file.
 
 ## Shell environment

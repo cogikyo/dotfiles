@@ -1,11 +1,11 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { RGBA } from "@opentui/core";
+import { type BoxRenderable, type Renderable, RGBA, ScrollBoxRenderable } from "@opentui/core";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { Schema } from "effect";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { hover, Section } from "./section.tsx";
 import {
   configRoot,
@@ -37,6 +37,7 @@ type Item = {
 };
 
 const snapshots = "/tmp/opencode/skills";
+const heading = 1;
 
 const Config = Schema.Struct({
   agents: Schema.optional(Schema.Record(Schema.String, Schema.Struct({ system: Schema.optional(Schema.Unknown) }))),
@@ -97,13 +98,44 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
     return current ? items(props.context, current, props.prompts) : [];
   });
 
+  const [box, setBox] = createSignal<BoxRenderable>();
+  const [layout, relayout] = createSignal(undefined, { equals: false });
+  createEffect(() => {
+    const node = box();
+    const content = node?.parent;
+    const scroll = node && scrollbox(node);
+    if (!content || !scroll) return;
+    content.on("resize", relayout);
+    scroll.viewport.on("resize", relayout);
+    scroll.afterLayout(relayout);
+    onCleanup(() => {
+      content.off("resize", relayout);
+      scroll.viewport.off("resize", relayout);
+    });
+  });
+  const fits = createMemo(() => {
+    layout();
+    const node = box();
+    const content = node?.parent;
+    const scroll = node && scrollbox(node);
+    if (!content || !scroll) return false;
+    return content.height - node.height + heading + list().length <= scroll.viewport.height;
+  });
+
   return (
     <Show when={list().length > 0}>
-      <Section context={props.context} title="Markdown Context" detail={`${list().length} read`} defaultOpen={false}>
-        <For each={list()}>{(entry) => <Row context={props.context} entry={entry} />}</For>
-      </Section>
+      <box ref={setBox}>
+        <Section context={props.context} title="Markdown Context" detail={`${list().length} read`} open={fits()}>
+          <For each={list()}>{(entry) => <Row context={props.context} entry={entry} />}</For>
+        </Section>
+      </box>
     </Show>
   );
+}
+
+function scrollbox(node: Renderable) {
+  for (let parent = node.parent; parent; parent = parent.parent)
+    if (parent instanceof ScrollBoxRenderable) return parent;
 }
 
 function Row(props: { context: Context; entry: Item }) {

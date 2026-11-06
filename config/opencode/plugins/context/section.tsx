@@ -18,15 +18,16 @@ export function Section(props: {
   context: Plugin.Context;
   title: string;
   detail: string;
-  defaultOpen?: boolean;
+  open?: boolean;
   children: JSX.Element;
 }) {
-  const [open, setOpen] = createSignal(props.defaultOpen ?? true);
+  const [pinned, setPinned] = createSignal<boolean>();
+  const open = () => pinned() ?? props.open ?? true;
   const theme = () => props.context.theme.text;
 
   return (
     <box flexDirection="column">
-      <box flexDirection="row" onMouseDown={() => setOpen((value) => !value)}>
+      <box flexDirection="row" onMouseDown={() => setPinned(!open())}>
         <text fg={theme().base} wrapMode="none">
           {open() ? "▼ " : "▶ "}
         </text>
