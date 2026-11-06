@@ -304,6 +304,14 @@ hl.window_rule({
 	size = floatSize,
 	center = true,
 })
+hl.window_rule({
+	name = "opencode-terminal",
+	match = { class = [[^(opencode-terminal)$]] },
+	float = true,
+	size = relative(43.0208, 45.37), -- 118×35 cells on the tv profile's 14×28 grid, like floatSize
+	center = true,
+	border_color = "rgb(f07a88)",
+})
 
 -- Satty — screenshot annotation popup, float centered at monocle size.
 hl.window_rule({

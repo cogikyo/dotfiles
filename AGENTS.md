@@ -66,7 +66,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
   - Routine: `hyprd rebuild`, `dctl update --dirty --only <cmd>`, and user stages such as `dctl --yes setup home`.
   - Ask first for package upgrades, root or lock stages, secrets, and startup, lock, or boot changes that could leave the session unusable.
   - Use `dctl update --dirty` to build uncommitted `cmds/` without asking; it overrides the `--all`/`--yes` build skip.
-- Before handing the user a `dctl` stage to run, say what it will do, such as `extra`'s full `pacman -Syu`, background mode, and its log path.
+- Use `terminal` for `dctl` stages that need the user's keyboard, with a `reason` that says what the stage will do, such as `extra`'s full `pacman -Syu`, background mode, and its log path.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
 - OpenCode applies `opencode.json`, `cli.json`, and plugin edits (including new plugin directories) live; test the change live before suggesting `/reload`.

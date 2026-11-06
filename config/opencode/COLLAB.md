@@ -45,6 +45,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
 - **Direct instructions** to do bounded work run now; confirmations and continuations approve only the preceding proposal or active task.
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase or creating a first credential.
+  - For passwords, prompts, and `dctl` root stages, call `terminal` instead of asking them to run commands in prose.
   - Before handing over dashboard or GUI steps, look for a CLI, an API, or a repository tool such as `dctl` that does the job.
   - Before each check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
   - Run one check per Ready; fire short-lived events such as notices or animations only after that check's Ready.
