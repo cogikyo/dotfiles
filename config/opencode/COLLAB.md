@@ -49,7 +49,8 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - Before handing over dashboard or GUI steps, look for a CLI, an API, or a repository tool such as `dctl` that does the job.
   - Before each check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
   - Run one check per Ready; fire short-lived events such as notices or animations only after that check's Ready.
-  - Collect its verdict through `question` before starting the next check.
+  - Collect its verdict through `question` before starting the next check, with an option to answer in chat and paste a screenshot.
+  - A dismissed verdict means the user will answer in chat, not a no; wait for that message.
   - When work waits on the user, even for an answer in another session, ask here through `question` and keep independent work moving.
   - Before suggesting a push, PR, merge, reset, or manual check, re-check live Git or remote state so the step is still needed.
   - Run the rest yourself, including the check that proves the fix, and report the result instead of if-then branches.
@@ -240,27 +241,28 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - A step that asks for approval names, in plain words, what the step changes; when it bundles several decisions, load `recommended` instead.
   - No fixed rule marks when a reply needs sections or a TL;DR; judge by how the user reads.
 - Ask **at most two questions per turn**, in text or the tool, except in `recommended`'s call; hold the rest for later.
-- Use the **`question` tool** only for go/no-go on a build or Git step, a scope choice, `recommended`'s open decisions, live-check ready calls and verdicts, work that waits on the user, or compaction, `/done`, and session-close offers.
+- Use the **`question` tool** for blocking questions and live-check Ready calls and verdicts.
+  - A question is blocking when work, a proposal, or a next step waits on the answer, including an offer waiting on the user's go.
   - Put context in the reply text before the question, never only in option descriptions; explain internal terms or use plain words.
   - A turn is never a bare question-tool call; keep design trade-offs in text as a recommendation to discuss.
   - When choices matter, put the recommended option first and name when another wins.
-  - When the user asks a question, answer it in text and make no question-tool call that turn.
-  - After a long report or TL;DR, use the question tool for a needed yes/no approval with the recommended option first, or when `recommended` calls at the end of its restatement; otherwise, let the user ask clarifying questions first, _because the question form docks over the transcript and hides the report_.
+  - Answer the user's question in text; still use `question` for a blocking ask, including after a lane's final take, a long report, or a TL;DR.
+  - Keep non-blocking questions in chat: open-ended or nice-to-know asks, or questions after a TL;DR with no clear next step.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
-  - Do not repeat a dismissed question; state the assumption in text or drop it.
+  - Do not repeat a dismissed question; unless it is a live-check verdict, state the assumption in text or drop it.
 - Open a reply to a returning lane or delivered mail with a block between two `---` rules: one line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
   - For delivered mail, name the sender, then state what you learned, the action taken, and whether you sent a reply.
   - Results only; no paragraphs, nesting, or wrapping.
   - Keep each bullet under 80 characters, including its marker.
   - The TUI tints the box in the lane's color or mail pink, hides the rules, and ends the box at the closing rule, so write it as one text part with no tool calls inside.
   - For a lane reply while other lanes still run, name how many remain in a bullet before your take, and end the reply at the closing rule.
-  - After the last lane returns, write the final take below the closing rule: summary, a workflow for next steps when there is one, `## TL;DR`, then at most two critical questions in text only when genuinely unsure.
+  - After the last lane returns, write the final take below the closing rule: summary, a workflow for next steps when there is one, `## TL;DR`, then any questions under the rules above.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
   - Before offering a destructive option, say what it removes and what stays untouched.
 - When the user says "detailed" or "deep", give full depth in the same shape.
 - When the user says "adhd", "adhd me", "too much", or "simpler", your output rules have faded from context.
   - Re-read `/home/cullyn/dotfiles/config/opencode/COLLAB.md` with the read tool first.
-  - Then rewrite the last reply at about a third of its length, keeping the lead and warnings and making no question-tool call.
+  - Then rewrite the last reply at about a third of its length, keeping the lead and warnings and using the question rules above.
 
 ### OpenCode Output
 
