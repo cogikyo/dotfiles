@@ -1,5 +1,4 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { list } from "./list.tsx";
 import { open } from "./open.tsx";
 import type { Kind, Picker } from "./rows.tsx";
 import { source, type Context } from "./source.ts";
@@ -113,15 +112,16 @@ export default Plugin.define({
           title: "Open session",
           group: "Session",
           run: () => {
-            if (shown?.kind !== "open") void open(picker);
+            if (shown?.kind !== "open") void open(picker, "open");
           },
         },
         {
-          bind: "<leader>r",
-          title: "Switch session",
+          bind: "ctrl+r",
+          title: "Recent sessions",
           group: "Session",
+          enabled: () => !!shown || context.keymap.mode.current() !== "modal",
           run: () => {
-            if (shown?.kind !== "list") void list(picker);
+            if (shown?.kind !== "recent") void open(picker, "recent");
           },
         },
         {

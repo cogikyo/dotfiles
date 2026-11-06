@@ -10,7 +10,7 @@ import { mix } from "../statusline/working.tsx";
 import type { Context, Session, Source } from "./source.ts";
 import { tag, title, type State } from "./tags.ts";
 
-export type Kind = "open" | "list";
+export type Kind = "open" | "recent";
 
 export type Picker = {
   readonly context: Context;
@@ -164,8 +164,6 @@ export const rows = (mailed?: Mailed) =>
       ),
     };
   };
-
-export const row = rows();
 
 function faded(context: Context, state: State) {
   const theme = dialog(context);

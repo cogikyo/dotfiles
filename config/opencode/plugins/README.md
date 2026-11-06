@@ -217,23 +217,25 @@ It replaces the tag, preserves an existing `refusals` flag and the rest of the t
 It refuses another session flagged `REFUSALS` without echoing its title.
 Only top-level sessions can call it or be tagged; `sessionID` defaults to the caller, and a missing title becomes `New session - <ISO time>`.
 
-`sessions/tui.tsx` binds `ctrl+o` to Open and `<leader>r` to Sessions.
+`sessions/tui.tsx` binds `ctrl+o` to Open and `ctrl+r` to Recent; `sessions/open.tsx` serves both pickers.
+The `ctrl+r` opener does not fire in modal dialogs except from Recent or Open.
 `<leader>shift+return` sends `/done` with no arguments to the root session.
 `/archive` and `/research` set the root session's state to `ARCHIVED` or `RESEARCH` without running `/done`, keeping its flags, then open Home in its directory so the next prompt starts a new session.
 `/refusals` toggles `REFUSALS` on the root session, keeping its state and other flags, and stays in the session.
-`cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
+`cli.json` sets the native `open.menu` and `session.list` bindings to `none` and `session.rename` to `<leader>r`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 
 Open lists only top-level sessions across all projects, excluding closed sessions even from search results.
+Recent lists only the current directory's sessions, including closed ones.
 Running lists sessions mid-turn or with a child mid-turn; Open follows with the rest.
-Each group puts sessions needing permission or question input and non-`REFUSALS` sessions with parked mail first, newest first within each rank.
+Both pickers put sessions needing permission or question input and non-`REFUSALS` sessions with parked mail first within Running and Open, newest first within each rank.
 The Open group's footers use the statusline's context-pressure colors by time since last update, from blue under 15 minutes to pink at three days or more.
-Sessions groups by date, newest day first, and ranks permission or question input first within each group, except closed sessions always come last even when they need input.
+Recent adds a Closed group last, newest first.
 Closed titles are muted, with `RESEARCH` titles in a faint scout blue, unless selected or current; rows retain pending-input and running markers.
-In Open, an envelope after a session title marks parked mail for open, non-`REFUSALS` sessions.
+In both pickers, an envelope after a session title marks parked mail for open, non-`REFUSALS` sessions.
 The marker and mail ranking share one `mail.parked` RPC request on opening, refreshed on inbox events and `server.connected`, instead of querying each session's inbox.
 
-Sessions lists only the current directory's sessions, including closed ones, with `ctrl+d` to delete and `ctrl+r` to rename.
+In Recent, `ctrl+d` deletes and `<leader>r` renames the selected session.
 
 The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, and a home route carrying `location`.
 If the host stops forwarding the extra row fields, rows degrade to plain titles without muting or status markers.
