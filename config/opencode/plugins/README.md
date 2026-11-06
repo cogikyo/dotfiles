@@ -237,19 +237,20 @@ Only top-level sessions can call it or be tagged; `sessionID` defaults to the ca
 `cli.json` sets the native `open.menu` and `session.list` bindings to `none`; `/open` and `/sessions` still open the native dialogs.
 The plugin omits native pins, quick-switch hints, and direct opening by pasted `ses_` ID.
 
-Without a search, Open ranks sessions needing permission or question input together with open, non-`REFUSALS` sessions with parked mail, then other open sessions, then titles starting with a closed tag, newest first within each rank.
+Open lists only top-level sessions across all projects, excluding closed sessions even from search results.
+Running lists sessions mid-turn or with a child mid-turn; Open follows with the rest.
+Each group puts sessions needing permission or question input and non-`REFUSALS` sessions with parked mail first, newest first within each rank.
+The Open group's footers use the statusline's context-pressure colors by time since last update, from blue under 15 minutes to pink at three days or more.
 Sessions groups by date, newest day first, and ranks permission or question input first within each group, except closed sessions always come last even when they need input.
 Closed titles are muted, with `RESEARCH` titles in a faint scout blue, unless selected or current; rows retain pending-input and running markers.
 In Open, an envelope after a session title marks parked mail for open, non-`REFUSALS` sessions.
 The marker and mail ranking share one `mail.parked` RPC request on opening, refreshed on inbox events and `server.connected`, instead of querying each session's inbox.
 
-- Open shows up to eight recents plus projects, expanding the list to include all sessions in its first rank; typing searches the full loaded session list.
-- Right arrow on a Git project opens its worktrees, including a `New worktree…` row; left arrow returns to Open.
-- Sessions lists only the current directory's sessions and offers `ctrl+d` to delete and `ctrl+r` to rename; Open covers all projects.
+Sessions lists only the current directory's sessions, including closed ones, with `ctrl+d` to delete and `ctrl+r` to rename.
 
-The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, the focused `FILTER` input, and a home route carrying `location`.
+The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, and a home route carrying `location`.
 If the host stops forwarding the extra row fields, rows degrade to plain titles without muting or status markers.
-The other host assumptions govern search expansion, selection, and navigation and need review after an OpenCode update.
+Review the selection and navigation assumptions after an OpenCode update.
 
 ## Launch
 

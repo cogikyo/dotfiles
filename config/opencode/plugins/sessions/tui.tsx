@@ -1,6 +1,6 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { list } from "./list.tsx";
-import { go, open } from "./open.tsx";
+import { open } from "./open.tsx";
 import type { Kind, Picker } from "./rows.tsx";
 import { source, type Context } from "./source.ts";
 import { retag, tag, title, type State, type Tag } from "./tags.ts";
@@ -22,9 +22,16 @@ async function edit(context: Context, command: string, change: (current?: Tag) =
   }
 }
 
+function home(context: Context, directory: string) {
+  const router = context.ui.router;
+  // The host accepts an untyped home location; clear the old object so Home observes the new directory.
+  if (router.current().type === "home") router.navigate({ type: "home" });
+  router.navigate({ type: "home", location: { directory } } as { type: "home" });
+}
+
 async function mark(context: Context, command: string, state: State) {
   const done = await edit(context, command, (current) => ({ state, flags: current?.flags ?? [] }));
-  if (done) go(context, { type: "project", directory: done.session.location.directory });
+  if (done) home(context, done.session.location.directory);
 }
 
 async function refusals(context: Context) {
@@ -103,7 +110,7 @@ export default Plugin.define({
       commands: [
         {
           bind: "ctrl+o",
-          title: "Open session or project",
+          title: "Open session",
           group: "Session",
           run: () => {
             if (shown?.kind !== "open") void open(picker);

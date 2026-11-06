@@ -40,7 +40,7 @@ export const located = (context: Context): Located | undefined => context.locati
 
 const TITLE_WIDTH = 61;
 
-export const dialog = (context: Context) => context.theme.surface("dialog");
+const dialog = (context: Context) => context.theme.surface("dialog");
 
 function members(context: Context, sessionID: string) {
   const family = context.data.session.family(sessionID);
@@ -55,9 +55,9 @@ export function attention(context: Context, sessionID: string): Attention {
   return false;
 }
 
-export type Mailed = (sessionID: string) => boolean;
+type Mailed = (sessionID: string) => boolean;
 
-export const urgent = (context: Context, session: Session, mailed?: Mailed) =>
+const urgent = (context: Context, session: Session, mailed?: Mailed) =>
   !!attention(context, session.id) || (mailable(session) && !!mailed?.(session.id));
 
 export function inbox(context: Context): Mailed {
@@ -76,13 +76,11 @@ export function inbox(context: Context): Mailed {
   return (sessionID) => parked().has(sessionID);
 }
 
-const running = (context: Context, sessionID: string) =>
+export const running = (context: Context, sessionID: string) =>
   members(context, sessionID).some((id) => context.data.session.status(id) === "running");
 
 export function order(context: Context, list: Session[], mailed?: Mailed) {
-  const rank = new Map(
-    list.map((session) => [session.id, urgent(context, session, mailed) ? 0 : tag(session.title)?.state ? 2 : 1]),
-  );
+  const rank = new Map(list.map((session) => [session.id, urgent(context, session, mailed) ? 0 : 1]));
   return list.toSorted((a, b) => (rank.get(a.id) ?? 1) - (rank.get(b.id) ?? 1) || b.time.updated - a.time.updated);
 }
 
@@ -206,39 +204,4 @@ export function timeAgo(timestamp: number) {
   const months = Math.floor(days / 30);
   if (months < 12) return `${months}mo`;
   return `${Math.floor(days / 365)}y`;
-}
-
-export const width = (value: string) => Bun.stringWidth(value);
-
-export function clip(value: string, max: number) {
-  if (max <= 0) return "";
-  if (width(value) <= max) return value;
-  const root = value.startsWith("/") ? "/" : "";
-  const segments = value.slice(root.length).split("/").filter(Boolean);
-  const prefix = `${root}…/`;
-  let kept = segments.at(-1) ?? value;
-  if (segments.length < 2 || width(prefix + kept) > max) return `${value.slice(0, max - 1)}…`;
-  for (const segment of segments.slice(0, -1).toReversed()) {
-    if (width(`${prefix}${segment}/${kept}`) > max) break;
-    kept = `${segment}/${kept}`;
-  }
-  return prefix + kept;
-}
-
-/** DialogSelect focuses a FILTER input after mounting; the plugin API exposes no onFilter hook. */
-export function listen(context: Context, set: (query: string) => void) {
-  const seen = new WeakSet<object>();
-  const editor = context.renderer.currentFocusedEditor;
-  if (editor) seen.add(editor);
-  let tries = 0;
-  const attach = () => {
-    const input = context.renderer.currentFocusedEditor;
-    if (input && !seen.has(input) && !input.isDestroyed && input.traits.status === "FILTER") {
-      set(input.plainText);
-      input.on("input", set);
-      return;
-    }
-    if (++tries < 20) setTimeout(attach, 10);
-  };
-  setTimeout(attach, 0);
 }

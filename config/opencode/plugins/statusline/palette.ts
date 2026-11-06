@@ -23,7 +23,7 @@ export const roles: Partial<Record<string, RGBA>> = {
   scout: RGBA.fromHex("#90d1f5"),
 };
 
-const steps = [15, 30, 45, 60, 70, 80, 90, 95];
+const percents = [15, 30, 45, 60, 70, 80, 90, 95];
 
 const ramp = [
   colors.blue,
@@ -37,11 +37,11 @@ const ramp = [
   colors.pink,
 ];
 
-export function tier(percent: number) {
-  const index = steps.findIndex((step) => percent < step);
+export function tier(value: number, steps: readonly number[] = percents) {
+  const index = steps.findIndex((step) => value < step);
   return index === -1 ? steps.length : index;
 }
 
-export function pressure(percent: number) {
-  return ramp[tier(percent)];
+export function pressure(value: number, steps?: readonly number[]) {
+  return ramp[tier(value, steps)];
 }
