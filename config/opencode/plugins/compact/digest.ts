@@ -35,7 +35,7 @@ function precedence(last: string) {
 }
 
 const HEAD = "# Compaction digest";
-const NEWEST = "User and Replies are newest first.";
+const NEWEST = "User and Replies are newest first."; // Matches stored old-format digests.
 const UNBRIEFED = "No brief was written: the plugin compacted this session automatically when its workflow ended.";
 
 export function digest(session: Session, brief: string | undefined, workflow: Workflow, live: Live) {
@@ -106,6 +106,7 @@ function said(session: Session) {
   const rest = entries.flatMap((entry, index) => (index === pin ? [] : [entry.text]));
   const room = USER - "## User\n\n".length - (ask?.length ?? 0) - note(rest.length).length - 4;
   const omitted = rest.length - newest(rest, room, pin < rest.length ? 1 : 0).length;
+  // Map rest's kept suffix back to entries without duplicating the pinned user message.
   const from = pin < 0 || omitted < pin ? omitted : omitted + 1;
   return [
     ...(ask !== undefined && pin < from ? [ask] : []),
