@@ -73,23 +73,33 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 ## Compact
 
 `compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn.
-The brief names in-flight work, waiting items with check commands, and the driven-run marker and scope when active.
-One root-session nudge per compaction cycle at 150K tokens asks for compaction at a finished-work boundary, with approval outside driven runs.
-When a workflow ends at or above 150K, the plugin queues compaction at turn end without asking; a pending brief takes precedence.
-At 300K tokens, it requests root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
+The brief names in-flight work, waiting items with check commands, uncommitted paths with owners and intended commit grouping, and the driven-run marker and scope when active.
+After a successful root `workflow end` at or above 100K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
+The tool result ends with a line telling the agent to end the turn without starting new work; after compaction, `recommended` proposes what comes next.
+Briefs are keyed by the compaction ID the host returns, so calling `compact` after workflow-end compaction is queued shares that compaction and sets its brief.
+A pending `compact` brief takes precedence over workflow-end compaction.
+Pending brief records are deleted only when compaction ends, fails, or is cancelled, or when the session is deleted.
+At 150K tokens, one root-session nudge per compaction cycle says to finish the running workflow.
+It also allows offering compaction right after a workflow starts following a long planning context, so the workflow runs on fresh context.
+Without a running workflow, the nudge asks for compaction after a commit lands or the task ends with the user deferring the commit, with approval outside driven runs.
+At 200K tokens, the plugin forces root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
-For brief and workflow-end root compactions, `digest.ts` builds the summary without a model call: User, Replies, Brief, Workflow, then Live.
+Every root compaction uses the plugin's digest without a model call, whether triggered by `compact`, workflow end, the user's `/compact`, or the ceiling.
+The host stores an empty summary, so chat shows only the "Compaction" divider.
+The `context` hook delivers the hidden digest to the model, bound to that compaction, and the host keeps no recent-message tail beside it.
+`digest.ts` builds User, Reply, one line per finished workflow, Brief, Workflow, then Live.
+Reply keeps the newest turn-final reply and any newer in-flight commentary, labeled as such, each clipped after 16,000 characters.
+Without a new brief, Brief carries the previous brief forward, labeled with the compaction time when it was recorded.
 `history.ts` reads the session's full stored history: User keeps user messages and question answers verbatim, oldest first, clipping each message or answer after 4,000 characters.
 User always keeps the first user message, then the newest entries within a rough 5K-token budget.
 An omission note between them counts skipped entries and explains how to read them with `sessions`.
-Replies keeps the newest final reply text within a rough 15K-token budget, always keeping the newest reply whole, and prints it oldest first after any omission note.
 `live.ts` probes Git branch, HEAD, dirty paths, open lanes, and delivered but unanswered mail asks.
 Live and the workflow store take precedence over later user words, which take precedence over the brief.
-Forced compaction keeps the host's model summary for tool-result context and adds User and Live through the context hook; child sessions keep model summaries and delegate-scope instructions.
-Digest failures fall back to model-summary instructions and log the error.
+Digest failures fall back to the host's model summary and log the error.
+Child sessions keep model summaries and delegate-scope instructions.
 
-After root compaction from any trigger, the plugin waits for a successful idle session and queues a follow-up to re-check waiting items with their commands, continue a ready workflow step needing no user input, or load `recommended`.
+After root compaction from any trigger, the plugin waits for a successful idle session and queues a follow-up to re-check waiting items with their commands, then load `recommended`.
 User input, including queued input, suppresses the follow-up, as does a superseding compaction or a failure or non-shutdown interruption between the compaction request and idle.
 
 `limits.ts` treats a missing configuration location as no configured buffer and caches that result without a toast; other config errors still show one.
@@ -344,7 +354,7 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 `<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
 
 `statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
-It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 300K for root sessions.
+It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 200K for root sessions.
 The gauge starts with ㊌ (water) while idle and ㊋ (fire) while the session runs.
 While running, the fire glyph fades between the gauge color and up to 35% red over a two-second cycle; a wave sweeps only the dots, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
@@ -421,7 +431,7 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
-Start and status show root context, headroom to forced compaction at 300K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
+Start and status show root context, headroom to forced compaction at 200K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.
 

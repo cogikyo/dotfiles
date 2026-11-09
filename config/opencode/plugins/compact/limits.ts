@@ -8,7 +8,7 @@ const share = 0.15;
 const buffers = new Map<string, Promise<number | string | undefined>>();
 
 // Keep below the native trigger in threshold() when changing opencode.json limits or buffer.
-export const ceiling = 300_000;
+export const ceiling = 200_000;
 
 export function threshold(limit: Limit, buffer: number | string | undefined, root: boolean) {
   const window = limit.input && limit.context ? Math.min(limit.input, limit.context) : limit.input || limit.context;

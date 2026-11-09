@@ -1,6 +1,8 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber } from "effect";
-import { objective } from "../compact/digest.ts";
+import type { Message } from "../compact/digest.ts";
+import { history } from "../compact/history.ts";
+import { located } from "../mail/store.ts";
 import { tag } from "../sessions/tags.ts";
 import { api, pinned } from "./rpc.ts";
 
@@ -11,7 +13,6 @@ const OPENING = 2;
 const SAMPLED = 4;
 const LATEST = 3;
 const MESSAGE_CHARS = 400;
-const SUMMARY_CHARS = 1_200;
 const MAX_CHARS = 36;
 const ORCHESTRATOR =
   "Orchestrator mode: the user gave this session an all-caps title. Keep decisions, synthesis, Git, and the user conversation here; send every edit, investigation, data pull, and check to children.";
@@ -36,7 +37,6 @@ const MINOR = new Set([
   "with",
 ]);
 
-type Message = Awaited<ReturnType<Plugin.Context["session"]["context"]>>[number];
 type State = { count: number; wrote: number; running: boolean };
 
 function human(text: string) {
@@ -52,14 +52,11 @@ function clip(text: string, max: number) {
 }
 
 function transcript(messages: readonly Message[]) {
-  const summary = messages.flatMap((message) =>
-    message.type === "compaction" && message.status === "completed" ? [message.summary] : [],
-  )[0];
   const said = messages.flatMap((message) => {
     const text = message.type === "user" ? human(message.text) : undefined;
     return text ? [text] : [];
   });
-  if (!summary && said.length === 0) return undefined;
+  if (said.length === 0) return undefined;
   const middle = Math.max(0, said.length - OPENING - LATEST);
   const picks = [
     ...new Set([
@@ -70,17 +67,11 @@ function transcript(messages: readonly Message[]) {
   ]
     .filter((index) => index >= 0 && index < said.length)
     .toSorted((a, b) => a - b);
-  const goal = summary && objective(summary);
   return [
-    ...(goal ? ["Summary of the session's earlier work:", "<summary>", clip(goal, SUMMARY_CHARS), "</summary>"] : []),
-    ...(picks.length > 0
-      ? [
-          `The user has sent ${said.length} messages${summary ? " since that summary" : ""}; a selection follows, oldest first, numbered by position:`,
-          "<messages>",
-          ...picks.map((index) => `#${index + 1} ${clip(said[index] ?? "", MESSAGE_CHARS)}`),
-          "</messages>",
-        ]
-      : []),
+    `The user has sent ${said.length} messages; a selection follows, oldest first, numbered by position:`,
+    "<messages>",
+    ...picks.map((index) => `#${index + 1} ${clip(said[index] ?? "", MESSAGE_CHARS)}`),
+    "</messages>",
   ].join("\n");
 }
 
@@ -138,6 +129,7 @@ export default Plugin.define({
     const states = new Map<string, State>();
     const owned = new Set<string>();
     const controller = new AbortController();
+    const file = located(ctx.app.channel);
 
     const state = (sessionID: string) => {
       const current = states.get(sessionID) ?? { count: 0, wrote: 0, running: false };
@@ -146,7 +138,11 @@ export default Plugin.define({
     };
 
     const generate = async (sessionID: string, title: string | undefined) => {
-      const context = transcript(await ctx.session.context({ sessionID }));
+      const context = transcript(
+        history(sessionID, file, (row) =>
+          log(Effect.logWarning("retitle: skipped an undecodable history row", { sessionID, ...row })),
+        ),
+      );
       if (!context) throw new Error("retitle: the session has no user messages to title");
       const { data: agent } = await ctx.agent.get({ agentID: "title" });
       const { text } = await ctx.generate.text({ prompt: request(title, context), model: agent.model });

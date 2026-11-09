@@ -2,6 +2,8 @@ import { Question } from "@opencode/schema/question";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { Schema } from "effect";
 import type { Open } from "../mail/mail.ts";
+import { fences, parse } from "../workflow/parse.ts";
+import { start, update, type Flow } from "../workflow/state.ts";
 
 export const Message = Schema.toEncoded(
   Schema.Union([SessionMessage.User, SessionMessage.Assistant, SessionMessage.Idle]),
@@ -22,65 +24,53 @@ export type Live = {
 };
 
 const PASTE = 4_000;
+const REPLY = 16_000;
 const USER = 5_000 * 4;
-const REPLIES = 15_000 * 4;
-const NOTE = 80;
 const DIRTY = 40;
 
 const Asked = Schema.Struct({ questions: Schema.Array(Question.Prompt) });
 const Answered = Schema.Struct({ answers: Schema.Array(Question.Answer) });
 
-function precedence(last: string) {
-  return `Precedence: Live and the stored workflow take priority over later user words, which take priority over ${last}.`;
-}
+const Steps = Schema.optionalKey(Schema.Array(Schema.Int));
+const Call = Schema.Struct({
+  start: Schema.optionalKey(Schema.Union([Schema.Literal(true), Schema.String])),
+  done: Steps,
+  skip: Steps,
+  fail: Steps,
+  repair: Steps,
+  end: Schema.optionalKey(Schema.Literal(true)),
+});
 
-const HEAD = "# Compaction digest";
-const NEWEST = "User and Replies are newest first."; // Matches stored old-format digests.
-const UNBRIEFED = "No brief was written: the plugin compacted this session automatically when its workflow ended.";
+export const Kept = Schema.Struct({ text: Schema.String, at: Schema.Number });
+export type Kept = typeof Kept.Type;
 
-export function digest(session: Session, brief: string | undefined, workflow: Workflow, live: Live) {
+export type Brief = { kept?: Kept; fresh: boolean; ended: boolean };
+
+export function digest(session: Session, brief: Brief, workflow: Workflow, live: Live) {
   return [
-    HEAD,
+    "# Compaction digest",
     [
-      "The compact plugin built this digest from session history and live probes without a model call.",
-      precedence("the brief"),
-      "User and Replies are oldest first.",
+      "The compact plugin built this digest from session history and live probes without a model call; the chat shows no summary.",
+      `This session is \`${session.id}\`; history scouts read it with the \`sessions\` tool.`,
+      "Precedence: Live and the stored workflow take priority over later user words, which take priority over the brief.",
+      "User is oldest first; Reply is the newest turn-final reply.",
     ].join(" "),
     `## User\n\n${said(session)}`,
-    `## Replies\n\n${replies(session.messages)}`,
-    `## Brief\n\n${brief ?? UNBRIEFED}`,
+    `## Reply\n\n${replies(session.messages)}`,
+    `## Finished workflows\n\n${finished(session.messages)}`,
+    `## Brief\n\n${briefing(brief)}`,
     `## Workflow\n\n${flow(workflow)}`,
     probe(live),
   ].join("\n\n");
 }
 
-export function recall(session: Session, workflow: Workflow, live: Live) {
-  return [
-    [
-      "This compaction used a model summary without a handoff brief.",
-      "The compact plugin added these records from session history and live probes at compaction time.",
-      precedence("the summary"),
-      "User is oldest first.",
-    ].join(" "),
-    `## User\n\n${said(session)}`,
-    `## Workflow\n\n${flow(workflow)}`,
-    probe(live),
-  ].join("\n\n");
-}
-
-export function objective(summary: string) {
-  if (!summary.startsWith(HEAD))
-    return summary
-      .split(/\n(?=#{1,6} )/u)
-      .find((section) => section.trim())
-      ?.trim();
-  const start = summary.indexOf("\n## Brief\n\n") + "\n## Brief\n\n".length;
-  const brief = summary.slice(start, summary.lastIndexOf("\n\n## Workflow\n\n")).trim();
-  if (brief && brief !== UNBRIEFED) return brief;
-  const head = summary.slice(0, summary.indexOf("\n\n## User\n\n"));
-  const user = summary.slice(head.length, summary.indexOf("\n\n## Replies\n\n"));
-  const asks = [...user.matchAll(/<message at="[^"]*">\n\n?([\s\S]*?)\n\n?<\/message>/gu)];
-  return asks.at(head.includes(NEWEST) ? -1 : 0)?.[1];
+function briefing({ kept, fresh, ended }: Brief) {
+  if (kept && fresh) return kept.text;
+  if (kept)
+    return `Carried forward: no brief was written for this compaction, so this is the latest brief, written before the compaction at ${stamp(kept.at)}.\n\n${kept.text}`;
+  return ended
+    ? "No brief was written: the plugin compacted this session automatically when its workflow ended."
+    : "No brief was written: this compaction came from a typed `/compact`, the plugin's context ceiling, or the host's context limit.";
 }
 
 function said(session: Session) {
@@ -139,26 +129,83 @@ function asked(part: Part) {
 }
 
 function replies(messages: readonly Message[]) {
-  const finals: { at: number; text: string }[] = [];
-  let last: { at: number; text: string } | undefined;
+  let final: { at: number; text: string } | undefined;
+  let open: { at: number; text: string } | undefined;
+  let stuck = false;
+  let finish: string | undefined;
   for (const message of messages) {
-    if (message.type === "idle") {
-      if (last) finals.push(last);
-      last = undefined;
+    if (message.type === "idle" && message.outcome !== "succeeded") stuck ||= open !== undefined;
+    else if (message.type === "idle" && open && !stuck) {
+      final = open;
+      open = undefined;
     }
     if (message.type !== "assistant") continue;
-    const text = message.content
-      .flatMap((part) => (part.type === "text" ? [part.text] : []))
-      .join("\n\n")
-      .trim();
-    if (text) last = { at: message.time.created, text };
+    finish = message.finish;
+    const text = spoken(message);
+    if (!text) continue;
+    open = { at: message.time.created, text };
+    stuck = false;
   }
-  if (last) finals.push(last);
-  const entries = finals.map((reply) => tagged("reply", reply.at, reply.text));
-  const kept = newest(entries, REPLIES - "## Replies\n\n".length - NOTE);
-  const omitted = entries.length - kept.length;
-  const note = omitted > 0 ? [`${omitted} older replies omitted to fit the ~15K-token budget.`] : [];
-  return [...note, ...kept].join("\n\n") || "No replies.";
+  if (open && !stuck && finish === "stop") {
+    final = open;
+    open = undefined;
+  }
+  return [
+    final ? tagged("reply", final.at, clip(final.text, REPLY)) : "No turn-final replies.",
+    ...(open
+      ? [
+          `In-flight commentary from the unfinished turn, not a final reply:\n\n${tagged("commentary", open.at, clip(open.text, REPLY))}`,
+        ]
+      : []),
+  ].join("\n\n");
+}
+
+function spoken(message: Extract<Message, { type: "assistant" }>) {
+  return message.content
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n\n")
+    .trim();
+}
+
+function finished(messages: readonly Message[]) {
+  const lines: string[] = [];
+  let current: Flow | undefined;
+  let fence: string | undefined;
+  for (const message of messages) {
+    if (message.type !== "assistant") continue;
+    for (const part of message.content) {
+      if (part.type === "text")
+        fence =
+          fences(part.text).findLast(({ text, partial }) => !partial && parse(text).steps.length > 0)?.text ?? fence;
+      if (part.type !== "tool" || part.name !== "workflow" || part.state.status !== "completed") continue;
+      const input = part.state.input;
+      if (!Schema.is(Call)(input)) continue;
+      const next = replay(current, fence, input);
+      if (!next) continue;
+      current = input.end ? undefined : next;
+      if (input.end) lines.push(closed(next, message.time.created));
+    }
+  }
+  return lines.join("\n") || "No workflow ended in this session.";
+}
+
+function replay(current: Flow | undefined, fence: string | undefined, input: typeof Call.Type) {
+  const source = input.start === true || input.start?.trim() === "true" ? fence : input.start;
+  try {
+    const next = source === undefined ? current : start(current, source);
+    return next && update(next, { done: input.done, skip: input.skip, fail: input.fail, repair: input.repair });
+  } catch {
+    return undefined;
+  }
+}
+
+function closed(run: Flow, at: number) {
+  const { title, steps } = parse(run.source);
+  const groups = (["done", "skipped", "failed", undefined] as const).flatMap((mark) => {
+    const numbers = steps.filter(({ n }) => run.marks[n] === mark).map(({ n }) => n);
+    return numbers.length ? [`${mark ?? "unfinished"} ${numbers.join(", ")}`] : [];
+  });
+  return `- ${stamp(at)} ${title} (rev ${run.rev}): ${groups.join("; ") || "no steps"}`;
 }
 
 function newest(entries: readonly string[], room: number, least = 1) {
@@ -209,8 +256,8 @@ function tagged(name: string, at: number, text: string) {
   return `<${name} at="${stamp(at)}">\n\n${text}\n\n</${name}>`;
 }
 
-function clip(text: string) {
-  return text.length > PASTE ? `${text.slice(0, PASTE)}\n[cut: ${text.length - PASTE} more characters]` : text;
+function clip(text: string, limit = PASTE) {
+  return text.length > limit ? `${text.slice(0, limit)}\n[cut: ${text.length - limit} more characters]` : text;
 }
 
 function stamp(at: number, seconds = false) {

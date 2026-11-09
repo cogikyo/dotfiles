@@ -2,17 +2,19 @@ import type { OpenCodeEvent } from "@opencode/client/promise";
 import { Plugin } from "@opencode/plugin";
 import { Event } from "@opencode/schema/event";
 import { SessionMessage } from "@opencode/schema/session-message";
+import { TokenUsage } from "@opencode/schema/token-usage";
 import { Effect, Fiber, Schema } from "effect";
 import { api as workflow } from "../workflow/rpc.ts";
 import { children } from "../workflow/progress.ts";
 import { status } from "../workflow/state.ts";
-import { digest, recall, type Workflow } from "./digest.ts";
+import { digest, Kept, type Workflow } from "./digest.ts";
 import { located } from "../mail/store.ts";
-import { checkpoint, history, type Skip } from "./history.ts";
+import { history, type Skip } from "./history.ts";
 import { ceiling } from "./limits.ts";
 import { probe } from "./live.ts";
 
 const threshold = 150_000;
+const floor = 100_000;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -27,18 +29,13 @@ const SUMMARY = [
 const CHILD =
   "- This is a delegate child session. Keep its brief's objective, write scope, exclusions, rules, and acceptance checks, as updated by later prompts.";
 
-function follow(flow: Workflow) {
-  const unread = "failed" in flow;
-  return [
-    "Compaction finished. Re-check each waiting item in the brief or summary with its recorded command.",
-    unread && "The stored workflow could not be read during compaction; call `workflow` with `{}` first.",
-    unread || flow.text
-      ? "Continue the stored workflow's next ready step if it needs no user input; otherwise load the `recommended` skill and follow it."
-      : "Then load the `recommended` skill and follow it.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
+const FOLLOW =
+  "Compaction finished. Re-check each waiting item in the compaction digest or summary with its recorded command, then load the `recommended` skill and follow it.";
+
+const STOP =
+  "Compaction is queued and runs when this turn ends; end the turn now without starting new work. After compaction, `recommended` proposes what comes next.";
+
+const Ends = Schema.Struct({ end: Schema.Literal(true) });
 
 const Input = Schema.Struct({
   brief: Schema.String.annotate({
@@ -49,8 +46,6 @@ const Input = Schema.Struct({
 });
 
 const Pending = Schema.Struct({ brief: Schema.optionalKey(Schema.String) });
-
-const Forced = Schema.Struct({ id: Schema.String, text: Schema.String });
 
 const description =
   "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or without asking at a completed-work boundary in a driven run.";
@@ -66,10 +61,6 @@ function nudged(sessionID = "") {
   return `nudged/${sessionID}`;
 }
 
-function forced(sessionID = "") {
-  return `forced/${sessionID}`;
-}
-
 function label(tokens: number) {
   return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1_000)}K`;
 }
@@ -83,7 +74,11 @@ const BOUNDARY = [
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 
-const NUDGE = `Context reached ${label(threshold)} tokens. At ${label(ceiling)}, forced compaction can run mid-turn without a handoff brief. ${BOUNDARY}`;
+const REACHED = `Context reached ${label(threshold)} tokens. At ${label(ceiling)}, forced compaction can run mid-turn without a handoff brief.`;
+
+const NUDGE = `${REACHED} ${BOUNDARY}`;
+
+const FINISH = `${REACHED} A workflow is running: finish it, and the plugin compacts after the turn that ends it. If \`workflow\` headroom shows the remaining steps won't fit before ${label(ceiling)}, end it at the next point with no lanes in flight and no repair pending; after compaction, \`recommended\` resumes the unfinished steps. If the workflow just started after a long planning context, offering compaction now is fine, so it runs on fresh context.`;
 
 function remember<T>(cache: Map<string, Promise<T>>, sessionID: string, load: () => Promise<T>) {
   let known = cache.get(sessionID);
@@ -93,6 +88,10 @@ function remember<T>(cache: Map<string, Promise<T>>, sessionID: string, load: ()
     cache.set(sessionID, known);
   }
   return known;
+}
+
+function carried(messages: readonly { metadata?: Record<string, unknown> }[]) {
+  for (const message of messages) if (typeof message.metadata?.digest === "string") return message.metadata.digest;
 }
 
 function explain(error: unknown) {
@@ -117,7 +116,6 @@ export default Plugin.define({
 
     const file = located(ctx.app.channel);
     const tokens = new Map<string, number>();
-    const ends = new Map<string, number>();
     const primaries = new Map<string, Promise<boolean>>();
     const compacting = new Set<string>();
     const requests = new Map<string, Request>();
@@ -183,10 +181,9 @@ export default Plugin.define({
         await ctx.session.wait({ sessionID });
         const session = await ctx.session.get({ sessionID });
         if (request.halted || session.outcome !== "succeeded" || (session.time.idle ?? 0) < since) return;
-        const flow = await tracked(sessionID);
         const [marker, ...after] = await ctx.session.context({ sessionID });
         if (marker?.id !== request.id || request.steered || after.some((message) => message.type === "user")) return;
-        await ctx.session.synthetic({ sessionID, text: follow(flow), delivery: "queue" });
+        await ctx.session.synthetic({ sessionID, text: FOLLOW, delivery: "queue" });
       } finally {
         if (requests.get(sessionID) === request) requests.delete(sessionID);
       }
@@ -202,8 +199,7 @@ export default Plugin.define({
         return false;
       });
       await forget(malformed.map((entry) => entry.key));
-      for (const prefix of [nudged(), forced()])
-        for (const entry of await scan(prefix)) sessions.add(entry.key.slice(prefix.length));
+      for (const entry of await scan(nudged())) sessions.add(entry.key.slice(nudged().length));
       await Promise.all(
         [...sessions].map((sessionID) =>
           ctx.session.get({ sessionID }).then(
@@ -215,7 +211,7 @@ export default Plugin.define({
     };
 
     const clear = async (sessionID: string) =>
-      forget([...(await stored(sessionID)).map((entry) => entry.key), nudged(sessionID), forced(sessionID)]);
+      forget([...(await stored(sessionID)).map((entry) => entry.key), nudged(sessionID)]);
 
     const rules = async (sessionID: string, text: string) => {
       const brief = (await stored(sessionID)).at(-1)?.value.brief;
@@ -233,38 +229,40 @@ export default Plugin.define({
       log(Effect.logWarning("compact: skipped an undecodable history row", { sessionID, ...row }));
 
     const summarize = async (sessionID: string) => {
-      const running = (await ctx.session.context({ sessionID })).findLast(
-        (message) => message.type === "compaction" && message.status === "running",
-      );
+      const context = await ctx.session.context({ sessionID });
+      const running = context.findLast((message) => message.type === "compaction" && message.status === "running");
       if (!running) throw new Error("no running compaction in the session context");
+      const [first] = context;
+      const prior =
+        first?.type === "compaction" && first.status === "completed" && Schema.is(Kept)(first.metadata?.brief)
+          ? first.metadata.brief
+          : undefined;
       const entry = await ctx.storage.get(key(sessionID, running.id));
+      const pending = Schema.is(Pending)(entry) ? entry : undefined;
+      const kept = pending?.brief === undefined ? prior : { text: pending.brief, at: running.time.created };
       const session = { id: sessionID, messages: history(sessionID, file, skipped(sessionID)) };
       const [flow, live] = await Promise.all([tracked(sessionID), probe(ctx, sessionID, file)]);
-      if (Schema.is(Pending)(entry)) {
-        await ctx.storage.remove(forced(sessionID));
-        return digest(session, entry.brief, flow, live);
-      }
-      // Bind recall to its compaction so a failed or superseded one cannot replay stale user intent.
-      await ctx.storage.set(forced(sessionID), { id: running.id, text: recall(session, flow, live) });
-      return undefined;
+      const text = digest(session, { kept, fresh: kept !== prior, ended: pending !== undefined }, flow, live);
+      return { digest: text, ...(kept ? { brief: kept } : {}) };
     };
 
-    const settle = async (sessionID: string) => {
-      const at = ends.get(sessionID);
-      if (at === undefined) return;
-      ends.delete(sessionID);
-      if ((tokens.get(sessionID) ?? 0) < threshold || compacting.has(sessionID) || requests.has(sessionID)) return;
-      if (!(await primary(sessionID)) || (await stored(sessionID)).length > 0) return;
-      const since = (await ctx.session.context({ sessionID })).some(
-        (message) => (message.type === "idle" || message.type === "compaction") && message.time.created > at,
+    const size = async (sessionID: string) => {
+      const known = tokens.get(sessionID);
+      if (known !== undefined) return known;
+      const last = (await ctx.session.context({ sessionID })).findLast(
+        (message) => message.type === "assistant" && message.tokens !== undefined,
       );
-      if (since) return;
-      const id = SessionMessage.ID.create();
-      await ctx.storage.set(key(sessionID, id), {});
-      await ctx.session.compact({ sessionID, id, delivery: "queue" }).catch(async (error: unknown) => {
-        await ctx.storage.remove(key(sessionID, id));
-        throw error;
-      });
+      const seeded = last?.type === "assistant" && last.tokens ? TokenUsage.total(last.tokens) : 0;
+      tokens.set(sessionID, seeded);
+      return seeded;
+    };
+
+    const conclude = async (sessionID: string) => {
+      if (compacting.has(sessionID) || !(await primary(sessionID)) || (await size(sessionID)) < floor) return false;
+      const admitted = await ctx.session.compact({ sessionID, delivery: "queue" });
+      if (!Schema.is(Pending)(await ctx.storage.get(key(sessionID, admitted.id))))
+        await ctx.storage.set(key(sessionID, admitted.id), {});
+      return true;
     };
 
     await ctx.tool.transform((editor) =>
@@ -290,30 +288,32 @@ export default Plugin.define({
           event.system.push(...(await rules(event.sessionID, `${SUMMARY}\n${CHILD}`)));
           return;
         }
-        const summary = await summarize(event.sessionID);
-        if (summary === undefined) event.system.push({ type: "text", text: SUMMARY });
-        else event.result = { summary };
+        event.result = { summary: "", metadata: { keepID: null, ...(await summarize(event.sessionID)) } };
       } catch (error) {
         fail("compaction digest", error);
-        event.system.push(...((await guard("compaction rules", rules(event.sessionID, SUMMARY))) ?? []));
+        const prior = carried(event.messages);
+        event.system.push(
+          ...((await guard("compaction rules", rules(event.sessionID, SUMMARY))) ?? []),
+          ...(prior ? [{ type: "text" as const, text: `Digest from the previous compaction:\n\n${prior}` }] : []),
+        );
       }
     });
 
-    const recalled = async (sessionID: string) => {
-      const record = await ctx.storage.get(forced(sessionID));
-      if (record === undefined) return undefined;
-      if (Schema.is(Forced)(record) && checkpoint(await ctx.session.context({ sessionID })) === record.id)
-        return record.text;
-      await ctx.storage.remove(forced(sessionID));
-      return undefined;
-    };
-
-    await ctx.session.hook("context", async (event) => {
-      const text = await guard("compaction recall", recalled(event.sessionID));
+    await ctx.session.hook("context", (event) => {
+      const text = carried(event.messages);
       if (text) event.system.push({ type: "text", text });
     });
 
-    await ctx.session.hook("experimental.idle", (event) => guard("compact at workflow end", settle(event.sessionID)));
+    await ctx.tool.hook("execute.after", async (event) => {
+      if (event.tool !== "workflow" || event.status !== "completed" || !Schema.is(Ends)(event.input)) return;
+      if (!(await guard("compact at workflow end", conclude(event.sessionID), false))) return;
+      const { content } = event.result;
+      event.result = {
+        ...event.result,
+        content:
+          typeof content === "string" ? `${content}\n\n${STOP}` : [...(content ?? []), { type: "text", text: STOP }],
+      };
+    });
 
     const cap = (sessionID: string, total: number) => {
       if (total < ceiling || compacting.has(sessionID)) return;
@@ -332,10 +332,18 @@ export default Plugin.define({
       if ((await stored(sessionID)).length > 0) return;
       const id = sent?.id ?? SessionMessage.ID.create();
       if (!sent) await ctx.storage.set(nudged(sessionID), { epoch: current, id });
+      const running = await guard(
+        "workflow status",
+        ctx
+          .rpc(workflow)
+          .state({ sessionID })
+          .then(({ flow }) => flow?.status === "active"),
+        false,
+      );
       await ctx.session.synthetic({
         id: SessionMessage.ID.make(id),
         sessionID,
-        text: NUDGE,
+        text: running ? FINISH : NUDGE,
         description: "Compaction nudge",
         delivery: "steer",
         resume: false,
@@ -366,15 +374,15 @@ export default Plugin.define({
       const halted =
         event.type === "session.execution.failed" ||
         (event.type === "session.execution.interrupted" && event.data.reason !== "shutdown");
-      const request = halted ? requests.get(event.data.sessionID) : undefined;
+      if (!halted) return;
+      const request = requests.get(event.data.sessionID);
       if (request) request.halted = true;
     };
 
     const act = async (event: OpenCodeEvent) => {
       if (event.type === "session.step.ended") {
         const { sessionID } = event.data;
-        const { input, output, reasoning, cache } = event.data.tokens;
-        const total = input + output + reasoning + cache.read + cache.write;
+        const total = TokenUsage.total(event.data.tokens);
         tokens.set(sessionID, total);
         cap(sessionID, total);
         await guard("nudge", notify(sessionID, total));
@@ -417,13 +425,6 @@ export default Plugin.define({
     watch().catch((error: unknown) => {
       if (!controller.signal.aborted) fail("event stream", error);
     });
-    ctx.rpc(workflow).events.on(
-      "changed",
-      async (event) => {
-        if (event.data.ended && mine(event.location)) ends.set(event.data.root, event.created);
-      },
-      { signal: controller.signal },
-    );
     void guard("reconcile briefs", reconcile());
 
     return () => controller.abort();

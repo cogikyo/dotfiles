@@ -7,7 +7,7 @@ const messages = `
     WHEN 'user' THEN json_remove(message.data, '$.files')
     WHEN 'assistant' THEN json_set(message.data, '$.content', (
       SELECT json_group_array(json(part.data)) FROM (${parts("message")}) part
-      WHERE json_extract(part.data, '$.type') = 'text' OR json_extract(part.data, '$.name') = 'question'))
+      WHERE json_extract(part.data, '$.type') = 'text' OR json_extract(part.data, '$.name') IN ('question', 'workflow')))
     ELSE message.data END, '$.id', message.id, '$.type', message.type) AS data
   FROM session_message message
   WHERE message.session_id = ?1 AND message.type IN ('user', 'assistant', 'idle') ORDER BY message.seq`;
@@ -26,8 +26,4 @@ export function history(sessionID: string, file: string, skip: (row: Skip) => vo
     skip({ seq: row.seq, error: String(decoded.failure) });
     return [];
   });
-}
-
-export function checkpoint(context: ReadonlyArray<{ type: string; id: string; status?: string }>) {
-  return context.findLast((message) => message.type === "compaction" && message.status === "completed")?.id;
 }
