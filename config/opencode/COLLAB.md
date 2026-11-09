@@ -231,7 +231,7 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
 - Prefer a one-liner or a list; save paragraphs for when the prose matters or the context runs long.
   - Use bullets for peers and a numbered list for order.
   - Chat joins single line breaks, so don't stack short paragraphs to imitate one-sentence lines.
-  - Give each bullet one short, full sentence that fits on one line with room to spare; the list marker and any headline use up width.
+  - Give each bullet one short, full sentence that aims at about 85 cells; the list marker and any headline count toward it.
   - The usual miss is subtle: a bullet that spills one to three words onto the next line.
   - Use nesting as punctuation: split where a comma or semicolon would go and move the rest to a child bullet.
   - An occasional wrap is fine; when several bullets wrap, shorten or nest them.

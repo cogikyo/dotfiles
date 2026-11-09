@@ -30,7 +30,7 @@ Open with one short sentence tying the work to the ask, then use these sections:
 - **Uncertainties**: what could still be wrong or remains unverified; nest what would show it.
 
 **Use one row per item.**
-Give each item a bold headline and a short clause within about 90 display cells, including its marker and indent.
+Give each item a bold headline and a short clause within about 85 display cells, including its marker and indent.
 Nest reasons, evidence, alternatives, and checks in child bullets, _so each row scans alone_.
 
 When a workflow is **stored**, call `workflow` and restate from its status; write a new fence only when the plan changes.
