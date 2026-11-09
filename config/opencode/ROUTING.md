@@ -3,11 +3,11 @@ routes:
   build/owner: claude/claude-opus-5-5 high
   build/general: claude/claude-opus-5-5 high
   build/git: claude/claude-opus-5-5 high
-  build/patch: claude/claude-sonnet-5-5 medium
+  build/patch: claude/claude-opus-5-5 medium
   build/scribe: openai/gpt-6.1-sol high
-  scout/*: claude/claude-sonnet-5-5 high
-  scout/context: claude/claude-sonnet-5-5 medium
-  scout/dirty: claude/claude-sonnet-5-5 medium
+  scout/*: claude/claude-opus-5-5 high
+  scout/context: claude/claude-opus-5-5 medium
+  scout/dirty: claude/claude-opus-5-5 medium
   scout/web: opencode-go/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
@@ -80,10 +80,9 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 ### Scouts
 
-- Use Sonnet scouts (`scout/context`, `scout/dirty`) for fast first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
+- Use `scout/context` and `scout/dirty` for first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
 - Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
-- Send focused questions to `scout/code` on its Sonnet route for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
-  - Pass `claude/claude-opus-5-5#high` when a design or verdict rests on the trace.
+- Send focused questions to `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Keep reads that need the Docker socket or `.pier/secrets.yaml`, such as `docker save` or `pier profile show`, in Collab's shell; cage blocks both for read-only children.
 - Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
@@ -120,7 +119,7 @@ Pick a builder by how much the brief settles.
 ## When to deviate
 
 - Run `build/owner` or `build/general` at Opus `xhigh` only for hard or ambiguous steps, with a `why:`.
-- Send trivial edits to `build/patch` on Sonnet `medium`, which is slightly faster than Opus.
+- Send trivial edits to `build/patch` on Opus `medium`.
   - Keep a `{scope}-patch` lane open for repeated patches in the same scope.
 - Use Opus `max` when the user asks for it.
 - Add Sol or Astra leaves eagerly beside Opus work; Collab picks between them.
@@ -162,7 +161,7 @@ Use the effort ladder for each step.
 
 ### `claude-sonnet-5-5`
 
-- The default for scouts and patches: `medium` for first-pass maps, dirty-tree checks, and patches; `high` for focused scouts.
+- Available as an explicit pick when speed matters; no route defaults to Sonnet.
 - Orchestrates web search and `x` calls well.
 
 ### `xai/grok-4.7`
@@ -196,5 +195,5 @@ Usage is internal routing data.
 Check `usage_status` before any dispatch to a non-pool route, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
 Mention usage only when the user asks, or when every route for a step is capped.
 
-- Anthropic's weekly windows are the scarce pool, so put work on Sol or Sonnet where they fit and keep Opus for building and judgment that needs it.
+- With three accounts, Claude headroom is the norm, so every Claude route defaults to Opus.
 - OpenAI's weekly window tends to reset mostly unspent, so Sol and Astra leaves stay cheap to add.
