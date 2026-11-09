@@ -311,7 +311,9 @@ export default Plugin.define({
       event.result = {
         ...event.result,
         content:
-          typeof content === "string" ? `${content}\n\n${STOP}` : [...(content ?? []), { type: "text", text: STOP }],
+          typeof content === "string"
+            ? `${content}\n\n${STOP}`
+            : [...(content ?? []), { type: "text", text: `\n\n${STOP}` }],
       };
     });
 
