@@ -32,6 +32,9 @@ An exact agent name beats a glob, and a longer glob beats a shorter one.
 The `claude` provider is the Anthropic account pool; the lanes plugin resolves it to `anthropic`, `anthropic-personal`, or `anthropic-cullyn` for each call.
 Each `fallbacks` entry names the model to use when every Anthropic account is capped.
 
+Main sessions belong to the user and are not routed here.
+The `opencode.json` default and the account picked in the TUI are not pooled.
+
 Omit `model` on `subagent` to take the route; this is the normal case.
 To change reasoning effort, pass the model and its variant together, such as `claude/claude-opus-5-5#xhigh`.
 An explicit model does not take the route's variant.
@@ -53,7 +56,17 @@ Collab runs at `high`; the user switches it to `xhigh` in the TUI picker when a 
 ## Anthropic accounts
 
 **Trend** (`anthropic`), **Cogikyo** (`anthropic-personal`), and **Cullyn** (`anthropic-cullyn`) all serve every repository.
-The pool spends each weekly window before it resets.
+Lane picks and failover share this order among uncapped accounts:
+
+1. Keep a lane's follow-ups on its current account.
+2. Prefer accounts with fresh usage data over unknown ones.
+3. Prefer weekly surplus of at least 25 percentage points, largest first.
+4. Otherwise prefer Trend.
+5. Then prefer the soonest weekly reset.
+
+Weekly surplus is the share of the week's usage left minus the share of the week's time left.
+Accounts with much left and little time to spend it lead; weekends follow the same math.
+Trend leads otherwise because its 5-hour window caps before its weekly usage runs out, so unused 5-hour windows are lost.
 
 - **Enforced**: when every account is capped, the pool uses the model's fallback without a variant and notes the switch in the result.
 - When an account caps mid-request, the Anthropic plugin resends on the next open account; later requests in that session stay there until the cap resets.
