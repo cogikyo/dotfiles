@@ -222,7 +222,7 @@ Other notification deduplication and timers live in memory.
 
 Every 60 seconds, the plugin checks each open root and its lanes for pending requests, with a separate reminder clock per root.
 With tabs enabled, open roots are the roots of tab sessions; without tabs, only the displayed root is open.
-Permission and question reminders repeat every hour on any open root until answered.
+Permission and question reminders repeat every 30 minutes on any open root until answered.
 Only the displayed root gets idle reminders every hour, unless its title starts with a closed tag or its tree has running work or pending non-synthetic items.
 Each root's clock pauses while Hyprland reports the screen locked and resets while the TUI is focused on that root, leaving other roots' clocks unchanged.
 Clocks are dropped when their roots are no longer open.

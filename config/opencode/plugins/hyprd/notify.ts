@@ -16,7 +16,7 @@ type Asks = {
 
 const SOCKET = "/tmp/hyprd.sock";
 const TICK_MS = 60_000;
-const ASK_MS = 60 * 60_000;
+const ASK_MS = 30 * 60_000;
 const IDLE_MS = 60 * 60_000;
 const REQUEST_MS = 2_000;
 const SYNC_MS = 10_000;
