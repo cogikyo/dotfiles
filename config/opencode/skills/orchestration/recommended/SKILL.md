@@ -15,18 +15,23 @@ Rebuild the thesis from the user's own words, not lane reports or earlier restat
 After compaction, use the digest's user messages and question answers; send one `scout/session` leaf if a needed fact is missing.
 Check every approval Collab is acting on against what the user actually said.
 Answer any question or "why" the user left pending before restating anything.
-Do not repeat a question the newest reply already asked; if nothing changed, say so in one line instead of restating.
+Do not repeat a question the newest reply already asked; if nothing changed, say so and briefly restate Thesis and Open only.
 
 ## Restate
 
-Open with one sentence placing the work against the original ask, then write these sections:
+Open with one short sentence tying the work to the ask, then use these sections:
 
-- **Thesis**: the problem in the user's words, Collab's current understanding, and whether the current work still serves it.
-  - Name each scope shift since the ask and who made it; an unasked shift is a finding, not a settled fact.
-- **Findings**: only what changed a decision, each with how Collab knows it: measured, read in source, reported by a lane, or inferred.
-- **Decided**: decisions the user would notice or might object to, each with its reason, stated as the outcome they will see.
-- **Open**: each decision that needs the user, with Collab's recommendation and when another option wins.
-- **Uncertainties**: what could still be wrong, what would show it, and what remains unverified.
+- **Thesis**: at most three one-line bullets, never a paragraph: the ask in the user's words, Collab's current understanding, and whether the work still serves it.
+  - Nest each scope shift and who made it; an unasked shift is a finding, not a settled fact.
+- **Findings**: only what changed a decision; tag only inferred or lane-reported facts in children.
+  - An untagged finding means it was measured or read in source.
+- **Decided**: outcomes the user would notice or might object to; nest each reason.
+- **Open**: user decisions, headed by Collab's recommendation; nest when another option wins.
+- **Uncertainties**: what could still be wrong or remains unverified; nest what would show it.
+
+**Use one row per item.**
+Give each item a bold headline and a short clause within about 90 display cells, including its marker and indent.
+Nest reasons, evidence, alternatives, and checks in child bullets, _so each row scans alone_.
 
 When a workflow is **stored**, call `workflow` and restate from its status; write a new fence only when the plan changes.
 Without a stored workflow, show pending work in a `workflow` fence before the TL;DR, following the `workflow` skill.
@@ -34,7 +39,7 @@ In a new or changed card, put open decisions that gate work in `you` steps, and 
 Omit a new card when nothing but the user's decisions is pending.
 “Write for a reader returning cold” governs prose; in the card, lane names appear as pills by design, and each headline says what its step does.
 
-Close the restatement with `## TL;DR`: the thesis and top recommendation in one or two sentences.
+Close the restatement with `## TL;DR`: the thesis and top recommendation in one sentence fitting one row.
 When something is open, say the questions follow, unless the user's own question defers them to the next reply.
 
 **Own the mechanism.**
