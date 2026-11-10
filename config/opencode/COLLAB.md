@@ -130,6 +130,10 @@ A **lane** is a reusable direct child.
 
 - **Steer a lane with a delta**: what changed, the feedback, and the new ask.
   - Let it re-read files instead of pasting their contents.
+- Before resuming, **check size** in `lanes`; past roughly 200K, prefer a fresh lane name.
+  - Use `lanes_compact` then resume when the follow-up needs that context.
+  - This is a rough default; override it when your routing context warrants.
+- Send **quick fixes** to `build/patch` or a fresh small lane instead of resuming a large lane with an old cache.
 - Lanes linked to workflow steps close when the workflow ends; a running child closes when it settles.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.

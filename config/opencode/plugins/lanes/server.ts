@@ -1,11 +1,13 @@
 import { Plugin } from "@opencode/plugin/effect";
 import type { Session } from "@opencode/schema/session";
+import type { SessionMessage } from "@opencode/schema/session-message";
 import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
 import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
-import { held, located } from "../mail/store.ts";
+import { held, located, opened } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
+import { count, measured } from "./label.ts";
 import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
 import { admit, checklist } from "./step.ts";
@@ -23,6 +25,8 @@ type Input = {
 };
 
 const pool = "claude";
+
+const inbox = "SELECT EXISTS (SELECT 1 FROM session_inbox WHERE session_id = ?1) AS pending";
 
 const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
 
@@ -70,6 +74,28 @@ const laneOf = (session: Session.Info) =>
 
 const closedOf = (session: Session.Info) =>
   Option.getOrUndefined(Schema.decodeUnknownOption(Closed)(session.metadata?.closed));
+
+const find = (list: readonly Session.Info[], key: string) =>
+  list.find((session) => session.id === key) ?? list.find((session) => laneOf(session) === key);
+
+const compactable = (messages: readonly SessionMessage.Info[]) =>
+  messages.some((message) => {
+    switch (message.type) {
+      case "user":
+      case "synthetic":
+      case "skill":
+      case "location-switched":
+        return true;
+      case "shell":
+        return message.metadata?.background !== true;
+      case "assistant":
+        return message.content.some((part) => part.type !== "reasoning");
+      default:
+        return false;
+    }
+  });
+
+const skip = (key: string, why: string) => Effect.succeed(`skipped ${key}: ${why}`);
 
 const same = (a: Ref | undefined, b: Ref) =>
   a?.providerID === b.providerID && a.id === b.id && (a.variant ?? "default") === (b.variant ?? "default");
@@ -143,12 +169,21 @@ export default Plugin.define({
           );
       });
 
+      const busy = (parentID: string, child: Session.Info) => {
+        const lane = laneOf(child);
+        return (
+          status(child) === "running" ||
+          held(child.id, file) ||
+          (lane !== undefined && creating.has(`${parentID}/${lane}`))
+        );
+      };
+
       const close = Effect.fn("lanes.close")(function* (parentID: string, names: readonly string[], by: Closed["by"]) {
         const list = yield* children(parentID);
         const outcomes: Outcome[] = [];
         const sealed = new Set<string>();
         for (const key of new Set(names.map((name) => name.trim()).filter(Boolean))) {
-          const child = list.find((session) => session.id === key) ?? list.find((session) => laneOf(session) === key);
+          const child = find(list, key);
           const closed = child
             ? sealed.has(child.id) || closedOf(child) !== undefined
             : list.some((session) => closedOf(session)?.lane === key);
@@ -156,9 +191,7 @@ export default Plugin.define({
             outcomes.push({ lane: key, skipped: closed ? "already closed" : "missing" });
             continue;
           }
-          const lane = laneOf(child);
-          const busy = status(child) === "running" || held(child.id, file);
-          if (busy || (lane !== undefined && creating.has(`${parentID}/${lane}`))) {
+          if (busy(parentID, child)) {
             outcomes.push({ lane: key, skipped: "running" });
             continue;
           }
@@ -167,6 +200,65 @@ export default Plugin.define({
           outcomes.push({ lane: key });
         }
         return outcomes;
+      });
+
+      const size = (child: Session.Info) =>
+        ctx.session.context({ sessionID: child.id }).pipe(Effect.map((messages) => measured(messages)?.tokens));
+
+      const queued = (sessionID: string) => {
+        try {
+          const pending = opened(file, (db) => db.query<{ pending: number }, [string]>(inbox).get(sessionID)?.pending);
+          return pending === 0 ? undefined : "pending input";
+        } catch {
+          return "inbox unreadable";
+        }
+      };
+
+      const blocked = (parentID: string, child: Session.Info) =>
+        closedOf(child) ? "closed" : busy(parentID, child) ? "running" : queued(child.id);
+
+      const shrink = (parentID: string, key: string, child: Session.Info) =>
+        Effect.gen(function* () {
+          if (!compactable(yield* ctx.session.context({ sessionID: child.id })))
+            return `skipped ${key}: nothing to compact`;
+          const current = yield* get(child.id);
+          const why = current ? blocked(parentID, current) : "missing";
+          if (why) return `skipped ${key}: ${why}`;
+          const admitted = yield* ctx.session.compact({ sessionID: child.id, delivery: "queue" });
+          yield* ctx.session.wait({ sessionID: child.id });
+          const marker = (yield* ctx.session.context({ sessionID: child.id })).find(
+            (message) => message.id === admitted.id,
+          );
+          if (marker?.type !== "compaction" || marker.status === "running")
+            return `failed ${key}: compaction did not complete`;
+          return marker.status === "completed" ? `compacted ${key}` : `failed ${key}: ${marker.error.message}`;
+        }).pipe(
+          Effect.catch((error) =>
+            Effect.succeed(`failed ${key}: ${error instanceof Error ? error.message : String(error)}`),
+          ),
+        );
+
+      const compact = Effect.fn("lanes.compact")(function* (parentID: string, names: readonly string[]) {
+        const list = yield* children(parentID);
+        const runs: Effect.Effect<string>[] = [];
+        const seen = new Set<string>();
+        for (const key of names.map((name) => name.trim()).filter(Boolean)) {
+          const child = find(list, key);
+          const twice = seen.has(key) || (child !== undefined && seen.has(child.id));
+          seen.add(key);
+          if (child) seen.add(child.id);
+          if (twice) {
+            runs.push(skip(key, "listed twice"));
+            continue;
+          }
+          if (!child) {
+            runs.push(skip(key, list.some((session) => closedOf(session)?.lane === key) ? "closed" : "missing"));
+            continue;
+          }
+          const why = blocked(parentID, child);
+          runs.push(why ? skip(key, why) : shrink(parentID, key, child));
+        }
+        return yield* Effect.all(runs, { concurrency: "unbounded" });
       });
 
       const retire = (childID: string) =>
@@ -385,7 +477,7 @@ export default Plugin.define({
         editor.add({
           name: "lanes",
           description:
-            "List this session's subagent children with lane name, agent, model, status, last activity, and sessionID.",
+            "List this session's subagent children with lane name, agent, model, status, context tokens, last activity, and sessionID.",
           input: Schema.Struct({}),
           options: { codemode: false },
           execute: (_input, context) =>
@@ -394,18 +486,38 @@ export default Plugin.define({
                 (a, b) => DateTime.toEpochMillis(b.time.updated) - DateTime.toEpochMillis(a.time.updated),
               );
               if (!list.length) return { content: "No subagent children." };
-              const rows = list.map((child) =>
+              const sizes = yield* Effect.forEach(
+                list,
+                (child) => size(child).pipe(Effect.option, Effect.map(Option.getOrUndefined)),
+                { concurrency: "unbounded" },
+              );
+              const rows = list.map((child, at) =>
                 [
                   laneOf(child) ?? closedOf(child)?.lane ?? "-",
                   String(child.agent ?? "-"),
                   child.model ? format(child.model) : "-",
                   closedOf(child) ? "closed" : status(child),
+                  sizes[at] === undefined ? "-" : count(sizes[at]),
                   ago(child.time.updated),
                   child.id,
                 ].join(" | "),
               );
-              return { content: ["lane | agent | model | status | last | sessionID", ...rows].join("\n") };
+              return { content: ["lane | agent | model | status | tokens | last | sessionID", ...rows].join("\n") };
             }),
+        });
+
+        editor.add({
+          name: "lanes_compact",
+          description:
+            "Compact idle subagent children under this session and wait for each summary; running and closed children are skipped. Pass lane names, or session IDs for unnamed children. The child is not prompted afterward; naming the lane again resumes it from the summary.",
+          input: Schema.Struct({
+            lanes: Schema.Array(Schema.String).annotate({ description: "Lane names or child session IDs to compact." }),
+          }),
+          options: { codemode: false },
+          execute: (input, context) =>
+            compact(context.sessionID, input.lanes).pipe(
+              Effect.map((lines) => ({ content: lines.join("\n") || "No lane names or session IDs given." })),
+            ),
         });
 
         editor.add({

@@ -26,10 +26,16 @@ The `claude` pool picks an Anthropic account from usage caches, keeps an open ac
 Background children return immediately and send completion, cancellation, or error to the parent's inbox.
 
 The `lanes` tool lists children, including closed ones; `subagent` reuses a lane name to steer or resume one.
+Its `tokens` column shows context usage from the latest assistant message since compaction in sidebar format, or `-` when unavailable, including just after compaction.
 `lanes_close` takes `{ lanes }` with lane names or child session IDs and returns `closed <entry>` or `skipped <entry>: <reason>` per entry; it never closes a running child.
 Closing moves the name from `lane` to `closed: { lane, by, at }` in child metadata and appends a session rule that denies every permission.
 `subagent` refuses the `sessionID` of a closed child; naming the old lane starts a fresh child.
 Children linked through `step` close when their workflow ends; running children close when they settle, and unlinked children stay open.
+
+`lanes_compact` takes `{ lanes }` with lane names or child session IDs and returns `compacted <entry>`, `skipped <entry>: <reason>`, or `failed <entry>: <reason>` per entry.
+Only Collab may call it; it runs each child's own model summary concurrently and waits without sending a follow-up prompt.
+Skip reasons are `listed twice`, `missing`, `closed`, `running`, `pending input` (queued in the host inbox), `inbox unreadable`, or `nothing to compact` (no new compactable turns).
+Compaction wakes the child and would run queued input, so resume pending-input lanes deliberately with `subagent` or start fresh.
 
 `lanes/tui.tsx` appends to `sidebar.content` and adds `/lanes` with Steer, Interrupt, Continue, and Open actions.
 Continue sends `Continue.` directly without a parent completion notice.

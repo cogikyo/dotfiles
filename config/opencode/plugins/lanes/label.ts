@@ -113,7 +113,7 @@ export function family(model: string) {
   return families.find(([pattern]) => pattern.test(bare))?.[1] ?? bare;
 }
 
-function count(tokens: number) {
+export function count(tokens: number) {
   if (tokens >= 999_500) return `${(tokens / 1_000_000).toFixed(1)}M`;
   return tokens < 1_000 ? String(tokens) : `${Math.round(tokens / 1_000)}K`;
 }
