@@ -70,6 +70,17 @@ Received history is filtered by `to` and sent history by `from`, so forks do not
 This plugin has no key or separate state file.
 See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notices.
 
+## Question
+
+`question/server.ts` hooks the built-in `question` tool; it has no tool, key, state, or TUI slot of its own.
+Before each call, it requires an assistant text part after both the latest user message and latest completed `question` result, within the post-compaction context; only the calling message's part may be empty or whitespace.
+Errored or aborted questions, mail, and subagent notices do not reset that window.
+A failed history read allows the call and logs `question: history read failed; allowing the call`.
+After a completed call, any answer not exactly matching an option label triggers a reminder to answer questions or doubt in text and end the turn without `question`.
+The reminder replaces `You can now continue with the user's answers in mind.`, or is appended if that sentence is absent.
+
+After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, and a text part being stored at text start, before tool execution.
+
 ## Compact
 
 `compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn.
