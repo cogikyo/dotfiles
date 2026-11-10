@@ -35,6 +35,8 @@ export function reword(content: Tool.Result["content"]): Tool.Result["content"] 
   return content.includes(close) ? content.replace(close, nudge) : `${content} ${nudge}`;
 }
 
+// Opus 5.5 sends pre-tool prose as reasoning marked only by "narration" in its base64 signature.
+// Anthropic says not to parse signatures; if the format changes, popups just lose the note.
 const narrated = (signature: unknown) => {
   if (typeof signature !== "string") return false;
   try {
@@ -56,6 +58,7 @@ export function note(messages: readonly SessionMessage.Info[], messageID: Sessio
   return undefined;
 }
 
+/** Show the note in the popup, but keep the original question in the model's result. */
 export const annotated = (
   execute: Tool.Info["execute"],
   input: { readonly questions: readonly [{ readonly question: string }, ...unknown[]] },
