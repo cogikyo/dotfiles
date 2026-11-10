@@ -10,9 +10,6 @@ const close = "You can now continue with the user's answers in mind.";
 export const nudge =
   "At least one answer was typed rather than picked. A typed answer may ask something or voice doubt; if one does, answer it in text and end your turn without calling `question`, and act on it only once the user confirms. Otherwise, continue with the user's answers in mind.";
 
-export const silent =
-  "No visible text since the user's last message or answered question. Your thinking and narration fold into hidden thoughts the user never sees, and the popup covers the transcript: write the answer or context as a text reply, then call `question`.";
-
 const WITHDRAWN =
   "Withdrawn so waiting mail could reach you: read it and act on it, then re-ask this question if you still need the user.";
 
@@ -38,18 +35,43 @@ export function reword(content: Tool.Result["content"]): Tool.Result["content"] 
   return content.includes(close) ? content.replace(close, nudge) : `${content} ${nudge}`;
 }
 
-export function quiet(messages: readonly SessionMessage.Info[], current: SessionMessage.ID) {
-  let spoke = false;
-  for (const message of messages) {
-    if (message.type === "user") spoke = false;
-    if (message.type !== "assistant") continue;
-    for (const part of message.content) {
-      if (part.type === "text" && (message.id === current || part.text.trim() !== "")) spoke = true;
-      if (part.type === "tool" && part.name === "question" && part.state.status === "completed") spoke = false;
-    }
+const narrated = (signature: unknown) => {
+  if (typeof signature !== "string") return false;
+  try {
+    return atob(signature.slice(0, 80)).includes("narration");
+  } catch {
+    return false;
   }
-  return !spoke;
+};
+
+export function note(messages: readonly SessionMessage.Info[], messageID: SessionMessage.ID, callID: string) {
+  const message = messages.findLast(({ id }) => id === messageID);
+  if (message?.type !== "assistant") return undefined;
+  const end = message.content.findIndex((part) => part.type === "tool" && part.id === callID);
+  if (end < 0) return undefined;
+  for (const part of message.content.slice(0, end).toReversed()) {
+    if (part.type === "tool") return undefined;
+    if (part.type === "reasoning" && narrated(part.native?.["signature"])) return part.text.trim() || undefined;
+  }
+  return undefined;
 }
+
+export const annotated = (
+  execute: Tool.Info["execute"],
+  input: { readonly questions: readonly [{ readonly question: string }, ...unknown[]] },
+  context: Tool.Context,
+  text: string,
+) => {
+  const [first, ...rest] = input.questions;
+  const shown = `${text}\n\n${first.question}`;
+  return execute({ ...input, questions: [{ ...first, question: shown }, ...rest] }, context).pipe(
+    Effect.map((result) =>
+      typeof result.content === "string"
+        ? { ...result, content: result.content.replace(`"${shown}"`, () => `"${first.question}"`) }
+        : result,
+    ),
+  );
+};
 
 const due = (file: string, sessionID: string) =>
   Effect.try(() => {
@@ -73,24 +95,27 @@ export default Plugin.define({
     Effect.gen(function* () {
       const file = store.located(ctx.app.channel);
 
+      const noted = (context: Tool.Context) =>
+        ctx.session.context({ sessionID: context.sessionID }).pipe(
+          Effect.map((messages) => note(messages, context.messageID, context.id)),
+          Effect.catchCause((cause) =>
+            Effect.logError("question: history read failed; asking without the note", cause).pipe(Effect.as(undefined)),
+          ),
+        );
+
       yield* ctx.tool.transform((editor) => {
         // Keep this on the Effect API: the promise API drops form.created's location, hiding the popup.
         editor.update("question", (tool) => {
           const execute = tool.execute;
           tool.execute = (input, context) =>
-            Effect.raceFirst(execute(input, context), withdraw(file, context.sessionID));
+            Effect.gen(function* () {
+              const text = yield* noted(context);
+              return yield* Effect.raceFirst(
+                text === undefined ? execute(input, context) : annotated(execute, input, context, text),
+                withdraw(file, context.sessionID),
+              );
+            });
         });
-      });
-
-      yield* ctx.tool.hook("execute.before", (event) => {
-        if (event.tool !== "question") return Effect.void;
-        return ctx.session.context({ sessionID: event.sessionID }).pipe(
-          Effect.map((messages) => quiet(messages, event.messageID)),
-          Effect.catchCause((cause) =>
-            Effect.logError("question: history read failed; allowing the call", cause).pipe(Effect.as(false)),
-          ),
-          Effect.flatMap((blocked) => (blocked ? Effect.fail(new Tool.Error({ message: silent })) : Effect.void)),
-        );
       });
 
       yield* ctx.tool.hook("execute.after", (event) =>

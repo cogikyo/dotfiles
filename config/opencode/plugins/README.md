@@ -85,10 +85,12 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 `question/server.ts` wraps the built-in `question` tool's `execute` with `Effect.raceFirst` and hooks its calls; it adds no tool, key, state file, or TUI slot.
 Wrap built-in tools that open forms through the Effect API to keep the calling fiber's location; promise-API `editor.update` drops `form.created`'s location, so the popup never appears.
 
-Before each call, it requires an assistant text part after both the latest user message and latest completed `question` result, within the post-compaction context; only the calling message's part may be empty or whitespace.
-Errored or aborted questions, mail, and subagent notices do not reset that window.
-A blocked call tells the model that thinking and narration are hidden and the popup covers the transcript, so it must write the answer or context in text before calling `question`.
-A failed history read allows the call and logs `question: history read failed; allowing the call`.
+Before each call, the wrapper prepends the calling message's nearest progress update to the first question's text when available; no assistant text part is required.
+It searches backward from this call for reasoning whose decoded signature prefix contains `narration`, stopping at any intervening tool part.
+The stored tool input stays unchanged, and the model result has the original question text restored.
+No note, an unreadable signature, or a failed history read opens the popup unchanged; failed reads log `question: history read failed; asking without the note`.
+Anthropic treats signatures as opaque, so format changes can silently leave the popup without a note.
+
 After a completed call, any answer not exactly matching an option label triggers a reminder to answer questions or doubt in text and end the turn without `question`.
 The reminder replaces `You can now continue with the user's answers in mind.`, or is appended if that sentence is absent.
 
@@ -98,7 +100,7 @@ The tool error tells the model to read and act on the mail, then re-ask if it st
 The 50-minute threshold leaves 10 minutes before the Anthropic plugin's 1-hour prompt-cache TTL (`anthropic/index.ts`) expires, so the resumed run can reuse the cache last written when the question was asked.
 Permission prompts are not withdrawn.
 
-After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, a text part being stored at text start before tool execution, and wrapped forms publishing a location so the popup appears without a reconnect.
+After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, progress-update reasoning and signatures being available before tool execution, and wrapped forms publishing a location so the popup appears without a reconnect.
 
 ## Compact
 
