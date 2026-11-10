@@ -250,7 +250,7 @@ If that lookup breaks, one warning toast appears; retitle keybinds still work.
 
 ## Hyprd
 
-`hyprd/tui.ts` loads the notification and pane-context plugins together.
+`hyprd/tui.ts` loads the notification, pane-context, and focus plugins together.
 `hyprd/notify.ts` sends permission, question, complete, idle, error, lane, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
 It needs `KITTY_PID` and `KITTY_WINDOW_ID` and follows child requests to their root.
 Except for mail, desktop notices are limited to open sessions outside the focused view.
@@ -275,6 +275,10 @@ Pending input covers current permissions and forms plus unresolved forms seen be
 It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records the process `start` time from `/proc/self/stat` and report time `at`, and removes the file on disposal.
 It creates the directory with mode `0700` and the file with mode `0600`, then publishes by atomic rename.
 Hyprd matches the record to a discovered TUI pane and checks the process start time before using it for [recycling gates and relaunch](../../../cmds/cmd/hyprd/README.md#opencode).
+
+`hyprd/focus.ts` reports renderer focus and blur through `hyprd/rpc.ts`, plus root-session changes and a 60-second heartbeat while focused.
+It reports `focused: false` on disposal.
+`hyprd/server.ts` emits each report as the ephemeral `rpc.hyprd.focus` event with `{ tui, session, focused }`, where `tui` is the TUI PID and `session` is the root ID or `""`.
 There is no tool, key, or TUI slot.
 
 ## Sessions

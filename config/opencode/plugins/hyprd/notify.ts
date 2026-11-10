@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as mail from "../mail/mail.ts";
 import { tag } from "../sessions/tags.ts";
+import { store } from "./focus.ts";
 
 type Data = Plugin.Context["data"];
 type Client = Plugin.Context["client"];
@@ -240,7 +241,7 @@ export default Plugin.define({
     const { data, ui } = context;
     const seen = new Set<string>();
     const ended = new Set<string>();
-    const [focus, setFocus] = context.storage.memory("focus", { initial: { focused: false } });
+    const [focus, setFocus] = store(context);
     const abort = new AbortController();
 
     const root = async (sessionID: string): Promise<string> => {
