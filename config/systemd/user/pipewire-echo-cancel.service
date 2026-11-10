@@ -1,7 +1,7 @@
 [Unit]
 Description=PipeWire echo canceller for the reSpeaker array
-After=pipewire.service
-BindsTo=pipewire.service
+After=pipewire.service dev-snd-by\x2did-usb\x2dSeeed_Studio_reSpeaker_XVF3800_4\x2dMic_Array_114993701262801368\x2d00.device
+BindsTo=pipewire.service dev-snd-by\x2did-usb\x2dSeeed_Studio_reSpeaker_XVF3800_4\x2dMic_Array_114993701262801368\x2d00.device
 ConditionHost=costello
 
 [Service]
@@ -10,4 +10,4 @@ Restart=on-failure
 Slice=session.slice
 
 [Install]
-WantedBy=pipewire.service
+WantedBy=pipewire.service dev-snd-by\x2did-usb\x2dSeeed_Studio_reSpeaker_XVF3800_4\x2dMic_Array_114993701262801368\x2d00.device
