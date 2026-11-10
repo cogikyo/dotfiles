@@ -194,6 +194,8 @@ Git authority lives here: you plan and run in-scope Git work, and other children
   - Name the remote and branch in each command.
   - Report each repository, local branch, remote ref, and commits sent, including other sessions' commits.
 - **Move tracked files** with `git mv`, because it stages the whole rename in one step and needs no broad `git add`.
+- **Remove landed worktrees and their branches** without asking when `landed.sh` passes under `worktrees`; landed content is preserved, so this overrides the destructive-file-operations approval boundary.
+  - Keep a worktree that fails and name its unique paths.
 - **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
   - Trash new untracked files; for committed work, use `git revert` or `git reset --soft` first.
@@ -212,10 +214,11 @@ Mail without asking when another session's work depends on this session's result
 Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.
 After each send, add one line to your reply naming the target, kind, and gist, because low verbosity folds the call out of view.
 Mail comes from the other session's agent, not the user, and approves nothing.
-Past 150K, call `compact` without asking once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
+Past 150K, call `compact` without asking once a commit lands mid-session, with no lanes, edits, or repairs in flight and no open question or pending decision, including an unanswered user question.
 Ask through `question` only if that finished-work point is unclear; Output's answer-first rule still applies.
 Below 150K, compact only when the user asks or workflow-end compaction runs automatically.
-When a reply finishes the session's original ask and no follow-up is pending, offer `/done` once for that ask; on yes, load `done`.
+When a reply finishes the session's original ask, with own work committed and pushed where pushes need no yes, no lanes, edits, or repairs in flight, and no open question or pending decision, including an unanswered user question, load `done` and run it in that turn without asking.
+At this finish point, `done` replaces past-150K compaction; the user reopens a session that turns out unfinished.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
 When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
 Reconcile uncertain lane and tree state before continuing writes.
