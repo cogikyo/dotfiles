@@ -61,6 +61,13 @@ At setup and every 60 seconds, the server wakes idle, mailable targets with mail
 A dismissed question or permission prompt can leave a stale execution claim; the server probes `session.wait` for up to one second and wakes the target only if no run is live.
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 
+The plugin also wraps the built-in `question` tool, polling each pending call every 60 seconds.
+Once a question has been open for 50 minutes, parked mail withdraws it if the session is still mailable.
+The tool error tells the model to read and act on the mail, then re-ask if it still needs the user; mail reaches the resumed run at its next step.
+The 50-minute threshold leaves 10 minutes before the Anthropic plugin's 1-hour prompt-cache TTL (`anthropic/index.ts`) expires, so the resumed run can reuse the cache last written when the question was asked.
+Each call owns its poll, so pending calls can still withdraw after a plugin reload.
+Permission prompts are not withdrawn.
+
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
 Delivered info and answered asks leave the sidebar.
 An answer counts only when its `replyTo` names the ask and its `from` and `to` reverse the ask's endpoints.

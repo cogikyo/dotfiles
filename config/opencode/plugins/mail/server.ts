@@ -1,5 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { SessionMessage } from "@opencode/schema/session-message";
+import { Tool } from "@opencode/schema/tool";
 import { Effect, Fiber, Schema, SchemaTransformation } from "effect";
 import { retag, tag } from "../sessions/tags.ts";
 import { flat, glyphs, kinds, type Mail, mailable, plain, source } from "./mail.ts";
@@ -25,17 +26,21 @@ const Input = Schema.Struct({
 });
 
 const wakeAfter = 3 * 60_000;
+const withdrawAfter = 50 * 60_000;
 const probe = 1_000;
 const sweepEvery = 60_000;
 
 const description = [
   "Send a message to the agent in another top-level session.",
-  "Mail reaches running targets at their next step; otherwise it waits for their next turn. Idle targets wake after about 3 minutes unless a revert is staged or their last turn failed after the mail parked.",
+  "Mail reaches running targets at their next step; otherwise it waits for their next turn. Waiting mail withdraws a pending question after about 50 minutes open. Idle targets wake after about 3 minutes unless a revert is staged or their last turn failed after the mail parked.",
   "The target sees it as mail from this session's agent, not from the user, so it carries no approval.",
   "Use kind info to share something and ask when you need a reply; answer an ask with replyTo set to its mail ID.",
   "Only top-level sessions can send, and only to open top-level sessions.",
   "Subjects are one line of at most 80 characters; bodies are at most 4000 characters.",
 ].join(" ");
+
+const WITHDRAWN =
+  "Withdrawn so waiting mail could reach you: read it and act on it, then re-ask this question if you still need the user.";
 
 const CHILD =
   "Cross-session mail is for top-level sessions; if another session needs something from your work, end your report with a suggested mail: the target session and the gist.";
@@ -138,6 +143,35 @@ function sweeper(ctx: Plugin.Context, file: string, fail: (what: string, error: 
     );
 }
 
+function withdrawable<Input, Context extends { sessionID: string; signal: AbortSignal }, Result>(
+  ask: (input: Input, context: Context) => Promise<Result>,
+  file: string,
+  fail: (what: string, error: unknown) => void,
+) {
+  return async (input: Input, context: Context) => {
+    const since = Date.now();
+    const stop = new AbortController();
+    const poll = setInterval(() => {
+      if (stop.signal.aborted || Date.now() - since < withdrawAfter) return;
+      try {
+        if (!store.inboxes(file).includes(context.sessionID)) return;
+        const session = store.sessions(file).find(({ id }) => id === context.sessionID);
+        if (session && mailable(session)) stop.abort();
+      } catch (error) {
+        fail("withdraw", error);
+      }
+    }, sweepEvery);
+    try {
+      return await ask(input, { ...context, signal: AbortSignal.any([context.signal, stop.signal]) });
+    } catch (error) {
+      if (stop.signal.aborted && !context.signal.aborted) throw new Tool.Error({ message: WITHDRAWN });
+      throw error;
+    } finally {
+      clearInterval(poll);
+    }
+  };
+}
+
 export default Plugin.define({
   id: "mail",
   async setup(ctx) {
@@ -158,7 +192,10 @@ export default Plugin.define({
       ledger: async ({ sessionID }) => store.ledger(sessionID, file),
       parked: async () => store.inboxes(file),
     });
-    await ctx.tool.transform((editor) =>
+    await ctx.tool.transform((editor) => {
+      editor.update("question", (tool) => {
+        tool.execute = withdrawable(tool.execute, file, fail);
+      });
       editor.add({
         name: "mail",
         description,
@@ -203,12 +240,12 @@ export default Plugin.define({
             resume: false,
           });
           return {
-            content: `Sent ${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}). Arrives at the next step if running; otherwise the next turn, with an idle wake after about 3 minutes unless a revert is staged or the last turn failed after parking.`,
+            content: `Sent ${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}). Arrives at the next step if running; otherwise the next turn. Waiting mail withdraws a pending question after about 50 minutes open. Idle wake after about 3 minutes unless a revert is staged or the last turn failed after parking.`,
             metadata: mail,
           };
         },
-      }),
-    );
+      });
+    });
     wake();
     const timer = setInterval(wake, sweepEvery);
     return () => clearInterval(timer);
