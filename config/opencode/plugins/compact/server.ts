@@ -10,10 +10,9 @@ import { status } from "../workflow/state.ts";
 import { digest, Kept, type Workflow } from "./digest.ts";
 import { located } from "../mail/store.ts";
 import { history, type Skip } from "./history.ts";
-import { ceiling } from "./limits.ts";
+import { ceiling, due, type Level, levels } from "./limits.ts";
 import { probe } from "./live.ts";
 
-const threshold = 150_000;
 const floor = 100_000;
 
 const SUMMARY = [
@@ -55,7 +54,11 @@ function key(sessionID: string, inbox = "") {
 }
 
 // A stored id marks a pending delivery; delivered records omit it.
-const Nudged = Schema.Struct({ epoch: Schema.String, id: Schema.optionalKey(Schema.String) });
+const Nudged = Schema.Struct({
+  epoch: Schema.String,
+  level: Schema.optionalKey(Schema.Number),
+  id: Schema.optionalKey(Schema.String),
+});
 
 function nudged(sessionID = "") {
   return `nudged/${sessionID}`;
@@ -66,7 +69,7 @@ function label(tokens: number) {
 }
 
 const BOUNDARY = [
-  "At workflow end, the plugin compacts after this turn unless a brief is pending.",
+  `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)} and no brief is pending.`,
   "For other compaction offers, wait until a commit lands or the task is done and the user deferred the commit.",
   "Do not offer mid-task while edits, lanes, or repairs are in flight, or while delivering findings, a proposal, or open choices.",
   "Ask through the question tool and call compact after approval.",
@@ -74,11 +77,21 @@ const BOUNDARY = [
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 
-const REACHED = `Context reached ${label(threshold)} tokens. At ${label(ceiling)}, forced compaction can run mid-turn without a handoff brief.`;
+const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
+  soft: {
+    running: `Soft warning: keep the workflow going if its remaining steps fit before ${label(ceiling)}. If this is a natural break with no lanes in flight and no repair pending, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps. If the workflow just started after a long planning context, offering compaction now is fine, so it runs on fresh context.`,
+    idle: `Soft warning. ${BOUNDARY}`,
+  },
+  strong: {
+    running: `Finish up now: start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight and no repair pending, and commit finished work; if context is still at least ${label(floor)}, the plugin compacts after the turn that ends the workflow, and \`recommended\` resumes the unfinished steps.`,
+    idle: "Finish up now: start no new work, commit finished work, and offer compaction through the question tool at the next clean point. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
+  },
+};
 
-const NUDGE = `${REACHED} ${BOUNDARY}`;
-
-const FINISH = `${REACHED} A workflow is running: finish it, and the plugin compacts after the turn that ends it. If \`workflow\` headroom shows the remaining steps won't fit before ${label(ceiling)}, end it at the next point with no lanes in flight and no repair pending; after compaction, \`recommended\` resumes the unfinished steps. If the workflow just started after a long planning context, offering compaction now is fine, so it runs on fresh context.`;
+function nudge(level: Level, running?: boolean) {
+  const advice = ADVICE[level.kind];
+  return `Context reached ${label(level.tokens)} tokens; forced compaction runs mid-turn at ${label(ceiling)} without a handoff brief. ${running ? advice.running : advice.idle}`;
+}
 
 function remember<T>(cache: Map<string, Promise<T>>, sessionID: string, load: () => Promise<T>) {
   let known = cache.get(sessionID);
@@ -327,13 +340,14 @@ export default Plugin.define({
     };
 
     const notify = async (sessionID: string, total: number) => {
-      if (total < threshold || requests.has(sessionID) || !(await primary(sessionID))) return;
+      if (total < levels[0].tokens || requests.has(sessionID) || !(await primary(sessionID))) return;
       const [current, record] = await Promise.all([epoch(sessionID), ctx.storage.get(nudged(sessionID))]);
       const sent = Schema.is(Nudged)(record) && record.epoch === current ? record : undefined;
-      if (sent && sent.id === undefined) return;
+      const level = due(total, sent);
+      if (!level) return;
       if ((await stored(sessionID)).length > 0) return;
       const id = sent?.id ?? SessionMessage.ID.create();
-      if (!sent) await ctx.storage.set(nudged(sessionID), { epoch: current, id });
+      if (sent?.id === undefined) await ctx.storage.set(nudged(sessionID), { epoch: current, level: level.tokens, id });
       const running = await guard(
         "workflow status",
         ctx
@@ -345,12 +359,12 @@ export default Plugin.define({
       await ctx.session.synthetic({
         id: SessionMessage.ID.make(id),
         sessionID,
-        text: running ? FINISH : NUDGE,
+        text: nudge(level, running),
         description: "Compaction nudge",
         delivery: "steer",
         resume: false,
       });
-      await ctx.storage.set(nudged(sessionID), { epoch: current });
+      await ctx.storage.set(nudged(sessionID), { epoch: current, level: level.tokens });
     };
 
     const track = async (event: OpenCodeEvent) => {
