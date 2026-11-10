@@ -353,7 +353,9 @@ hl.layer_rule({
 hl.workspace_rule({ workspace = "special:stash", gaps_out = 120 })
 hl.on("workspace.created", function(ws)
 	if ws.name == "special:dropdown" and ws.is_empty then
-		hl.exec_cmd("kitty --class dropdown -o tab_bar_min_tabs=2 -o background_opacity=0.92 -o 'window_padding_width=24 9 9 9'")
+		hl.exec_cmd(
+			"kitty --class dropdown -o tab_bar_min_tabs=2 -o background_opacity=0.92 -o 'window_padding_width=24 9 9 9'"
+		)
 	end
 end)
 
