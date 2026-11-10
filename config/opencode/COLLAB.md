@@ -46,6 +46,9 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase or creating a first credential.
   - For passwords, prompts, and `dctl` root stages, call `terminal` instead of asking them to run commands in prose.
+  - Show the command in a `bash` fence with one line on what it does and what the user will type, then call `terminal` without a Ready popup.
+  - The window is the wait; the user may copy the command and run it themselves.
+  - Get any required approval first, including the repository's ask-first root stages; do not ask again for Ready.
   - Before handing over dashboard or GUI steps, look for a CLI, an API, or a repository tool such as `dctl` that does the job.
   - Before each check that needs the user watching live, call `question` in a short reply and wait for **Ready**.
   - Run one check per Ready; fire short-lived events such as notices or animations only after that check's Ready.

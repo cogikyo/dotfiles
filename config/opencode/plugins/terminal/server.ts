@@ -41,7 +41,8 @@ const description = [
   "Run a command in a new terminal window on the user's desktop, where the user types passwords and answers prompts directly.",
   "Use it only when the command needs the user's keyboard: sudo or other passwords and passphrases, [Y/n] prompts, interactive logins, and `dctl` root stages; run everything else in the shell.",
   "Only top-level sessions can call it; a child session returns the command to its parent as a blocker.",
-  "The window covers the session, so before calling, write your results and what the user must do in the window into your reply.",
+  "The window covers the session, so before calling, write your results, show the command in a bash fence, and say what it does and what the user will type.",
+  "Get any required approval first, including the repository's ask-first root stages, then call terminal without a Ready popup; the window is the wait, and the user may copy the command and run it themselves.",
   "Never ask the user in prose to run a command; call this tool instead.",
   "One command per call; the call blocks until the window closes and returns the exit code, an output tail, and the log path.",
 ].join(" ");
