@@ -130,7 +130,7 @@ sessions:
 
     cogikyo:
       init: true
-      project: cogikyo/cogikyo
+      project: cogikyo
       body:
         - editor
         - agents
