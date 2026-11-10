@@ -5,6 +5,8 @@ export type Ref = { providerID: string; id: string; variant?: string };
 
 export const routingPath = path.join(import.meta.dirname, "..", "..", "ROUTING.md");
 
+export const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
+
 export function parseRouting(text: string) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/u.exec(text);
   if (!match) throw new Error("no YAML frontmatter");

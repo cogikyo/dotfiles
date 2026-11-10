@@ -4,11 +4,11 @@ import type { SessionMessage } from "@opencode/schema/session-message";
 import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
 import { readFile } from "node:fs/promises";
-import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
 import { held, located, opened } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { count, measured } from "./label.ts";
-import { parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
+import { pick, pool, resume } from "./pick.ts";
+import { format, parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
 import { admit, checklist } from "./step.ts";
 
@@ -24,11 +24,7 @@ type Input = {
   step?: number;
 };
 
-const pool = "claude";
-
 const inbox = "SELECT EXISTS (SELECT 1 FROM session_inbox WHERE session_id = ?1) AS pending";
-
-const format = (ref: Ref) => `${ref.providerID}/${ref.id}${ref.variant ? `#${ref.variant}` : ""}`;
 
 function parseRef(value: string): Ref {
   const [model, variant] = value.split("#");
@@ -43,24 +39,6 @@ const readRouting = Effect.tryPromise({
       message: `ROUTING.md at ${routingPath} is unusable (${error instanceof Error ? error.message : String(error)}); pass model explicitly.`,
     }),
 });
-
-async function pick(route: Ref, current: Ref | undefined, fallback: Ref | undefined) {
-  const list = await survey(route.id);
-  const open = ranked(list, current?.providerID);
-  const stale = list
-    .filter((account) => account.age !== undefined && account.age > staleAfter)
-    .map((account) => `${account.id} ${Math.round(account.age! / 60_000)}m old`);
-  const notes = stale.length
-    ? [`lanes: Claude usage is stale (${stale.join(", ")}); picked by last known numbers.`]
-    : [];
-  if (!open.length && fallback) {
-    const ref = { providerID: fallback.providerID, id: fallback.id };
-    notes.push(`lanes: all Claude accounts are capped for ${route.id}; using ${format(ref)} with no effort.`);
-    return { ref, note: notes.join("\n") };
-  }
-  const account = open[0] ?? list.toSorted((a, b) => reopens(a) - reopens(b))[0];
-  return { ref: { ...route, providerID: account.id }, note: notes.join("\n") || undefined };
-}
 
 const Closed = Schema.Struct({
   lane: Schema.optionalKey(Schema.String),
@@ -327,10 +305,8 @@ export default Plugin.define({
         const routing = yield* readRouting;
         const route = explicit ?? routeFor(routing.routes, input.agent);
         if (!route) return { model: undefined, note: undefined };
-        const { ref, note } =
-          route.providerID === pool
-            ? yield* Effect.promise(() => pick(route, existing?.model, routing.fallbacks[`${pool}/${route.id}`]))
-            : { ref: route, note: undefined };
+        const choose = explicit ? pick : resume;
+        const { ref, note } = yield* Effect.promise(() => choose(route, existing?.model, routing.fallbacks));
         if (!explicit && same(existing?.model, ref)) return { model: undefined, note };
         return { model: format(ref), note };
       });

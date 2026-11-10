@@ -23,6 +23,9 @@ Their three leader binds use separate base-mode inline layers, so they do not fi
 Inputs are `agent`, `description`, `prompt`, and optional `model`, `sessionID`, `background`, and `lane`.
 Explicit models use `provider/model#variant`; frontmatter routes keep `provider/model [variant]`.
 The `claude` pool picks an Anthropic account from usage caches, keeps an open account on resume, and reports stale-cache or fallback notes in results.
+When every account is capped for Opus or Sonnet, `lanes/pick.ts` follows the fallback chain through the same model on Cursor's O pool, then `opencode-go/grok-4.7`.
+Cursor Grok checks only C and falls back directly to Go, leaving O for Claude overflow.
+Cursor picks skip a route whose fresh pool window reads 100% and has not reset; missing, stale, or unusable usage counts as open and adds a note.
 Background children return immediately and send completion, cancellation, or error to the parent's inbox.
 
 The `lanes` tool lists children, including closed ones; `subagent` reuses a lane name to steer or resume one.

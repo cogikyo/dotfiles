@@ -302,11 +302,20 @@
         "apiKey": "not-needed"
       },
       "models": {
+        "grok-4.7": {
+          "name": "Grok 4.7"
+        },
         "grok-4.6-fast": {
           "name": "Grok 4.6 Fast"
         },
+        "claude-opus-5-5": {
+          "name": "Opus 5.5"
+        },
         "claude-opus-5-5-fast": {
           "name": "Opus 5.5 Fast"
+        },
+        "claude-sonnet-5-5": {
+          "name": "Sonnet 5.5"
         }
       }
     },

@@ -6,15 +6,18 @@ routes:
   build/patch: claude/claude-opus-5-5 medium
   build/scribe: openai/gpt-6.1-sol high
   scout/*: claude/claude-opus-5-5 high
-  scout/context: claude/claude-opus-5-5 medium
-  scout/dirty: claude/claude-opus-5-5 medium
-  scout/web: opencode-go/grok-4.7 high
+  scout/context: cursor/grok-4.7
+  scout/dirty: cursor/grok-4.7
+  scout/web: cursor/grok-4.7
   review/*: openai/gpt-6.1-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.1-sol high
 fallbacks:
-  claude/claude-opus-5-5: opencode-go/grok-4.7
-  claude/claude-sonnet-5-5: opencode-go/grok-4.7
+  claude/claude-opus-5-5: cursor/claude-opus-5-5
+  claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
+  cursor/grok-4.7: opencode-go/grok-4.7
+  cursor/claude-opus-5-5: opencode-go/grok-4.7
+  cursor/claude-sonnet-5-5: opencode-go/grok-4.7
 ---
 
 # Routing
@@ -30,7 +33,7 @@ Frontmatter routes use `provider/model [variant]`, with a space before the optio
 Explicit `subagent` model values use `provider/model#variant`.
 An exact agent name beats a glob, and a longer glob beats a shorter one.
 The `claude` provider is the Anthropic account pool; the lanes plugin resolves it to `anthropic`, `anthropic-personal`, or `anthropic-cullyn` for each call.
-Each `fallbacks` entry names the model to use when every Anthropic account is capped.
+Each `fallbacks` entry names the next model to try when the source model's pool is capped; entries form a chain.
 
 Main sessions belong to the user and are not routed here.
 The `opencode.json` default and the account picked in the TUI are not pooled.
@@ -68,7 +71,7 @@ Weekly surplus is the share of the week's usage left minus the share of the week
 Accounts with much left and little time to spend it lead; weekends follow the same math.
 Trend leads otherwise because its 5-hour window caps before its weekly usage runs out, so unused 5-hour windows are lost.
 
-- **Enforced**: when every account is capped, the pool uses the model's fallback without a variant and notes the switch in the result.
+- **Enforced**: when every account is capped for Opus or Sonnet, lanes try the same model on Cursor's O pool, then `opencode-go/grok-4.7` if O is capped, without a variant and with a note for each switch.
 - When an account caps mid-request, the Anthropic plugin resends on the next open account; later requests in that session stay there until the cap resets.
 - Pass `anthropic/…`, `anthropic-personal/…`, or `anthropic-cullyn/…` only when the user names an account; that pins the account and skips the pick.
 - Opus and Sonnet both take `medium` through `max`; pick by the effort ladder.
@@ -80,16 +83,16 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 ### Scouts
 
-- Use `scout/context` and `scout/dirty` for first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
+- Use `scout/context` and `scout/dirty` on Cursor Grok for first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
 - Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
 - Send focused questions to `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Keep reads that need the Docker socket or `.pier/secrets.yaml`, such as `docker save` or `pier profile show`, in Collab's shell; cage blocks both for read-only children.
-- Use `scout/web` for the option space and prior art; it routes to Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
+- Use `scout/web` for the option space and prior art; it routes to Cursor Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
-  - Seat `scout/web` on its Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
+  - Seat `scout/web` on its Cursor Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
   - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design.
-  - Drop a capped seat instead of substituting a fallback; the `x` tool stays on the xAI pool and is skipped when that pool is capped.
+  - Check `usage_status` before seating the council and drop a known-capped seat before lanes can substitute a fallback; skip `x` when its separate xAI pool is capped.
 
 ### Reviewers
 
@@ -166,7 +169,7 @@ Use the effort ladder for each step.
 
 ### `xai/grok-4.7`
 
-- Grok runs on three pools: `xai`, `cursor`, and `opencode-go`.
+- Grok is available through `xai`, `cursor`, and `opencode-go`; scout routes use Cursor's C pool.
 - Route web scouting and quick context searches there freely; treat findings as leads and verify claims that decide a design.
 - The `x` tool runs the Grok CLI on the xAI pool for native X search; Collab keeps it for `/x` and routes other X research to scouts or verifiers.
 - A standing seat in web councils; see Scouts.
@@ -180,19 +183,22 @@ Use the effort ladder for each step.
 ### Fallback providers
 
 - `cursor/*`: C and O are separate monthly pools on a legacy Cursor plan.
-  - C covers Cursor models: Grok, Composer, and Auto; `cursor/grok-4.6-fast` bills C but took about 40 minutes for one web scout.
-  - O covers third-party models such as Opus fast and is small.
+  - C covers Cursor models: Grok, Composer, and Auto; Grok checks only C and falls back to Go when C is capped, leaving O for Claude overflow.
+  - O covers third-party models such as Opus and Sonnet and is small.
   - About **1,200 Opus fast steps** used up a month.
   - Use it for **short, bounded jobs**.
-  - Use `claude-opus-5-5-fast` for Opus, always as the fast variant, and Fable is admin-blocked.
-  - Use Cursor as overflow when direct providers are capped, or when the user wants speed and accepts spending Cursor usage.
-- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the fallback when every Anthropic account is capped.
+  - Claude fallbacks use `claude-opus-5-5` or `claude-sonnet-5-5`; Fable is admin-blocked.
+  - In one run each on the same known-answer code trace, Cursor Opus scored **5/5 in 2 minutes** and Grok 4.7 scored **4/5 in 3 minutes**.
+  - Composer 2.5 scored **4/5** but drifted for **10 minutes and 195 tool calls** on its one run, so it is not used.
+  - Lanes skip a Cursor route when its fresh pool window reads 100% and has not reset.
+    Missing, stale, or unusable usage counts as open and adds a note.
+- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the second fallback hop for Claude, after Cursor, or the direct fallback for Cursor Grok.
   - Each Go model has its own monthly dollar cap, with 20% per 5 hours and 50% per week; Grok's is $15, so one Grok scout spends about 15% of a week.
 
 ## Usage
 
 Usage is internal routing data.
-Check `usage_status` before any dispatch to a non-pool route, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
+Check `usage_status` before any dispatch outside `claude` or `cursor`, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
 Mention usage only when the user asks, or when every route for a step is capped.
 
 - With three accounts, Claude headroom is the norm, so every Claude route defaults to Opus.
