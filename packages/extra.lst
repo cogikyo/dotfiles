@@ -38,6 +38,7 @@ qemu-system-x86
 qemu-ui-gtk
 qemu-user-static
 qemu-user-static-binfmt
+rootlesskit
 rustup
 satty
 shellcheck

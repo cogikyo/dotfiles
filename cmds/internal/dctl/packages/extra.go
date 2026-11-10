@@ -1,9 +1,13 @@
 package packages
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
-	"os/user"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -47,43 +51,45 @@ func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 		{
 			Name: "extra-docker",
 			Check: func(ctx context.Context) error {
-				state, err := run.Output(ctx, "", "systemctl", "is-enabled", "docker.socket")
-				switch state {
-				case "enabled":
-					return nil
-				case "not-found":
-					return setup.Manual("docker.socket not found; run dctl setup extra")
-				case "":
-					return fmt.Errorf("systemctl is-enabled docker.socket: %w", err)
-				}
-				return fmt.Errorf("docker.socket is %s", state)
-			},
-			Fix: func(ctx context.Context) error {
-				return run.Run(ctx, "", "sudo", "-n", "systemctl", "enable", "docker.socket")
-			},
-		},
-		{
-			Name: "extra-docker-group",
-			Check: func(ctx context.Context) error {
-				u, err := user.Current()
+				name, err := dockerContext(ctx, run)
 				if err != nil {
 					return err
 				}
-				groups, err := run.Output(ctx, "", "id", "-nG", u.Username)
-				if err != nil {
-					return fmt.Errorf("id -nG %s: %w", u.Username, err)
+				if name != "rootless" {
+					if err := rootfulData(); err != nil {
+						return err
+					}
+					return fmt.Errorf("docker context is %s, not rootless", name)
 				}
-				if slices.Contains(strings.Fields(groups), "docker") {
-					return nil
-				}
-				return fmt.Errorf("%s is not in the docker group", u.Username)
+				return rootlessAnswers(ctx, run)
 			},
 			Fix: func(ctx context.Context) error {
-				u, err := user.Current()
+				name, err := dockerContext(ctx, run)
 				if err != nil {
 					return err
 				}
-				return run.Run(ctx, "", "sudo", "-n", "usermod", "-aG", "docker", u.Username)
+				if name != "rootless" {
+					if err := rootfulData(); err != nil {
+						return err
+					}
+				}
+				if rootlessAnswers(ctx, run) != nil {
+					if err := run.Run(ctx, "", "systemctl", "--user", "start", "docker.service"); err != nil {
+						return err
+					}
+					if err := rootlessAnswers(ctx, run); err != nil {
+						return err
+					}
+				}
+				if name == "rootless" {
+					return nil
+				}
+				if _, err := run.Output(ctx, "", "docker", "context", "inspect", "rootless"); err != nil {
+					if err := run.Run(ctx, "", "docker", "context", "create", "rootless", "--docker", "host="+rootlessHost()); err != nil {
+						return err
+					}
+				}
+				return run.Run(ctx, "", "docker", "context", "use", "rootless")
 			},
 		},
 		{
@@ -93,6 +99,42 @@ func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 		},
 		androidItem(run),
 	}}
+}
+
+func dockerContext(ctx context.Context, run execx.Runner) (string, error) {
+	name, err := run.Output(ctx, "", "docker", "context", "show")
+	if err != nil {
+		return "", fmt.Errorf("docker context show: %w", err)
+	}
+	return name, nil
+}
+
+func rootlessHost() string {
+	dir := cmp.Or(os.Getenv("XDG_RUNTIME_DIR"), fmt.Sprintf("/run/user/%d", os.Getuid()))
+	return "unix://" + filepath.Join(dir, "docker.sock")
+}
+
+func rootlessAnswers(ctx context.Context, run execx.Runner) error {
+	host := rootlessHost()
+	sec, err := run.Output(ctx, "", "docker", "-H", host, "info", "-f", "{{json .SecurityOptions}}")
+	if err != nil {
+		return fmt.Errorf("no docker daemon answers at %s: %w", host, err)
+	}
+	if !strings.Contains(sec, "name=rootless") {
+		return fmt.Errorf("the docker daemon at %s is not rootless", host)
+	}
+	return nil
+}
+
+var rootful = []string{"/var/lib/docker", "/var/lib/containerd"}
+
+func rootfulData() error {
+	for _, dir := range rootful {
+		if _, err := os.Lstat(dir); !errors.Is(err, fs.ErrNotExist) {
+			return setup.Manual("rootful Docker holds data in %s; migrate first", dir)
+		}
+	}
+	return nil
 }
 
 func install(ctx context.Context, run execx.Runner, names []string, sudo ...string) error {

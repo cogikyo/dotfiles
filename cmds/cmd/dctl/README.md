@@ -285,7 +285,9 @@ Missing AUR and local base packages need manual installation.
   ```
 
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
-  - Its `extra-docker` items enable `docker.socket` and add you to the `docker` group, which takes effect at your next login.
+  - Its `extra-docker` item selects the `rootless` Docker context, creating it if needed.
+    It starts the user `docker.service` if needed before switching and passes only when the context is `rootless` and the daemon reports `name=rootless`.
+    While `/var/lib/docker` or `/var/lib/containerd` exists and the context isn't `rootless`, it refuses to switch: migrate first.
   - Its `extra-bun` item runs `bun install --frozen-lockfile --ignore-scripts` when a locked OpenCode dependency for this platform is missing or has the wrong version.
   - Its last item, `extra-android`, installs platform-tools, platform 37.0, build-tools 36.0.0, and the emulator in `$ANDROID_HOME` (`~/.local/share/android-sdk`).
     It creates the `medium_phone` AVD if missing; the CLI selects its API 36 Play Store image.
