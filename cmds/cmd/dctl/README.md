@@ -778,7 +778,7 @@ Cloudflare management moved to `cogictl cloudflare` in the cogikyo repo (`cmds/`
 ## Repos
 
 Repository management runs through setup and update, with no standalone repos command.
-Setup clones missing repositories; update only fast-forwards eligible checkouts.
+Setup moves checkouts to catalog paths or clones missing repositories; update only fast-forwards eligible checkouts.
 
 ```sh
 dctl setup repos
@@ -791,14 +791,23 @@ dctl update repos
   owner/name ~/destination
   ```
 
-- Destinations start with `~/` or `/`; existing directories are never replaced.
+- Destinations start with `~/` or `/`.
+- Setup finds earlier paths for the same `owner/name` in dotfiles Git history.
+  - Owner/name renames are not followed.
+  - Interrupted moves resume on the next run.
+- Move targets may contain only empty directories or checkouts that are also moving.
+  - Setup removes only empty directories.
+  - Other target contents require manual handling.
+- Setup reports moves that need manual handling:
+  - The source is a symlink, is a linked worktree, or has linked worktrees.
+  - The source is or contains dotfiles or another current catalog path.
+- `dctl setup repos --status` lists pending moves and missing clones.
 - Setup checks checkout roots/origins and fetches full history for shallow dotfiles.
-  - No manual unshallow step is needed after installation.
+  - Full dotfiles clones need no history fetch.
 - Update skips both `~/dotfiles` and the `DOTFILES` checkout.
 - Tracked changes, detached HEAD, no upstream, ahead/diverged branches prevent merging.
   - Untracked files are excluded from the dirty check.
-- Missing repositories need setup; broken checkouts need manual repair.
-  - Move a broken checkout aside, then rerun `dctl setup repos`.
+- If setup requests a manual move or repair, follow its instructions, then rerun it.
 
 ## macOS
 

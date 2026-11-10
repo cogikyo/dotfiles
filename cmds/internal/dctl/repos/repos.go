@@ -345,24 +345,316 @@ func update(ctx context.Context, run execx.Runner, dir, url string) (State, stri
 	return Forwarded, "", nil
 }
 
+type plan struct {
+	repo   Repo
+	dir    string
+	target checkout
+	err    error
+	from   string
+	held   string
+}
+
+func survey(ctx context.Context, run execx.Runner, root paths.Root) ([]plan, error) {
+	repos, err := Read(list(root))
+	if err != nil {
+		return nil, err
+	}
+	history, err := past(ctx, run, root)
+	if err != nil {
+		return nil, err
+	}
+	claims := []claim{
+		{filepath.Clean(root.Dotfiles), "the dotfiles checkout"},
+		{filepath.Join(root.Home, "dotfiles"), "the dotfiles checkout"},
+	}
+	for _, r := range repos {
+		claims = append(claims, claim{filepath.Clean(r.Dir(root.Home)), "the catalog path for " + r.Repo})
+	}
+	plans := make([]plan, len(repos))
+	for i, r := range repos {
+		p := plan{repo: r, dir: filepath.Clean(r.Dir(root.Home))}
+		p.target, p.err = inspect(ctx, run, p.dir, r.URL())
+		if p.err == nil {
+			p.from, p.held, p.err = find(ctx, run, root.Home, r, p.target.kind == usable, history[r.Repo], claims)
+		}
+		plans[i] = p
+	}
+	for changed := true; changed; {
+		changed = false
+		leaving := map[string]bool{}
+		for _, p := range plans {
+			if p.from != "" {
+				leaving[p.from] = true
+			}
+		}
+		for i := range plans {
+			p := &plans[i]
+			if p.from == "" || p.target.kind == absent {
+				continue
+			}
+			if _, err := hollow(p.dir, leaving); err == nil {
+				continue
+			}
+			p.held = fmt.Sprintf("%s, which moves %s there", action(p.repo, p.target.reason), show(root.Home, p.from))
+			p.from, changed = "", true
+		}
+	}
+	return plans, nil
+}
+
+func past(ctx context.Context, run execx.Runner, root paths.Root) (map[string][]string, error) {
+	const file = "packages/repos.lst"
+	revs, err := run.Output(ctx, root.Dotfiles, "git", "log", "--format=%H", "--", file)
+	if err != nil {
+		return nil, err
+	}
+	history := map[string][]string{}
+	for rev := range strings.FieldsSeq(revs) {
+		text, err := run.Output(ctx, root.Dotfiles, "git", "show", rev+":"+file)
+		switch {
+		case exit(err) > 0:
+			continue
+		case err != nil:
+			return nil, err
+		}
+		repos, err := Parse(strings.NewReader(text))
+		if err != nil {
+			continue
+		}
+		for _, r := range repos {
+			if !slices.Contains(history[r.Repo], r.Path) {
+				history[r.Repo] = append(history[r.Repo], r.Path)
+			}
+		}
+	}
+	return history, nil
+}
+
+func staging(home string, r Repo) string {
+	return filepath.Join(home, ".local", "state", "dctl", "repos", r.Repo)
+}
+
+type claim struct{ dir, by string }
+
+func find(ctx context.Context, run execx.Runner, home string, r Repo, settled bool, old []string, claims []claim) (from, held string, err error) {
+	movable := func(dir string) (string, string, error) {
+		reason, err := pinned(ctx, run, home, dir, claims)
+		switch {
+		case err != nil:
+			return "", "", err
+		case reason != "":
+			return "", fmt.Sprintf("checkout %s %s; move it to %s by hand", show(home, dir), reason, r.Path), nil
+		}
+		return dir, "", nil
+	}
+	stage := staging(home, r)
+	c, err := inspect(ctx, run, stage, r.URL())
+	switch {
+	case err != nil:
+		return "", "", err
+	case c.kind == broken:
+		return "", fmt.Sprintf("%s is %s (%s); move it aside, then run `dctl setup repos`", show(home, stage), Broken, c.reason), nil
+	case c.kind == usable && settled:
+		return "", fmt.Sprintf("%s duplicates %s; compare them, then remove %s", show(home, stage), r.Path, show(home, stage)), nil
+	case c.kind == usable:
+		return movable(stage)
+	case settled:
+		return "", "", nil
+	}
+	own := filepath.Clean(r.Dir(home))
+	for _, path := range old {
+		dir := filepath.Clean(paths.ExpandHome(home, path))
+		if dir == own {
+			continue
+		}
+		c, err := inspect(ctx, run, dir, r.URL())
+		switch {
+		case err != nil:
+			return "", "", err
+		case c.kind == usable:
+			return movable(dir)
+		}
+	}
+	return "", "", nil
+}
+
+func pinned(ctx context.Context, run execx.Runner, home, dir string, claims []claim) (string, error) {
+	st, err := os.Lstat(dir)
+	if err != nil {
+		return "", err
+	}
+	real, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", err
+	}
+	if st.Mode()&fs.ModeSymlink != 0 {
+		return "is a symlink to " + show(home, real), nil
+	}
+	for _, c := range claims {
+		if _, err := os.Lstat(c.dir); errors.Is(err, fs.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return "", err
+		}
+		parent, err := filepath.EvalSymlinks(filepath.Dir(c.dir))
+		if err != nil {
+			return "", err
+		}
+		ids := []string{filepath.Join(parent, filepath.Base(c.dir))}
+		if to, err := filepath.EvalSymlinks(c.dir); err == nil {
+			ids = append(ids, to)
+		}
+		for _, id := range ids {
+			switch {
+			case id == real:
+				return "is " + c.by, nil
+			case inside(real, id):
+				return "holds " + show(home, c.dir), nil
+			}
+		}
+	}
+	out, err := run.Output(ctx, dir, "git", "worktree", "list", "--porcelain")
+	if err != nil {
+		return "", err
+	}
+	var trees []string
+	for line := range strings.Lines(out) {
+		if tree, ok := strings.CutPrefix(strings.TrimSpace(line), "worktree "); ok {
+			trees = append(trees, tree)
+		}
+	}
+	switch {
+	case len(trees) == 0 || trees[0] != real:
+		return "is a linked worktree", nil
+	case len(trees) > 1:
+		return "has linked worktrees", nil
+	}
+	return "", nil
+}
+
+func inside(dir, path string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != "." && filepath.IsLocal(rel)
+}
+
+func show(home, dir string) string {
+	if inside(home, dir) {
+		rel, _ := filepath.Rel(home, dir)
+		return "~/" + rel
+	}
+	return dir
+}
+
+func hollow(dir string, leaving map[string]bool) ([]string, error) {
+	var dirs []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case leaving[path] && d.IsDir():
+			return filepath.SkipDir
+		case leaving[path]:
+			return nil
+		case !d.IsDir():
+			return fmt.Errorf("%s holds %s", dir, path)
+		}
+		dirs = append(dirs, path)
+		return nil
+	})
+	return dirs, err
+}
+
+func relocate(home string, plans []plan) {
+	var moves []*plan
+	for i := range plans {
+		if plans[i].from != "" {
+			moves = append(moves, &plans[i])
+		}
+	}
+	slices.SortFunc(moves, func(a, b *plan) int { return strings.Compare(b.from, a.from) })
+	for _, p := range moves {
+		stage := staging(home, p.repo)
+		if p.from == stage {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(stage), 0o755); err != nil {
+			p.err = err
+			continue
+		}
+		if err := renameNoReplace(p.from, stage); err != nil {
+			p.err = &os.LinkError{Op: "rename", Old: p.from, New: stage, Err: err}
+			continue
+		}
+	}
+	slices.SortFunc(moves, func(a, b *plan) int { return strings.Compare(a.dir, b.dir) })
+	for _, p := range moves {
+		if p.err != nil {
+			continue
+		}
+		stage := staging(home, p.repo)
+		if p.from != stage {
+			prune(filepath.Dir(p.from), home)
+		}
+		if err := place(stage, p.dir); err != nil {
+			p.err = err
+			continue
+		}
+		prune(filepath.Dir(stage), filepath.Join(home, ".local", "state", "dctl"))
+	}
+}
+
+func place(stage, dir string) error {
+	dirs, err := hollow(dir, nil)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	for _, d := range slices.Backward(dirs) {
+		if err := os.Remove(d); err != nil {
+			return err
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		return err
+	}
+	if err := renameNoReplace(stage, dir); err != nil {
+		return &os.LinkError{Op: "rename", Old: stage, New: dir, Err: err}
+	}
+	return nil
+}
+
+func prune(dir, stop string) {
+	for ; inside(stop, dir); dir = filepath.Dir(dir) {
+		st, err := os.Lstat(dir)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			continue
+		case err != nil || !st.IsDir() || os.Remove(dir) != nil:
+			return
+		}
+	}
+}
+
 func Stage(root paths.Root, run execx.Runner) setup.Stage {
 	return setup.Stage{Name: "repos", Items: []setup.Item{{
 		Name: "repos-cloned",
 		Check: func(ctx context.Context) error {
-			repos, err := Read(list(root))
+			plans, err := survey(ctx, run, root)
 			if err != nil {
 				return err
 			}
-			var missing, problems, moves []string
-			for _, r := range repos {
-				c, err := inspect(ctx, run, r.Dir(root.Home), r.URL())
+			var missing, problems, manual []string
+			for _, p := range plans {
 				switch {
-				case err != nil:
-					problems = append(problems, fmt.Sprintf("%s: %v", r.Repo, err))
-				case c.kind == absent:
-					missing = append(missing, r.Repo)
-				case c.kind == broken:
-					moves = append(moves, r.Repo+": "+action(r, c.reason))
+				case p.err != nil:
+					problems = append(problems, fmt.Sprintf("%s: %v", p.repo.Repo, p.err))
+				case p.from != "":
+					problems = append(problems, fmt.Sprintf("%s: move %s to %s", p.repo.Repo, show(root.Home, p.from), p.repo.Path))
+				case p.held != "":
+					manual = append(manual, p.repo.Repo+": "+p.held)
+				case p.target.kind == absent:
+					missing = append(missing, p.repo.Repo)
+				case p.target.kind == broken:
+					manual = append(manual, p.repo.Repo+": "+action(p.repo, p.target.reason))
 				}
 			}
 			if len(missing) > 0 {
@@ -370,64 +662,81 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 			}
 			switch {
 			case len(problems) > 0:
-				return errors.New(strings.Join(append(problems, moves...), "\n"))
-			case len(moves) > 0:
-				return setup.Manual("%s", strings.Join(moves, "\n"))
+				return errors.New(strings.Join(append(problems, manual...), "\n"))
+			case len(manual) > 0:
+				return setup.Manual("%s", strings.Join(manual, "\n"))
 			}
 			return nil
 		},
 		Fix: func(ctx context.Context) error {
-			repos, err := Read(list(root))
+			plans, err := survey(ctx, run, root)
 			if err != nil {
 				return err
 			}
+			relocate(root.Home, plans)
 			var errs []error
-			var moves []string
-			for _, r := range repos {
+			var manual []string
+			for _, p := range plans {
 				if err := ctx.Err(); err != nil {
 					return errors.Join(append(errs, err)...)
 				}
-				dir := r.Dir(root.Home)
-				c, err := inspect(ctx, run, dir, r.URL())
+				switch {
+				case p.err != nil:
+					errs = append(errs, fmt.Errorf("%s: %w", p.repo.Repo, p.err))
+					continue
+				case p.held != "":
+					manual = append(manual, p.repo.Repo+": "+p.held)
+					continue
+				case p.from != "" || p.target.kind == usable:
+					continue
+				}
+				c, err := inspect(ctx, run, p.dir, p.repo.URL())
 				switch {
 				case err != nil:
-					errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
+					errs = append(errs, fmt.Errorf("%s: %w", p.repo.Repo, err))
 				case c.kind == broken:
-					moves = append(moves, r.Repo+": "+action(r, c.reason))
+					manual = append(manual, p.repo.Repo+": "+action(p.repo, c.reason))
 				case c.kind == absent:
-					if err := clone(ctx, run, r, dir); errors.Is(err, execx.ErrStalled) {
-						return errors.Join(append(errs, fmt.Errorf("%s: clone stalled; skipped the remaining repos: %w", r.Repo, err))...)
+					if err := clone(ctx, run, p.repo, p.dir); errors.Is(err, execx.ErrStalled) {
+						return errors.Join(append(errs, fmt.Errorf("%s: clone stalled; skipped the remaining repos: %w", p.repo.Repo, err))...)
 					} else if err != nil {
-						errs = append(errs, fmt.Errorf("%s: clone: %w", r.Repo, err))
+						errs = append(errs, fmt.Errorf("%s: clone: %w", p.repo.Repo, err))
 					}
 				}
 			}
 			switch {
 			case len(errs) > 0:
-				if len(moves) > 0 {
-					errs = append(errs, errors.New(strings.Join(moves, "\n")))
+				if len(manual) > 0 {
+					errs = append(errs, errors.New(strings.Join(manual, "\n")))
 				}
 				return errors.Join(errs...)
-			case len(moves) > 0:
-				return setup.Manual("%s", strings.Join(moves, "\n"))
+			case len(manual) > 0:
+				return setup.Manual("%s", strings.Join(manual, "\n"))
 			}
 			return nil
 		},
 	}, {
 		Name: "repos-history",
 		Check: func(ctx context.Context) error {
-			shallow, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "--is-shallow-repository")
-			switch {
+			switch partial, err := shallow(ctx, run, root); {
 			case err != nil:
 				return err
-			case shallow == "true":
+			case partial:
 				return errors.New("dotfiles has only the commit the ISO installed")
 			}
 			return nil
 		},
 		Fix: func(ctx context.Context) error {
+			if partial, err := shallow(ctx, run, root); err != nil || !partial {
+				return err
+			}
 			fetch := execx.Remote(execx.Reason(run, "fetch the history the ISO left out"))
 			return fetch.Run(ctx, root.Dotfiles, "git", "fetch", "--unshallow", "--progress")
 		},
 	}}}
+}
+
+func shallow(ctx context.Context, run execx.Runner, root paths.Root) (bool, error) {
+	out, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "--is-shallow-repository")
+	return out == "true", err
 }
