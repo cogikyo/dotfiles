@@ -74,6 +74,7 @@ export default Plugin.define({
       const file = store.located(ctx.app.channel);
 
       yield* ctx.tool.transform((editor) => {
+        // Keep this on the Effect API: the promise API drops form.created's location, hiding the popup.
         editor.update("question", (tool) => {
           const execute = tool.execute;
           tool.execute = (input, context) =>
