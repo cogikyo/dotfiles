@@ -83,10 +83,10 @@ Root sessions receive soft nudges at 150K and 200K tokens and a strong "finish u
 Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
 With a running workflow, soft nudges say to keep going if the remaining steps fit before 300K.
 At a natural break with no lanes in flight or repair pending, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
-Offering compaction right after a workflow starts following a long planning context is also allowed, so the workflow runs on fresh context.
-Without a running workflow, soft nudges ask for compaction after a commit lands or the task ends with the user deferring the commit, with approval outside driven runs.
+Without a running workflow, soft nudges say to compact without asking past 150K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
+Ask through `question` only if that point is unclear, subject to COLLAB.md's answer-first rule.
 The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight or repair pending, and commit finished work.
-Without a running workflow, it says to start no new work, commit finished work, and offer compaction at the next clean point.
+Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
 In a driven run, commit finished work and queue compaction without asking.
 At 300K tokens, the plugin forces root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.

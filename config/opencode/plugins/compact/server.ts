@@ -47,7 +47,7 @@ const Input = Schema.Struct({
 const Pending = Schema.Struct({ brief: Schema.optionalKey(Schema.String) });
 
 const description =
-  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks, after the user approves an offer made with the question tool at a completed-work boundary, or without asking at a completed-work boundary in a driven run.";
+  "Queue compaction of this session with a handoff brief. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 150K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule.";
 
 function key(sessionID: string, inbox = "") {
   return `pending/${sessionID}/${inbox}`;
@@ -70,21 +70,21 @@ function label(tokens: number) {
 
 const BOUNDARY = [
   `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)} and no brief is pending.`,
-  "For other compaction offers, wait until a commit lands or the task is done and the user deferred the commit.",
-  "Do not offer mid-task while edits, lanes, or repairs are in flight, or while delivering findings, a proposal, or open choices.",
-  "Ask through the question tool and call compact after approval.",
+  "For other compaction, past 150K, call compact without asking once a commit lands or the task is done.",
+  "The point must be clear: no edits, lanes, or repairs in flight and no open question, including an unanswered user question; do not compact mid-task while delivering findings, a proposal, or open choices.",
+  "Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule, and call compact after approval.",
   "In a driven run, commit finished work and queue compact without asking, with the active run marker and named scope in the brief so it takes precedence over workflow-end compaction.",
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
 
 const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
   soft: {
-    running: `Soft warning: keep the workflow going if its remaining steps fit before ${label(ceiling)}. If this is a natural break with no lanes in flight and no repair pending, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps. If the workflow just started after a long planning context, offering compaction now is fine, so it runs on fresh context.`,
+    running: `Soft warning: keep the workflow going if its remaining steps fit before ${label(ceiling)}. If this is a natural break with no lanes in flight and no repair pending, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps.`,
     idle: `Soft warning. ${BOUNDARY}`,
   },
   strong: {
     running: `Finish up now: start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight and no repair pending, and commit finished work; if context is still at least ${label(floor)}, the plugin compacts after the turn that ends the workflow, and \`recommended\` resumes the unfinished steps.`,
-    idle: "Finish up now: start no new work, commit finished work, and offer compaction through the question tool at the next clean point. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
+    idle: "Finish up now: start no new work, commit finished work, and queue compact without asking at the next clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
   },
 };
 
