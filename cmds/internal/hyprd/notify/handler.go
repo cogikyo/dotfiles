@@ -508,7 +508,7 @@ func soundWorker() {
 			continue
 		}
 		paVolume := req.volume * 65536 / 100
-		_ = exec.Command("paplay", "--volume="+strconv.Itoa(paVolume), req.path).Run()
+		_ = exec.Command("paplay", "--property=media.role=event", "--volume="+strconv.Itoa(paVolume), req.path).Run()
 	}
 }
 
