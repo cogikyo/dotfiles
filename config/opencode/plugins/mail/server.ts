@@ -1,6 +1,5 @@
 import { Plugin } from "@opencode/plugin";
 import { SessionMessage } from "@opencode/schema/session-message";
-import { Tool } from "@opencode/schema/tool";
 import { Effect, Fiber, Schema, SchemaTransformation } from "effect";
 import { retag, tag } from "../sessions/tags.ts";
 import { flat, glyphs, kinds, type Mail, mailable, plain, source } from "./mail.ts";
@@ -26,7 +25,6 @@ const Input = Schema.Struct({
 });
 
 const wakeAfter = 3 * 60_000;
-const withdrawAfter = 50 * 60_000;
 const probe = 1_000;
 const sweepEvery = 60_000;
 
@@ -38,9 +36,6 @@ const description = [
   "Only top-level sessions can send, and only to open top-level sessions.",
   "Subjects are one line of at most 80 characters; bodies are at most 4000 characters.",
 ].join(" ");
-
-const WITHDRAWN =
-  "Withdrawn so waiting mail could reach you: read it and act on it, then re-ask this question if you still need the user.";
 
 const CHILD =
   "Cross-session mail is for top-level sessions; if another session needs something from your work, end your report with a suggested mail: the target session and the gist.";
@@ -143,35 +138,6 @@ function sweeper(ctx: Plugin.Context, file: string, fail: (what: string, error: 
     );
 }
 
-function withdrawable<Input, Context extends { sessionID: string; signal: AbortSignal }, Result>(
-  ask: (input: Input, context: Context) => Promise<Result>,
-  file: string,
-  fail: (what: string, error: unknown) => void,
-) {
-  return async (input: Input, context: Context) => {
-    const since = Date.now();
-    const stop = new AbortController();
-    const poll = setInterval(() => {
-      if (stop.signal.aborted || Date.now() - since < withdrawAfter) return;
-      try {
-        if (!store.inboxes(file).includes(context.sessionID)) return;
-        const session = store.sessions(file).find(({ id }) => id === context.sessionID);
-        if (session && mailable(session)) stop.abort();
-      } catch (error) {
-        fail("withdraw", error);
-      }
-    }, sweepEvery);
-    try {
-      return await ask(input, { ...context, signal: AbortSignal.any([context.signal, stop.signal]) });
-    } catch (error) {
-      if (stop.signal.aborted && !context.signal.aborted) throw new Tool.Error({ message: WITHDRAWN });
-      throw error;
-    } finally {
-      clearInterval(poll);
-    }
-  };
-}
-
 export default Plugin.define({
   id: "mail",
   async setup(ctx) {
@@ -193,9 +159,6 @@ export default Plugin.define({
       parked: async () => store.inboxes(file),
     });
     await ctx.tool.transform((editor) => {
-      editor.update("question", (tool) => {
-        tool.execute = withdrawable(tool.execute, file, fail);
-      });
       editor.add({
         name: "mail",
         description,

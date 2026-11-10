@@ -64,13 +64,6 @@ At setup and every 60 seconds, the server wakes idle, mailable targets with mail
 A dismissed question or permission prompt can leave a stale execution claim; the server probes `session.wait` for up to one second and wakes the target only if no run is live.
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 
-The plugin also wraps the built-in `question` tool, polling each pending call every 60 seconds.
-Once a question has been open for 50 minutes, parked mail withdraws it if the session is still mailable.
-The tool error tells the model to read and act on the mail, then re-ask if it still needs the user; mail reaches the resumed run at its next step.
-The 50-minute threshold leaves 10 minutes before the Anthropic plugin's 1-hour prompt-cache TTL (`anthropic/index.ts`) expires, so the resumed run can reuse the cache last written when the question was asked.
-Each call owns its poll, so pending calls can still withdraw after a plugin reload.
-Permission prompts are not withdrawn.
-
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
 Delivered info and answered asks leave the sidebar.
 An answer counts only when its `replyTo` names the ask and its `from` and `to` reverse the ask's endpoints.
@@ -81,6 +74,7 @@ Rows open the peer session when clicked.
 The sidebar refreshes on inbox enqueue, delivery, and cancellation, `session.deleted`, `server.connected`, and successful `mail` calls, debounced by 300 ms.
 
 `mail/rpc.ts` exposes `ledger` and `parked`; `mail/store.ts` reads the OpenCode DB read-only because the TUI initially loads only the newest 20 messages per session.
+The question plugin reads this parked-mail store for its withdrawal check.
 The queries depend on host tables `session_v2`, `session_message`, and `session_inbox`, including their JSON message and metadata shapes; review these after host updates.
 Received history is filtered by `to` and sent history by `from`, so forks do not inherit a parent's mail.
 This plugin has no key or separate state file.
@@ -88,14 +82,23 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 
 ## Question
 
-`question/server.ts` hooks the built-in `question` tool; it has no tool, key, state, or TUI slot of its own.
+`question/server.ts` wraps the built-in `question` tool's `execute` with `Effect.raceFirst` and hooks its calls; it adds no tool, key, state file, or TUI slot.
+Wrap built-in tools that open forms through the Effect API to keep the calling fiber's location; promise-API `editor.update` drops `form.created`'s location, so the popup never appears.
+
 Before each call, it requires an assistant text part after both the latest user message and latest completed `question` result, within the post-compaction context; only the calling message's part may be empty or whitespace.
 Errored or aborted questions, mail, and subagent notices do not reset that window.
+A blocked call tells the model that thinking and narration are hidden and the popup covers the transcript, so it must write the answer or context in text before calling `question`.
 A failed history read allows the call and logs `question: history read failed; allowing the call`.
 After a completed call, any answer not exactly matching an option label triggers a reminder to answer questions or doubt in text and end the turn without `question`.
 The reminder replaces `You can now continue with the user's answers in mind.`, or is appended if that sentence is absent.
 
-After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, and a text part being stored at text start, before tool execution.
+The wrapper first checks for parked mail after 50 minutes, then every 60 seconds, and withdraws the question if the session is still mailable.
+A store read failure logs `question: withdraw check failed` and cannot trigger withdrawal.
+The tool error tells the model to read and act on the mail, then re-ask if it still needs the user; mail reaches the resumed run at its next step.
+The 50-minute threshold leaves 10 minutes before the Anthropic plugin's 1-hour prompt-cache TTL (`anthropic/index.ts`) expires, so the resumed run can reuse the cache last written when the question was asked.
+Permission prompts are not withdrawn.
+
+After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, a text part being stored at text start before tool execution, and wrapped forms publishing a location so the popup appears without a reconnect.
 
 ## Compact
 
