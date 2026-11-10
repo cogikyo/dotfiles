@@ -379,6 +379,7 @@ func survey(ctx context.Context, run execx.Runner, root paths.Root) ([]plan, err
 		}
 		plans[i] = p
 	}
+	// A blocked move can keep another target occupied, so recheck dependent moves.
 	for changed := true; changed; {
 		changed = false
 		leaving := map[string]bool{}
@@ -571,6 +572,7 @@ func relocate(home string, plans []plan) {
 			moves = append(moves, &plans[i])
 		}
 	}
+	// Stage all sources first: a target may contain another source.
 	slices.SortFunc(moves, func(a, b *plan) int { return strings.Compare(b.from, a.from) })
 	for _, p := range moves {
 		stage := staging(home, p.repo)
