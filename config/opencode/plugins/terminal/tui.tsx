@@ -83,6 +83,7 @@ function call(data: Context["data"], sessionID: string, metadata: unknown) {
 }
 
 function highlight(ledger: Ledger, frame: Renderable, command: string, shell: Shell) {
+  // This match depends on ask() in server.ts placing the command last, after a blank line.
   const body = find(frame, (value) => value.endsWith(`\n\n${command}`), 4);
   const box = body?.text.parent;
   if (!body || !box) return;
