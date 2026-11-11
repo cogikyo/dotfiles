@@ -361,6 +361,12 @@ function collected(command: Command) {
   );
 }
 
+function units(command: Command) {
+  return flags(command).flatMap(({ flag, value }) =>
+    (flag === "u" || flag === "unit") && value !== undefined ? [value] : [],
+  );
+}
+
 function text(file: string) {
   try {
     return readFileSync(file, "utf8");
@@ -577,6 +583,15 @@ export function inspect(
   if (commands.some((command) => command[0] === "systemd-run" && !collected(command))) {
     found.add(
       "systemd-run must pass `--collect` (`-G`), since a failed unit otherwise stays loaded and hyprd health reports it; when a test needs the failed unit to stay, pass `-p CollectMode=inactive` instead",
+    );
+  }
+  if (
+    commands.some(
+      (command) => command[0] === "systemd-run" && units(command).some((unit) => unit.startsWith("cogikyo-")),
+    )
+  ) {
+    found.add(
+      "agent shells may not start `cogikyo-*` systemd units, since those names carry voice-loop rights on cogikyo's bus; Cullyn starts them from his key or terminal instead",
     );
   }
   if (commands.some(([name]) => name === "grok"))
