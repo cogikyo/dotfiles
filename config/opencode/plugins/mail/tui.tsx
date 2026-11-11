@@ -103,13 +103,14 @@ function Group(props: { context: Context; peer: Peer; frame: string }) {
   const go = () => props.context.ui.router.navigate({ type: "session", sessionID: props.peer.id });
   const look = (item: Open) => {
     const glyph = glyphs[item.mail.kind];
+    const urgent = item.mail.urgent ? colors.red : undefined;
     switch (item.state) {
       case "unread":
-        return { icon: `  ${glyph}`, tone: colors.pink, detail: timeAgo(item.mail.sent) };
+        return { icon: `  ${glyph}`, tone: urgent ?? colors.pink, detail: timeAgo(item.mail.sent) };
       case "owed":
-        return { icon: `  ${glyph}`, tone: colors.yellow, detail: timeAgo(item.mail.sent) };
+        return { icon: `  ${glyph}`, tone: urgent ?? colors.yellow, detail: timeAgo(item.mail.sent) };
       case "waiting":
-        return { icon: `  → ${glyph}`, tone: theme().muted, detail: envelope.closed, mark: colors.pink };
+        return { icon: `  → ${glyph}`, tone: theme().muted, detail: envelope.closed, mark: urgent ?? colors.pink };
       case "asked":
         return { icon: `  → ${glyph}`, tone: theme().muted, detail: envelope.open };
     }

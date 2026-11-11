@@ -114,7 +114,7 @@ export function compose(item: Found, mail: Mail, scan: Scan) {
   const theme = context.theme.text;
   const lead: Part[] = kind === "sent" ? [["→ ", theme.muted]] : [];
   const prefix: Part[] = [...lead, [kind === "sent" ? mail.recipient : mail.sender, tone], [separator, theme.muted]];
-  const postmark = ` ${mail.kind}${separator}${when(mail.sent)}`;
+  const postmark = ` ${stamp(mail)}${separator}${when(mail.sent)}`;
   const used = Bun.stringWidth(prefix.map(([value]) => value).join("")) + Bun.stringWidth(postmark);
   const room = Math.trunc(line.width) - Math.trunc(icon.width) - used;
   const parts: Part[] = [...prefix, [fit(mail.subject, room), theme.base]];
@@ -170,6 +170,8 @@ function attach(row: Renderable, { parent, key, style, content }: Extra, { conte
   ledger.record(row, text, () => text.destroy());
   return true;
 }
+
+const stamp = (mail: Mail) => (mail.urgent ? `urgent ${mail.kind}` : mail.kind);
 
 function fit(value: string, room: number) {
   if (room <= 0 || Bun.stringWidth(value) <= room) return value;

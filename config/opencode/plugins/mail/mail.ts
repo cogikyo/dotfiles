@@ -22,6 +22,7 @@ export const Mail = Schema.Struct({
   body: Schema.String,
   sent: Schema.Finite,
   replyTo: Schema.optional(Schema.String),
+  urgent: Schema.optional(Schema.Boolean),
 });
 
 export type Mail = typeof Mail.Type;

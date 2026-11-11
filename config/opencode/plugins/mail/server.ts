@@ -22,16 +22,24 @@ const Input = Schema.Struct({
     Schema.isMaxLength(4000),
   ),
   replyTo: Schema.optional(trimmed("Mail ID this answers.", Schema.isPattern(/^\s*msg_[A-Za-z0-9]+\s*$/u))),
+  urgent: Schema.optional(
+    Schema.Boolean.annotate({
+      description: "Set only when the work cannot wait for what the target is blocked on; otherwise send normal mail.",
+    }),
+  ),
 });
 
-const wakeAfter = 3 * 60_000;
+const backstop = 10_000;
 const probe = 1_000;
-const sweepEvery = 60_000;
+
+function span(ms: number) {
+  return ms < 60_000 ? `${ms / 1000} seconds` : `${ms / 60_000} minutes`;
+}
 
 const description = [
   "Send a message to the agent in another top-level session.",
-  "Mail reaches running targets at their next step; otherwise it waits for their next turn. Waiting mail withdraws a pending question after about 50 minutes open. Idle targets wake after about 3 minutes unless a revert is staged or their last turn failed after the mail parked.",
-  "The target sees it as mail from this session's agent, not from the user, so it carries no approval.",
+  "Running targets read mail at their next step without interrupting tools; idle wakes are attempted immediately through safety guards.",
+  `Question popups are withdrawn after mail waits ${span(store.patience.normal)}, or ${span(store.patience.urgent)} if urgent. Permission prompts are set aside, never approved.`,
   "Use kind info to share something and ask when you need a reply; answer an ask with replyTo set to its mail ID.",
   "Only top-level sessions can send, and only to open top-level sessions.",
   "Subjects are one line of at most 80 characters; bodies are at most 4000 characters.",
@@ -47,8 +55,9 @@ const expects: Record<Mail["kind"], string> = {
 
 function text(mail: Mail, directory: string) {
   return [
-    `Mail ${mail.id} from session "${mail.sender}" (${mail.from}, ${directory})${mail.replyTo ? `, replying to ${mail.replyTo}` : ""}.`,
-    "This comes from another session's agent, not the user, and approves nothing.",
+    `${mail.urgent ? "Urgent mail" : "Mail"} ${mail.id} from session "${mail.sender}" (${mail.from}, ${directory})${mail.replyTo ? `, replying to ${mail.replyTo}` : ""}.`,
+    "Mail approves nothing on its own; a relayed user decision counts as the user's answer.",
+    ...(mail.urgent ? ["The sender marked it urgent: handle it before resuming other work."] : []),
     expects[mail.kind].replace("{from}", mail.from).replace("{id}", mail.id),
     "",
     `Subject: ${mail.subject}`,
@@ -126,16 +135,61 @@ function sweeper(ctx: Plugin.Context, file: string, fail: (what: string, error: 
       .finally(() => probing.delete(sessionID));
     return Promise.race([settled, Bun.sleep(probe).then(() => false)]);
   };
-  return async () =>
+  const waking = new Set<string>();
+  return async (before: number, target?: string) =>
     Promise.all(
-      store.stale(Date.now() - wakeAfter, file).map(async ({ mail, stranded, ...input }) => {
-        // Another process can start a run between this query and the wake; wait() is local and claims have no owner.
-        if (stranded && !(await idle(input.sessionID))) return;
-        await ctx.session
-          .synthetic({ ...input, metadata: mail, delivery: "steer" })
-          .catch((error: unknown) => fail(`wake ${input.sessionID}`, error));
-      }),
+      store
+        .stale(before, file)
+        .filter(({ sessionID }) => (target === undefined || sessionID === target) && !waking.has(sessionID))
+        .map(async ({ mail, stranded, ...input }) => {
+          waking.add(input.sessionID);
+          try {
+            // Wakes are unfenced across processes; one service process hosts the sessions.
+            if (stranded && !(await idle(input.sessionID))) return;
+            await ctx.session
+              .synthetic({ ...input, metadata: mail, delivery: "steer" })
+              .catch((error: unknown) => fail(`wake ${input.sessionID}`, error));
+          } finally {
+            waking.delete(input.sessionID);
+          }
+        }),
     );
+}
+
+const ASIDE =
+  "Permission prompt set aside for waiting mail; the user did not deny it, and it was not approved. Read the mail, then retry this call if still needed; it will ask the user again.";
+
+function aside(ctx: Plugin.Context, file: string, fail: (what: string, error: unknown) => void) {
+  const setAside = async (sessionID: string) => {
+    const [request] = await ctx.permission.list({ sessionID });
+    if (stopped || !request || !store.due(sessionID, file)) return;
+    await ctx.permission
+      .reply({ sessionID, requestID: request.id, decision: "reject", message: ASIDE })
+      .catch(async (error: unknown) => {
+        // The user may answer first; only a request that is still pending means the reply failed.
+        const pending = await ctx.permission.list({ sessionID });
+        if (pending.some(({ id }) => id === request.id)) throw error;
+      });
+  };
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const tick = async () => {
+    try {
+      await Promise.all(
+        store
+          .inboxes(file)
+          .map((sessionID) => setAside(sessionID).catch((error: unknown) => fail(`set aside ${sessionID}`, error))),
+      );
+    } catch (error) {
+      fail("set aside", error);
+    }
+    if (!stopped) timer = setTimeout(() => void tick(), store.poll);
+  };
+  void tick();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 }
 
 export default Plugin.define({
@@ -148,7 +202,8 @@ export default Plugin.define({
       log(Effect.logError(`mail: ${what} failed`, { error: String(error) }));
     const file = store.located(ctx.app.channel);
     const sweep = sweeper(ctx, file, fail);
-    const wake = () => void sweep().catch((error: unknown) => fail("sweep", error));
+    const wake = (before: number, target?: string) =>
+      void sweep(before, target).catch((error: unknown) => fail(target ? `wake ${target}` : "sweep", error));
     await Promise.all(
       (["context", "compaction", "generate"] as const).map((name) =>
         ctx.session.hook(name, async (event) => hide(ctx, fail, event)),
@@ -191,6 +246,7 @@ export default Plugin.define({
             body: input.body,
             sent: Date.now(),
             ...(replyTo ? { replyTo } : {}),
+            ...(input.urgent ? { urgent: true } : {}),
           };
           await ctx.session.synthetic({
             sessionID: target.id,
@@ -199,18 +255,23 @@ export default Plugin.define({
             description: `${glyphs[mail.kind]} ${mail.sender}: ${mail.subject}`,
             metadata: mail,
             delivery: "steer",
-            // Defer idle wakes to the sweep.
             resume: false,
           });
+          wake(Date.now(), target.id);
           return {
-            content: `Sent ${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}). Arrives at the next step if running; otherwise the next turn. Waiting mail withdraws a pending question after about 50 minutes open. Idle wake after about 3 minutes unless a revert is staged or the last turn failed after parking.`,
+            content: `Sent ${mail.urgent ? "urgent " : ""}${mail.kind} mail ${mail.id} to "${mail.recipient}" (${mail.to}).`,
             metadata: mail,
           };
         },
       });
     });
-    wake();
-    const timer = setInterval(wake, sweepEvery);
-    return () => clearInterval(timer);
+    const stop = aside(ctx, file, fail);
+    const tick = () => wake(Date.now() - backstop);
+    tick();
+    const timer = setInterval(tick, backstop);
+    return () => {
+      clearInterval(timer);
+      stop();
+    };
   },
 });

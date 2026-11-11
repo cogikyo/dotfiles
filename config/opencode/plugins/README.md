@@ -49,20 +49,29 @@ Only Collab delegates, with one level of children.
 
 ## Mail
 
-`mail/server.ts` exposes `mail` with `to`, required `kind` (`info` or `ask`), `subject`, `body`, and optional `replyTo` for cross-session handoffs, including across directories.
+`mail/server.ts` exposes `mail` with `to`, required `kind` (`info` or `ask`), `subject`, `body`, and optional `replyTo` and `urgent` for cross-session handoffs, including across directories.
 `to` accepts a top-level session ID or an exact title with its tag stripped; missing or ambiguous title matches fail and list up to eight close matches when available.
 `replyTo` must name a mail message this session received from the target.
 Subjects are single lines of at most 80 characters, and bodies are plain text of at most 4000 characters.
 Callers and targets must be open, non-`REFUSALS`, top-level sessions, as defined by `mailable()` in `mail/mail.ts`.
 Title matching uses the same rule; self and missing targets are refused.
-Mail comes from the sending session's agent and carries no user approval.
+Mail comes from the sending session's agent and carries no approval on its own; a relayed user decision counts as the user's answer.
+This trust is a prompt rule; the plugin checks no authority.
 `info` expects no reply, and acknowledgment-only replies are forbidden.
 `ask` expects a `mail` reply with `replyTo`, even when the answer is that the agent can't act or is waiting on the user.
+`urgent` is independent of `kind`.
 
-Mail waits for the target's next turn; a running target gets it at its next step.
-At setup and every 60 seconds, the server wakes idle, mailable targets with mail parked for at least 3 minutes.
-A dismissed question or permission prompt can leave a stale execution claim; the server probes `session.wait` for up to one second and wakes the target only if no run is live.
+Sending mail immediately attempts to wake an idle target; a running target gets it at its next step, without interrupting a long tool.
+At setup and every 10 seconds, a backstop sweep attempts wakes for mail parked at least 10 seconds.
+A dismissed question or permission prompt can leave a stale execution claim; the server gives the local `session.wait` probe one second and skips the wake unless it succeeds.
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
+An in-memory `waking` set prevents duplicate wakes in the service process; cross-process races are accepted because one service process hosts the sessions.
+
+Parked mail withdraws a `question` popup after 5 minutes, or 5 seconds for urgent mail, checked every 2 seconds.
+The same timing sets permission prompts aside by rejecting them with feedback, never approving them.
+The host rejects the session's whole pending permission batch, including `terminal` requests.
+Terminal popups and permission prompts have no exemption; open Kitty windows and child sessions' prompts and popups are untouched.
+`patience` and `poll` in `mail/store.ts` own these timings.
 
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
 Delivered info and answered asks leave the sidebar.
@@ -70,6 +79,7 @@ An answer counts only when its `replyTo` names the ask and its `from` and `to` r
 Owed asks and delivered sent asks also leave when the peer is closed, `REFUSALS`, or deleted.
 The section hides when nothing is open.
 Incoming rows show the kind glyph and age; sent rows have a closed envelope while waiting in the target and an open envelope while awaiting an ask's reply.
+Urgent incoming glyphs and waiting sent envelopes are red; byline postmarks read `urgent info` or `urgent ask`.
 Rows open the peer session when clicked.
 The sidebar refreshes on inbox enqueue, delivery, and cancellation, `session.deleted`, `server.connected`, and successful `mail` calls, debounced by 300 ms.
 
@@ -94,11 +104,9 @@ Anthropic treats signatures as opaque, so format changes can silently leave the 
 After a completed call, any answer not exactly matching an option label triggers a reminder to answer questions or doubt in text and end the turn without `question`.
 The reminder replaces `You can now continue with the user's answers in mind.`, or is appended if that sentence is absent.
 
-The wrapper first checks for parked mail after 50 minutes, then every 60 seconds, and withdraws the question if the session is still mailable.
+The wrapper races `question` calls against the [Mail](#mail) parked-mail deadline, withdrawing the popup only while the session is mailable.
 A store read failure logs `question: withdraw check failed` and cannot trigger withdrawal.
-The tool error tells the model to read and act on the mail, then re-ask if it still needs the user; mail reaches the resumed run at its next step.
-The 50-minute threshold leaves 10 minutes before the Anthropic plugin's 1-hour prompt-cache TTL (`anthropic/index.ts`) expires, so the resumed run can reuse the cache last written when the question was asked.
-Permission prompts are not withdrawn.
+The tool error directs the model to read the mail before asking again.
 
 After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, progress-update reasoning and signatures being available before tool execution, and wrapped forms publishing a location so the popup appears without a reconnect.
 

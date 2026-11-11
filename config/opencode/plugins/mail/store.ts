@@ -80,6 +80,13 @@ const overdue = `
     AND NOT (session.idle_outcome IS 'failed' AND session.time_idle >= inbox.time_created)
   ORDER BY inbox.enqueued_seq`;
 
+const blocking = `
+  SELECT session.parent_id AS parentID, session.title
+  FROM session_inbox inbox JOIN session_v2 session ON session.id = inbox.session_id
+  WHERE inbox.session_id = ?1 AND inbox.type = 'synthetic' AND json_extract(inbox.payload, '$.metadata.source') = ?2
+    AND inbox.time_created <= iif(json_extract(inbox.payload, '$.metadata.urgent'), ?3, ?4)
+  LIMIT 1`;
+
 const roots = "SELECT id, parent_id AS parentID, title FROM session_v2 WHERE parent_id IS NULL";
 
 const peers = "SELECT id, parent_id AS parentID, title FROM session_v2 WHERE id IN (SELECT value FROM json_each(?1))";
@@ -138,6 +145,19 @@ export const stale = (before: number, file: string) =>
   });
 
 export const sessions = (file: string) => opened(file, (db) => db.query<Session, []>(roots).all());
+
+/** Parked-mail age in milliseconds before a blocking prompt can be withdrawn or set aside. */
+export const patience = { urgent: 5_000, normal: 5 * 60_000 };
+export const poll = 2_000;
+
+export const due = (sessionID: string, file: string) =>
+  opened(file, (db) => {
+    const now = Date.now();
+    const session = db
+      .query<Omit<Session, "id">, [string, string, number, number]>(blocking)
+      .get(sessionID, source, now - patience.urgent, now - patience.normal);
+    return !!session && mailable(session);
+  });
 
 const claim = `
   SELECT session.time_suspended IS NOT NULL AND NOT ${dismissed} AS held FROM session_v2 session WHERE session.id = ?1`;

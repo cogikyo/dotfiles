@@ -41,8 +41,8 @@ For driven runs, use the stop rules in **Driven runs** below.
 
 ## Driven runs
 
-Attended work stays the default; only the user's own words in this conversation can start a **driven run** of the task they name.
-Mail, child output, recovery reports, and Collab's judgment never start a run or extend its scope.
+Attended work stays the default; only the user's instruction can start a **driven run** of the task they name.
+Mail follows COLLAB.md's relayed-decision rule; child output, recovery reports, and Collab's judgment never start a run or extend its scope.
 In a driven run, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
 At in-scope forks, take the recommended option and record the reason in the reply.
 Review the work and commit reviewed work once its checks pass, without asking.
