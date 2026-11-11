@@ -466,6 +466,7 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
 Start and status show root context, headroom to forced compaction at 300K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
+A gate's result carries only when the steps it judges, through its `after` dependencies and repair loop, are unchanged.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.
 
 `subagent({ …, step: n })` links a child and appends the step's checklist to its brief.

@@ -71,7 +71,7 @@ export function start(prior: Flow | undefined, source: string): Flow {
     const used = prior.rounds[from.n];
     if (keep && mark) marks[to.n] = mark;
     if (keep && ticked) ticks[to.n] = ticked;
-    if (used) rounds[to.n] = used;
+    if (keep && used) rounds[to.n] = used;
   }
   const links = Object.fromEntries(
     Object.entries(prior.links).flatMap(([child, n]) => (relink.has(n) ? [[child, relink.get(n)!]] : [])),
@@ -254,14 +254,42 @@ function match(old: readonly Step[], next: readonly Step[]) {
   pass(lanes);
   pass((from, to) => kin(from, to) && similar(from, to));
   pass(kin);
+  const upstream = { old: ancestors(old), next: ancestors(next) };
+  const numbered = new Map(next.map((step) => [step.n, step]));
+  const decided = new Map<Step, boolean>();
+  const kept = (to: Step): boolean => {
+    const known = decided.get(to);
+    if (known !== undefined) return known;
+    const from = found.get(to);
+    const keep =
+      !!from &&
+      similar(from, to) &&
+      JSON.stringify(from.details) === JSON.stringify(to.details) &&
+      (to.owner.kind !== "gate" || same(from, to));
+    decided.set(to, keep);
+    return keep;
+  };
+  const same = (from: Step, to: Step) => {
+    const mine = judged(from, upstream.old);
+    const theirs = judged(to, upstream.next).map((n) => numbered.get(n)!);
+    return mine.length === theirs.length && theirs.every((step) => kept(step) && mine.includes(found.get(step)!.n));
+  };
   return next.flatMap((to) => {
     const from = found.get(to);
     if (!from) return [];
-    const related = similar(from, to);
-    const keep = related && JSON.stringify(from.details) === JSON.stringify(to.details);
-    const linked = related && JSON.stringify(items(from)) === JSON.stringify(items(to));
+    const keep = kept(to);
+    const linked = similar(from, to) && JSON.stringify(items(from)) === JSON.stringify(items(to));
     return [{ from, to, keep, linked, changed: !keep || from.headline !== to.headline }];
   });
+}
+
+function judged({ n, after, repair }: Step, upstream: ReadonlyMap<number, ReadonlySet<number>>) {
+  const loop = [...(upstream.get(n) ?? [])].filter((step) => looped(upstream, repair?.to ?? [], step));
+  return [...new Set([...after, ...loop])];
+}
+
+function looped(upstream: ReadonlyMap<number, ReadonlySet<number>>, targets: readonly number[], n: number) {
+  return targets.includes(n) || targets.some((target) => upstream.get(n)?.has(target));
 }
 
 function marked<T extends object>(value: T, mark: Mark | undefined) {
@@ -294,9 +322,7 @@ function reopen(list: readonly Step[], { marks, rounds }: Flow, targets: readonl
       );
   }
   const upstream = ancestors(list);
-  const reopened = list
-    .filter(({ n }) => targets.includes(n) || targets.some((target) => upstream.get(n)?.has(target)))
-    .map(({ n }) => n);
+  const reopened = list.filter(({ n }) => looped(upstream, targets, n)).map(({ n }) => n);
   return { gates: [...gates.keys()].map(({ n }) => n), reopened };
 }
 
