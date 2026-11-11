@@ -160,8 +160,7 @@ Directory lookup uses the longest configured session project prefix under `~`; `
 Unmatched directories use `open.workspace`, set to 4 in `hyprd.yaml`.
 `workspaces` returns space-separated workspace numbers in argument order, starting with the caller Kitty's workspace.
 
-The picker navigates same-workspace picks locally from its workspace mapping, without calling `hyprd open`.
-`open` focuses another TUI already showing the session (`focused`), or returns `here` if the caller is on the target workspace.
+The picker sends every pick to `open`, which focuses another TUI already showing the session (`focused`), or returns `here` if the caller is on the target workspace.
 Otherwise it reuses or launches that workspace's agents Kitty and fills free tabs in build, drive, plan, learn, scout order; when none is free, it replaces the displayed session in build.
 A zsh tab gets `c --session`; a TUI gets a `navigate` event.
 Hyprd focuses the target before waiting for its report to confirm the switch.

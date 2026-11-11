@@ -347,8 +347,7 @@ The marker and mail ranking share one `mail.parked` RPC request on opening, refr
 
 In Recent, `ctrl+d` deletes and `<leader>r` renames the selected session.
 
-Open navigates same-workspace selections locally from its workspace mapping, without calling `hyprd open`.
-Other selections, including Recent, use [`hyprd open`](../../../cmds/cmd/hyprd/README.md#opencode): focus an existing TUI, navigate locally on the target workspace, or open in that workspace's agents Kitty.
+Selections in Open and Recent use [`hyprd open`](../../../cmds/cmd/hyprd/README.md#opencode): focus an existing TUI, navigate locally on the target workspace, or open in that workspace's agents Kitty.
 Without Kitty pane identity or a hyprd socket, selections navigate locally; other routing failures show an error toast.
 
 The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, and a home route carrying `location`.

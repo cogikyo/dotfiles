@@ -193,7 +193,7 @@ function edits(picker: Picker, find: (sessionID: string) => Session | undefined)
 export async function open(picker: Picker, kind: Kind) {
   const { context, source } = picker;
   const release = picker.hold(kind);
-  const [pick, close, lookup, near] = createRoot((dispose) => {
+  const [pick, close, lookup] = createRoot((dispose) => {
     const route = context.ui.router.current();
     const current = route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
     const here = kind === "recent" ? spot(context, route) : undefined;
@@ -248,14 +248,12 @@ export async function open(picker: Picker, kind: Kind) {
       actions: here ? edits(picker, find) : undefined,
     });
     context.ui.dialog.set({ size: "large" });
-    return [selected, dispose, find, seated?.near] as const;
+    return [selected, dispose, find] as const;
   });
   const sessionID = await pick;
-  const session = sessionID ? lookup(sessionID) : undefined;
-  const stay = !!session && !!near?.(session);
+  const directory = sessionID ? lookup(sessionID)?.location.directory : undefined;
   release();
   close();
   if (!sessionID) return;
-  if (stay) return context.ui.router.navigate({ type: "session", sessionID });
-  await show(context.ui, sessionID, session?.location.directory);
+  await show(context.ui, sessionID, directory);
 }
