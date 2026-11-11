@@ -46,6 +46,13 @@ const (
 	videoGrace    = 60 * time.Second
 )
 
+const (
+	bluetoothctlPath         = "/usr/bin/bluetoothctl"
+	bluetoothConnectAttempts = 8
+	bluetoothRetryDelay      = 2 * time.Second
+	bluetoothTryTimeout      = 8 * time.Second
+)
+
 // Lock supervises the Quickshell session lock and restores session resources after release.
 type Lock struct {
 	hypr        *hypr.Client
@@ -59,6 +66,7 @@ type Lock struct {
 	mu          sync.Mutex
 	saved       *lockState
 	inFull      bool
+	boot        bool
 	restarting  bool
 	deferred    bool
 }
@@ -165,6 +173,8 @@ func (l *Lock) Adopt() error {
 	}
 	l.mu.Lock()
 	l.inFull = true
+	// The greeter's boot lock has no recorded intent.
+	l.boot = intent == ""
 	l.mu.Unlock()
 	go l.hold(intent == intentAcquired)
 	return nil
@@ -452,6 +462,7 @@ func (l *Lock) release() {
 	if err := l.exitBlackout(saved); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: unlock: %v\n", err)
 	}
+	l.boot = false
 }
 
 func lockCommand(ctx context.Context, log *lockLog) *exec.Cmd {
@@ -639,7 +650,7 @@ func (l *Lock) exitBlackout(saved *lockState) error {
 		fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
 	}
 
-	if bt := cfg.Bluetooth; bt.Enabled && bt.Device != "" {
+	if bt := cfg.Bluetooth; bt.Enabled && bt.Device != "" && !l.boot {
 		connectBluetooth(bt.Device)
 	}
 	restoreEwwWidgets(false)
@@ -684,4 +695,33 @@ func startDetached(name string, args ...string) {
 	if err := detach.Start(exec.Command(name, args...)); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: start %s %s: %v\n", name, strings.Join(args, " "), err)
 	}
+}
+
+func connectBluetooth(device string) {
+	go func() {
+		var lastErr error
+		var lastOut []byte
+		for attempt := 1; attempt <= bluetoothConnectAttempts; attempt++ {
+			ctx, cancel := context.WithTimeout(context.Background(), bluetoothTryTimeout)
+			cmd := exec.CommandContext(ctx, bluetoothctlPath, "connect", device)
+			out, err := cmd.CombinedOutput()
+			cancel()
+			if err == nil {
+				if attempt > 1 {
+					fmt.Printf("hyprd bluetooth: connected %s after %d attempts\n", device, attempt)
+				}
+				return
+			}
+			lastErr = err
+			lastOut = out
+			if attempt < bluetoothConnectAttempts {
+				time.Sleep(bluetoothRetryDelay)
+			}
+		}
+		if len(lastOut) > 0 {
+			fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v: %s\n", device, bluetoothConnectAttempts, lastErr, lastOut)
+			return
+		}
+		fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v\n", device, bluetoothConnectAttempts, lastErr)
+	}()
 }

@@ -58,7 +58,7 @@ type InitConfig struct {
 	NetworkTimeout int `yaml:"network_timeout"` // seconds to wait for network before proceeding
 }
 
-// BluetoothConfig controls automatic device connection at startup and unlock.
+// BluetoothConfig controls reconnection on unlock, except the boot lock.
 type BluetoothConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	Device  string `yaml:"device"`

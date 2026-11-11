@@ -37,7 +37,7 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 `hyprd init` imports the Wayland environment into systemd and D-Bus, starts the session target and user services, waits for the daemon socket, and sends `init`.
 The daemon applies the saved wallpaper mode and optionally waits for the network.
 It waits for unlock before it restores eww widgets and the initial browser layouts, opens configured sessions, and selects the initial workspace.
-It also starts Spotify, starts GLava when the display profile allows it, and connects the configured Bluetooth device.
+It also starts Spotify and, if the display profile allows it, GLava.
 Boot apps open after the password unlocks the session.
 This prevents `misc:session_lock_xray` from showing new windows beneath a lock client that has not mapped yet.
 
@@ -191,7 +191,8 @@ On the first launch, the desktop cover runs after hyprd enters `lockbarrier` and
 It saves the workspace, switches to the empty workspace 7, stops desktop GLava when on battery, tags the remaining GLava windows `lock`, pauses dunst, closes eww widgets, and applies the saved wallpaper mode.
 The `glava-lock` rule in `config/hypr/hyprland.lua` drops tagged desktop GLava windows to 0.01 opacity.
 The opacity stays above 0 because Hyprland skips drawing a window at 0, which stops its frame callbacks and would stall GLava.
-Release removes the tag, restarts desktop GLava if the display profile wants it, restores the saved workspace, applies the saved wallpaper mode, restores dunst and widgets, and reconnects configured Bluetooth.
+Release removes the tag, restarts desktop GLava if the display profile wants it, restores the saved workspace, applies the saved wallpaper mode, and restores dunst and widgets.
+It also reconnects the configured Bluetooth device, except when releasing the greeter's boot lock.
 Lock and release do not touch Spotify or other media players.
 
 Hyprland's `misc:session_lock_xray` keeps the wallpaper layers rendering under the transparent lock surface, so the lock shows the live wallpaper in either mode.

@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,52 +25,12 @@ var startupExecs = []string{
 	"spotify-launcher",
 }
 
-const (
-	bluetoothctlPath         = "/usr/bin/bluetoothctl"
-	bluetoothConnectAttempts = 8
-	bluetoothRetryDelay      = 2 * time.Second
-	bluetoothTryTimeout      = 8 * time.Second
-)
-
-// dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
-func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
+func dispatchStartup(h *hypr.Client) {
 	for _, cmd := range startupExecs {
 		if err := h.Exec(cmd); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
 		}
 	}
-	if bt.Enabled && bt.Device != "" {
-		connectBluetooth(bt.Device)
-	}
-}
-
-func connectBluetooth(device string) {
-	go func() {
-		var lastErr error
-		var lastOut []byte
-		for attempt := 1; attempt <= bluetoothConnectAttempts; attempt++ {
-			ctx, cancel := context.WithTimeout(context.Background(), bluetoothTryTimeout)
-			cmd := exec.CommandContext(ctx, bluetoothctlPath, "connect", device)
-			out, err := cmd.CombinedOutput()
-			cancel()
-			if err == nil {
-				if attempt > 1 {
-					fmt.Printf("hyprd bluetooth: connected %s after %d attempts\n", device, attempt)
-				}
-				return
-			}
-			lastErr = err
-			lastOut = out
-			if attempt < bluetoothConnectAttempts {
-				time.Sleep(bluetoothRetryDelay)
-			}
-		}
-		if len(lastOut) > 0 {
-			fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v: %s\n", device, bluetoothConnectAttempts, lastErr, lastOut)
-			return
-		}
-		fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v\n", device, bluetoothConnectAttempts, lastErr)
-	}()
 }
 
 type NotifyFunc func(app, urgency, title, body string)
@@ -148,7 +107,7 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	SyncGLava(i.state, i.lock.Locked())
-	dispatchStartup(i.hypr, cfg.Bluetooth)
+	dispatchStartup(i.hypr)
 
 	if init.Workspace > 0 {
 		if err := i.hypr.FocusWorkspace(init.Workspace); err != nil {
