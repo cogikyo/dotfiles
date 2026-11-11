@@ -1,6 +1,6 @@
 import type { LocationRef } from "@opencode/client/promise";
 import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, createRoot } from "solid-js";
+import { createEffect, createRoot, on } from "solid-js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { prompts } from "../statusline/prompt.ts";
@@ -17,6 +17,9 @@ type Report = {
   readonly tabs: number;
   readonly pending: boolean;
 };
+
+const place = (route: ReturnType<Plugin.Context["ui"]["router"]["current"]>) =>
+  route.type === "session" ? route.sessionID : route.type;
 
 function isLocation(value: unknown): value is LocationRef {
   return typeof value === "object" && value !== null && "directory" in value && typeof value.directory === "string";
@@ -108,9 +111,10 @@ export default Plugin.define({
       typing = setTimeout(sync, settle);
     };
 
-    // Record forms reactively before navigation; partial answers survive in host memory.
     const record = createRoot((dispose) => {
+      // Record forms before navigation; partial answers survive in host memory.
       createEffect(() => displayed(ui.router.current()));
+      createEffect(on(() => place(ui.router.current()), sync, { defer: true }));
       return dispose;
     });
     sync();

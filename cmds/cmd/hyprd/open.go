@@ -120,10 +120,14 @@ func (d *Daemon) open(ctx context.Context, req openRequest) (string, error) {
 		return "", err
 	}
 	publish := func(event opencodepkg.Navigate) { d.server.Subs.Notify("navigate", event) }
-	if err := opencodepkg.Open(ctx, pid, tab, req.session, publish); err != nil {
+	confirm, err := opencodepkg.Open(ctx, pid, tab, req.session, publish)
+	if err != nil {
 		return "", err
 	}
 	if err := d.showPane(ctx, pid, tab.Pane.ID, tab.Pane.Env["KITTY_TAB_ID"]); err != nil {
+		return "", err
+	}
+	if err := confirm(); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("opened %d %s", ws, tab.Name), nil

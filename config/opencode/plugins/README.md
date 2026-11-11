@@ -291,7 +291,7 @@ Only the displayed root gets idle reminders every hour, unless its title starts 
 Each root's clock pauses while Hyprland reports the screen locked and resets while the TUI is focused on that root, leaving other roots' clocks unchanged.
 Clocks are dropped when their roots are no longer open.
 
-`hyprd/context.ts` checks the displayed root, prompt text, tab count, and pending input each second and publishes changes to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json`, with a heartbeat each minute.
+`hyprd/context.ts` checks the displayed root, prompt text, tab count, and pending input on route changes and each second, publishing changes to `$XDG_RUNTIME_DIR/opencode/tui/<TUI-pid>.json`, with a heartbeat each minute.
 Pending input covers current permissions and forms plus unresolved forms seen before navigation, whose partial answers remain in host memory.
 It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records the process `start` time from `/proc/self/stat` and report time `at`, and removes the file on disposal.
 It creates the directory with mode `0700` and the file with mode `0600`, then publishes by atomic rename.
@@ -347,7 +347,8 @@ The marker and mail ranking share one `mail.parked` RPC request on opening, refr
 
 In Recent, `ctrl+d` deletes and `<leader>r` renames the selected session.
 
-Both pickers route selections through [`hyprd open`](../../../cmds/cmd/hyprd/README.md#opencode): focus an existing TUI, navigate locally on the target workspace, or open in that workspace's agents Kitty.
+Open navigates same-workspace selections locally from its workspace mapping, without calling `hyprd open`.
+Other selections, including Recent, use [`hyprd open`](../../../cmds/cmd/hyprd/README.md#opencode): focus an existing TUI, navigate locally on the target workspace, or open in that workspace's agents Kitty.
 Without Kitty pane identity or a hyprd socket, selections navigate locally; other routing failures show an error toast.
 
 The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, and a home route carrying `location`.

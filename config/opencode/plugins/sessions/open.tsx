@@ -83,7 +83,7 @@ function seats(context: Context, mailed: Mailed, loading: Promise<void>, directo
       const known = desk();
       return known ? seat(known) : urgency(context, mailed);
     },
-    strong: (session: Session) => {
+    near: (session: Session) => {
       const known = desk();
       return !!known && seat(known)(session) === 0;
     },
@@ -191,7 +191,7 @@ function edits(picker: Picker, find: (sessionID: string) => Session | undefined)
 export async function open(picker: Picker, kind: Kind) {
   const { context, source } = picker;
   const release = picker.hold(kind);
-  const [pick, close, lookup] = createRoot((dispose) => {
+  const [pick, close, lookup, near] = createRoot((dispose) => {
     const route = context.ui.router.current();
     const current = route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
     const here = kind === "recent" ? spot(context, route) : undefined;
@@ -214,7 +214,7 @@ export async function open(picker: Picker, kind: Kind) {
       ? undefined
       : seats(context, mailed, loading, () => live().map((session) => session.location.directory));
     const rank = seated?.rank ?? (() => urgency(context, mailed));
-    const row = rows(mailed, seated?.strong);
+    const row = rows(mailed, seated?.near);
     const option = (category: string, session: Session): Option<string> =>
       Object.assign(row(context, session, session.id, session.id === current), footer(context, session), { category });
     const options = stable(() => {
@@ -246,11 +246,14 @@ export async function open(picker: Picker, kind: Kind) {
       actions: here ? edits(picker, find) : undefined,
     });
     context.ui.dialog.set({ size: "large" });
-    return [selected, dispose, find] as const;
+    return [selected, dispose, find, seated?.near] as const;
   });
   const sessionID = await pick;
-  const directory = sessionID ? lookup(sessionID)?.location.directory : undefined;
+  const session = sessionID ? lookup(sessionID) : undefined;
+  const stay = !!session && !!near?.(session);
   release();
   close();
-  if (sessionID) await show(context.ui, sessionID, directory);
+  if (!sessionID) return;
+  if (stay) return context.ui.router.navigate({ type: "session", sessionID });
+  await show(context.ui, sessionID, session?.location.directory);
 }

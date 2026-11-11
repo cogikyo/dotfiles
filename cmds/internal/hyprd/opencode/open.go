@@ -132,23 +132,32 @@ func occupy(pane kitty.ProfilePane) Occupant {
 	return Busy
 }
 
-func Open(ctx context.Context, pid int, tab Tab, id string, publish func(Navigate)) error {
+func Open(ctx context.Context, pid int, tab Tab, id string, publish func(Navigate)) (confirm func() error, err error) {
 	term := kitty.NewClient(pid)
+	paneID := tab.Pane.ID
 	_, tui := tuiProcess(tab.Pane)
 	switch {
 	case tab.Occupant == Shell:
-		return launch(ctx, term, tab.Pane.ID, id)
+		if err := term.SendText(ctx, paneID, launchCommand(id)); err != nil {
+			return nil, err
+		}
+		return func() error { return await(ctx, term, paneID, id, launchTimeout, nil) }, nil
 	case tab.Occupant == Shared:
-		return fmt.Errorf("tab %s has more than one window", tab.Name)
+		return nil, fmt.Errorf("tab %s has more than one window", tab.Name)
 	case tui:
-		event := Navigate{kitty.PaneKey{KittyPID: pid, PaneID: tab.Pane.ID}, id}
-		return await(ctx, term, tab.Pane.ID, id, switchTimeout, func() { publish(event) })
+		if err := context.Cause(ctx); err != nil {
+			return nil, err
+		}
+		event := Navigate{kitty.PaneKey{KittyPID: pid, PaneID: paneID}, id}
+		nudge := func() { publish(event) }
+		nudge()
+		return func() error { return await(ctx, term, paneID, id, switchTimeout, nudge) }, nil
 	case tab.Occupant == Starting:
-		return fmt.Errorf("tab %s has not reached a prompt", tab.Name)
+		return nil, fmt.Errorf("tab %s has not reached a prompt", tab.Name)
 	case tab.Occupant == Missing:
-		return fmt.Errorf("tab %s is missing", tab.Name)
+		return nil, fmt.Errorf("tab %s is missing", tab.Name)
 	}
-	return fmt.Errorf("tab %s runs %s", tab.Name, foreground(tab.Pane))
+	return nil, fmt.Errorf("tab %s runs %s", tab.Name, foreground(tab.Pane))
 }
 
 func launch(ctx context.Context, term *kitty.Client, paneID int, id string) error {

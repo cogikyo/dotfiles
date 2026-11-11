@@ -154,15 +154,17 @@ hyprd open <kitty-pid> <pane-id> <session-id> <dir>
 hyprd workspaces <kitty-pid> [<dir>...]  # caller's workspace, then each directory's workspace
 ```
 
-OpenCode's [Ctrl-O picker](../../../config/opencode/plugins/README.md#sessions) uses `open` to show a session on its project's workspace.
+OpenCode's [Ctrl-O picker](../../../config/opencode/plugins/README.md#sessions) routes sessions by project workspace.
 Both verbs require absolute directories.
 Directory lookup uses the longest configured session project prefix under `~`; `init: true` wins ties, then the lower workspace number.
 Unmatched directories use `open.workspace`, set to 4 in `hyprd.yaml`.
 `workspaces` returns space-separated workspace numbers in argument order, starting with the caller Kitty's workspace.
 
-If another TUI already shows the session, `open` focuses it and returns `focused`; if the caller is already on the target workspace, it returns `here` for the picker to navigate in place.
+The picker navigates same-workspace picks locally from its workspace mapping, without calling `hyprd open`.
+`open` focuses another TUI already showing the session (`focused`), or returns `here` if the caller is on the target workspace.
 Otherwise it reuses or launches that workspace's agents Kitty and fills free tabs in build, drive, plan, learn, scout order; when none is free, it replaces the displayed session in build.
-A zsh tab gets `c --session`; a TUI gets a `navigate` event, and hyprd waits for its report to confirm the switch.
+A zsh tab gets `c --session`; a TUI gets a `navigate` event.
+Hyprd focuses the target before waiting for its report to confirm the switch.
 Success returns `opened <workspace> <tab>`.
 
 Opens share a reservation with recycling, refreshes, and hyprd restarts.
