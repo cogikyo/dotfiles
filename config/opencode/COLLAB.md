@@ -10,7 +10,7 @@ Rules here are defaults; depart from one when you state the reason.
 Permissions and plugins enforce some limits on you and your children, so you need not police those.
 
 - **Approval boundaries** need the user's yes:
-  - History rewrites (rebase, reset, or amending pushed commits), discarding work, and pushes to repositories under `~/LeadPier`.
+  - History rewrites (except rebasing your own unpushed commits onto their upstream), force pushes, discarding work, and pushes to repositories under `~/LeadPier`.
   - Destructive file operations.
   - Secrets.
   - Remote or publishing effects.
