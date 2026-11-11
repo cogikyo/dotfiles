@@ -85,6 +85,10 @@ func main() {
 		cmdNotify()
 	case "opencode":
 		cmdOpenCode()
+	case "open":
+		cmdOpen()
+	case "workspaces":
+		cmdWorkspaces()
 	case "accent":
 		cmdAccent()
 	case "view":
@@ -317,6 +321,12 @@ func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
 func cmdView()    { sendCommand("view") }
 func cmdHealth()  { sendCommand(strings.TrimSpace("health " + strings.Join(os.Args[2:], " "))) }
+func cmdOpen()    { sendCommand(strings.TrimSpace("open " + strings.Join(os.Args[2:], " "))) }
+
+func cmdWorkspaces() {
+	pid := requireArg("usage: hyprd workspaces <kitty-pid> [<directory>...]")
+	sendCommand(strings.TrimSpace("workspaces " + pid + " " + strings.Join(os.Args[3:], "\t")))
+}
 
 func cmdOpenCode() {
 	if len(os.Args) < 3 {
@@ -507,6 +517,10 @@ OpenCode:
   hyprd opencode recycle        Recycle safe TUI panes and watch progress
   hyprd opencode status [job]   Poll the active or named refresh job
   hyprd opencode cancel [job]   Cancel a waiting or queued refresh job
+  hyprd open <kitty-pid> <kitty-window-id> <session-id> <directory>
+                                Show the session on its project's workspace agents kitty
+  hyprd workspaces <kitty-pid> [<directory>...]
+                                Print the kitty's workspace, then each directory's open workspace
 
 Browser:
   hyprd browser launch
@@ -519,7 +533,7 @@ Browser:
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|display|three-body|all)
-  hyprd subscribe [...]  Stream events (workspace split view)
+  hyprd subscribe [...]  Stream events (workspace split view navigate)
   hyprd view             Recompute which Kitty panes are in view
 
 Screenshot:

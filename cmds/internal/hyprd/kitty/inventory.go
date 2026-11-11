@@ -1,6 +1,7 @@
 package kitty
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -40,7 +41,7 @@ func Inventory() ([]LocatedPane, error) {
 	var errs []error
 	answered := 0
 	for _, pid := range pids {
-		windows, err := NewClient(pid).FullState()
+		windows, err := NewClient(pid).FullState(context.Background())
 		if err != nil {
 			errs = append(errs, fmt.Errorf("kitty %d: %w", pid, err))
 			continue

@@ -51,6 +51,7 @@ type Daemon struct {
 	pickerCtl *session.Picker
 	accentCtl *Accent
 	opencode  *opencodepkg.Controller
+	views     *kitty.Tracker
 	view      *View
 	health    *health.Monitor
 	restartCh chan struct{}
@@ -80,8 +81,8 @@ func New() (*Daemon, error) {
 	if err := d.lockCtl.Adopt(); err != nil {
 		return nil, fmt.Errorf("adopt lock: %w", err)
 	}
-	views := kitty.NewTracker(hyprClient)
-	d.opencode = opencodepkg.New(views, func(title, body string) {
+	d.views = kitty.NewTracker(hyprClient)
+	d.opencode = opencodepkg.New(d.views, func(title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load(), d.notifyWorkspace)
 		if err := notifier.Handle(notifypkg.NotifyRequest{
 			Source:  "send",
@@ -99,7 +100,7 @@ func New() (*Daemon, error) {
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
-	d.view = NewView(views, d.server.Subs)
+	d.view = NewView(d.views, d.server.Subs)
 
 	return d, nil
 }
@@ -382,6 +383,10 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "opencode":
 		return d.opencode.Handle(arg)
+	case "open":
+		return d.handleOpen(arg)
+	case "workspaces":
+		return d.handleWorkspaces(arg)
 	case "view":
 		d.view.Mark()
 		return "ok"

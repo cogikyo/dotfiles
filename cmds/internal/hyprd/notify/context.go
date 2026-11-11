@@ -2,6 +2,7 @@ package notify
 
 import (
 	"bytes"
+	"context"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	"dotfiles/cmds/internal/hyprd/wm"
@@ -39,7 +40,7 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 	}
 
 	if ctx.PID > 0 {
-		ctx.WorkspaceID = n.workspaceForPID(ctx.PID)
+		ctx.WorkspaceID = n.hypr.WorkspaceForPID(ctx.PID)
 	}
 	if ctx.PID > 0 && ctx.WindowID > 0 {
 		ctx.TabID, ctx.App = n.tabContext(ctx.PID, ctx.WindowID)
@@ -69,19 +70,6 @@ func usesKittyEnv(source string) bool {
 	}
 }
 
-func (n *Notifier) workspaceForPID(pid int) int {
-	clients, err := n.hypr.Clients()
-	if err != nil {
-		return 0
-	}
-	for _, c := range clients {
-		if c.Pid == pid {
-			return c.Workspace.ID
-		}
-	}
-	return 0
-}
-
 func (n *Notifier) activeWorkspaceID() int {
 	wsID, err := n.hypr.ActiveWorkspace()
 	if err != nil {
@@ -92,7 +80,7 @@ func (n *Notifier) activeWorkspaceID() int {
 
 func (n *Notifier) tabContext(pid, windowID int) (string, string) {
 	client := kitty.NewClient(pid)
-	windows, err := client.FullState()
+	windows, err := client.FullState(context.Background())
 	if err != nil {
 		return "", ""
 	}
@@ -146,7 +134,7 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 		}
 
 		client := kitty.NewClient(pid)
-		windows, err := client.FullState()
+		windows, err := client.FullState(context.Background())
 		if err != nil {
 			continue
 		}
@@ -174,7 +162,7 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 							PID:         pid,
 							WindowID:    pane.ID,
 							TabID:       pane.Env["KITTY_TAB_ID"],
-							WorkspaceID: n.workspaceForPID(pid),
+							WorkspaceID: n.hypr.WorkspaceForPID(pid),
 							App:         tabIcon(tab.Title),
 						}
 					}
@@ -254,24 +242,7 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 	}
 
 	if ctx.PID > 0 {
-		if clients, err := n.hypr.Clients(); err == nil {
-			for _, c := range clients {
-				if c.Pid == ctx.PID {
-					_ = wm.NewThreeBody(n.hypr, n.state).Show(c.Address, 0)
-					break
-				}
-			}
-		}
-	}
-
-	if ctx.PID > 0 {
-		kitty := kitty.NewClient(ctx.PID)
-		if ctx.TabID != "" {
-			_ = kitty.FocusTab(ctx.TabID)
-		}
-		if ctx.WindowID > 0 {
-			_ = kitty.FocusWindow(ctx.WindowID)
-		}
+		_ = wm.NewThreeBody(n.hypr, n.state).ShowPane(context.Background(), ctx.PID, ctx.WindowID, ctx.TabID)
 	}
 }
 

@@ -2,11 +2,50 @@ package kitty
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"dotfiles/cmds/internal/config"
 )
+
+type ProfilePane struct {
+	Pane
+	Windows int
+}
+
+func (w OSWindow) ProfilePanes(profile config.TabProfile) map[string]ProfilePane {
+	panes := make(map[string]ProfilePane)
+	for _, def := range profile.Tabs {
+		id := fmt.Sprintf("%d-%s%s", w.ID, profile.Prefix, def.Name)
+		for _, tab := range w.Tabs {
+			if i := slices.IndexFunc(tab.Windows, func(p Pane) bool { return p.Env["KITTY_TAB_ID"] == id }); i >= 0 {
+				panes[def.Name] = ProfilePane{tab.Windows[i], len(tab.Windows)}
+				break
+			}
+		}
+	}
+	return panes
+}
+
+func (c *Client) ProcessEnv() (map[string]string, error) {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/environ", c.pid))
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[string]string)
+	for entry := range strings.SplitSeq(string(data), "\x00") {
+		if key, value, ok := strings.Cut(entry, "="); ok {
+			env[key] = value
+		}
+	}
+	return env, nil
+}
+
+func (p Pane) Created() time.Time {
+	return time.Unix(0, p.CreatedAt)
+}
 
 // detectTabProfile infers the tab profile by matching KITTY_TAB_ID prefixes; falls back to "editor".
 func detectTabProfile(cfg *config.HyprConfig, win OSWindow) string {

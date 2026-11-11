@@ -1,4 +1,4 @@
-// Package opencode coordinates OpenCode managed-service refreshes and Kitty TUI recycling.
+// Package opencode coordinates service refreshes, recycling, and session opens.
 package opencode
 
 import (
@@ -80,6 +80,8 @@ type Controller struct {
 	api     *apiClient
 	views   *kitty.Tracker
 	closed  bool
+	holder  string
+	freed   *sync.Cond
 	notify  func(title, body string)
 }
 
@@ -91,6 +93,7 @@ func New(views *kitty.Tracker, notify func(title, body string)) *Controller {
 		views:  views,
 		notify: notify,
 	}
+	controller.freed = sync.NewCond(&controller.mu)
 	go controller.worker()
 	go controller.ticker()
 	return controller
@@ -319,12 +322,6 @@ func (c *Controller) run(job *job) result {
 		return result{state: "error", message: "snapshot failed: " + err.Error()}
 	}
 
-	if mode == ModeRecycle {
-		c.update(job, "running", "recycle", fmt.Sprintf("recycling %d TUI panes", len(snapshot.Panes)))
-		details = append(details, recycle(c.views, snapshot, minAge)...)
-		return result{state: "done", message: recycleSummary(snapshot), details: details}
-	}
-
 	skip := make(map[kitty.PaneKey]string)
 	if c.mode(job) == ModeQueue {
 		var gateResult result
@@ -334,6 +331,18 @@ func (c *Controller) run(job *job) result {
 			return gateResult
 		}
 		details = append(details, gateResult.details...)
+	}
+
+	release, err := c.Reserve(context.Background(), "opencode refresh job "+job.status.ID)
+	if err != nil {
+		return result{state: "error", message: err.Error(), details: details}
+	}
+	defer release()
+
+	if mode == ModeRecycle {
+		c.update(job, "running", "recycle", fmt.Sprintf("recycling %d TUI panes", len(snapshot.Panes)))
+		details = append(details, recycle(c.views, snapshot, minAge)...)
+		return result{state: "done", message: recycleSummary(snapshot), details: details}
 	}
 
 	c.update(job, "running", "snapshot", "recapturing OpenCode TUI panes")
@@ -479,8 +488,8 @@ func (c *Controller) RebuildBlocked() string {
 	return c.blockedLocked()
 }
 
-// BeginRestart reserves an idle controller against manual and auto jobs.
-// On success, the rebuild caller owns the reservation until exec or CancelRestart.
+// BeginRestart reserves the controller unless a job or open is in flight.
+// The caller holds the reservation until exec or CancelRestart.
 func (c *Controller) BeginRestart() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -502,6 +511,9 @@ func (c *Controller) blockedLocked() string {
 	if c.closed {
 		return "hyprd restart already in progress"
 	}
+	if c.holder != "" {
+		return c.holder + " in flight"
+	}
 	job := c.current
 	if job == nil {
 		job = c.pending
@@ -510,6 +522,33 @@ func (c *Controller) blockedLocked() string {
 		return ""
 	}
 	return "opencode refresh job " + job.status.ID + " in flight"
+}
+
+func (c *Controller) Reserve(ctx context.Context, holder string) (func(), error) {
+	stop := context.AfterFunc(ctx, func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.freed.Broadcast()
+	})
+	defer stop()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for c.holder != "" && !c.closed && ctx.Err() == nil {
+		c.freed.Wait()
+	}
+	if err := context.Cause(ctx); err != nil {
+		return nil, err
+	}
+	if c.closed {
+		return nil, errors.New("hyprd is restarting")
+	}
+	c.holder = holder
+	return func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.holder = ""
+		c.freed.Broadcast()
+	}, nil
 }
 
 func (c *Controller) beginStop(job *job) bool {

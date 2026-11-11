@@ -2,6 +2,7 @@
 package kitty
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -50,6 +51,9 @@ type Pane struct {
 	Env                 map[string]string `json:"env"`
 	UserVars            map[string]string `json:"user_vars"`
 	ForegroundProcesses []Process         `json:"foreground_processes"`
+	AtPrompt            bool              `json:"at_prompt"`
+	LastCommand         string            `json:"last_reported_cmdline"`
+	CreatedAt           int64             `json:"created_at"`
 }
 
 type Process struct {
@@ -58,8 +62,8 @@ type Process struct {
 	PID     int      `json:"pid"`
 }
 
-func (k *Client) FullState() ([]OSWindow, error) {
-	out, err := exec.Command("kitty", "@", "--to", k.socketPath, "ls").CombinedOutput()
+func (k *Client) FullState(ctx context.Context) ([]OSWindow, error) {
+	out, err := exec.CommandContext(ctx, "kitty", "@", "--to", k.socketPath, "ls").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("kitty ls: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -71,8 +75,8 @@ func (k *Client) FullState() ([]OSWindow, error) {
 	return windows, nil
 }
 
-func (k *Client) FocusTab(tabID string) error {
-	return exec.Command("kitty", "@", "--to", k.socketPath,
+func (k *Client) FocusTab(ctx context.Context, tabID string) error {
+	return exec.CommandContext(ctx, "kitty", "@", "--to", k.socketPath,
 		"focus-tab", "--match", "env:KITTY_TAB_ID="+tabID).Run()
 }
 
@@ -81,14 +85,14 @@ func (k *Client) GotoTab(index int) error {
 		"action", "goto_tab", fmt.Sprintf("%d", index)).Run()
 }
 
-func (k *Client) FocusWindow(id int) error {
-	return exec.Command("kitty", "@", "--to", k.socketPath,
+func (k *Client) FocusWindow(ctx context.Context, id int) error {
+	return exec.CommandContext(ctx, "kitty", "@", "--to", k.socketPath,
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
 // SendText writes to one pane without changing focus.
-func (k *Client) SendText(id int, text string) error {
-	cmd := exec.Command("kitty", "@", "--to", k.socketPath,
+func (k *Client) SendText(ctx context.Context, id int, text string) error {
+	cmd := exec.CommandContext(ctx, "kitty", "@", "--to", k.socketPath,
 		"send-text", "--match", fmt.Sprintf("id:%d", id), "--stdin")
 	cmd.Stdin = strings.NewReader(text)
 	out, err := cmd.CombinedOutput()
@@ -99,13 +103,13 @@ func (k *Client) SendText(id int, text string) error {
 }
 
 // Pane returns the current state of one pane.
-func (k *Client) Pane(id int) (Pane, bool, error) {
-	located, found, err := k.Locate(id)
+func (k *Client) Pane(ctx context.Context, id int) (Pane, bool, error) {
+	located, found, err := k.Locate(ctx, id)
 	return located.Pane, found, err
 }
 
-func (k *Client) Locate(id int) (LocatedPane, bool, error) {
-	windows, err := k.FullState()
+func (k *Client) Locate(ctx context.Context, id int) (LocatedPane, bool, error) {
+	windows, err := k.FullState(ctx)
 	if err != nil {
 		return LocatedPane{}, false, err
 	}
@@ -119,7 +123,7 @@ func (k *Client) Locate(id int) (LocatedPane, bool, error) {
 
 // ForegroundProcesses inspects one pane's foreground process group.
 func (k *Client) ForegroundProcesses(id int) ([]Process, error) {
-	pane, found, err := k.Pane(id)
+	pane, found, err := k.Pane(context.Background(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -130,13 +134,13 @@ func (k *Client) ForegroundProcesses(id int) ([]Process, error) {
 }
 
 func (k *Client) launch(args ...string) error {
-	_, err := k.launchID(args...)
+	_, err := k.launchID(context.Background(), args...)
 	return err
 }
 
-func (k *Client) launchID(args ...string) (int, error) {
+func (k *Client) launchID(ctx context.Context, args ...string) (int, error) {
 	cmdArgs := append([]string{"@", "--to", k.socketPath, "launch"}, args...)
-	out, err := exec.Command("kitty", cmdArgs...).CombinedOutput()
+	out, err := exec.CommandContext(ctx, "kitty", cmdArgs...).CombinedOutput()
 	if err != nil {
 		return 0, fmt.Errorf("kitty launch: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -150,11 +154,11 @@ func (k *Client) launchID(args ...string) (int, error) {
 func (k *Client) LaunchOverlay(windowID int, cwd string, argv ...string) (int, error) {
 	// Without --match, kitty ignores --next-to for a window outside the active tab.
 	args := []string{"--type=overlay", "--match=window_id:" + strconv.Itoa(windowID), "--next-to=id:" + strconv.Itoa(windowID), "--cwd=" + cwd}
-	return k.launchID(append(args, argv...)...)
+	return k.launchID(context.Background(), append(args, argv...)...)
 }
 
-func (k *Client) gotoLayout(tabID, layout string) error {
-	return exec.Command("kitty", "@", "--to", k.socketPath,
+func (k *Client) gotoLayout(ctx context.Context, tabID, layout string) error {
+	return exec.CommandContext(ctx, "kitty", "@", "--to", k.socketPath,
 		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()
 }
 
@@ -228,7 +232,7 @@ func (k *Client) moveTabBackward() error {
 
 // tabIndex returns the position of tabID in the first OS window, or -1 if absent.
 func (k *Client) tabIndex(tabID string) (int, error) {
-	windows, err := k.FullState()
+	windows, err := k.FullState(context.Background())
 	if err != nil {
 		return -1, err
 	}

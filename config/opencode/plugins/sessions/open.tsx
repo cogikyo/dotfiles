@@ -1,5 +1,6 @@
 import path from "node:path";
-import { createMemo, createRoot } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, onCleanup } from "solid-js";
+import { desks, show, type Desks } from "../hyprd/open.ts";
 import { pressure } from "../statusline/palette.ts";
 import {
   inbox,
@@ -10,16 +11,84 @@ import {
   running,
   stable,
   timeAgo,
+  urgency,
   watch,
   type Kind,
+  type Mailed,
   type Option,
   type Picker,
+  type Rank,
 } from "./rows.tsx";
 import { message, sessions, type Context, type Session } from "./source.ts";
 import { tag, title } from "./tags.ts";
 
 const MINUTE = 60_000;
 const ages = [15, 30, 60, 120, 240, 1440, 2880, 4320].map((minutes) => minutes * MINUTE);
+
+let last: Desks | undefined;
+
+function seat(desk: Desks): Rank {
+  return (session) => {
+    const ws = desk.of.get(session.location.directory) ?? 0;
+    if (ws <= 0) return Infinity;
+    return ws === desk.here ? 0 : ws;
+  };
+}
+
+function seats(context: Context, mailed: Mailed, loading: Promise<void>, directories: () => string[]) {
+  const [desk, setDesk] = createSignal(last);
+  const [ready, setReady] = createSignal(false);
+  void loading.finally(() => setReady(true));
+  let done = false;
+  onCleanup(() => {
+    done = true;
+  });
+  const asked = new Set<string>();
+  let warned = false;
+  const warn = (reason: string) => {
+    if (warned) return;
+    warned = true;
+    context.ui.toast.show({ message: `Could not sort sessions by workspace: ${reason}`, variant: "warning" });
+  };
+  const forget = () => {
+    done = true;
+    last = undefined;
+    setDesk(undefined);
+  };
+  const ask = async (fresh: string[]) => {
+    try {
+      const found = await desks(fresh);
+      if (done) return;
+      if (!found) return forget();
+      setDesk((known) => {
+        last = { here: found.here, of: new Map([...(known?.of ?? []), ...found.of]) };
+        return last;
+      });
+      if (found.oversized.length) warn(`directory too long for hyprd: ${found.oversized[0]}`);
+    } catch (error) {
+      if (done) return;
+      forget();
+      warn(message(error));
+    }
+  };
+  createEffect(() => {
+    if (!ready() || done) return;
+    const fresh = [...new Set(directories())].filter((directory) => !asked.has(directory));
+    if (!fresh.length) return;
+    fresh.forEach((directory) => asked.add(directory));
+    void ask(fresh);
+  });
+  return {
+    rank: (): Rank => {
+      const known = desk();
+      return known ? seat(known) : urgency(context, mailed);
+    },
+    strong: (session: Session) => {
+      const known = desk();
+      return !!known && seat(known)(session) === 0;
+    },
+  };
+}
 
 function place(context: Context, session: Session) {
   const project = context.data.project.get(session.projectID);
@@ -98,10 +167,31 @@ async function rename(picker: Picker, session: Session) {
   }
 }
 
+function edits(picker: Picker, find: (sessionID: string) => Session | undefined) {
+  return [
+    {
+      bind: "ctrl+d",
+      title: "delete",
+      onTrigger: (sessionID: string) => {
+        const session = find(sessionID);
+        if (session) void remove(picker, session);
+      },
+    },
+    {
+      bind: "<leader>r",
+      title: "rename",
+      onTrigger: (sessionID: string) => {
+        const session = find(sessionID);
+        if (session) void rename(picker, session);
+      },
+    },
+  ];
+}
+
 export async function open(picker: Picker, kind: Kind) {
   const { context, source } = picker;
   const release = picker.hold(kind);
-  const [pick, close] = createRoot((dispose) => {
+  const [pick, close, lookup] = createRoot((dispose) => {
     const route = context.ui.router.current();
     const current = route.type === "session" ? context.data.session.root(route.sessionID) : undefined;
     const here = kind === "recent" ? spot(context, route) : undefined;
@@ -116,20 +206,25 @@ export async function open(picker: Picker, kind: Kind) {
     const find = (sessionID: string) => all().find((session) => session.id === sessionID);
     watch(context, source.loaded);
     const mailed = inbox(context);
-    const row = rows(mailed);
-    void source.load();
+    const loading = source.load();
     void context.data.project.sync().catch(() => undefined);
+    const list = createMemo(() => all().filter(scoped));
+    const live = createMemo(() => list().filter((session) => !tag(session.title)?.state));
+    const seated = here
+      ? undefined
+      : seats(context, mailed, loading, () => live().map((session) => session.location.directory));
+    const rank = seated?.rank ?? (() => urgency(context, mailed));
+    const row = rows(mailed, seated?.strong);
     const option = (category: string, session: Session): Option<string> =>
       Object.assign(row(context, session, session.id, session.id === current), footer(context, session), { category });
     const options = stable(() => {
-      const list = all().filter(scoped);
-      const closed = list.filter((session) => tag(session.title)?.state);
-      const live = list.filter((session) => !closed.includes(session));
-      const busy = live.filter((session) => running(context, session.id));
-      const idle = live.filter((session) => !busy.includes(session));
+      const closed = list().filter((session) => tag(session.title)?.state);
+      const busy = live().filter((session) => running(context, session.id));
+      const idle = live().filter((session) => !busy.includes(session));
+      const by = rank();
       return [
-        ...order(context, busy, mailed).map((session) => option("Running", session)),
-        ...order(context, idle, mailed).map((session) =>
+        ...order(busy, by).map((session) => option("Running", session)),
+        ...order(idle, by).map((session) =>
           Object.assign(option("Open", session), { footerColor: pressure(Date.now() - session.time.updated, ages) }),
         ),
         ...closed.toSorted((a, b) => b.time.updated - a.time.updated).map((session) => option("Closed", session)),
@@ -148,32 +243,14 @@ export async function open(picker: Picker, kind: Kind) {
       },
       // A defined current preserves selection by value as options load, even without a matching row.
       current: current ?? "",
-      actions: here
-        ? [
-            {
-              bind: "ctrl+d",
-              title: "delete",
-              onTrigger: (sessionID: string) => {
-                const session = find(sessionID);
-                if (session) void remove(picker, session);
-              },
-            },
-            {
-              bind: "<leader>r",
-              title: "rename",
-              onTrigger: (sessionID: string) => {
-                const session = find(sessionID);
-                if (session) void rename(picker, session);
-              },
-            },
-          ]
-        : undefined,
+      actions: here ? edits(picker, find) : undefined,
     });
     context.ui.dialog.set({ size: "large" });
-    return [selected, dispose] as const;
+    return [selected, dispose, find] as const;
   });
   const sessionID = await pick;
+  const directory = sessionID ? lookup(sessionID)?.location.directory : undefined;
   release();
   close();
-  if (sessionID) context.ui.router.navigate({ type: "session", sessionID });
+  if (sessionID) await show(context.ui, sessionID, directory);
 }

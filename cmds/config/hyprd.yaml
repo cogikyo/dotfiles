@@ -144,6 +144,9 @@ sessions:
         - editor
         - agents
 
+open:
+  workspace: 4
+
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ kitty tab profiles                                                            │

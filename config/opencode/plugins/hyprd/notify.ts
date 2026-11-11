@@ -15,7 +15,7 @@ type Asks = {
   forms: Awaited<ReturnType<Client["session"]["form"]["list"]>>;
 };
 
-const SOCKET = "/tmp/hyprd.sock";
+export const SOCKET = "/tmp/hyprd.sock";
 const TICK_MS = 60_000;
 const ASK_MS = 30 * 60_000;
 const IDLE_MS = 60 * 60_000;
@@ -38,14 +38,14 @@ const hyprland =
     ? `${process.env.XDG_RUNTIME_DIR}/hypr/${process.env.HYPRLAND_INSTANCE_SIGNATURE}/.socket.sock`
     : undefined;
 
-function request(path: string, command: string) {
-  return new Promise<string>((resolve) => {
+export function request(path: string, command: string, ms = REQUEST_MS) {
+  return new Promise<string>((resolve, reject) => {
     let body = "";
     const socket = createConnection(path);
     socket.setEncoding("utf8");
-    const timer = setTimeout(() => socket.destroy(), REQUEST_MS);
+    const timer = setTimeout(() => socket.destroy(), ms);
     socket.on("data", (chunk: string) => (body += chunk));
-    socket.on("error", () => socket.destroy());
+    socket.on("error", reject);
     socket.on("close", () => {
       clearTimeout(timer);
       resolve(body);
@@ -95,12 +95,12 @@ function send(event: Kind, fields: { message?: string; last_assistant_message?: 
     last_assistant_message: last && line(last),
     ...pane,
   };
-  void request(SOCKET, `notify ${JSON.stringify(body)}`);
+  void request(SOCKET, `notify ${JSON.stringify(body)}`).catch(() => undefined);
 }
 
 async function locked() {
   if (!hyprland) return false;
-  const body = await request(hyprland, "j/locked");
+  const body = await request(hyprland, "j/locked").catch(() => "");
   let state: unknown;
   try {
     state = JSON.parse(body);

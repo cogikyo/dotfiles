@@ -1,6 +1,7 @@
 package kitty
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,7 +52,7 @@ func (t *Editor) Edit(filePath string) (string, error) {
 	if err := t.hypr.FocusWindow(win.Address); err != nil {
 		return "", fmt.Errorf("focus editor: %w", err)
 	}
-	if err := client.FocusWindow(pane.ID); err != nil {
+	if err := client.FocusWindow(context.Background(), pane.ID); err != nil {
 		return "", fmt.Errorf("focus nvim pane: %w", err)
 	}
 	if err := openInNvim(pane, abs); err != nil {
@@ -122,7 +123,7 @@ func (t *Editor) findEditor(wsID int) (*hypr.Window, error) {
 
 func nvimInWindow(win *hypr.Window) (*Client, Pane, bool) {
 	client := NewClient(win.Pid)
-	state, err := client.FullState()
+	state, err := client.FullState(context.Background())
 	if err != nil {
 		return nil, Pane{}, false
 	}

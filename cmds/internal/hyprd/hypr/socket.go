@@ -141,6 +141,24 @@ func (c *Client) Clients() ([]Window, error) {
 	return windows, nil
 }
 
+func (c *Client) WorkspaceForPID(pid int) int {
+	ws, _ := c.LookupWorkspace(pid)
+	return ws
+}
+
+func (c *Client) LookupWorkspace(pid int) (int, error) {
+	clients, err := c.Clients()
+	if err != nil {
+		return 0, err
+	}
+	for _, w := range clients {
+		if w.Pid == pid {
+			return w.Workspace.ID, nil
+		}
+	}
+	return 0, nil
+}
+
 // ActiveWindow returns the focused window, or nil when Hyprland has no active window.
 func (c *Client) ActiveWindow() (*Window, error) {
 	data, err := c.Request("j/activewindow")

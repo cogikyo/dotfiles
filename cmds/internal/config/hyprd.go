@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ type HyprConfig struct {
 	Displays   DisplayProfiles       `yaml:"displays"`
 	Tabs       map[string]TabProfile `yaml:"tabs"`
 	Sessions   SessionsConfig        `yaml:"sessions"`
+	Open       OpenConfig            `yaml:"open"`
 }
 
 // VPNConfig lists NetworkManager VPN profiles that can be loaded from secrets.
@@ -382,6 +384,34 @@ func (s SessionsConfig) DefaultSession(ws int) string {
 		}
 	}
 	return ""
+}
+
+func (s SessionsConfig) Workspace(dir, home string) int {
+	var match Session
+	longest := 0
+	for _, session := range s {
+		if session.Project == "" {
+			continue
+		}
+		root := filepath.Join(home, session.Project)
+		if dir != root && !strings.HasPrefix(dir, root+string(filepath.Separator)) {
+			continue
+		}
+		switch {
+		case len(root) < longest:
+			continue
+		case len(root) == longest && match.Init && !session.Init:
+			continue
+		case len(root) == longest && match.Init == session.Init && match.Workspace <= session.Workspace:
+			continue
+		}
+		match, longest = session, len(root)
+	}
+	return match.Workspace
+}
+
+type OpenConfig struct {
+	Workspace int `yaml:"workspace"`
 }
 
 // UnmarshalYAML decodes workspace-grouped session YAML into the flat runtime map.

@@ -60,7 +60,7 @@ hyprd rebuild            # rebuild binary and hot-restart (preserves state)
 
 `hyprd rebuild` builds from `~/dotfiles/cmds` or `$DOTFILES/cmds`, installs `~/.local/bin/hyprd`, saves runtime state, and restarts in place.
 It uses `internal/gobuild` settings shared with `dctl update cmd` and ISO builds: `-trimpath -buildvcs=false`, `CGO_ENABLED=0`, empty `GOFLAGS`, and `GOWORK=off`.
-It refuses during a full lock or an active OpenCode refresh job.
+It refuses during a full lock, an active OpenCode refresh job, or a session open.
 Use a scratch build for build-only checks; `hyprd rebuild` changes the running daemon.
 
 ### Window management
@@ -150,7 +150,23 @@ hyprd opencode now            # bypass gates, refresh immediately, watch progres
 hyprd opencode recycle        # recycle eligible TUIs without stopping the service
 hyprd opencode status [job]   # show active or named job as JSON
 hyprd opencode cancel [job]   # cancel a waiting or queued job
+hyprd open <kitty-pid> <pane-id> <session-id> <dir>
+hyprd workspaces <kitty-pid> [<dir>...]  # caller's workspace, then each directory's workspace
 ```
+
+OpenCode's [Ctrl-O picker](../../../config/opencode/plugins/README.md#sessions) uses `open` to show a session on its project's workspace.
+Both verbs require absolute directories.
+Directory lookup uses the longest configured session project prefix under `~`; `init: true` wins ties, then the lower workspace number.
+Unmatched directories use `open.workspace`, set to 4 in `hyprd.yaml`.
+`workspaces` returns space-separated workspace numbers in argument order, starting with the caller Kitty's workspace.
+
+If another TUI already shows the session, `open` focuses it and returns `focused`; if the caller is already on the target workspace, it returns `here` for the picker to navigate in place.
+Otherwise it reuses or launches that workspace's agents Kitty and fills free tabs in build, drive, plan, learn, scout order; when none is free, it replaces the displayed session in build.
+A zsh tab gets `c --session`; a TUI gets a `navigate` event, and hyprd waits for its report to confirm the switch.
+Success returns `opened <workspace> <tab>`.
+
+Opens share a reservation with recycling, refreshes, and hyprd restarts.
+The daemon has a 50-second deadline against the plugin's 60 seconds, but a stalled Kitty or Hyprland call can still focus a window after the deadline.
 
 Every 10 minutes, hyprd silently attempts to recycle OpenCode TUIs at least 4 hours old, unless a refresh job or hyprd restart is in progress.
 It closes each eligible TUI and sends ` c --session <id>` to its pane's login zsh, or ` c` for Home when no valid session is selected.
@@ -355,13 +371,14 @@ Used by eww widgets and OpenCode for real-time state.
 
 ```bash
 hyprd query [topic]      # get state as JSON (workspace|hidden|split|display|three-body|all)
-hyprd subscribe [...]    # stream events (workspace split view)
+hyprd subscribe [...]    # stream events (workspace split view navigate)
 hyprd view               # recompute which Kitty panes are in view
 ```
 
 `view` reports panes in active Kitty tabs on visible workspaces, regardless of focus.
 Panes whose view cannot be mapped are omitted.
 Kitty's tab bar sends `view` on tab switches because Hyprland emits no event for them.
+`navigate` targets a TUI with `kitty_pid`, `kitty_pane_id`, and `session_id`; it is a request, not replayed state.
 
 `hyprd query display` returns the widest non-mirrored monitor's `monitor` name, `description`, and `ppi`, the resolved `profile` with its eww `layout` and `font_size`, and `hidden` (share mode or full lock is active).
 Copy `description` into a profile's `match` to pin a screen to it.
@@ -398,5 +415,6 @@ eww integration:
 - `displays` — [display profiles](#display-profiles)
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
 - `sessions` — layouts grouped by workspace and keyed by name; `init: true` launches on boot in workspace order (at most one per workspace); `after: <session>` opens right after that init session finishes opening
+- `open.workspace` — fallback workspace for session directories outside configured projects
 
 The window roles referenced by session bodies come from the compiled `ThreeBody` map in `cmds/internal/config/hyprd.go`.

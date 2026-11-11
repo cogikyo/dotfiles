@@ -267,7 +267,11 @@ If that lookup breaks, one warning toast appears; retitle keybinds still work.
 
 ## Hyprd
 
-`hyprd/tui.ts` loads the notification, pane-context, and focus plugins together.
+`hyprd/tui.ts` loads the notification, pane-context, focus, and session-open plugins together.
+`hyprd/events.ts` shares one `hyprd subscribe workspace view navigate` child per TUI across plugin loads and hot-reload generations.
+It replays the latest workspace and view state to new listeners; navigation requests are not replayed.
+Browser workspace controls, statusline animations, and `hyprd/open.ts` consume this bus.
+
 `hyprd/notify.ts` sends permission, question, complete, idle, error, lane, and viewed events to `/tmp/hyprd.sock` using the TUI's Kitty pane identity.
 It needs `KITTY_PID` and `KITTY_WINDOW_ID` and follows child requests to their root.
 Except for mail, desktop notices are limited to open sessions outside the focused view.
@@ -291,7 +295,7 @@ Clocks are dropped when their roots are no longer open.
 Pending input covers current permissions and forms plus unresolved forms seen before navigation, whose partial answers remain in host memory.
 It requires `XDG_RUNTIME_DIR` and `KITTY_WINDOW_ID`, records the process `start` time from `/proc/self/stat` and report time `at`, and removes the file on disposal.
 It creates the directory with mode `0700` and the file with mode `0600`, then publishes by atomic rename.
-Hyprd matches the record to a discovered TUI pane and checks the process start time before using it for [recycling gates and relaunch](../../../cmds/cmd/hyprd/README.md#opencode).
+Hyprd matches the record to a discovered TUI pane and checks the process start time before using it for [recycling gates, relaunch, and session-open confirmation](../../../cmds/cmd/hyprd/README.md#opencode).
 
 `hyprd/focus.ts` reports renderer focus and blur through `hyprd/rpc.ts`, plus root-session changes and a 60-second heartbeat while focused.
 It reports `focused: false` on disposal.
@@ -333,7 +337,8 @@ The plugin omits native pins, quick-switch hints, and direct opening by pasted `
 Open lists only top-level sessions across all projects, excluding closed sessions even from search results.
 Recent lists only the current directory's sessions, including closed ones.
 Running lists sessions mid-turn or with a child mid-turn; Open follows with the rest.
-Both pickers put sessions needing permission or question input and non-`REFUSALS` sessions with parked mail first within Running and Open, newest first within each rank.
+With hyprd, Open sorts each group by the caller's workspace first, then workspace number, then newest update; rows on the caller's workspace are bold.
+Recent and Open without hyprd put sessions needing permission or question input and non-`REFUSALS` sessions with parked mail first within Running and Open, newest first within each rank.
 The Open group's footers use the statusline's context-pressure colors by time since last update, from blue under 15 minutes to pink at three days or more.
 Recent adds a Closed group last, newest first.
 Closed titles are muted, with `RESEARCH` titles in a faint scout blue, unless selected or current; rows retain pending-input and running markers.
@@ -341,6 +346,9 @@ In both pickers, an envelope after a session title marks parked mail for open, n
 The marker and mail ranking share one `mail.parked` RPC request on opening, refreshed on inbox events and `server.connected`, instead of querying each session's inbox.
 
 In Recent, `ctrl+d` deletes and `<leader>r` renames the selected session.
+
+Both pickers route selections through [`hyprd open`](../../../cmds/cmd/hyprd/README.md#opencode): focus an existing TUI, navigate locally on the target workspace, or open in that workspace's agents Kitty.
+Without Kitty pane identity or a hyprd socket, selections navigate locally; other routing failures show an error toast.
 
 The plugin relies on host behavior beyond the published types: extra option fields such as `titleView` and `gutter`, selection preservation with a defined `current`, the `modal` mode after dialog replacement, and a home route carrying `location`.
 If the host stops forwarding the extra row fields, rows degrade to plain titles without muting or status markers.
@@ -417,7 +425,7 @@ It replaces the built-in sidebar footer, also disabled, with the OpenCode versio
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
 The border pulse, fire fade, and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
-`statusline/view.ts` shares one `hyprd subscribe view` process per TUI to pause these animations in out-of-view panes; unknown view state leaves them running.
+`statusline/view.ts` uses the shared [hyprd bus](#hyprd) to pause these animations in out-of-view panes; unknown view state leaves them running.
 
 `statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
 In queue mode, Enter dispatches `prompt.queue` only while the session runs, the prompt is in normal mode, and the prompt has text.

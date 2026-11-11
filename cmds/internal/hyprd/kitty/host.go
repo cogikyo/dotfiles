@@ -1,6 +1,7 @@
 package kitty
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -141,7 +142,7 @@ func (t *Manager) host(args []string) (result string, err error) {
 		return "", fmt.Errorf("focus replacement tab: %w", err)
 	}
 	if focus.focusedPane >= 0 && focus.focusedPane < len(focus.stagePanes) {
-		if err = kitty.FocusWindow(focus.stagePanes[focus.focusedPane]); err != nil {
+		if err = kitty.FocusWindow(context.Background(), focus.stagePanes[focus.focusedPane]); err != nil {
 			return "", fmt.Errorf("focus replacement pane: %w", err)
 		}
 	}
@@ -213,7 +214,7 @@ func (t *Manager) resolveHostTarget(origin hostOrigin) (hostTarget, error) {
 
 	// The socket is per Kitty process, so any window found here belongs to that process.
 	kitty := NewClient(origin.pid)
-	windows, err := kitty.FullState()
+	windows, err := kitty.FullState(context.Background())
 	if err != nil {
 		return hostTarget{}, fmt.Errorf("kitty state for pid %d: %w", origin.pid, err)
 	}
@@ -1167,12 +1168,12 @@ func stageHostTabs(kitty *Client, plan *hostPlan) error {
 		args := []string{"--type=tab", "--keep-focus", "--match", fmt.Sprintf("window_id:%d", anchor), "--source-window", fmt.Sprintf("id:%d", anchor), "--copy-env", "--env", "KITTY_TAB_ID=" + runtimeID, "--env", "HYPRD_LAUNCH_COMMAND=", "--env", "HYPRD_HOST_TXN=", "--env", "HYPRD_TAB_HOST=", "--tab-title=" + tab.source.Title}
 		args = append(args, paneMetadataArgs(plan.target, tab.logicalCWDs[0], 0, plan.txn)...)
 		args = append(args, hostLaunchCommand(plan.controller, plan.target, tab.definition.Command, tab.targetCWDs[0])...)
-		paneID, err := kitty.launchID(args...)
+		paneID, err := kitty.launchID(context.Background(), args...)
 		if err != nil {
 			return fmt.Errorf("stage tab %s: %w", tab.name, err)
 		}
 		tab.stagePanes = append(tab.stagePanes, paneID)
-		state, err := kitty.FullState()
+		state, err := kitty.FullState(context.Background())
 		if err != nil {
 			return err
 		}
@@ -1197,7 +1198,7 @@ func stageHostTabs(kitty *Client, plan *hostPlan) error {
 				paneArgs = append(paneArgs, "--bias", fmt.Sprint(pane.Bias))
 			}
 			paneArgs = append(paneArgs, hostLaunchCommand(plan.controller, plan.target, pane.Command, tab.targetCWDs[profilePane])...)
-			paneID, err := kitty.launchID(paneArgs...)
+			paneID, err := kitty.launchID(context.Background(), paneArgs...)
 			if err != nil {
 				return fmt.Errorf("stage pane %d for %s: %w", paneIndex+1, tab.name, err)
 			}
@@ -1251,7 +1252,7 @@ func hostLaunchCommand(controller, host, command, cwd string) []string {
 func verifyHostTabs(kitty *Client, plan *hostPlan) error {
 	deadline := time.Now().Add(4 * time.Second)
 	for {
-		windows, err := kitty.FullState()
+		windows, err := kitty.FullState(context.Background())
 		if err != nil {
 			return err
 		}
@@ -1316,7 +1317,7 @@ func paneRunsOnHost(pane Pane, host, controller string) bool {
 }
 
 func rollbackHostTabs(kitty *Client, plan *hostPlan) error {
-	windows, err := kitty.FullState()
+	windows, err := kitty.FullState(context.Background())
 	if err != nil {
 		return err
 	}

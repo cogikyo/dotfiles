@@ -55,7 +55,7 @@ export function attention(context: Context, sessionID: string): Attention {
   return false;
 }
 
-type Mailed = (sessionID: string) => boolean;
+export type Mailed = (sessionID: string) => boolean;
 
 const urgent = (context: Context, session: Session, mailed?: Mailed) =>
   !!attention(context, session.id) || (mailable(session) && !!mailed?.(session.id));
@@ -79,9 +79,16 @@ export function inbox(context: Context): Mailed {
 export const running = (context: Context, sessionID: string) =>
   members(context, sessionID).some((id) => context.data.session.status(id) === "running");
 
-export function order(context: Context, list: Session[], mailed?: Mailed) {
-  const rank = new Map(list.map((session) => [session.id, urgent(context, session, mailed) ? 0 : 1]));
-  return list.toSorted((a, b) => (rank.get(a.id) ?? 1) - (rank.get(b.id) ?? 1) || b.time.updated - a.time.updated);
+export type Rank = (session: Session) => number;
+
+export const urgency =
+  (context: Context, mailed?: Mailed): Rank =>
+  (session) =>
+    urgent(context, session, mailed) ? 0 : 1;
+
+export function order(list: Session[], rank: Rank) {
+  const ranks = new Map(list.map((session) => [session.id, rank(session)]));
+  return list.toSorted((a, b) => ranks.get(a.id)! - ranks.get(b.id)! || b.time.updated - a.time.updated);
 }
 
 export function watch(context: Context, known: () => Session[]) {
@@ -130,7 +137,7 @@ function Mark(props: { context: Context; sessionID: string; current: boolean; co
   );
 }
 
-export const rows = (mailed?: Mailed) =>
+export const rows = (mailed?: Mailed, strong?: (session: Session) => boolean) =>
   function row<Value>(context: Context, session: Session, value: Value, current: boolean): Option<Value> {
     const text = title(session);
     const [plain, setPlain] = createSignal(true);
@@ -149,7 +156,7 @@ export const rows = (mailed?: Mailed) =>
       value,
       gutter,
       titleView: () => (
-        <>
+        <span style={{ attributes: strong?.(session) ? TextAttributes.BOLD : TextAttributes.NONE }}>
           {plain() && state ? <span style={{ fg: faded(context, state) }}>{fit()}</span> : fit()}
           {mail() ? (
             plain() ? (
@@ -160,7 +167,7 @@ export const rows = (mailed?: Mailed) =>
           ) : (
             ""
           )}
-        </>
+        </span>
       ),
     };
   };

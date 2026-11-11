@@ -88,23 +88,12 @@ func inspect(located kitty.LocatedPane, seen map[kitty.PaneKey]kitty.Seen) (Pane
 		warnings = append(warnings, fmt.Sprintf("TUI %d report unavailable: %v", tui.PID, err))
 	}
 
-	sessionID := option(tui.Cmdline, "--session", "-s")
-	if report != nil {
-		sessionID = ""
-		if report.Session != nil {
-			sessionID = *report.Session
-		}
-	}
-	if !validSessionID(sessionID) {
-		sessionID = ""
-	}
-
 	pane := Pane{
 		KittyPaneID: located.Pane.ID,
 		KittyPID:    located.KittyPID,
 		TUIPID:      tui.PID,
 		Directory:   cleanDirectory(directory),
-		SessionID:   sessionID,
+		SessionID:   sessionID(tui, report),
 		Started:     started,
 		Shell:       loginZshCommand(located.Pane.Cmdline),
 		Report:      report,
@@ -141,6 +130,30 @@ func tuiProcess(pane kitty.Pane) (kitty.Process, bool) {
 		}
 	}
 	return kitty.Process{}, false
+}
+
+func foregroundTUI(pane kitty.Pane) (kitty.Process, bool) {
+	i := slices.IndexFunc(pane.ForegroundProcesses, func(p kitty.Process) bool {
+		return p.PID > 0 && isTUICommand(p.Cmdline)
+	})
+	if i < 0 {
+		return kitty.Process{}, false
+	}
+	return pane.ForegroundProcesses[i], true
+}
+
+func sessionID(tui kitty.Process, report *Report) string {
+	id := option(tui.Cmdline, "--session", "-s")
+	if report != nil {
+		id = ""
+		if report.Session != nil {
+			id = *report.Session
+		}
+	}
+	if !ValidSessionID(id) {
+		return ""
+	}
+	return id
 }
 
 var (
@@ -186,7 +199,7 @@ func option(args []string, names ...string) string {
 	return ""
 }
 
-func validSessionID(id string) bool {
+func ValidSessionID(id string) bool {
 	if !strings.HasPrefix(id, "ses_") || len(id) == len("ses_") {
 		return false
 	}

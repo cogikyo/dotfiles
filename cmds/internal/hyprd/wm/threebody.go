@@ -1,10 +1,13 @@
 package wm
 
 import (
+	"context"
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/kitty"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
+	"errors"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -98,6 +101,40 @@ func (tb *ThreeBody) Show(address string, home int) error {
 	}
 	_, err = tb.swapIn(wsID, address)
 	return err
+}
+
+func (tb *ThreeBody) ShowPane(ctx context.Context, pid, window int, tab string) error {
+	clients, err := tb.hypr.Clients()
+	if i := slices.IndexFunc(clients, func(c hypr.Window) bool { return c.Pid == pid }); i >= 0 {
+		if err := context.Cause(ctx); err != nil {
+			return err
+		}
+		err = tb.Show(clients[i].Address, 0)
+	}
+	term := kitty.NewClient(pid)
+	if tab != "" {
+		err = errors.Join(err, term.FocusTab(ctx, tab))
+	}
+	if window > 0 {
+		err = errors.Join(err, term.FocusWindow(ctx, window))
+	}
+	return err
+}
+
+func (tb *ThreeBody) Find(wsID int, class, title string) (*hypr.Window, error) {
+	clients, err := tb.hypr.Clients()
+	if err != nil {
+		return nil, err
+	}
+	st := tb.state.GetThreeBody(wsID)
+	i := slices.IndexFunc(clients, func(c hypr.Window) bool {
+		return windows.MatchesTarget(&c, class, title) &&
+			(c.Workspace.ID == wsID || c.Workspace.Name == windows.ShadowWorkspace && st.Has(c.Address))
+	})
+	if i < 0 {
+		return nil, nil
+	}
+	return &clients[i], nil
 }
 
 // Toggle swaps the active workspace's parked shadow with its visible slave.

@@ -1,6 +1,7 @@
 package kitty
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -64,7 +65,7 @@ func (t *Manager) init(args []string) (string, error) {
 	}
 
 	kitty := NewClient(pid)
-	windows, err := kitty.FullState()
+	windows, err := kitty.FullState(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("kitty state: %w", err)
 	}
@@ -84,7 +85,7 @@ func (t *Manager) init(args []string) (string, error) {
 		if !t.checkRequires(tab.Requires, cwd) {
 			continue
 		}
-		if err := t.launchLocalTab(kitty, profile, tab, windowID, cwd); err != nil {
+		if err := t.launchLocalTab(context.Background(), kitty, profile, tab, windowID, cwd); err != nil {
 			return "", err
 		}
 		created++
@@ -92,12 +93,12 @@ func (t *Manager) init(args []string) (string, error) {
 
 	t.closeLauncherTab(kitty, windows[0])
 	focusID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, profile.Focus)
-	kitty.FocusTab(focusID)
+	kitty.FocusTab(context.Background(), focusID)
 
 	return fmt.Sprintf("tabs init: %s (%d tabs)", profileName, created), nil
 }
 
-func (t *Manager) EnsureTab(pid int, profileName, tabName, cwd string) (string, error) {
+func (t *Manager) EnsureTab(ctx context.Context, pid int, profileName, tabName, cwd string) (string, error) {
 	profile, err := t.getProfile(profileName)
 	if err != nil {
 		return "", err
@@ -107,21 +108,10 @@ func (t *Manager) EnsureTab(pid int, profileName, tabName, cwd string) (string, 
 		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)
 	}
 	kitty := NewClient(pid)
-	var windows []OSWindow
 	// Never launch while tabs init runs; it would create the tab a second time.
-	for deadline := time.Now().Add(initTimeout); ; time.Sleep(200 * time.Millisecond) {
-		if windows, err = kitty.FullState(); err != nil {
-			return "", fmt.Errorf("kitty state: %w", err)
-		}
-		if len(windows) == 0 {
-			return "", fmt.Errorf("no kitty windows")
-		}
-		if !initRunning(windows[0]) {
-			break
-		}
-		if time.Now().After(deadline) {
-			return "", fmt.Errorf("tabs init still running after %s", initTimeout)
-		}
+	windows, err := kitty.WaitInit(ctx)
+	if err != nil {
+		return "", err
 	}
 
 	tabID := fmt.Sprintf("%d-%s%s", windows[0].ID, profile.Prefix, tab.Name)
@@ -132,10 +122,32 @@ func (t *Manager) EnsureTab(pid int, profileName, tabName, cwd string) (string, 
 	if !t.checkRequires(tab.Requires, cwd) {
 		return "", fmt.Errorf("tab %s requires %s in %s", tab.Name, tab.Requires, cwd)
 	}
-	return tabID, t.launchLocalTab(kitty, profile, *tab, windows[0].ID, cwd)
+	return tabID, t.launchLocalTab(ctx, kitty, profile, *tab, windows[0].ID, cwd)
 }
 
 const initTimeout = 15 * time.Second
+
+func (c *Client) WaitInit(ctx context.Context) ([]OSWindow, error) {
+	ctx, cancel := context.WithTimeoutCause(ctx, initTimeout, fmt.Errorf("tabs init still running after %s", initTimeout))
+	defer cancel()
+	for {
+		windows, err := c.FullState(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("kitty state: %w", err)
+		}
+		if len(windows) == 0 {
+			return nil, fmt.Errorf("no kitty windows")
+		}
+		if !initRunning(windows[0]) {
+			return windows, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, context.Cause(ctx)
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+}
 
 // initRunning matches the launcher line in config/kitty/sessions/*.conf.
 func initRunning(win OSWindow) bool {
@@ -158,7 +170,7 @@ func (t *Manager) refresh(args []string) (string, error) {
 	}
 
 	kitty := NewClient(pid)
-	windows, err := kitty.FullState()
+	windows, err := kitty.FullState(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("kitty state: %w", err)
 	}
@@ -281,13 +293,13 @@ func (t *Manager) refreshAll(kitty *Client, profile *config.TabProfile, windowID
 	}
 
 	for _, tab := range launch {
-		if err := t.launchManagedTab(kitty, profile, tab.definition, windowID, host, tab.logical); err != nil {
+		if err := t.launchManagedTab(context.Background(), kitty, profile, tab.definition, windowID, host, tab.logical); err != nil {
 			return "", err
 		}
 	}
 
 	focusID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, profile.Focus)
-	kitty.FocusTab(focusID)
+	kitty.FocusTab(context.Background(), focusID)
 	return fmt.Sprintf("tabs refresh: all (%d tabs)", len(launch)), nil
 }
 
@@ -310,10 +322,10 @@ func (t *Manager) refreshSingle(kitty *Client, profile *config.TabProfile, tab c
 	if !satisfied {
 		return fmt.Sprintf("tabs refresh: %s (skipped, requires %s)", tab.Name, tab.Requires), nil
 	}
-	kitty.FocusTab(tabID)
+	kitty.FocusTab(context.Background(), tabID)
 	kitty.closeTab(tabID)
 
-	if err := t.launchManagedTab(kitty, profile, tab, windowID, host, logical); err != nil {
+	if err := t.launchManagedTab(context.Background(), kitty, profile, tab, windowID, host, logical); err != nil {
 		return "", err
 	}
 
@@ -485,7 +497,7 @@ func (t *Manager) checkRequires(requires, cwd string) bool {
 	}
 }
 
-func (t *Manager) launchLocalTab(kitty *Client, profile *config.TabProfile, tab config.TabDef, windowID int, cwd string) error {
+func (t *Manager) launchLocalTab(ctx context.Context, kitty *Client, profile *config.TabProfile, tab config.TabDef, windowID int, cwd string) error {
 	controller, err := controllerHost()
 	if err != nil {
 		return err
@@ -501,10 +513,10 @@ func (t *Manager) launchLocalTab(kitty *Client, profile *config.TabProfile, tab 
 	if err != nil {
 		return err
 	}
-	return t.launchManagedTab(kitty, profile, tab, windowID, controller, logical)
+	return t.launchManagedTab(ctx, kitty, profile, tab, windowID, controller, logical)
 }
 
-func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, tab config.TabDef, windowID int, host, logical string) error {
+func (t *Manager) launchManagedTab(ctx context.Context, kitty *Client, profile *config.TabProfile, tab config.TabDef, windowID int, host, logical string) error {
 	controller, err := controllerHost()
 	if err != nil {
 		return err
@@ -516,13 +528,13 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 	}
 	launchArgs := t.buildLaunchArgs(tab, tabID, controller, host, logical, cwd)
 	paneIDs := make([]int, 1, len(tab.Panes)+1)
-	paneIDs[0], err = kitty.launchID(launchArgs...)
+	paneIDs[0], err = kitty.launchID(ctx, launchArgs...)
 	if err != nil {
 		return fmt.Errorf("launch tab %s: %w", tab.Name, err)
 	}
 
 	if tab.Layout != "" {
-		if err := kitty.gotoLayout(tabID, tab.Layout); err != nil {
+		if err := kitty.gotoLayout(ctx, tabID, tab.Layout); err != nil {
 			return fmt.Errorf("set layout for tab %s: %w", tab.Name, err)
 		}
 	}
@@ -538,7 +550,7 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 			return err
 		}
 		launchArgs = t.buildPaneLaunchArgs(tabID, pane, controller, host, paneLogical, paneCWD, paneIndex)
-		paneID, err := kitty.launchID(launchArgs...)
+		paneID, err := kitty.launchID(ctx, launchArgs...)
 		if err != nil {
 			return fmt.Errorf("launch pane for tab %s: %w", tab.Name, err)
 		}
@@ -546,14 +558,14 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 	}
 
 	if tab.Layout != "" && len(tab.Panes) > 0 {
-		if err := kitty.gotoLayout(tabID, tab.Layout); err != nil {
+		if err := kitty.gotoLayout(ctx, tabID, tab.Layout); err != nil {
 			return fmt.Errorf("reapply layout for tab %s: %w", tab.Name, err)
 		}
 	}
 	if tab.FocusPane < 0 || tab.FocusPane >= len(paneIDs) {
 		return fmt.Errorf("tab %s focus_pane %d out of range", tab.Name, tab.FocusPane)
 	}
-	if err := kitty.FocusWindow(paneIDs[tab.FocusPane]); err != nil {
+	if err := kitty.FocusWindow(ctx, paneIDs[tab.FocusPane]); err != nil {
 		return fmt.Errorf("focus pane for tab %s: %w", tab.Name, err)
 	}
 

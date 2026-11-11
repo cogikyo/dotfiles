@@ -6,16 +6,14 @@ import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/detach"
 	"dotfiles/cmds/internal/hyprd/health"
-	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
-	"dotfiles/cmds/internal/hyprd/windows"
+	"dotfiles/cmds/internal/hyprd/wm"
 	"errors"
 	"fmt"
 	"html"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -23,7 +21,7 @@ import (
 
 const (
 	investigateSession = "dotfiles"
-	investigateBody    = "agents"
+	agentsBody         = "agents"
 	investigateTab     = "learn"
 	promptLine         = 300
 )
@@ -164,7 +162,7 @@ func (d *Daemon) planInvestigation(found []health.Finding) (investigation, error
 	return investigation{
 		workspace: session.Workspace,
 		cwd:       filepath.Join(home, session.Project),
-		profile:   cmp.Or(session.Tabs[investigateBody], investigateBody),
+		profile:   cmp.Or(session.Tabs[agentsBody], agentsBody),
 		prompt:    investigatePrompt(found, d.health.Log()),
 	}, nil
 }
@@ -172,12 +170,12 @@ func (d *Daemon) planInvestigation(found []health.Finding) (investigation, error
 func (d *Daemon) describeInvestigation(plan investigation) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "workspace: %d (%s session)\n", plan.workspace, investigateSession)
-	term, pid, ok := d.agentsKitty(plan.workspace)
+	term, pid, ok := d.agentsKitty(context.Background(), plan.workspace)
 	if !ok {
-		fmt.Fprintf(&b, "%s kitty: absent or parked; three-body would launch or unpark it, then the route waits for any running tabs init and launches the %s tab from the %s profile only if it is missing\n",
-			investigateBody, investigateTab, plan.profile)
+		fmt.Fprintf(&b, "%s kitty: absent; three-body would launch it, then the route waits for any running tabs init and launches the %s tab from the %s profile only if it is missing\n",
+			agentsBody, investigateTab, plan.profile)
 	} else {
-		fmt.Fprintf(&b, "%s kitty: pid %d, socket reachable\n", investigateBody, pid)
+		fmt.Fprintf(&b, "%s kitty: pid %d, socket reachable\n", agentsBody, pid)
 		tabID, window, err := d.investigateWindow(term, plan.profile)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -196,47 +194,26 @@ func (d *Daemon) describeInvestigation(plan investigation) string {
 }
 
 func (d *Daemon) investigateWindow(term *kitty.Client, profile string) (string, int, error) {
-	state, err := term.FullState()
+	state, err := term.FullState(context.Background())
 	if err != nil {
 		return "", 0, err
 	}
 	if len(state) == 0 {
 		return "", 0, errors.New("kitty has no OS windows")
 	}
-	tabID := fmt.Sprintf("%d-%s%s", state[0].ID, d.config.Load().Tabs[profile].Prefix, investigateTab)
-	for _, tab := range state[0].Tabs {
-		for _, pane := range tab.Windows {
-			if pane.Env["KITTY_TAB_ID"] == tabID {
-				return tabID, pane.ID, nil
-			}
-		}
-	}
-	return tabID, 0, nil
+	tabs := d.config.Load().Tabs[profile]
+	tabID := fmt.Sprintf("%d-%s%s", state[0].ID, tabs.Prefix, investigateTab)
+	return tabID, state[0].ProfilePanes(tabs)[investigateTab].ID, nil
 }
 
 func (d *Daemon) investigate(plan investigation) error {
-	d.state.LockLayout()
-	err := d.hypr.FocusWorkspace(plan.workspace)
-	if err == nil {
-		_, err = d.focusBody(investigateBody)
-	}
-	d.state.UnlockLayout()
+	ctx := context.Background()
+	term, pid, err := d.raiseAgents(ctx, plan.workspace)
 	if err != nil {
 		return err
 	}
 
-	var term *kitty.Client
-	var pid int
-	ready := poll(15*time.Second, func() bool {
-		var ok bool
-		term, pid, ok = d.agentsKitty(plan.workspace)
-		return ok
-	})
-	if !ready {
-		return fmt.Errorf("no reachable %s kitty on workspace %d", investigateBody, plan.workspace)
-	}
-
-	if _, err := kitty.NewManager(d.hypr, d.state).EnsureTab(pid, plan.profile, investigateTab, plan.cwd); err != nil {
+	if _, err := kitty.NewManager(d.hypr, d.state).EnsureTab(ctx, pid, plan.profile, investigateTab, plan.cwd); err != nil {
 		return fmt.Errorf("ensure %s tab: %w", investigateTab, err)
 	}
 	tabID, window, err := d.investigateWindow(term, plan.profile)
@@ -251,26 +228,52 @@ func (d *Daemon) investigate(plan investigation) error {
 	if err != nil {
 		return err
 	}
-	return term.FocusWindow(overlay)
+	return term.FocusWindow(ctx, overlay)
 }
 
-func (d *Daemon) agentsKitty(workspace int) (*kitty.Client, int, bool) {
-	clients, err := d.hypr.Clients()
+func (d *Daemon) raiseAgents(ctx context.Context, workspace int) (*kitty.Client, int, error) {
+	d.state.LockLayout()
+	err := context.Cause(ctx)
+	if err == nil {
+		err = d.hypr.FocusWorkspace(workspace)
+	}
+	if err == nil {
+		err = context.Cause(ctx)
+	}
+	if err == nil {
+		_, err = d.focusBody(agentsBody)
+	}
+	d.state.UnlockLayout()
 	if err != nil {
-		return nil, 0, false
+		return nil, 0, err
 	}
-	body := config.ThreeBody[investigateBody]
-	i := slices.IndexFunc(clients, func(c hypr.Window) bool {
-		return c.Workspace.ID == workspace && windows.MatchesTarget(&c, body.Class, body.Title)
+
+	var term *kitty.Client
+	var pid int
+	ctx, cancel := context.WithTimeoutCause(ctx, 15*time.Second, fmt.Errorf("no reachable %s kitty on workspace %d", agentsBody, workspace))
+	defer cancel()
+	err = poll(ctx, func() bool {
+		var ok bool
+		term, pid, ok = d.agentsKitty(ctx, workspace)
+		return ok
 	})
-	if i < 0 {
+	if err != nil {
+		return nil, 0, err
+	}
+	return term, pid, nil
+}
+
+func (d *Daemon) agentsKitty(ctx context.Context, workspace int) (*kitty.Client, int, bool) {
+	body := config.ThreeBody[agentsBody]
+	w, err := wm.NewThreeBody(d.hypr, d.state).Find(workspace, body.Class, body.Title)
+	if err != nil || w == nil {
 		return nil, 0, false
 	}
-	term := kitty.NewClient(clients[i].Pid)
-	if _, err := term.FullState(); err != nil {
+	term := kitty.NewClient(w.Pid)
+	if _, err := term.FullState(ctx); err != nil {
 		return nil, 0, false
 	}
-	return term, clients[i].Pid, true
+	return term, w.Pid, true
 }
 
 func findingIDs(found []health.Finding) []string {
@@ -296,13 +299,13 @@ func investigatePrompt(found []health.Finding, log string) string {
 	return b.String()
 }
 
-func poll(timeout time.Duration, ok func() bool) bool {
-	deadline := time.Now().Add(timeout)
+func poll(ctx context.Context, ok func() bool) error {
 	for !ok() {
-		if time.Now().After(deadline) {
-			return false
+		select {
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		case <-time.After(200 * time.Millisecond):
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
-	return true
+	return nil
 }

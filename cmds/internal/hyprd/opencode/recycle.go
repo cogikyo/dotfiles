@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -80,7 +81,7 @@ func (p Pane) label() string {
 
 func closeTUI(views *kitty.Tracker, snapshot Pane, gated bool) (string, error) {
 	client := kitty.NewClient(snapshot.KittyPID)
-	located, found, err := client.Locate(snapshot.KittyPaneID)
+	located, found, err := client.Locate(context.Background(), snapshot.KittyPaneID)
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +105,7 @@ func closeTUI(views *kitty.Tracker, snapshot Pane, gated bool) (string, error) {
 			return "", fmt.Errorf("SIGTERM TUI %d: %w", snapshot.TUIPID, err)
 		}
 		if !waitTUIExit(client, snapshot, termWait) {
-			current, found, err := client.Locate(snapshot.KittyPaneID)
+			current, found, err := client.Locate(context.Background(), snapshot.KittyPaneID)
 			if err != nil {
 				return "", fmt.Errorf("inspect TUI before SIGKILL: %w", err)
 			}
@@ -142,7 +143,7 @@ func hiddenNow(views *kitty.Tracker, pane kitty.LocatedPane, gated bool) string 
 
 func launchTUI(snapshot Pane) (string, error) {
 	client := kitty.NewClient(snapshot.KittyPID)
-	pane, found, err := client.Pane(snapshot.KittyPaneID)
+	pane, found, err := client.Pane(context.Background(), snapshot.KittyPaneID)
 	if err != nil {
 		return "", err
 	}
@@ -152,13 +153,11 @@ func launchTUI(snapshot Pane) (string, error) {
 	if !loginZshReady(pane) {
 		return "skipped (foreground changed before relaunch)", nil
 	}
-	command := " c\n"
 	result := "recycled (home)"
-	if validSessionID(snapshot.SessionID) {
-		command = " c --session " + snapshot.SessionID + "\n"
+	if ValidSessionID(snapshot.SessionID) {
 		result = "recycled " + snapshot.SessionID
 	}
-	if err := client.SendText(snapshot.KittyPaneID, command); err != nil {
+	if err := launch(context.Background(), client, snapshot.KittyPaneID, snapshot.SessionID); err != nil {
 		return "", err
 	}
 	return result, nil
@@ -179,7 +178,7 @@ func tuiIsForeground(snapshot Pane, pane kitty.Pane) bool {
 func waitLoginZsh(client *kitty.Client, paneID int, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for {
-		pane, found, err := client.Pane(paneID)
+		pane, found, err := client.Pane(context.Background(), paneID)
 		if err == nil && found && loginZshReady(pane) {
 			return true
 		}
@@ -227,7 +226,7 @@ func signal(pid int, sig syscall.Signal) error {
 func waitTUIExit(client *kitty.Client, snapshot Pane, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for {
-		pane, found, err := client.Pane(snapshot.KittyPaneID)
+		pane, found, err := client.Pane(context.Background(), snapshot.KittyPaneID)
 		if err == nil && (!found || !tuiIsForeground(snapshot, pane)) {
 			return true
 		}

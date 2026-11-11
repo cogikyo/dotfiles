@@ -1,8 +1,8 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { spawn, type ChildProcess } from "node:child_process";
-import { createInterface } from "node:readline";
+import { spawn } from "node:child_process";
 import { Schema } from "effect";
 import { createSignal, For, Show } from "solid-js";
+import { listen } from "../hyprd/events.ts";
 
 const Window = Schema.Struct({
   address: Schema.String,
@@ -17,30 +17,13 @@ const Workspace = Schema.Struct({
   data: Schema.Struct({ browser_qa: Schema.NullOr(Schema.Array(Schema.Unknown)) }),
 });
 
-const restart = 5_000;
 const width = 30;
 
 export default Plugin.define({
   id: "browser",
   setup(context) {
     const [windows, setWindows] = createSignal<readonly Window[]>([]);
-    let watcher: ChildProcess | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
-
-    const watch = () => {
-      const child = spawn("hyprd", ["subscribe", "workspace"], { stdio: ["ignore", "pipe", "ignore"] });
-      watcher = child;
-      createInterface({ input: child.stdout }).on("line", (line) => {
-        const next = parse(line);
-        if (next) setWindows(next);
-      });
-      child.once("error", () => undefined);
-      child.once("close", () => {
-        if (watcher === child) watcher = undefined;
-        if (!disposed) timer = setTimeout(watch, restart);
-      });
-    };
 
     const fail = (message: string) => {
       if (!disposed) context.ui.toast.show({ title: "Browser QA", message, variant: "error" });
@@ -60,7 +43,10 @@ export default Plugin.define({
       });
     };
 
-    watch();
+    const stop = listen((value) => {
+      const next = parse(value);
+      if (next) setWindows(next);
+    });
 
     context.ui.slot({
       after: "sidebar.content",
@@ -95,19 +81,12 @@ export default Plugin.define({
 
     return () => {
       disposed = true;
-      clearTimeout(timer);
-      watcher?.kill();
+      stop();
     };
   },
 });
 
-function parse(line: string) {
-  let value: unknown;
-  try {
-    value = JSON.parse(line);
-  } catch {
-    return undefined;
-  }
+function parse(value: unknown) {
   if (!Schema.is(Workspace)(value)) return undefined;
   return (value.data.browser_qa ?? [])
     .filter((item): item is Window => Schema.is(Window)(item) && item.workspace === `browser-qa-${item.slot}`)

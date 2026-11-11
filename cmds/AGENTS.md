@@ -25,6 +25,7 @@ Apply `converge` before changing state-mutating commands or setup stages.
 ## Couplings
 
 - Keep hyprd verbs aligned across `cmd/hyprd/{main,daemon}.go` and `../config/hypr/binds.lua`.
+- Keep the `open` and `workspaces` socket contracts in `cmd/hyprd/open.go` aligned with `../config/opencode/plugins/hyprd/open.ts` and their CLI verbs in `cmd/hyprd/main.go`.
 - Keep `../system/etc/greetd/config.toml` → `--locked-cmd "hyprd lock client"` aligned with the local `hyprd lock client` verb in `cmd/hyprd/main.go`.
 - Names in `config/ewwd.yaml` → `windows.{full,compact}` must match `defwindow` names under `../config/eww/yuck/`.
 - Hyprd's `query display` selects ewwd's window set from the `config/hyprd.yaml` → `displays` profile; hyprd requests `ewwd relayout` when the profile's `eww` layout or the monitor changes.
