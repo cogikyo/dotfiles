@@ -47,7 +47,9 @@ Add `~/.local/state/opencode/scratch/<sessionID>/` for each session in the tree.
 Keep both scratch roots and the shared `runs.jsonl`.
 Keep any scratch or `/tmp/opencode` path that `grep -r` finds cited in `/home/cullyn/cogikyo/docs/`, including the containing directory selected for deletion.
 Record count and size, then stop processes whose working directory or arguments point into the selected paths.
-Delete with literal `rm -rf -- /tmp/opencode/<name> …` paths; send sandbox directories to `trash -- <path>`.
+Delete selected `/tmp/opencode/<name>` directories with `rm -rf -- /tmp/opencode/<name>`.
+Move selected session sandbox directories with `trash -- /home/cullyn/.local/state/opencode/scratch/<sessionID>`.
+Write each selected path literally, without trailing slashes; do not build a path array or pass deletion targets through a loop.
 
 ## Close
 
