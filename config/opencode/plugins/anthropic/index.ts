@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { Plugin } from "@opencode/plugin";
+import type { Session } from "@opencode/schema/session";
 import { Effect, Fiber } from "effect";
 import { claudeAccounts } from "./accounts.ts";
 import { isLongContextError, LONG_CONTEXT_BETAS } from "./claude-auth/betas.js";
@@ -16,6 +17,7 @@ const renewEvery = 5 * 60_000;
 
 type Account = {
   id: string;
+  main: boolean;
   loginCommand: string;
   credentials: Credentials;
   excluded: Map<string, Set<string>>;
@@ -77,10 +79,11 @@ export default Plugin.define({
 
     const clear = clearing(log);
     const registry = new Map<string, Account>(
-      Object.values(claudeAccounts).map(({ id, configDir, loginCommand }) => [
+      Object.values(claudeAccounts).map(({ id, main, configDir, loginCommand }) => [
         id,
         {
           id,
+          main,
           loginCommand,
           credentials: new Credentials(configDir, log),
           excluded: new Map(),
@@ -90,6 +93,23 @@ export default Plugin.define({
       ]),
     );
     const pending = new WeakMap<Request, Pending>();
+    const roots = new Map<string, Promise<boolean>>();
+
+    const root = (sessionID: Session.ID) => {
+      let known = roots.get(sessionID);
+      if (!known) {
+        known = ctx.session.get({ sessionID }).then(
+          (session) => !session.parentID,
+          (error: unknown) => {
+            roots.delete(sessionID);
+            log(Effect.logWarning("anthropic: session lookup failed", { sessionID, error: String(error) }));
+            return true;
+          },
+        );
+        roots.set(sessionID, known);
+      }
+      return known;
+    };
 
     const timers = [...registry.values()].map(({ credentials }) => {
       const renewEarly = () =>
@@ -113,7 +133,8 @@ export default Plugin.define({
             `${account.id}: Claude credentials are unavailable or expired. Run ${account.loginCommand}.`,
           );
 
-    const open = async (model: string, skip: Account) => {
+    const open = async (model: string, skip: Account, sessionID: Session.ID) => {
+      const top = await root(sessionID);
       const now = Date.now();
       const list = (await survey(model, now)).map((usage) => {
         const until = registry.get(usage.id)!.until;
@@ -121,17 +142,18 @@ export default Plugin.define({
       });
       return ranked(list)
         .filter((usage) => usage.id !== skip.id)
-        .map((usage) => registry.get(usage.id)!);
+        .map((usage) => registry.get(usage.id)!)
+        .filter((account) => account.main || !top);
     };
 
-    const route = async (own: Account, sessionID: string, model: string) => {
+    const route = async (own: Account, sessionID: Session.ID, model: string) => {
       if (own.until <= Date.now()) {
         own.sticky.clear();
         return own;
       }
       const kept = registry.get(own.sticky.get(sessionID) ?? "");
       if (kept && kept.until <= Date.now()) return kept;
-      const [next] = await open(model, own);
+      const [next] = await open(model, own, sessionID);
       if (!next) return own;
       own.sticky.set(sessionID, next.id);
       log(
@@ -263,7 +285,7 @@ export default Plugin.define({
             return;
           }
           const move = async (from: Account) => {
-            for (const next of await open(state.model, from)) {
+            for (const next of await open(state.model, from, sessionID)) {
               const found = await next.credentials.get();
               const result =
                 typeof found === "string"

@@ -157,7 +157,12 @@ Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/
 `anthropic/index.ts` signs and shapes subscription requests for Trend, Cogikyo, and Cullyn with separate credential and beta-exclusion state.
 It uses local credential refresh and vendored request-shaping modules from `opencode-claude-auth` 2.2.1.
 See [account state and login](anthropic/README.md) before changing auth code.
-This plugin has no tool, key, or TUI slot.
+
+`anthropic/tui.ts` binds `ctrl+m` to toggle the prompt's model between Fable 5.2 at `high` and Opus 5.5 at `xhigh`; other models switch to Fable.
+`pool.ts` picks Cogikyo or Cullyn from usage caches.
+When both accounts are capped, it picks the one that reopens first and shows a warning toast.
+The TUI plugin API has no model setter, so it steps `model.cycle_favorite`; each step enters the recent-models list.
+The chosen account's target model must be a favorite, or an error toast names it.
 
 `anthropic/claude-auth/transforms.js` moves non-core system text to the first user message and keeps its cache breakpoint when fewer than four other breakpoints remain.
 

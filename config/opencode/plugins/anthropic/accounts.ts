@@ -7,17 +7,20 @@ export const claudeAccounts = {
     label: "Anthropic [Trend]",
     configDir: path.join(os.homedir(), ".claude"),
     loginCommand: "claude-auth trend",
+    main: false,
   },
   cogikyo: {
     id: "anthropic-personal",
     label: "Anthropic [Cogikyo]",
     configDir: path.join(os.homedir(), ".claude-cogikyo"),
     loginCommand: "claude-auth cogikyo",
+    main: true,
   },
   cullyn: {
     id: "anthropic-cullyn",
     label: "Anthropic [Cullyn]",
     configDir: path.join(os.homedir(), ".claude-cullyn"),
     loginCommand: "claude-auth cullyn",
+    main: true,
   },
 } as const;

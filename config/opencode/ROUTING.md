@@ -36,7 +36,7 @@ The `claude` provider is the Anthropic account pool; the lanes plugin resolves i
 Each `fallbacks` entry names the next model to try when the source model's pool is capped; entries form a chain.
 
 Main sessions belong to the user and are not routed here.
-The `opencode.json` default and the account picked in the TUI are not pooled.
+`ctrl+m` and main-session failover pick only Cogikyo or Cullyn; default and manual picks otherwise keep their account.
 
 Omit `model` on `subagent` to take the route; this is the normal case.
 To change reasoning effort, pass the model and its variant together, such as `claude/claude-opus-5-5#xhigh`.

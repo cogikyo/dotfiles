@@ -32,7 +32,7 @@
     "session.unshare": "none",
     "session.parent": "up,ctrl+alt+up",
     "model.list": "<leader>m",
-    "model.cycle_favorite": "ctrl+m",
+    "model.cycle_favorite": "none",
     "agent.list": "none",
     "variant.cycle": "none",
     "variant.list": "<leader>i",
