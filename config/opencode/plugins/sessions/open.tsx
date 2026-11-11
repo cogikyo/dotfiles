@@ -1,4 +1,6 @@
 import path from "node:path";
+import type { DialogSelectOption } from "@opencode/plugin/tui/context";
+import type { RGBA } from "@opentui/core";
 import { createEffect, createMemo, createRoot, createSignal, onCleanup } from "solid-js";
 import { desks, show, type Desks } from "../hyprd/open.ts";
 import { pressure } from "../statusline/palette.ts";
@@ -85,7 +87,7 @@ function seats(context: Context, mailed: Mailed, loading: Promise<void>, directo
     },
     near: (session: Session) => {
       const known = desk();
-      return !!known && seat(known)(session) === 0;
+      return known && seat(known)(session) === 0;
     },
   };
 }
@@ -215,8 +217,10 @@ export async function open(picker: Picker, kind: Kind) {
       : seats(context, mailed, loading, () => live().map((session) => session.location.directory));
     const rank = seated?.rank ?? (() => urgency(context, mailed));
     const row = rows(mailed, seated?.near);
-    const option = (category: string, session: Session): Option<string> =>
-      Object.assign(row(context, session, session.id, session.id === current), footer(context, session), { category });
+    const option = (category: string, session: Session, footerColor?: RGBA): Option<string> => ({
+      ...row(context, session, session.id === current, { ...footer(context, session), footerColor }),
+      category,
+    });
     const options = stable(() => {
       const closed = list().filter((session) => tag(session.title)?.state);
       const busy = live().filter((session) => running(context, session.id));
@@ -224,9 +228,7 @@ export async function open(picker: Picker, kind: Kind) {
       const by = rank();
       return [
         ...order(busy, by).map((session) => option("Running", session)),
-        ...order(idle, by).map((session) =>
-          Object.assign(option("Open", session), { footerColor: pressure(Date.now() - session.time.updated, ages) }),
-        ),
+        ...order(idle, by).map((session) => option("Open", session, pressure(Date.now() - session.time.updated, ages))),
         ...closed.toSorted((a, b) => b.time.updated - a.time.updated).map((session) => option("Closed", session)),
       ];
     });
@@ -239,7 +241,7 @@ export async function open(picker: Picker, kind: Kind) {
       },
       placeholder: "Search sessions…",
       get options() {
-        return options();
+        return options() as unknown as DialogSelectOption<string>[];
       },
       // A defined current preserves selection by value as options load, even without a matching row.
       current: current ?? "",

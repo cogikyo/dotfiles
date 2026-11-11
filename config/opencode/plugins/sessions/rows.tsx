@@ -19,12 +19,22 @@ export type Picker = {
   readonly claim: () => () => boolean;
 };
 
-/** The host spreads fields omitted from plugin types into DialogSelect for search, titles, and status markers. */
-export type Option<Value> = DialogSelectOption<Value> & {
+/** The host forwards extra fields and renders view footers despite plugin types. */
+export type Option<Value> = Omit<DialogSelectOption<Value>, "footer"> & {
+  readonly footer?: () => JSX.Element;
+  readonly footerText?: string;
+  readonly footerColor?: RGBA;
   readonly searchText?: string;
   readonly titleView?: () => JSX.Element;
   readonly gutter?: (color: RGBA) => JSX.Element;
 };
+
+export type Footer = { readonly footer: string; readonly footerColor?: RGBA; readonly searchText?: string };
+
+/** Current-desktop match, or undefined until hyprd reports desktops. */
+export type Near = (session: Session) => boolean | undefined;
+
+const FADE = 0.3;
 
 type Attention = "permission" | "question" | false;
 
@@ -137,12 +147,13 @@ function Mark(props: { context: Context; sessionID: string; current: boolean; co
   );
 }
 
-export const rows = (mailed?: Mailed, strong?: (session: Session) => boolean) =>
-  function row<Value>(context: Context, session: Session, value: Value, current: boolean): Option<Value> {
+export const rows = (mailed?: Mailed, near?: Near) =>
+  function row(context: Context, session: Session, current: boolean, note: Footer): Option<string> {
+    const theme = () => dialog(context);
     const text = title(session);
     const [plain, setPlain] = createSignal(true);
     const gutter = (color: RGBA) => {
-      setPlain(color.equals(dialog(context).text.base));
+      setPlain(color.equals(theme().text.base));
       return <Mark context={context} sessionID={session.id} current={current} color={color} />;
     };
     const state = tag(session.title)?.state;
@@ -151,13 +162,21 @@ export const rows = (mailed?: Mailed, strong?: (session: Session) => boolean) =>
       const room = mail() ? TITLE_WIDTH - 2 : TITLE_WIDTH;
       return text.length > room ? `${text.slice(0, room - 1)}…` : text;
     };
+    const style = (color: RGBA) => {
+      const here = near?.(session);
+      const fg = here === false ? mix(color, theme().background.base, FADE) : color;
+      return { bold: here === true, fg: plain() ? fg : undefined };
+    };
     return {
+      ...note,
       title: text,
-      value,
+      value: session.id,
       gutter,
+      footerText: note.footer,
+      footer: () => <span style={style(note.footerColor ?? theme().text.muted)}>{note.footer}</span>,
       titleView: () => (
-        <span style={{ bold: !!strong?.(session) }}>
-          {plain() && state ? <span style={{ fg: faded(context, state) }}>{fit()}</span> : fit()}
+        <span style={style(state ? faded(context, state) : theme().text.base)}>
+          {fit()}
           {mail() ? (
             plain() ? (
               <span style={{ fg: colors.pink }}>{` ${envelope.closed}`}</span>
@@ -182,7 +201,7 @@ const signature = (option: Option<unknown>) =>
   [
     JSON.stringify(option.value),
     option.title,
-    option.footer ?? "",
+    option.footerText ?? "",
     option.category ?? "",
     option.searchText ?? "",
   ].join("\u0000");
