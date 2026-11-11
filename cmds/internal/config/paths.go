@@ -10,6 +10,8 @@ import (
 
 const configsDir = "dotfiles/cmds/config"
 
+const CogikyoBin = "/nix/var/nix/profiles/cogikyo/bin"
+
 // ConfigPath returns the $HOME-relative path to a daemon's repo-backed YAML config.
 func ConfigPath(name string) string {
 	return filepath.Join(configsDir, name+".yaml")

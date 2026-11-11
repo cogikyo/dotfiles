@@ -2,12 +2,12 @@
 
 Hyprland daemon and CLI.
 Connects to Hyprland's IPC sockets to manage windows, workspaces, and sessions, then exposes commands over a Unix socket.
-CLI-only tools (dictation, screenshot, and VPN) run directly without the daemon socket.
+CLI-only tools (dictation, voice, screenshot, and VPN) run directly without the daemon socket.
 
 ## Structure
 
 The entrypoint, daemon, and event dispatch live in `cmds/cmd/hyprd/`.
-Domain packages live in `cmds/internal/hyprd/`, with direct dictation, screenshot, and VPN commands under `cli/`.
+Domain packages live in `cmds/internal/hyprd/`, with direct dictation, voice, screenshot, and VPN commands under `cli/`.
 The user unit is `config/systemd/user/hyprd.service` at the repo root.
 In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypoint files to `cmds/cmd/hyprd/`, and config paths to `cmds/`.
 
@@ -21,7 +21,7 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 | Window types that make up a session                | `cmds/internal/config/hyprd.go` → compiled `ThreeBody` map                     |
 | Which session opens on which workspace at boot     | `config/hyprd.yaml` → `sessions` entries with `init: true`                     |
 | Command routing (CLI → daemon)                     | `main.go` → `daemon.go` dispatch table                                         |
-| CLI-only tools (no daemon socket)                  | `cli/` — dictation, screenshot, VPN                                            |
+| CLI-only tools (no daemon socket)                  | `cli/` — dictation, voice, screenshot, VPN                                     |
 | Dictation placement / caret reporting              | `cli/dictate.go` → `ime/`                                                      |
 | Hyprland event → state update                      | `events.go`                                                                    |
 | Adding a new daemon command                        | add file in `wm/`, register in `daemon.go`                                     |
@@ -260,6 +260,16 @@ Build the plugin with `dctl update plugin`; see [plugin rebuilds](../dctl/README
 Apps report their text-cursor boxes only while an input method is registered, so the daemon holds a passive input method in `ime/`.
 It never grabs the keyboard or types.
 It answers each input-method `done` with an empty `commit(serial)` so Hyprland acknowledges text-input state; Chromium/Electron withhold cursor boxes until that acknowledgement arrives.
+
+### Voice
+
+```bash
+hyprd voice                  # pause or resume the cogikyo voice loop
+```
+
+Super+Shift+' and a click on the voice icon in eww's audio pill both run `hyprd voice`.
+It pauses hearing and hushes speech when cochlea reports `listening` and thalamus does not report `hushed`; otherwise it resumes both.
+Repeated resume requests do nothing while the first is still running.
 
 ### Screenshot
 

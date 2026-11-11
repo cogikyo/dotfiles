@@ -95,6 +95,8 @@ func main() {
 		cli.Screenshot()
 	case "dictate":
 		cli.Dictate()
+	case "voice":
+		cli.Voice()
 	case "health":
 		cmdHealth()
 	case "rebuild":
@@ -526,6 +528,9 @@ Screenshot:
 
 Dictation:
   hyprd dictate                 Toggle Hex dictation with the pill at the text cursor (pointer fallback)
+
+Voice:
+  hyprd voice                   Pause or resume the cogikyo voice loop
 
 VPN:
   hyprd vpn Trend               Toggle full/split; off goes to full

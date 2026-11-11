@@ -89,6 +89,7 @@ Brightness changes made outside these actions, such as the brightness keys, open
 | --------- | ------------------ | ------------------------------------------ |
 | audio     | WirePlumber        | default sink/source volume, mute, identity |
 | bluetooth | BlueZ D-Bus        | tracked headphone connection and battery   |
+| voice     | `vagus tail`       | cogikyo voice loop hearing and hush        |
 | music     | Spotify            | playback, Canvas, history, queue           |
 | network   | /proc/net/dev      | upload/download speeds                     |
 | date      | time               | time, date, clockface icons, weeks alive   |
@@ -102,6 +103,13 @@ Brightness changes made outside these actions, such as the brightness keys, open
 | timer     | internal           | countdown timer and alarm                  |
 
 Each provider implements the `providers.Provider` interface and runs in its own goroutine. Providers that support user interaction also implement `providers.ActionProvider`.
+
+### Voice
+
+`voice` publishes `{"mode": ...}` from local-host hearing and hush events.
+While hearing is `listening`, mode is `listening` for hush off, `hushed` for hush on, and `unknown` for missing or stale hush.
+Events expire after 25 s; missing hearing gives `down`, while `paused`, `dictating`, and `down` pass through.
+If the cogikyo profile's `vagus` is unavailable, mode is `absent` and the bar hides the icon.
 
 ### Music
 

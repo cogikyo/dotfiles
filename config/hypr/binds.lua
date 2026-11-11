@@ -81,6 +81,7 @@ super("V", "Screen share mode",   "hyprd share")
 super("SHIFT + V", "Silence notifications", "hyprd quiet")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 hl.bind("SUPER + apostrophe", hl.dsp.exec_cmd("hyprd dictate"), { description = "Dictate at text cursor", release = true })
+super("SHIFT + apostrophe", "Toggle voice loop", "hyprd voice")
 
 hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
 hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })

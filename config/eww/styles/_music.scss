@@ -161,6 +161,25 @@
     color: $glc-3;
   }
 
+  &-voice {
+    color: $glc-3;
+    font-size: 1.1em;
+    margin-right: 10px;
+
+    &-listening {
+      color: $sky-2;
+    }
+
+    &-hushed {
+      color: $orn-3;
+    }
+
+    &-paused,
+    &-dictating {
+      color: $glc-5;
+    }
+  }
+
   &-headphones {
     transition: color 0.25s $ease-out-snap;
 
