@@ -17,6 +17,12 @@ export function textual(node: Renderable | undefined): node is Text {
   return node !== undefined && "textNode" in node;
 }
 
+export function leaves(node: TextNodeRenderable): [TextNodeRenderable, number, string][] {
+  return node.children.flatMap((child, index): [TextNodeRenderable, number, string][] =>
+    typeof child === "string" ? [[node, index, child]] : owned.has(child) ? [] : leaves(child),
+  );
+}
+
 export class Ledger {
   readonly #entries = new Map<Renderable, Map<unknown, Entry>>();
 
@@ -66,7 +72,7 @@ export class Ledger {
   }
 
   adjust<T>(owner: Renderable, key: string, value: T, field: Field<T>) {
-    if (field.get() === value) return false;
+    if (same(field.get(), value)) return false;
     this.#change(owner, key, value, field);
     owner.requestRender();
     return true;

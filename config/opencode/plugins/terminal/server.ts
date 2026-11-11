@@ -5,7 +5,7 @@ import { statSync } from "node:fs";
 import { mkdir, open, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { expand, temp } from "../guard/paths.ts";
+import { expand, temp, tilde } from "../guard/paths.ts";
 import { flags, launches } from "../guard/shell.ts";
 
 const root = path.join(temp, "terminal");
@@ -42,10 +42,44 @@ const description = [
   "Use it only when the command needs the user's keyboard: sudo or other passwords and passphrases, [Y/n] prompts, interactive logins, and `dctl` root stages; run everything else in the shell.",
   "Only top-level sessions can call it; a child session returns the command to its parent as a blocker.",
   "The window covers the session, so before calling, write your results, show the command in a bash fence, and say what it does and what the user will type.",
-  "Get any required approval first, including the repository's ask-first root stages, then call terminal without a Ready popup; the window is the wait, and the user may copy the command and run it themselves.",
+  "Get any required approval first, including the repository's ask-first root stages, then call terminal without a Ready popup; the call asks the user to Run it or Run manually.",
   "Never ask the user in prose to run a command; call this tool instead.",
   "One command per call; the call blocks until the window closes and returns the exit code, an output tail, and the log path.",
 ].join(" ");
+
+const choices = [
+  { label: "Run it", description: "Open a terminal window and run it now" },
+  { label: "Run manually", description: "Get the command to copy and run yourself" },
+] as const;
+
+const Answered = Schema.Struct({ answers: Schema.Array(Schema.Array(Schema.String)) });
+
+type Question = Tool.Info & { readonly id: string };
+
+function ask(question: Question, input: typeof Input.Type, cd: string | undefined, context: Tool.Context) {
+  const text = [input.reason, ...(cd ? ["", `in ${tilde(cd)}`] : []), "", input.command].join("\n");
+  return question
+    .execute({ questions: [{ header: "Terminal", question: text, options: choices }] }, context)
+    .pipe(Effect.map(({ output }) => (Schema.is(Answered)(output) ? (output.answers[0]?.[0] ?? "") : "")));
+}
+
+function manual(cd: string | undefined) {
+  return [
+    "The user chose to run this command themselves when ready; no window opened and nothing ran.",
+    "Users usually pick this because they want to understand or discuss the command first.",
+    `Reply with the exact command in a bash fence they can copy${cd ? `, with \`cd ${cd}\` on its own line first` : ""}, then a few plain sentences on what it does, what they will be asked to type, and what output or risk to expect.`,
+    "Invite questions and end your turn; do not call `terminal` again for this command unless the user asks.",
+  ].join(" ");
+}
+
+function typed(answer: string) {
+  return [
+    `The user typed their own answer instead of choosing Run it or Run manually: "${answer}"`,
+    "No window opened and nothing ran.",
+    "If the answer asks something or voices doubt, answer it in text and end your turn; otherwise act on it.",
+    "Do not call `terminal` again for this command unless the user asks.",
+  ].join(" ");
+}
 
 export function unsafe(input: { command: string; reason: string; workdir?: string }) {
   for (const [field, pattern, allowed] of controls) {
@@ -201,21 +235,26 @@ export default Plugin.define({
                 resources: [input.command],
                 source: { type: "tool", messageID: context.messageID, id: context.id },
               });
+              const question = (yield* ctx.tool.list()).find((tool) => tool.id === "question");
+              if (!question) {
+                return yield* new Tool.Error({
+                  message: "the question tool is not registered, so terminal cannot ask",
+                });
+              }
+              const cd = cwd === path.resolve(session.location.directory) ? undefined : cwd;
+              const answer = yield* ask(question, input, cd, context);
+              if (answer === "Run manually") return { content: manual(cd), metadata: { choice: "manual" } };
+              if (answer !== "Run it") return { content: typed(answer), metadata: { choice: "typed" } };
               const dir = path.join(root, context.id.replace(/[^\w.-]/gu, "_"));
               const label = (session.title ?? "").replace(/\p{Cc}+/gu, " ").trim() || "OpenCode";
-              return yield* Effect.tryPromise({
+              const result = yield* Effect.tryPromise({
                 try: (signal) => popup(dir, { ...input, kitty, cwd, session: label }, signal),
                 catch: (error) => new Tool.Error({ message: `terminal failed: ${(error as Error).message}` }),
               });
+              return { ...result, metadata: { ...result.metadata, choice: "run" } };
             }),
         });
       });
-
-      yield* ctx.permission.hook("evaluate", (event) =>
-        Effect.sync(() => {
-          if (event.action === "terminal" && event.effect === "allow") event.effect = "ask";
-        }),
-      );
 
       yield* ctx.tool.hook("execute.before", (event) => {
         const command = (event.input as { command?: unknown } | undefined)?.command;

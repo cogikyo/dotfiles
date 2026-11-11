@@ -202,13 +202,25 @@ There is no tool, key, or TUI slot for the index.
 
 `terminal/server.ts` exposes `terminal` with `command`, `reason`, and optional `workdir`, which defaults to the session directory.
 Use it only for commands that need the user's keyboard, including passwords, interactive prompts, and `dctl` root stages; run other commands in `shell`.
-Only top-level sessions can call it; children get an error before any permission ask or window and must return the command to their parent as a blocker.
+Only top-level sessions can call it; children get an error before any question or window and must return the command to their parent as a blocker.
 The `reason` tells the user what the command does and what they must type or answer.
-Before calling, state your results and what the user must do in your reply, because the window covers the session.
-Before the permission ask, the plugin rejects control characters except newline and tab in `command`; `reason` and `workdir` allow none.
-The plugin changes permission `allow` to `ask` for `terminal`, including under the global allow-all rule.
+Before calling, state your results, show the command in a bash fence, and explain what the user must do, because the window covers the session.
+Before asking, the plugin rejects control characters except newline and tab in `command`; `reason` and `workdir` allow none.
+It calls `ctx.permission.assert`, so configured deny rules still block.
 
-Approval opens a fresh Kitty window with class `opencode-terminal`, `--title` set to `<session title> — <reason>`, and remote control disabled.
+After its guards, the plugin calls the registered `question` tool after transforms, so the question plugin's wrapper applies; a missing tool fails with `Tool.Error`.
+The popup has one question with header `Terminal`, showing the reason, `in <dir>` when the workdir differs from the session directory, then the command.
+It offers `Run it`, `Run manually`, and the question tool's built-in typed answer.
+`Run manually` opens no window and runs nothing; the result tells the model to reply with a copyable bash fence, short context, and then end its turn.
+A typed answer also opens no window and runs nothing; the user's text returns to the model.
+Esc propagates the question's dismissal and ends the step.
+Completed results carry `choice: "run" | "manual" | "typed"` metadata.
+
+`terminal/tui.tsx` follows `metadata.tool` to a tool part named `terminal`, then turns the docked form's left border and `Questions` title the theme's error red.
+It renders the command as a bash code block with code-blocks' Vagari style and bash parser, matching transcript fences; if the exact command text is not found, the command stays plain.
+Other forms keep host colors, and the plugin restores its changes when the form goes away.
+
+`Run it` opens a fresh Kitty window with class `opencode-terminal`, `--title` set to `<session title> — <reason>`, and remote control disabled.
 Session-title control characters become spaces; a title that is empty after trimming becomes `OpenCode`.
 `config/hypr/hyprland.lua` floats and centers it with a red border.
 `terminal/run.sh` sets the Kitty tab title to the session title with OSC 2 and prints a header with the session badge, wrapped reason, and working directory (`~`-abbreviated and `%q`-escaped).

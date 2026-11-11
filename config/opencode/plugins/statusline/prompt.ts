@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode/plugin/tui";
 import type { OptimizedBuffer, RGBA, Renderable } from "@opentui/core";
 
-type Frame = Renderable & { readonly border: unknown; readonly borderColor: RGBA };
+type Frame = Renderable & { readonly border: unknown; borderColor: RGBA };
 type Draw = (this: Renderable, buffer: OptimizedBuffer, deltaTime: number) => void;
 type Editor = Renderable & { readonly plainText: string };
 
@@ -63,7 +63,7 @@ export function cell(buffer: OptimizedBuffer, x: number, y: number) {
   return code <= 0x10ffff ? String.fromCodePoint(code) : "";
 }
 
-function framed(node: Renderable): node is Frame {
+export function framed(node: Renderable): node is Frame {
   return "borderColor" in node && "border" in node && Array.isArray(node.border) && node.border.join() === "left";
 }
 

@@ -14,7 +14,7 @@ export function scan(): Language[] {
     .map((entry) => load(entry.name));
 }
 
-function load(name: string): Language {
+export function load(name: string): Language {
   const file = (base: string) => path.join(root, name, base);
   const manifest: Manifest = existsSync(file("manifest.json"))
     ? JSON.parse(readFileSync(file("manifest.json"), "utf8"))

@@ -15,11 +15,11 @@ import type { Post, Stage } from "./draw.ts";
 import { apply, dashes, grow, runs, walk, type Item, type Letter, type Tint } from "./lane.ts";
 import { compose, flatten, match, notice } from "./notice.ts";
 import { question } from "./question.ts";
-import { native, owned, textual, type Ledger, type Text } from "./ledger.ts";
+import { leaves, native, owned, textual, type Ledger, type Text } from "./ledger.ts";
 import * as mail from "./mail.ts";
 import { locate } from "./scroll.ts";
+import { framed } from "../statusline/prompt.ts";
 
-type Frame = Renderable & { readonly border: unknown };
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
@@ -296,22 +296,12 @@ function strip(text: Text, model: TextNodeRenderable, ledger: Ledger) {
   return ledger.write(text, lead[0], lead[1], lead[2].slice(separator.length));
 }
 
-function leaves(node: TextNodeRenderable): [TextNodeRenderable, number, string][] {
-  return node.children.flatMap((child, index): [TextNodeRenderable, number, string][] =>
-    typeof child === "string" ? [[node, index, child]] : owned.has(child) ? [] : leaves(child),
-  );
-}
-
 function read(node: Text) {
   return flatten(node.textNode);
 }
 
 function marked(node: Renderable | undefined): node is MarkdownRenderable {
   return node !== undefined && "_blockStates" in node;
-}
-
-function framed(node: Renderable): node is Frame {
-  return "borderColor" in node && "border" in node && Array.isArray(node.border) && node.border.join() === "left";
 }
 
 function editable(node: Renderable) {
