@@ -55,8 +55,13 @@ func parseTmpfiles(r io.Reader) ([]tmpEntry, error) {
 		if len(fields) < 2 {
 			return nil, fmt.Errorf("line %d: want \"<type> <path> ...\", got %q", n, line)
 		}
-		if fields[0] != "f" && fields[0] != "d" {
-			return nil, fmt.Errorf("line %d: only f and d entries are supported, got %q", n, fields[0])
+		switch fields[0] {
+		case "f", "d":
+		case "e", "x":
+			// No paths to create or check.
+			continue
+		default:
+			return nil, fmt.Errorf("line %d: only f, d, e, and x entries are supported, got %q", n, fields[0])
 		}
 		path := fields[1]
 		if !filepath.IsAbs(path) || strings.ContainsAny(path, "%*?[") {

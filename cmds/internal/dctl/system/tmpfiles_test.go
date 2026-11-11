@@ -22,7 +22,7 @@ func tmpfilesOverlay(t *testing.T, conf string) string {
 }
 
 func TestParseTmpfiles(t *testing.T) {
-	got, err := parseTmpfiles(strings.NewReader("# lock\n\nf /run/app.lock 0644 root root -\nd /home/u/.cache :0755 u u -\n"))
+	got, err := parseTmpfiles(strings.NewReader("# lock\n\nf /run/app.lock 0644 root root -\nd /home/u/.cache :0755 u u -\ne /home/u/.cache - - - 3d\nx /home/u/.cache/keep\n"))
 	want := []tmpEntry{{'f', "/run/app.lock"}, {'d', "/home/u/.cache"}}
 	if err != nil || !slices.Equal(got, want) {
 		t.Fatalf("got %v, %v; want %v", got, err, want)

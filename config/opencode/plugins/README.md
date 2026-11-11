@@ -203,7 +203,7 @@ HTML conversion runs in a killable Worker (`convert.ts`) using `html.ts`, a verb
 Read-only shell and `x` calls append request and return records to `~/.local/state/opencode/scratch/runs.jsonl`, keyed by call and session IDs.
 Return records contain tool status, not process exit codes; the index is not proof of command success.
 `/tmp/opencode` is a disk-backed bind mount of `~/.cache/opencode-tmp` and survives reboots.
-User tmpfiles (`config/user-tmpfiles.d/opencode.conf`) age out unused entries in `/tmp/opencode` and caged scratch after 3 days; the index is exempt.
+System tmpfiles (`system/etc/tmpfiles.d/opencode-tmp.conf`) remove unused entries in `/tmp/opencode` and caged scratch as root after 3 days; the index is exempt.
 There is no tool, key, or TUI slot for the index.
 
 ## Terminal
