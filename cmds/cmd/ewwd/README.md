@@ -89,7 +89,7 @@ Brightness changes made outside these actions, such as the brightness keys, open
 | --------- | ------------------ | ------------------------------------------ |
 | audio     | WirePlumber        | default sink/source volume, mute, identity |
 | bluetooth | BlueZ D-Bus        | tracked headphone connection and battery   |
-| voice     | `vagus tail`       | cogikyo voice loop hearing and hush        |
+| voice     | `vagus`, `cogictl` | hearing, hush, thalamus hold               |
 | music     | Spotify            | playback, Canvas, history, queue           |
 | network   | /proc/net/dev      | upload/download speeds                     |
 | date      | time               | time, date, clockface icons, weeks alive   |
@@ -106,10 +106,11 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 
 ### Voice
 
-`voice` publishes `{"mode": ...}` from local-host hearing and hush events.
-While hearing is `listening`, mode is `listening` for hush off, `hushed` for hush on, and `unknown` for missing or stale hush.
-Events expire after 25 s; missing hearing gives `down`, while `paused`, `dictating`, and `down` pass through.
-If the cogikyo profile's `vagus` is unavailable, mode is `absent` and the bar hides the icon.
+`voice` publishes `{"mode": ...}` from local-host hearing and hush events, which expire after 25 s.
+Missing hearing gives `down`; non-`listening` modes pass through.
+While listening, hush off gives `listening`, hush on gives `hushed`, and missing hush gives `thalamus-held` if thalamus has a hold, otherwise `thalamus-down`.
+The hold comes from `cogictl organ status <host> --json` at startup and every 25 s without hush; failed reads count as no hold.
+A missing `vagus` gives `absent` and the bar hides the icon.
 
 ### Music
 

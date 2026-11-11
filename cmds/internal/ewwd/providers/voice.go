@@ -52,12 +52,14 @@ func (v *Voice) Start(ctx context.Context, notify func(data any)) error {
 		return nil
 	}
 
+	host, _ := os.Hostname()
 	events := make(chan voiceEvent)
-	go tailVoice(ctx, vagus, events)
+	go tailVoice(ctx, vagus, host, events)
 	v.publish(notify, "down")
 
 	var hearing string
 	var hush *bool
+	held := thalamusHeld(ctx, host)
 	hearingStale := time.NewTimer(voiceStale)
 	defer hearingStale.Stop()
 	hushStale := time.NewTimer(voiceStale)
@@ -82,23 +84,49 @@ func (v *Voice) Start(ctx context.Context, notify func(data any)) error {
 			hearing = ""
 		case <-hushStale.C:
 			hush = nil
+			held = thalamusHeld(ctx, host)
+			hushStale.Reset(voiceStale)
 		}
-		v.publish(notify, voiceMode(hearing, hush))
+		v.publish(notify, voiceMode(hearing, hush, held))
 	}
 }
 
-func voiceMode(hearing string, hush *bool) string {
+func voiceMode(hearing string, hush *bool, held bool) string {
 	switch {
 	case hearing == "":
 		return "down"
 	case hearing != "listening":
 		return hearing
+	case hush == nil && held:
+		return "thalamus-held"
 	case hush == nil:
-		return "unknown"
+		return "thalamus-down"
 	case *hush:
 		return "hushed"
 	}
 	return "listening"
+}
+
+func thalamusHeld(ctx context.Context, host string) bool {
+	ctx, cancel := context.WithTimeout(ctx, voiceRetry)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, filepath.Join(config.CogikyoBin, "cogictl"), "organ", "status", host, "--json").Output()
+	if err != nil {
+		return false
+	}
+	var organs []struct {
+		Organ string `json:"organ"`
+		Hold  string `json:"hold"`
+	}
+	if json.Unmarshal(out, &organs) != nil {
+		return false
+	}
+	for _, o := range organs {
+		if o.Organ == "thalamus" {
+			return o.Hold != ""
+		}
+	}
+	return false
 }
 
 func (v *Voice) Stop() error {
@@ -131,8 +159,7 @@ type voiceEvent struct {
 	} `json:"body"`
 }
 
-func tailVoice(ctx context.Context, vagus string, events chan<- voiceEvent) {
-	host, _ := os.Hostname()
+func tailVoice(ctx context.Context, vagus, host string, events chan<- voiceEvent) {
 	for {
 		cmd := exec.CommandContext(ctx, vagus, "tail", "cochlea.hearing", "thalamus.hush")
 		stdout, err := cmd.StdoutPipe()

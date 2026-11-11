@@ -315,12 +315,13 @@
 
 (defwidget voice [compact]
   (tip :compact compact :text "  ${
-    voice-info.mode == "listening" ? "listening · 󰳽 pause voice loop" :
-    voice-info.mode == "hushed" ? "hushed · 󰳽 resume voice loop" :
-    voice-info.mode == "paused" ? "paused · 󰳽 resume voice loop" :
-    voice-info.mode == "dictating" ? "dictating · 󰳽 resume voice loop" :
-    voice-info.mode == "unknown" ? "hush unknown · 󰳽 pause voice loop unless hushed" :
-    "voice loop down · 󰳽 resume voice loop"
+    voice-info.mode == "listening" ? "listening · 󰳽 pause" :
+    voice-info.mode == "hushed" ? "listening · replies hushed · 󰳽 unhush" :
+    voice-info.mode == "thalamus-down" ? "listening · replies off (thalamus down) · 󰳽 pause" :
+    voice-info.mode == "thalamus-held" ? "listening · no replies yet (thalamus held) · 󰳽 pause" :
+    voice-info.mode == "paused" ? "paused · 󰳽 resume" :
+    voice-info.mode == "dictating" ? "Hex has the mic · 󰳽 resume" :
+    "cochlea down · 󰳽 try resume"
   }  "
     (eventbox
       :onclick "hyprd voice"
@@ -328,7 +329,14 @@
       :cursor "pointer"
       (label
         :class "tr-c audio-voice audio-voice-${voice-info.mode}"
-        :text "󱑽"
+        :text {
+          voice-info.mode == "listening" || voice-info.mode == "thalamus-held" ? "󰟅" :
+          voice-info.mode == "hushed" ? "󰻔" :
+          voice-info.mode == "thalamus-down" ? "󱑽" :
+          voice-info.mode == "paused" ? "󰏤" :
+          voice-info.mode == "dictating" ? "󰌌" :
+          "󰩅"
+        }
       )
     )
   )

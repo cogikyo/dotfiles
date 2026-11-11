@@ -162,21 +162,33 @@
   }
 
   &-voice {
-    color: $glc-3;
     font-size: 1.1em;
+    min-width: 1em;
     margin-right: 10px;
 
-    &-listening {
+    &-listening,
+    &-thalamus-held {
       color: $sky-2;
     }
 
     &-hushed {
+      color: $prp-1;
+    }
+
+    &-thalamus-down {
+      color: $rby-0;
+    }
+
+    &-paused {
+      color: $glu-2;
+    }
+
+    &-dictating {
       color: $orn-3;
     }
 
-    &-paused,
-    &-dictating {
-      color: $glc-5;
+    &-down {
+      color: $glc-3;
     }
   }
 
