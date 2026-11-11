@@ -156,7 +156,7 @@ export const rows = (mailed?: Mailed, strong?: (session: Session) => boolean) =>
       value,
       gutter,
       titleView: () => (
-        <span style={{ attributes: strong?.(session) ? TextAttributes.BOLD : TextAttributes.NONE }}>
+        <span style={{ bold: !!strong?.(session) }}>
           {plain() && state ? <span style={{ fg: faded(context, state) }}>{fit()}</span> : fit()}
           {mail() ? (
             plain() ? (
