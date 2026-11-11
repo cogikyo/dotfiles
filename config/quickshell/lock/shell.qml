@@ -352,7 +352,7 @@ ShellRoot {
         if (focused.length !== 1)
             return ""
         const monitor = focused[0]
-        if (monitor.activeWorkspace?.id !== cover || monitor.specialWorkspace?.id !== 0)
+        if (monitor.activeWorkspace?.id !== cover || monitor.specialWorkspace?.name !== "")
             return ""
         if (clients.some(c => c.class !== "GLava" && (c.pinned !== false || c.workspace?.id === cover)))
             return ""
