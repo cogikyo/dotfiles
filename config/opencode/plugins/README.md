@@ -104,41 +104,28 @@ After host updates, recheck that closing sentence in `toModelContent`, `metadata
 
 ## Compact
 
-`compact/server.ts` exposes `compact` with `brief` and `reason`, queuing compaction after the current turn.
-The brief names in-flight work, waiting items with check commands, uncommitted paths with owners and intended commit grouping, and the driven-run marker and scope when active.
+`compact/server.ts` exposes `compact` with no input, queuing compaction after the current turn.
 After a successful root `workflow end` at or above 100K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
 The tool result ends with a line telling the agent to end the turn without starting new work; after compaction, `recommended` proposes what comes next.
-Briefs are keyed by the compaction ID the host returns, so calling `compact` after workflow-end compaction is queued shares that compaction and sets its brief.
-A pending `compact` brief takes precedence over workflow-end compaction.
-Pending brief records are deleted only when compaction ends, fails, or is cancelled, or when the session is deleted.
 Root sessions receive soft nudges at 150K and 200K tokens and a strong "finish up now" nudge at 250K.
 Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
 With a running workflow, soft nudges say to keep going if the remaining steps fit before 300K.
-At a natural break with no lanes in flight or repair pending, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
+At a natural break with no lanes in flight, repair pending, or open user question, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
 Without a running workflow, soft nudges say to compact without asking past 150K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
 Ask through `question` only if that point is unclear, subject to COLLAB.md's answer-first rule.
-The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight or repair pending, and commit finished work.
+The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, repair pending, or open user question, and commit finished work.
 Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
 In a driven run, commit finished work and queue compaction without asking.
-At 300K tokens, the plugin forces root-session compaction at a step boundary, even mid-task, without creating a handoff brief.
+At 300K tokens, the plugin forces root-session compaction at a step boundary, even mid-task.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
-Every root compaction uses the plugin's digest without a model call, whether triggered by `compact`, workflow end, the user's `/compact`, or the ceiling.
-The host stores an empty summary, so chat shows only the "Compaction" divider.
-The `context` hook delivers the hidden digest to the model, bound to that compaction, and the host keeps no recent-message tail beside it.
-`digest.ts` builds User, Reply, one line per finished workflow, Brief, Workflow, then Live.
-Reply keeps the newest turn-final reply and any newer in-flight commentary, labeled as such, each clipped after 16,000 characters.
-Without a new brief, Brief carries the previous brief forward, labeled with the compaction time when it was recorded.
-`history.ts` reads the session's full stored history: User keeps user messages and question answers verbatim, oldest first, clipping each message or answer after 4,000 characters.
-User always keeps the first user message, then the newest entries within a rough 5K-token budget.
-An omission note between them counts skipped entries and explains how to read them with `sessions`.
-`live.ts` probes Git branch, HEAD, dirty paths, open lanes, and delivered but unanswered mail asks.
-Live and the workflow store take precedence over later user words, which take precedence over the brief.
-Digest failures fall back to the host's model summary and log the error.
+Every root compaction stores a fixed recovery summary without a model call: “Compaction finished. This session is `<id>`. Load the `recommended` skill and follow it.”
+This applies to `compact`, workflow end, the user's `/compact`, and the ceiling.
+The [`recommended` skill](../skills/orchestration/recommended/SKILL.md) owns state recovery.
 Child sessions keep model summaries and delegate-scope instructions.
 
-After root compaction from any trigger, the plugin waits for a successful idle session and queues a follow-up to re-check waiting items with their commands, then load `recommended`.
-User input, including queued input, suppresses the follow-up, as does a superseding compaction or a failure or non-shutdown interruption between the compaction request and idle.
+After root compaction, the plugin waits for a successful idle session and queues a wake-up follow-up.
+The follow-up is suppressed by user input, including queued input, an assistant reply after compaction, a superseding compaction, or a failure or non-shutdown interruption between the compaction request and idle.
 
 `limits.ts` treats a missing configuration location as no configured buffer and caches that result without a toast; other config errors still show one.
 
@@ -245,8 +232,7 @@ It generates the title without a temporary child session.
 A title containing letters but no lowercase letters stays pinned.
 Counters live in memory, and the resulting title lives on the session.
 
-Context comes from stored history through `ctx.session.context`, using the first two qualifying user messages, up to four spread samples, and the latest three.
-After compaction, it includes the summary's objective (a digest's brief or oldest user message, or a model summary's first nonempty section) and samples the user messages since that summary.
+Context comes from full stored session history, using the first two qualifying user messages, up to four spread samples, and the latest three.
 The trigger and message context skip non-user items and messages under three words after removing image markers.
 
 Generated titles are Title Case and at most 36 characters, so they fit on one sidebar line; words that already contain a capital keep their casing.
@@ -485,7 +471,7 @@ Changed checklists reset ticks and unlink the child; `end: true` deletes the wor
 `subagent({ …, step: n })` links a child and appends the step's checklist to its brief.
 The child can tick only its own items with `workflow({ check: [n…] })`; Collab owns step marks and repairs.
 Status distinguishes running and returned children; `Ready:` excludes both.
-The compaction digest includes workflow status; the store remains the source of step state.
+After compaction, recovery reads `workflow` status; the store remains the source of step state.
 
 Starting a revision in parallel with `subagent({ …, step: n })` can link a child to the new revision with the old checklist, so its ticks land on the new step.
 Start a revision and launch its children in separate turns.

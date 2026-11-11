@@ -52,7 +52,7 @@ const parked = `
   WHERE type = 'synthetic' AND json_extract(payload, '$.metadata.source') = ?1`;
 
 /** Mirrors packages/core/src/session/history.ts withParts(); split parts replace legacy inline content. */
-export const parts = (message: string) => `
+const parts = (message: string) => `
   SELECT value AS data FROM json_each(${message}.data, '$.content')
   WHERE NOT EXISTS (SELECT 1 FROM session_part WHERE message_id = ${message}.id)
   UNION ALL

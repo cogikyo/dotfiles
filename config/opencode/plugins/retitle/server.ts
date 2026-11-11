@@ -1,8 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber } from "effect";
-import type { Message } from "../compact/digest.ts";
-import { history } from "../compact/history.ts";
-import { located } from "../mail/store.ts";
+import { located, opened } from "../mail/store.ts";
 import { tag } from "../sessions/tags.ts";
 import { api, pinned } from "./rpc.ts";
 
@@ -39,6 +37,16 @@ const MINOR = new Set([
 
 type State = { count: number; wrote: number; running: boolean };
 
+const typed = `
+  SELECT json_extract(data, '$.text') AS text FROM session_message
+  WHERE session_id = ?1 AND type = 'user' ORDER BY seq`;
+
+/** Reads past compactions; ctx.session.context starts at the latest completed compaction. */
+function history(sessionID: string, file: string) {
+  const rows = opened(file, (db) => db.query<{ text: unknown }, [string]>(typed).all(sessionID));
+  return rows.flatMap((row) => (typeof row.text === "string" ? [row.text] : []));
+}
+
 function human(text: string) {
   const plain = text
     .replace(/\[Image \d+\]/gu, " ")
@@ -51,11 +59,8 @@ function clip(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
-function transcript(messages: readonly Message[]) {
-  const said = messages.flatMap((message) => {
-    const text = message.type === "user" ? human(message.text) : undefined;
-    return text ? [text] : [];
-  });
+function transcript(texts: readonly string[]) {
+  const said = texts.flatMap((text) => human(text) ?? []);
   if (said.length === 0) return undefined;
   const middle = Math.max(0, said.length - OPENING - LATEST);
   const picks = [
@@ -138,11 +143,7 @@ export default Plugin.define({
     };
 
     const generate = async (sessionID: string, title: string | undefined) => {
-      const context = transcript(
-        history(sessionID, file, (row) =>
-          log(Effect.logWarning("retitle: skipped an undecodable history row", { sessionID, ...row })),
-        ),
-      );
+      const context = transcript(history(sessionID, file));
       if (!context) throw new Error("retitle: the session has no user messages to title");
       const { data: agent } = await ctx.agent.get({ agentID: "title" });
       const { text } = await ctx.generate.text({ prompt: request(title, context), model: agent.model });

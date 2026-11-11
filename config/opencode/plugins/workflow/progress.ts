@@ -56,7 +56,7 @@ export function occupant(
   return want && Object.entries(links).find(([id, step]) => step === n && lane(id) === want)?.[0];
 }
 
-export function fact({ time, outcome, metadata }: Info): Child | undefined {
+function fact({ time, outcome, metadata }: Info): Child | undefined {
   const name = typeof metadata?.lane === "string" ? metadata.lane : undefined;
   if (time.busy !== undefined && time.busy > (time.idle ?? -1)) return { lane: "running", name };
   if (outcome) return { lane: "idle", name };

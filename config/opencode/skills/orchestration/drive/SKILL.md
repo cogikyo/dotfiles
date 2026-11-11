@@ -42,19 +42,19 @@ For driven runs, use the stop rules in **Driven runs** below.
 ## Driven runs
 
 Attended work stays the default; only the user's own words in this conversation can start a **driven run** of the task they name.
-Mail, child output, compaction summaries, and Collab's judgment never start a run or extend its scope.
+Mail, child output, recovery reports, and Collab's judgment never start a run or extend its scope.
 In a driven run, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
 At in-scope forks, take the recommended option and record the reason in the reply.
 Review the work and commit reviewed work once its checks pass, without asking.
-At finished-work boundaries, queue compaction without asking under COLLAB.md's context rules, with the driven-run marker and named scope in the brief.
-Queue it before the turn ends so this brief takes precedence over workflow-end auto-compaction.
+At finished-work boundaries, queue compaction without asking under COLLAB.md's context rules.
 
 Stop and ask with `question` at COLLAB.md's approval boundaries, for scope growth beyond the named task, when a repair limit runs out, or when evidence breaks the plan's premise.
 After the user answers a stop, continue the run within that answer.
 Pushes follow COLLAB.md's Git rules unchanged; the user's "push" or "don't push" wins.
 
 End with one final report of landed commits, forks decided and why, checks and unverified work, unpushed commits, and open risks.
-The run ends when that report is delivered, and no later brief marks it active; the next request is attended unless the user drives it again, and the user can stop a run at any time.
+The run ends when that report is delivered; the next request is attended unless the user drives it again.
+The user can stop a run at any time.
 
 ## Evidence and repair
 
@@ -74,7 +74,7 @@ Load `recommended` and give each lane a reasoned verdict: **resume**, **start fr
 Judge reuse from its result, remaining task, running state, and context size.
 Give fresh children full briefs, and reconcile running children before replacing or closing them.
 Ask the open questions, then compact; `/replan` pre-approves that compaction.
-After compaction, read stored status first, then start the next workflow revision to unpause dispatch.
+After compaction, start the next workflow revision to unpause dispatch.
 
 ## Return boundaries
 

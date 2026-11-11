@@ -223,7 +223,8 @@ At this finish point, `done` replaces past-150K compaction; the user reopens a s
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
 When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
 Reconcile uncertain lane and tree state before continuing writes.
-Re-read image evidence when needed, because compaction summaries drop attachment payloads.
+After compaction, load `recommended` to recover state from session history and the stored workflow.
+Re-read image evidence when needed after compaction, because attachment payloads are not carried forward.
 
 ## Output
 

@@ -52,7 +52,9 @@ Give a session with fewer than 4 compactions one leaf.
 Split a session with 4 or more into leaves of about 3 compaction segments each, bounded by message `seq`; every leaf counts toward the budget.
 These thresholds are first guesses; revise them from real sweeps.
 Tell each leaf to load `retro` in past mode for its session and children, supplying the ID, focus, triage evidence, and papercuts diagnosis.
-Give a split leaf its `seq` range and tell it to read only that range plus the compaction summary that opens it, and only the children created during that range.
+Give a split leaf its `seq` range and tell it to read only that range and the children created during it.
+At the opening boundary, read any nonempty compaction summary and any historical `metadata.digest` on the compaction row.
+When neither carries task state, report missing pre-range context as an evidence gap.
 Merge a split session's leaf findings before cross-session synthesis.
 Require read-only findings marked unconfirmed, each with a question the user would need to answer.
 Synthesize after the leaves return; report failed or incomplete leaves as evidence gaps.
