@@ -75,8 +75,11 @@ ewwd action weather refresh               # refetch unless fetched <10m ago
 The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
 Cycling skips disconnected ports and output monitors, and keeps each device's volume and mute state.
 When the tracked headphones' wear state changes, the default sink and source follow: putting them on selects their Bluetooth sink once it appears and `audio.headphones_source` as the source.
-Taking them off or disconnecting while worn selects `audio.fallback_sink` and `audio.fallback_source`.
-Unknown wear state and other disconnects leave the defaults alone, and cycling the sink by hand cancels a pending switch to the headphones.
+Taking them off or disconnecting while worn selects the first available sink in `audio.fallback_sinks` (Snapcast, then HDMI) and `audio.fallback_source`.
+Unknown wear state, other disconnects, and connecting while not worn leave the default sink alone, including across an ewwd restart.
+Cycling the sink by hand cancels a pending switch to the headphones.
+With `audio.snapcast.sink` as the default, the speaker label joins connected, unmuted Snapcast clients above 0% volume, such as `TV + node-1`.
+It reads `No speakers` when none qualify, or the sink description (`Snapcast`) when snapserver is unreachable.
 If the tracked headphones stay connected and not worn for 10 minutes, ewwd disconnects them to save battery.
 Each new connection restarts the countdown, since the headphones can reconnect on their own while off-head.
 In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.
@@ -85,22 +88,22 @@ Brightness changes made outside these actions, such as the brightness keys, open
 
 ## Providers
 
-| Provider  | Source             | Data                                       |
-| --------- | ------------------ | ------------------------------------------ |
-| audio     | WirePlumber        | default sink/source volume, mute, identity |
-| bluetooth | BlueZ D-Bus        | tracked headphone connection and battery   |
-| voice     | `vagus`, `cogictl` | hearing, hush, thalamus hold               |
-| music     | Spotify            | playback, Canvas, history, queue           |
-| network   | /proc/net/dev      | upload/download speeds                     |
-| date      | time               | time, date, clockface icons, weeks alive   |
-| clock     | time               | wall-aligned hour, minute, second          |
-| computer  | procfs/sysfs       | RAM use, NVMe Composite temperature        |
-| battery   | sysfs power_supply | charge, AC state, time to empty or full    |
-| backlight | sysfs backlight    | brightness percent; OSD on key changes     |
-| cycle-5   | time               | wall-aligned scalar display cycle          |
-| cycle-6   | time               | wall-aligned scalar display cycle          |
-| weather   | OpenWeatherMap API | temperature, conditions, moon phase, wind  |
-| timer     | internal           | countdown timer and alarm                  |
+| Provider  | Source                | Data                                       |
+| --------- | --------------------- | ------------------------------------------ |
+| audio     | WirePlumber, Snapcast | default sink/source volume, mute, identity |
+| bluetooth | BlueZ D-Bus           | tracked headphone connection and battery   |
+| voice     | `vagus`, `cogictl`    | hearing, hush, thalamus hold               |
+| music     | Spotify               | playback, Canvas, history, queue           |
+| network   | /proc/net/dev         | upload/download speeds                     |
+| date      | time                  | time, date, clockface icons, weeks alive   |
+| clock     | time                  | wall-aligned hour, minute, second          |
+| computer  | procfs/sysfs          | RAM use, NVMe Composite temperature        |
+| battery   | sysfs power_supply    | charge, AC state, time to empty or full    |
+| backlight | sysfs backlight       | brightness percent; OSD on key changes     |
+| cycle-5   | time                  | wall-aligned scalar display cycle          |
+| cycle-6   | time                  | wall-aligned scalar display cycle          |
+| weather   | OpenWeatherMap API    | temperature, conditions, moon phase, wind  |
+| timer     | internal              | countdown timer and alarm                  |
 
 Each provider implements the `providers.Provider` interface and runs in its own goroutine. Providers that support user interaction also implement `providers.ActionProvider`.
 

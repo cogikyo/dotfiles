@@ -1,9 +1,7 @@
 package config
 
-// ewwd.go declares ewwd provider settings and their default values.
 import "time"
 
-// EwwConfig holds settings for every ewwd provider.
 type EwwConfig struct {
 	Windows WindowSets    `yaml:"windows"`
 	Weather WeatherConfig `yaml:"weather"`
@@ -26,25 +24,21 @@ func (w WindowSets) For(layout Layout) (show, hide []string) {
 	return w.Full, w.Compact
 }
 
-// MusicConfig configures the music provider's Spotify Canvas integration.
 type MusicConfig struct {
 	SpDc string `yaml:"sp_dc"` // open.spotify.com session cookie for Canvas API auth
 }
 
-// WeatherConfig configures the OpenWeatherMap polling loop.
 type WeatherConfig struct {
 	APIKeyFile   string        `yaml:"api_key_file"`  // path to plaintext file containing the OWM API key
 	PollInterval time.Duration `yaml:"poll_interval"` // how often to refetch from the OWM API
 }
 
-// TimerConfig defines default durations and constraints for timer/alarm widgets.
 type TimerConfig struct {
 	DefaultMinutes    int `yaml:"default_minutes"`     // initial timer length in minutes
 	DefaultAlarmHours int `yaml:"default_alarm_hours"` // initial alarm offset from now, in hours
 	MinAlarmHours     int `yaml:"min_alarm_hours"`     // minimum allowed alarm offset, in hours
 }
 
-// AudioConfig controls WirePlumber volume with per-device aliases.
 type AudioConfig struct {
 	SourceMax           int               `yaml:"source_max"`            // maximum source volume %, may exceed 100 (boost)
 	SinkMax             int               `yaml:"sink_max"`              // maximum sink volume %, typically <= 100
@@ -52,22 +46,25 @@ type AudioConfig struct {
 	DefaultSinkVolume   int               `yaml:"default_sink_volume"`   // sink volume % applied by reset_volume
 	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied by reset_volume
 	NameMappings        map[string]string `yaml:"name_mappings"`         // node.nick or node.name -> display alias
-	FallbackSink        string            `yaml:"fallback_sink"`
+	FallbackSinks       []string          `yaml:"fallback_sinks"`
 	HeadphonesSource    string            `yaml:"headphones_source"`
 	FallbackSource      string            `yaml:"fallback_source"`
+	Snapcast            SnapcastConfig    `yaml:"snapcast"`
 }
 
-// DateConfig provides reference dates for date-based widgets (age, countdowns).
+type SnapcastConfig struct {
+	Sink string `yaml:"sink"`
+	RPC  string `yaml:"rpc"`
+}
+
 type DateConfig struct {
 	BirthDate string `yaml:"birth_date"` // ISO-8601 date
 }
 
-// NetworkConfig controls polling frequency for network interface statistics.
 type NetworkConfig struct {
 	PollInterval time.Duration `yaml:"poll_interval"`
 }
 
-// DefaultEww returns ewwd defaults.
 func DefaultEww() EwwConfig {
 	return EwwConfig{
 		Windows: WindowSets{

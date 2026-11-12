@@ -20,9 +20,14 @@ audio:
   volume_step: 10
   default_sink_volume: 69
   default_source_volume: 100
-  fallback_sink: alsa_output.pci-0000_c2_00.1.hdmi-stereo-extra1
+  fallback_sinks:
+    - snapcast
+    - alsa_output.pci-0000_c2_00.1.hdmi-stereo-extra1
   headphones_source: AirPodsVoice
   fallback_source: alsa_input.usb-Seeed_Studio_reSpeaker_XVF3800_4-Mic_Array_114993701262801368-00.analog-stereo
+  snapcast:
+    sink: snapcast
+    rpc: 127.0.0.1:1705
   name_mappings:
     AirPodsHiRes: AirPods Max
     alsa_output.pci-0000_c2_00.1.hdmi-stereo-extra1: LG TV

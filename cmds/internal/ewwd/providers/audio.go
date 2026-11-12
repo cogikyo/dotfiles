@@ -24,7 +24,6 @@ const (
 	audioActionTimeout  = 750 * time.Millisecond
 )
 
-// AudioState is the authoritative WirePlumber snapshot exported to eww.
 type AudioState struct {
 	SinkAvailable   bool   `json:"sink_available"`
 	Sink            int    `json:"sink"`
@@ -77,6 +76,7 @@ type Audio struct {
 	last     AudioState
 	hasLast  bool
 	source   audioDevice
+	speakers string
 }
 
 func NewAudio(state StateSetter, cfg config.AudioConfig) *Audio {
@@ -92,7 +92,7 @@ func NewAudio(state StateSetter, cfg config.AudioConfig) *Audio {
 
 func (a *Audio) Wear(address, state string) {
 	a.wearMu.Lock()
-	if state == "" && a.wear.state != "worn" {
+	if state != "worn" && (state == "unknown" || a.wear.state != "worn") {
 		a.wearMu.Unlock()
 		return
 	}
@@ -128,6 +128,10 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	events := make(chan string, 32)
 	status := make(chan bool, 8)
 	go subscribeAudio(ctx, events, status)
+	speakers := make(chan string)
+	if a.config.Snapcast.RPC != "" {
+		go subscribeSnapcast(ctx, a.config.Snapcast.RPC, speakers)
+	}
 
 	var debounce *time.Timer
 	var debounceC <-chan time.Time
@@ -198,6 +202,8 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 				a.publish(AudioState{})
 				finishPending(errors.New("audio event stream unavailable"))
 			}
+		case a.speakers = <-speakers:
+			a.refresh(ctx)
 		case target := <-events:
 			burstTargets[target] = true
 			if debounce == nil {
@@ -241,7 +247,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 				headphones = "bluez_output." + strings.ReplaceAll(strings.ToUpper(change.address), ":", "_") + "."
 				followHeadphones()
 			} else {
-				a.selectConfigured(ctx, "sink", "fallback_sink", a.config.FallbackSink)
+				a.selectConfigured(ctx, "sink", "fallback_sinks", a.config.FallbackSinks...)
 			}
 		case req := <-a.requests:
 			switch {
@@ -264,6 +270,9 @@ func (a *Audio) Stop() error {
 
 func (a *Audio) refresh(ctx context.Context) {
 	sink, sinkOK := a.readDevice(ctx, "sink")
+	if a.speakers != "" && sink.is(a.config.Snapcast.Sink) {
+		sink.name = a.speakers
+	}
 	source, sourceOK := a.readDevice(ctx, "source")
 	a.source = source
 	a.publish(AudioState{
@@ -562,23 +571,31 @@ func (a *Audio) reconcileSource(ctx context.Context) {
 	a.selectConfigured(ctx, "source", key, want)
 }
 
-func (a *Audio) selectConfigured(ctx context.Context, deviceType, key, name string) {
-	if name == "" {
+func (a *Audio) selectConfigured(ctx context.Context, deviceType, key string, names ...string) {
+	if !slices.ContainsFunc(names, func(name string) bool { return name != "" }) {
 		fmt.Fprintf(os.Stderr, "ewwd: audio: headphones changed but audio.%s is unset\n", key)
 		return
 	}
-	found, err := a.selectNode(ctx, deviceType, func(n audioNode) bool {
-		return n.Properties["node.nick"] == name || n.Name == name
-	})
+	nodes, err := listAudioNodes(ctx, deviceType)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: audio: select %s %q: %v\n", key, name, err)
+		fmt.Fprintf(os.Stderr, "ewwd: audio: select %s: %v\n", key, err)
 		return
 	}
-	if !found {
-		fmt.Fprintf(os.Stderr, "ewwd: audio: %s %q is not available\n", key, name)
+	for _, name := range names {
+		index := slices.IndexFunc(nodes, func(n audioNode) bool {
+			return name != "" && (n.Properties["node.nick"] == name || n.Name == name)
+		})
+		if index < 0 {
+			continue
+		}
+		if err := a.setDefault(ctx, deviceType, nodes[index]); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: audio: select %s %q: %v\n", key, name, err)
+			return
+		}
+		fmt.Fprintf(os.Stderr, "ewwd: audio: default %s set to %s %q\n", deviceType, key, name)
 		return
 	}
-	fmt.Fprintf(os.Stderr, "ewwd: audio: default %s set to %s %q\n", deviceType, key, name)
+	fmt.Fprintf(os.Stderr, "ewwd: audio: %s %q is not available\n", key, names)
 }
 
 func (a *Audio) selectNode(ctx context.Context, deviceType string, match func(audioNode) bool) (bool, error) {
