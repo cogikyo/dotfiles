@@ -1,0 +1,16 @@
+[Unit]
+Description=Snapcast server streaming the snapcast sink to the TV and voice nodes
+After=pipewire.service
+BindsTo=pipewire.service
+ConditionHost=costello
+
+[Service]
+StateDirectory=snapserver
+ExecStartPre=/usr/bin/cp --update=none %h/.config/snapcast/seed.json %S/snapserver/server.json
+Environment="PIPEWIRE_PROPS={ node.description = Snapcast device.description = Snapcast }"
+ExecStart=/usr/bin/snapserver -c %h/.config/snapcast/snapserver.conf --server.datadir=%S/snapserver
+Restart=on-failure
+Slice=session.slice
+
+[Install]
+WantedBy=pipewire.service

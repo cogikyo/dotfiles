@@ -1,0 +1,1 @@
+ip saddr { 192.168.0.114 } tcp dport 1704 accept

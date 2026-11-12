@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+hdmi=alsa_output.pci-0000_c2_00.1.hdmi-stereo-extra1
+
+route() {
+	local want node
+	want=$(pactl get-default-sink)
+	[[ $want == snapcast ]] && want=$hdmi
+	node=$(pw-dump | jq '.[] | select(.type == "PipeWire:Interface:Node" and .info.props["node.name"] == "alerts-output") | .id')
+	[[ -n $node && "$node $want" != "${routed:-}" ]] || return 0
+	pw-metadata -n default "$node" target.object "$want" >/dev/null
+	routed="$node $want"
+	echo "alerts -> $want"
+}
+
+route
+pactl subscribe | while read -r event; do
+	case $event in
+	*"on server"* | *"'new' on sink-input"*) route ;;
+	esac
+done
