@@ -9,7 +9,7 @@ StateDirectory=snapserver
 ExecStartPre=/usr/bin/cp --update=none %h/.config/snapcast/seed.json %S/snapserver/server.json
 # /dirac adds no audio delay; it reports sink latency so video players hold the picture.
 # Keep latency at --stream.buffer + about 55 ms.
-Environment="PIPEWIRE_PROPS={ node.description = Snapcast device.description = Snapcast audioconvert.filter-graph.0 = { nodes = [ { type = builtin name = delay label = convolver config = { filename = /dirac latency = 0.554 } } ] } }"
+Environment="PIPEWIRE_PROPS={ node.description = Snapcast device.description = Snapcast node.group = pipewire.dummy audioconvert.filter-graph.0 = { nodes = [ { type = builtin name = delay label = convolver config = { filename = /dirac latency = 0.554 } } ] } }"
 ExecStart=/usr/bin/snapserver -c %h/.config/snapcast/snapserver.conf --server.datadir=%S/snapserver --stream.buffer=500
 Restart=on-failure
 Slice=session.slice
