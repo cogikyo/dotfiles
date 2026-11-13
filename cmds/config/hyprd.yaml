@@ -265,7 +265,7 @@ vpn:
 # │ notifications                                                                 │
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 notify:
-  default_volume: 100 # percentage; 100 = paplay 65536. Per-event volume overrides this.
+  default_volume: 79 # percentage; 100 = paplay 65536. Per-event volume overrides this.
 
   # ├─ visual styles ────────────────────────────────────────────────────────────┤
   styles:
@@ -296,24 +296,24 @@ notify:
     start:
       style: secondary
       sound: civ5-worker-select
-      volume: 95
+      volume: 75
       timeout: 1000
     idle:
       style: secondary
       sound: sdv-frog
-      volume: 95
+      volume: 75
       timeout: 5000
 
     lane:
       style: success
       sound: civ6-notification
-      volume: 65
+      volume: 52
       timeout: 2500
 
     complete:
       style: primary
       sound: jobs-done
-      volume: 110
+      volume: 87
 
     permission:
       style: tertiary
@@ -326,7 +326,7 @@ notify:
       style: error
       sound: something-need-doing
       timeout: 2500
-      volume: 100
+      volume: 79
 
   # ├─ sound routing ────────────────────────────────────────────────────────────┤
   urgency_sounds: # common urgency levels
