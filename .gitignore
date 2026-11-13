@@ -19,6 +19,9 @@ cmds/config/*.local.yaml
 # Go telemetry via the ~/.config/go symlink
 config/go/telemetry/
 
+# Static Satoshi (license bars public redistribution)
+share/fonts/Satoshi-*.otf
+
 # ISO build artifacts
 iso/work/
 iso/out/
