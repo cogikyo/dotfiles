@@ -207,6 +207,15 @@ Return records contain tool status, not process exit codes; the index is not pro
 System tmpfiles (`system/etc/tmpfiles.d/opencode-tmp.conf`) remove unused entries in `/tmp/opencode` and caged scratch as root after 3 days; the index is exempt.
 There is no tool, key, or TUI slot for the index.
 
+## Cogikyo
+
+`cogikyo/server.ts` registers only for plugin locations resolving under `~/cogikyo`.
+After successful `edit`, `write`, or `patch` calls, it appends a **Public dotfiles** notice when a target resolves into `~/dotfiles`, following symlinks through helpers from `guard/paths.ts`.
+Notices are deduplicated in memory per session and top-level dotfiles path within each location instance.
+
+The plugin never blocks or changes the write; hook errors log `cogikyo: dotfiles notice skipped`.
+Shell writes (`cp`, `tee`, `>`) are not covered.
+
 ## Terminal
 
 `terminal/server.ts` exposes `terminal` with `command`, `reason`, and optional `workdir`, which defaults to the session directory.
