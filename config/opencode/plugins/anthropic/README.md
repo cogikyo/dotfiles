@@ -33,10 +33,9 @@ Authentication errors do not move a request to another account.
 ## Usage caps and failover
 
 Lane picks, `ctrl+m`, and failover share `pool.ts`; `ctrl+m` and root-session failover exclude Trend.
-Among uncapped accounts, keep the lane's current account first, then prefer fresh usage data over unknown accounts.
-Next prefer weekly surplus of at least 25 percentage points, largest first; otherwise prefer Trend, then the soonest weekly reset.
-Weekly surplus is the share of the week's usage left minus the share of the week's time left.
-Trend's 5-hour window caps before its weekly usage runs out, so unused 5-hour windows are lost.
+Among uncapped accounts, keep the lane's current account first, then prefer fresh usage data over unknown accounts, then Trend, then the soonest weekly reset.
+Trend leads because its 5-hour window limits how fast it can spend weekly usage, so it cannot be drained in a burst later.
+Cogikyo and Cullyn have no 5-hour window, so soonest-reset-first uses their weekly capacity before it expires.
 
 Only 429s identified as usage caps trigger failover to other open accounts.
 Sessions keep their replacement while the original account's in-memory cap mark lasts, unless the replacement is capped or unavailable.

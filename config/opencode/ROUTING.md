@@ -63,13 +63,11 @@ Lane picks and failover share this order among uncapped accounts:
 
 1. Keep a lane's follow-ups on its current account.
 2. Prefer accounts with fresh usage data over unknown ones.
-3. Prefer weekly surplus of at least 25 percentage points, largest first.
-4. Otherwise prefer Trend.
-5. Then prefer the soonest weekly reset.
+3. Prefer Trend.
+4. Then prefer the soonest weekly reset.
 
-Weekly surplus is the share of the week's usage left minus the share of the week's time left.
-Accounts with much left and little time to spend it lead; weekends follow the same math.
-Trend leads otherwise because its 5-hour window caps before its weekly usage runs out, so unused 5-hour windows are lost.
+Trend leads because its 5-hour window limits how fast it can spend weekly usage, so it cannot be drained in a burst later.
+Cogikyo and Cullyn have no 5-hour window, so soonest-reset-first uses their weekly capacity before it expires; `ctrl+m` and main-session failover exclude Trend and use that order.
 
 - **Enforced**: when every account is capped for Opus or Sonnet, lanes try the same model on Cursor's O pool, then `opencode-go/grok-4.7` if O is capped, without a variant and with a note for each switch.
 - When an account caps mid-request, the Anthropic plugin resends on the next open account; later requests in that session stay there until the cap resets.

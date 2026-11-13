@@ -4,8 +4,6 @@ import { claudeAccounts } from "./accounts.ts";
 export const staleAfter = 10 * 60_000;
 const quotaDelay = 30_000;
 const hold = 15 * 60_000;
-const week = 7 * 24 * 60 * 60_000;
-const ahead = 25;
 
 export type Availability = {
   id: string;
@@ -13,7 +11,6 @@ export type Availability = {
   known: boolean;
   capped: number[];
   weekly: number;
-  surplus: number;
 };
 
 const ids = Object.values(claudeAccounts).map(({ id }) => id);
@@ -39,10 +36,6 @@ async function availability(id: string, modelID: string, now = Date.now()): Prom
     known: !issue && windows.length > 0 && known.length === windows.length,
     capped: known.filter((window) => window.used! >= 100).map((window) => window.reset),
     weekly: weekly?.reset ?? Infinity,
-    surplus:
-      weekly && Number.isFinite(weekly.reset) && weekly.reset > now
-        ? 100 - weekly.used! - ((weekly.reset - now) / week) * 100
-        : -Infinity,
   };
 }
 
@@ -53,7 +46,6 @@ export function survey(modelID: string, now = Date.now()) {
 export const reopens = (account: Availability) => Math.max(...account.capped);
 
 export function ranked(list: Availability[], current?: string) {
-  const lead = (account: Availability) => (account.surplus >= ahead ? account.surplus : 0);
   const trend = (account: Availability) => Number(account.id === claudeAccounts.trend.id);
   return list
     .filter((account) => !account.capped.length)
@@ -61,7 +53,6 @@ export function ranked(list: Availability[], current?: string) {
       (a, b) =>
         Number(b.id === current) - Number(a.id === current) ||
         Number(b.known) - Number(a.known) ||
-        lead(b) - lead(a) ||
         trend(b) - trend(a) ||
         a.weekly - b.weekly,
     );
