@@ -26,7 +26,7 @@ func Machine(u *ui.UI, root string) Stage {
 			}
 			p := facts.Profile()
 			if old, err := machine.Read(record); err == nil {
-				p.WiFi, p.YubiKeys = old.WiFi, old.YubiKeys
+				p.WiFi, p.YubiKeys, p.Cogikyo = old.WiFi, old.YubiKeys, old.Cogikyo
 			}
 			if p, err = AskMachine(u, facts, p); err != nil {
 				return err
@@ -41,6 +41,23 @@ func Machine(u *ui.UI, root string) Stage {
 }
 
 func AskMachine(u *ui.UI, f machine.Facts, p machine.Profile) (machine.Profile, error) {
+	p, err := hardware(u, f, p)
+	if err != nil {
+		return p, err
+	}
+	initial := "off"
+	if p.Cogikyo {
+		initial = "on"
+	}
+	cogikyo, err := choose(u, "Cogikyo packages", []string{"off", "on"}, initial)
+	if err != nil {
+		return p, err
+	}
+	p.Cogikyo = cogikyo == "on"
+	return p, p.Validate()
+}
+
+func hardware(u *ui.UI, f machine.Facts, p machine.Profile) (machine.Profile, error) {
 	u.Info("detected %s", f)
 	if slices.Contains(p.GPUs, machine.NVIDIA) {
 		u.Warn("NVIDIA is not supported yet; the install falls back to the in-kernel driver")
@@ -83,7 +100,7 @@ func AskMachine(u *ui.UI, f machine.Facts, p machine.Profile) (machine.Profile, 
 		return p, err
 	}
 	p.YubiKeys, _ = strconv.Atoi(keys)
-	return p, p.Validate()
+	return p, nil
 }
 
 func choose(u *ui.UI, title string, options []string, initial string) (string, error) {

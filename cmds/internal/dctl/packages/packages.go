@@ -47,8 +47,8 @@ func Parse(r io.Reader) ([]string, error) {
 }
 
 type Lists struct {
-	Base, AUR, Extra, Local []string
-	Vendor                  map[string][]string
+	Base, AUR, Extra, Cogikyo, Local []string
+	Vendor                           map[string][]string
 }
 
 var Vendors = []string{machine.AMD, machine.Intel}
@@ -57,9 +57,10 @@ func Load(dir string) (Lists, error) {
 	base, berr := Read(filepath.Join(dir, "base.lst"))
 	aur, aerr := Read(filepath.Join(dir, "aur.lst"))
 	extra, eerr := Read(filepath.Join(dir, "extra.lst"))
-	l := Lists{Base: base, AUR: aur, Extra: extra, Vendor: map[string][]string{}}
+	cogikyo, cerr := Read(filepath.Join(dir, "cogikyo.lst"))
+	l := Lists{Base: base, AUR: aur, Extra: extra, Cogikyo: cogikyo, Vendor: map[string][]string{}}
 	entries, err := os.ReadDir(dir)
-	errs := []error{berr, aerr, eerr, err}
+	errs := []error{berr, aerr, eerr, cerr, err}
 	for _, v := range Vendors {
 		names, err := Read(filepath.Join(dir, v+".lst"))
 		l.Vendor[v] = names
@@ -90,11 +91,17 @@ func (l Lists) Official(vendors []string) []string {
 	return unique(names)
 }
 
+func (l Lists) Apps(p machine.Profile) []string {
+	if p.Cogikyo {
+		return unique(slices.Concat(l.Extra, l.Cogikyo))
+	}
+	return l.Extra
+}
+
 var record = machine.Path
 
-func selected() ([]string, error) {
-	p, err := machine.Read(record)
-	return p.Vendors(), err
+func profile() (machine.Profile, error) {
+	return machine.Read(record)
 }
 
 func unique(names []string) []string {
@@ -151,7 +158,7 @@ func missing(ctx context.Context, dir string, run execx.Runner) (official, other
 	if err != nil {
 		return nil, nil, err
 	}
-	vendors, err := selected()
+	p, err := profile()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,7 +166,7 @@ func missing(ctx context.Context, dir string, run execx.Runner) (official, other
 	if err != nil {
 		return nil, nil, err
 	}
-	return absent(l.Official(vendors), have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
+	return absent(l.Official(p.Vendors()), have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
 }
 
 var coreDB = "/var/lib/pacman/sync/core.db"

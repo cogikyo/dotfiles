@@ -21,11 +21,15 @@ func Extra(dir, opencode string, run execx.Runner) setup.Stage {
 		if err != nil {
 			return nil, err
 		}
+		p, err := profile()
+		if err != nil {
+			return nil, err
+		}
 		have, err := installed(ctx, run)
 		if err != nil {
 			return nil, err
 		}
-		return absent(l.Extra, have), nil
+		return absent(l.Apps(p), have), nil
 	}
 	return setup.Stage{Name: "extra", Background: true, Items: []setup.Item{
 		{

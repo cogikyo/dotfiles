@@ -1,0 +1,6 @@
+# official
+qemu-user-static
+qemu-user-static-binfmt
+
+# aur
+snapcast

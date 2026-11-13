@@ -38,6 +38,7 @@ type Profile struct {
 	WLAN      []string
 	YubiKeys  int
 	Lane      []int
+	Cogikyo   bool
 }
 
 var module = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -107,6 +108,7 @@ func (p Profile) Format() []byte {
 		{"wlan", strings.Join(p.WLAN, ",")},
 		{"yubikeys", strconv.Itoa(p.YubiKeys)},
 		{"lane", cpus(p.Lane, ",")},
+		{"cogikyo", flag(p.Cogikyo, "on", "off")},
 	} {
 		fmt.Fprintf(&b, "%s=%s\n", kv[0], kv[1])
 	}
@@ -151,6 +153,8 @@ func Parse(data []byte) (Profile, error) {
 			p.YubiKeys, err = strconv.Atoi(value)
 		case "lane":
 			p.Lane, err = parseCPUs(value)
+		case "cogikyo":
+			p.Cogikyo, err = parseFlag(value, "on", "off")
 		default:
 			err = errors.New("unknown key")
 		}

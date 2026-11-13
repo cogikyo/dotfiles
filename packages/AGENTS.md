@@ -11,6 +11,7 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 | `amd.lst`, `intel.lst` | Vendor-specific offline packages  |
 | `aur.lst`              | AUR offline payload recipes       |
 | `extra.lst`            | Online `dctl setup extra`         |
+| `cogikyo.lst`          | Cogikyo-only online packages      |
 | `repos.lst`            | Repository clone catalog          |
 | `brew.lst`             | macOS Homebrew formulae and casks |
 | `<pkg>/PKGBUILD`       | Local offline payload recipe      |
@@ -25,7 +26,8 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 - `brew.lst` lists canonical Homebrew formula names and `cask:<token>` casks; macOS `dctl setup` installs missing entries and never removes unlisted ones.
 - Name local recipe directories after the package; the loader uses directory names as package names.
 - Ship keys for `validpgpkeys` under `<pkg>/keys/pgp/*.asc`; ISO builds fail before building if a required fingerprint is absent from the build keyring.
-- ISO builds require the base, vendor, AUR, and extra lists; base, both vendor sets, AUR, and local packages enter the offline payload.
+- The package loader requires base, both vendor, AUR, extra, and cogikyo lists; only base, both vendor sets, AUR, and local packages enter the ISO offline payload.
 - Installation, package setup, and reconciliation select vendor lists from `/etc/dctl/machine`; `linux-firmware-intel`, `linux-firmware-mediatek`, and `linux-firmware-realtek` remain in base.
+- Put cogikyo-only packages in `cogikyo.lst`; `dctl setup extra` and reconciliation select it only with `cogikyo=on` in `/etc/dctl/machine` (absent means off).
 - `dctl update packages` reconciles the system with the lists; packages kept from its removal checklist are inserted into `extra.lst` under `# official` or `# aur`.
 - A binary at `~/.local/bin/eww` shadows the packaged eww from `eww/`.

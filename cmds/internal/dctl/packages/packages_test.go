@@ -39,7 +39,7 @@ func lists(t *testing.T, files map[string]string) string {
 		t.Fatal(err)
 	}
 	files = maps.Clone(files)
-	for _, v := range []string{"amd.lst", "intel.lst"} {
+	for _, v := range []string{"amd.lst", "intel.lst", "cogikyo.lst"} {
 		if _, ok := files[v]; !ok {
 			files[v] = ""
 		}

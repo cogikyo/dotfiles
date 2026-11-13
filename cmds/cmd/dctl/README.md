@@ -194,9 +194,11 @@ It checks units in its `running` list, currently only `sshd.service`, and starts
 
 On an existing install, run `dctl setup machine` before system, package, or lock work if `/etc/dctl/machine` is missing or invalid.
 Installation writes the record before applying setup stages.
-The `machine` stage detects hardware and records the Wi-Fi policy and YubiKey count without asking for or changing the hostname.
+The `machine` stage detects hardware and records the Wi-Fi policy, YubiKey count, and Cogikyo package choice without asking for or changing the hostname.
 
-The record uses `key=value` lines; all keys are required: `preset`, `cpu`, `gpus`, `form`, `backlight`, `wifi`, `wlan`, `yubikeys`, and `lane`.
+The record uses `key=value` lines; required keys are `preset`, `cpu`, `gpus`, `form`, `backlight`, `wifi`, `wlan`, `yubikeys`, and `lane`.
+The optional `cogikyo=on|off` key selects [Cogikyo packages](#packages-and-background-work); absent means `off`.
+Run `dctl setup machine` and choose **Cogikyo packages** to change it; re-detection preselects the current value, and the installer asks too.
 Unknown keys, including `hostname`, are rejected.
 Detection reads DMI, CPU/GPU vendors, battery/backlight, wireless drivers, and CPU topology.
 Confirm the Framework preset when the machine is recognized.
@@ -285,6 +287,7 @@ Missing AUR and local base packages need manual installation.
   ```
 
 - `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
+  - With `cogikyo=on` in `/etc/dctl/machine`, it also installs missing `packages/cogikyo.lst` entries.
   - Its `extra-docker` item selects the `rootless` Docker context, creating it if needed.
     It starts the user `docker.service` if needed before switching and passes only when the context is `rootless` and the daemon reports `name=rootless`.
     While `/var/lib/docker` or `/var/lib/containerd` exists and the context isn't `rootless`, it refuses to switch: migrate first.
@@ -499,6 +502,7 @@ Lua loads `caret-<hl.version()>.so` when present; the plugin refuses to initiali
 ### Package reconciliation
 
 Reconciliation treats base, selected vendor lists, AUR, extra, and local recipes as the desired set.
+It includes `cogikyo.lst` only with `cogikyo=on`; when off, packages listed only there count as unlisted.
 It needs `/etc/dctl/machine`; if missing, run `dctl setup machine` first.
 It changes package reasons before prompting, so cancelling is not a complete undo.
 
@@ -547,7 +551,7 @@ dctl iso build --fresh
 
 - Bundles a depth-1 clone; working-tree changes and full history are excluded.
 - Resolves base, both AMD/Intel vendor sets, AUR, and local recipes; missing packages stop the build.
-- `extra.lst` must exist but is not bundled; use `dctl setup extra` after installation.
+- `extra.lst` and `cogikyo.lst` must exist, but their packages are not in the offline payload; use `dctl setup extra` after installation.
 - Declared recipe PGP keys must be provided under recipe `keys/pgp/*.asc`.
 - Uses `/var/cache/dctl-iso/` for caching; concurrent builds are refused.
   - Recipe keys include recipe revisions and direct runtime dependency versions.
