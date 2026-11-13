@@ -29,6 +29,7 @@ type AudioState struct {
 	Sink            int    `json:"sink"`
 	SinkName        string `json:"sink_name"`
 	SinkMuted       bool   `json:"sink_muted"`
+	SinkGroup       bool   `json:"sink_group"`
 	SourceAvailable bool   `json:"source_available"`
 	Source          int    `json:"source"`
 	SourceName      string `json:"source_name"`
@@ -76,13 +77,14 @@ type Audio struct {
 	last     AudioState
 	hasLast  bool
 	source   audioDevice
-	speakers string
+	tracked  string
 }
 
-func NewAudio(state StateSetter, cfg config.AudioConfig) *Audio {
+func NewAudio(state StateSetter, cfg config.AudioConfig, headphones string) *Audio {
 	return &Audio{
 		state:    state,
 		config:   cfg,
+		tracked:  headphonesSink(headphones),
 		requests: make(chan audioRequest),
 		wearSent: make(chan struct{}, 1),
 		stop:     make(chan struct{}),
@@ -128,10 +130,6 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	events := make(chan string, 32)
 	status := make(chan bool, 8)
 	go subscribeAudio(ctx, events, status)
-	speakers := make(chan string)
-	if a.config.Snapcast.RPC != "" {
-		go subscribeSnapcast(ctx, a.config.Snapcast.RPC, speakers)
-	}
 
 	var debounce *time.Timer
 	var debounceC <-chan time.Time
@@ -202,8 +200,6 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 				a.publish(AudioState{})
 				finishPending(errors.New("audio event stream unavailable"))
 			}
-		case a.speakers = <-speakers:
-			a.refresh(ctx)
 		case target := <-events:
 			burstTargets[target] = true
 			if debounce == nil {
@@ -244,7 +240,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 			wearHandled = seq
 			headphones = ""
 			if change.state == "worn" {
-				headphones = "bluez_output." + strings.ReplaceAll(strings.ToUpper(change.address), ":", "_") + "."
+				headphones = headphonesSink(change.address)
 				followHeadphones()
 			} else {
 				a.selectConfigured(ctx, "sink", "fallback_sinks", a.config.FallbackSinks...)
@@ -270,9 +266,6 @@ func (a *Audio) Stop() error {
 
 func (a *Audio) refresh(ctx context.Context) {
 	sink, sinkOK := a.readDevice(ctx, "sink")
-	if a.speakers != "" && sink.is(a.config.Snapcast.Sink) {
-		sink.name = a.speakers
-	}
 	source, sourceOK := a.readDevice(ctx, "source")
 	a.source = source
 	a.publish(AudioState{
@@ -280,6 +273,7 @@ func (a *Audio) refresh(ctx context.Context) {
 		Sink:            sink.volume,
 		SinkName:        sink.name,
 		SinkMuted:       sink.muted,
+		SinkGroup:       sink.is(a.config.Snapcast.Sink),
 		SourceAvailable: sourceOK,
 		Source:          source.volume,
 		SourceName:      source.name,
@@ -305,6 +299,17 @@ type audioDevice struct {
 	muted  bool
 	node   string
 	nick   string
+}
+
+func (n audioNode) is(name string) bool {
+	return name != "" && (n.Name == name || n.Properties["node.nick"] == name)
+}
+
+func headphonesSink(address string) string {
+	if address == "" {
+		return ""
+	}
+	return "bluez_output." + strings.ReplaceAll(strings.ToUpper(address), ":", "_") + "."
 }
 
 func (d audioDevice) is(name string) bool {
@@ -497,7 +502,7 @@ func (a *Audio) HandleAction(args []string) (string, error) {
 
 func (a *Audio) execute(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("action required: change_volume, toggle_mute, cycle_device, or reset_volume")
+		return errors.New("action required: change_volume, set_volume, toggle_mute, cycle_device, or reset_volume")
 	}
 
 	switch args[0] {
@@ -506,6 +511,22 @@ func (a *Audio) execute(ctx context.Context, args []string) error {
 			return errors.New("change_volume requires: <sink|source> <up|down>")
 		}
 		return a.changeVolume(ctx, args[1], args[2])
+	case "set_volume":
+		if len(args) != 3 {
+			return errors.New("set_volume requires: <sink|source> <percent>")
+		}
+		if err := a.requireAvailable(args[1]); err != nil {
+			return err
+		}
+		volume, err := strconv.Atoi(args[2])
+		if err != nil {
+			return fmt.Errorf("invalid volume %q", args[2])
+		}
+		ceiling := a.config.SinkMax
+		if args[1] == "source" {
+			ceiling = a.config.SourceMax
+		}
+		return a.setVolume(ctx, args[1], volume, ceiling)
 	case "toggle_mute":
 		if len(args) != 2 {
 			return errors.New("toggle_mute requires: sink or source")
@@ -529,6 +550,15 @@ func (a *Audio) execute(ctx context.Context, args []string) error {
 	}
 }
 
+func (a *Audio) outputs(sinks []audioNode) []audioNode {
+	if !slices.ContainsFunc(sinks, func(n audioNode) bool { return n.is(a.config.Snapcast.Sink) }) {
+		return sinks
+	}
+	return slices.DeleteFunc(sinks, func(n audioNode) bool {
+		return !n.is(a.config.Snapcast.Sink) && (a.tracked == "" || !strings.HasPrefix(n.Name, a.tracked))
+	})
+}
+
 func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 	if err := a.requireAvailable(deviceType); err != nil {
 		return err
@@ -547,6 +577,9 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 	current, _, _, ok := parseAudioIdentity(inspect)
 	if !ok {
 		return fmt.Errorf("default %s has no node name", deviceType)
+	}
+	if deviceType == "sink" {
+		nodes = a.outputs(nodes)
 	}
 	index := slices.IndexFunc(nodes, func(n audioNode) bool { return n.Name == current })
 	next := nodes[(index+1)%len(nodes)]
@@ -583,7 +616,7 @@ func (a *Audio) selectConfigured(ctx context.Context, deviceType, key string, na
 	}
 	for _, name := range names {
 		index := slices.IndexFunc(nodes, func(n audioNode) bool {
-			return name != "" && (n.Properties["node.nick"] == name || n.Name == name)
+			return n.is(name)
 		})
 		if index < 0 {
 			continue

@@ -127,7 +127,7 @@ func (d *Daemon) Run() error {
 
 func (d *Daemon) initProviders() {
 	cfg := d.config.Eww
-	audio := providers.NewAudio(d.state, cfg.Audio)
+	audio := providers.NewAudio(d.state, cfg.Audio, d.config.Hypr.Bluetooth.Device)
 	d.providers = []providers.Provider{
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
@@ -139,6 +139,7 @@ func (d *Daemon) initProviders() {
 		providers.NewCycle(d.state, "cycle-6", 6*time.Second),
 		audio,
 		providers.NewBluetooth(d.state, d.config.Hypr.Bluetooth.Device, audio.Wear),
+		providers.NewSnapcast(d.state, cfg.Audio.Snapcast.RPC),
 		providers.NewVoice(d.state),
 		providers.NewMusic(d.state, d.server.Subs.Notify, cfg.Music.SpDc),
 		providers.NewTimer(d.state, cfg.Timer),

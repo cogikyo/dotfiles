@@ -212,8 +212,13 @@
 ;; audio
 
 (deflisten audio-info
-  :initial '{"sink_available":false,"sink":0,"sink_name":"","sink_muted":false,"source_available":false,"source":0,"source_name":"","source_muted":false}'
+  :initial '{"sink_available":false,"sink":0,"sink_name":"","sink_muted":false,"sink_group":false,"source_available":false,"source":0,"source_name":"","source_muted":false}'
   'ewwd subscribe audio | jq --unbuffered -c ".data"'
+)
+
+(deflisten snapcast
+  :initial '{"available":false,"speakers":[]}'
+  'ewwd subscribe snapcast | jq --unbuffered -c ".data"'
 )
 
 (deflisten bluetooth-info
@@ -252,6 +257,7 @@
           :name {audio-info.sink_name}
           :available {audio-info.sink_available}
           :muted {audio-info.sink_muted}
+          :group {audio-info.sink_group}
           :icon-on "󰓃"
           :icon-muted "󰓄"
         )
@@ -261,13 +267,13 @@
   )
 )
 
-(defwidget audio-control [content value name available muted icon-muted icon-on compact]
-  (tip :compact compact :text "  ${available ? "󰳽 mute · ǂ next device · 󰳾 mixer · 󱕒 adjust" : "${content} unavailable · 󰳾 mixer"}  "
+(defwidget audio-control [content value name available muted icon-muted icon-on compact ?group]
+  (tip :compact compact :text "  ${available ? "󰳽 mute · ǂ next device · 󰳾 ${group ? "speakers" : "mixer"} · 󱕒 adjust" : "${content} unavailable · 󰳾 mixer"}  "
     (eventbox
       :class "audio-${content}"
       :onclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
       :onmiddleclick {available ? "ewwd action audio cycle_device ${content}" : ""}
-      :onrightclick "${terminal} --title='terminalfloat' -e pulsemixer & disown"
+      :onrightclick {group ? "eww open --toggle speakers --pos $(($(hyprctl cursorpos | cut -d, -f1) - 40))x62" : "${terminal} --title='terminalfloat' -e pulsemixer & disown"}
       :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
       :cursor "pointer"
       (box
@@ -310,6 +316,41 @@
         )
       )
     )
+  )
+)
+
+(defwindow speakers
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left" :y "62px")
+  (eventbox :onhoverlost "eww close speakers"
+    (box :class "speakers" :orientation "v" :space-evenly false
+      (speaker-volume :name {audio-info.sink_name} :class "speakers-group"
+        :visible {audio-info.sink_group}
+        :value {audio-info.sink}
+        :muted {audio-info.sink_muted}
+        :onchange "ewwd action audio set_volume sink {}"
+        :onmute "ewwd action audio toggle_mute sink"
+      )
+      (for speaker in {snapcast.speakers}
+        (speaker-volume :name {speaker.name}
+          :value {speaker.volume}
+          :muted {speaker.muted}
+          :onchange "ewwd action snapcast volume ${speaker.id} {}"
+          :onmute "ewwd action snapcast mute ${speaker.id} ${!speaker.muted}"
+        )
+      )
+    )
+  )
+)
+
+(defwidget speaker-volume [name value muted onchange onmute ?class ?visible]
+  (box :class "speakers-row ${class}" :visible {visible ?: true} :space-evenly false :spacing 9
+    (button :class "speakers-mute ${muted ? "speakers-muted" : ""}" :onclick onmute :timeout "2s"
+      (label :text {muted ? "󰓄" : "󰓃"})
+    )
+    (label :class "speakers-name" :text name :xalign 0 :width 90 :limit-width 14)
+    (scale :class "speakers-scale" :width 200 :min 0 :max 101 :value value :round-digits 0 :onchange onchange :timeout "2s")
+    (label :class "speakers-percent" :text "${value}%" :xalign 1 :width 40)
   )
 )
 
