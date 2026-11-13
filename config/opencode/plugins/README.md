@@ -44,9 +44,9 @@ Continue sends `Continue.` directly without a parent completion notice.
 Click a non-running child's status icon or use `/lanes-close` to close every non-running child in the sidebar through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
 The sidebar hides closed children.
 Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
-Collab delegates, and among its children only `verify/decide` may, limited to read-only agents by its frontmatter permissions.
-`experimental.subagent_depth` is 2 in `opencode.json`, so the decider's children cannot launch anything.
-`lanes` lists only the caller's direct children, so Collab's list omits the decider's children.
+Collab delegates; among its children, `verify/decide`, `build/owner`, and `review/entropy` may launch read-only one-shots in the foreground, within their frontmatter permissions.
+`experimental.subagent_depth` is 2 in `opencode.json`, so their children cannot launch anything.
+`lanes` lists only the caller's direct children, so Collab's list omits these helpers.
 
 ## Mail
 
@@ -188,7 +188,8 @@ Use `x` for X search, `sessions` for history, and `session_create` for new sessi
 Prefer `workdir`; V2 resolves each remaining `cd` argument against it, so chained relative changes can cause false external-directory prompts.
 The `context`, `compaction`, and `generate` hooks describe parallel calls and the shell environment: zsh without unquoted `$var` word-splitting outside the read-only set, or offline `bash -c` in cage for read-only agents.
 
-For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, `diagram`, and `workflow`; agent permissions can restrict these further.
+For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, `diagram`, `workflow`, and `subagent`; agent permissions can restrict these further.
+The global `subagent` deny keeps that last one from every read-only agent except `review/entropy`, whose frontmatter allows its helpers.
 Code Mode `execute` is excluded, and `verify/web` denies all shell calls.
 Each read-only shell runs through [cage](../../../cmds/cmd/cage/README.md) offline, with writes limited to `~/.local/state/opencode/scratch/<session-id>`.
 `$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.

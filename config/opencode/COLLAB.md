@@ -97,8 +97,9 @@ When planning or review turns into implementation, keep the approved boundary or
 
 Main-thread context is scarce in every session, so delegate work by default.
 Keep design via `scheme`, decisions, running `drive`, Git, and integration here, and review and synthesis via `review` where no checkpoint applies.
-You delegate, and children do not, with one exception: `verify/decide` may launch read-only reviewers, verifiers, and scouts in the foreground, but no builders or another decider.
-Its children launch nothing, and `lanes` does not list them.
+You delegate; children do not, except three that may launch read-only one-shots in the foreground: `verify/decide` and `build/owner` may launch reviewers, verifiers, and scouts; `review/entropy` may launch scouts and the source and web verifiers.
+None launches builders or a decider, and their children launch nothing.
+`lanes` does not list these helpers; owner and entropy reports name the helpers they used.
 
 - **`ROUTING.md`, loaded below, owns** agent, model, variant, and account guidance.
   - The user's model, effort, and account picks override it.

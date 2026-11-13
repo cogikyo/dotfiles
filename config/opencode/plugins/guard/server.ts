@@ -28,6 +28,7 @@ const allowed = [
   "x",
   "diagram",
   "workflow",
+  "subagent",
 ];
 const files: Record<string, { key: string; recursive: boolean; required: boolean }> = {
   read: { key: "path", recursive: false, required: true },
