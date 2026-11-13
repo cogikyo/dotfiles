@@ -5,6 +5,8 @@ description: Use when work or decisions touch Cullyn's homelab, home network, Cl
 
 # Cogikyo
 
+Place by **domain**: dotfiles holds the desktop you'd want on any machine; homelab, apartment, devices, and apps belong in `~/cogikyo`, even on costello.
+
 The knowledge base is `/home/cullyn/cogikyo/docs/`; read its `AGENTS.md` for the rules, source tags, and owner map.
 Read the relevant KB docs before stating or guessing host facts, and re-measure a fact before acting unless measured in your own session.
 

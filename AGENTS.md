@@ -59,6 +59,8 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
 ## Working here
 
+- Place by **domain**: dotfiles holds the desktop you'd want on any machine; homelab, apartment, devices, and apps belong in `~/cogikyo`, even on costello.
+- Put cogikyo-only packages in `packages/cogikyo.lst`.
 - Run `dctl setup` and `dctl update` as the user; setup checks non-lock root stages as the user before batching needed root work through sudo.
 - When a change adds something that needs updates, make sure `dctl update` covers it; extend dctl if needed.
 - Configs in the macOS link subset (`cmds/internal/dctl/home/mac.go`) must also work on macOS; guard Linux-only shell lines with `$OSTYPE`.
