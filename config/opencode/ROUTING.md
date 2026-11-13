@@ -6,9 +6,9 @@ routes:
   build/patch: claude/claude-opus-5-5 medium
   build/scribe: openai/gpt-6.1-sol high
   scout/*: claude/claude-opus-5-5 high
-  scout/context: cursor/grok-4.7
-  scout/dirty: cursor/grok-4.7
-  scout/web: cursor/grok-4.7
+  scout/context: claude/claude-sonnet-5-5 high
+  scout/dirty: claude/claude-sonnet-5-5 high
+  scout/web: xai/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.1-sol high
@@ -16,7 +16,6 @@ routes:
 fallbacks:
   claude/claude-opus-5-5: cursor/claude-opus-5-5
   claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
-  cursor/grok-4.7: opencode-go/grok-4.7
   cursor/claude-opus-5-5: opencode-go/grok-4.7
   cursor/claude-sonnet-5-5: opencode-go/grok-4.7
 ---
@@ -48,7 +47,7 @@ Use `claude/<model>#<variant>` to keep account selection, or omit `#<variant>` t
 
 Pick effort for each workflow step from the task; route variants are defaults.
 
-- **`medium`**: mechanical or fully specified work, such as patches, lookups, first-pass maps, data pulls, and builds whose brief settles every choice.
+- **`medium`**: mechanical or fully specified work, such as patches, lookups, data pulls, and builds whose brief settles every choice.
 - **`high`**: bounded judgment, such as builders with a clear brief, focused scouts, and routine reviews.
 - **`xhigh`**: hard or ambiguous work, such as tricky debugging, cross-cutting builds, and the final review of a risky change.
 - **`max`**: only when the user asks for it, or for a sweep the user requested.
@@ -82,16 +81,16 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 ### Scouts
 
-- Use `scout/context` and `scout/dirty` on Cursor Grok for first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
+- Use `scout/context` and `scout/dirty` on Sonnet `high` for first passes that give Collab a rough overview of whether focused scouts or verifiers are needed and which ones.
 - Start with `scout/context` only when ownership and relevant files are unknown; skip the first pass when the brief names the files or the question is already bounded.
 - Send focused questions to `scout/code` for local code behavior, readers and consumers, end-to-end traces, and live or legacy paths.
 - Use `scout/library` before writing a helper that likely exists in the stdlib or the repository.
 - Keep reads that need the Docker socket or `.pier/secrets.yaml`, such as `docker save` or `pier profile show`, in Collab's shell; cage blocks both for read-only children.
-- Use `scout/web` for the option space and prior art; it routes to Cursor Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
+- Use `scout/web` for the option space and prior art; it routes to xAI Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
-  - Seat `scout/web` on its Cursor Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`.
+  - Seat `scout/web` on its xAI Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`; `claude/claude-sonnet-5-5#high` is also an acceptable web seat.
   - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design.
-  - Check `usage_status` before seating the council and drop a known-capped seat before lanes can substitute a fallback; skip `x` when its separate xAI pool is capped.
+  - Check `usage_status` before seating the council and drop a known-capped seat before lanes can substitute a fallback; when the shared xAI pool is capped, skip `x` and seat Sonnet `high` or `opencode-go/grok-4.7#high` yourself, since lanes cannot detect its cap.
 
 ### Reviewers
 
@@ -170,13 +169,13 @@ Use the effort ladder for each step.
 
 ### `claude-sonnet-5-5`
 
-- Available as an explicit pick when speed matters; no route defaults to Sonnet.
+- Routes `scout/context` and `scout/dirty` at `high`; also available as an explicit pick when speed matters.
 - Orchestrates web search and `x` calls well.
 
 ### `xai/grok-4.7`
 
-- Grok is available through `xai`, `cursor`, and `opencode-go`; scout routes use Cursor's C pool.
-- Route web scouting and quick context searches there freely, and verify claims that decide a design.
+- Grok is available through `xai`, `cursor`, and `opencode-go`; `scout/web` uses the xAI pool shared with `x`.
+- Route web scouting there, and verify claims that decide a design.
 - Weigh findings from Grok on any provider, or from Cursor's own models, below Opus, Sol, and Fable findings.
   - Claude served through Cursor's O pool is the same model and keeps full weight.
 - The `x` tool runs the Grok CLI on the xAI pool for native X search; Collab keeps it for `/x` and routes other X research to scouts or verifiers.
@@ -191,16 +190,17 @@ Use the effort ladder for each step.
 ### Fallback providers
 
 - `cursor/*`: C and O are separate monthly pools on a legacy Cursor plan.
-  - C covers Cursor models: Grok, Composer, and Auto; Grok checks only C and falls back to Go when C is capped, leaving O for Claude overflow.
+  - C covers Cursor models: Grok, Composer, and Auto.
   - O covers third-party models such as Opus and Sonnet and is small.
   - About **1,200 Opus fast steps** used up a month.
   - Use it for **short, bounded jobs**.
   - Claude fallbacks use `claude-opus-5-5` or `claude-sonnet-5-5`; Fable is admin-blocked.
-  - In one run each on the same known-answer code trace, Cursor Opus scored **5/5 in 2 minutes** and Grok 4.7 scored **4/5 in 3 minutes**.
+  - In one run on a known-answer code trace, Cursor Opus scored **5/5 in 2 minutes**.
+  - Cursor Grok is not routed: 8 web scouts had a 54-minute median and 4 returned no report.
   - Composer 2.5 scored **4/5** but drifted for **10 minutes and 195 tool calls** on its one run, so it is not used.
   - Lanes skip a Cursor route when its fresh pool window reads 100% and has not reset.
     Missing, stale, or unusable usage counts as open and adds a note.
-- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the second fallback hop for Claude, after Cursor, or the direct fallback for Cursor Grok.
+- `opencode-go/*`: currently `grok-4.7` and `deepseek-v4.1-flash`; the best models there change often, and Grok is the second fallback hop for Claude, after Cursor.
   - Each Go model has its own monthly dollar cap, with 20% per 5 hours and 50% per week; Grok's is $15, so one Grok scout spends about 15% of a week.
 
 ## Usage
@@ -209,5 +209,5 @@ Usage is internal routing data.
 Check `usage_status` before any dispatch outside `claude` or `cursor`, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
 Mention usage only when the user asks, or when every route for a step is capped.
 
-- With three accounts, Claude headroom is the norm, so every Claude route except `verify/decide` defaults to Opus.
+- With three accounts, Claude headroom is the norm.
 - OpenAI's weekly window tends to reset mostly unspent, so Sol and Astra leaves stay cheap to add.
