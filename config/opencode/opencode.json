@@ -429,6 +429,7 @@
     }
   },
   "experimental": {
+    "subagent_depth": 2,
     "policies": [
       { "action": "provider.use", "resource": "*", "effect": "deny" },
       { "action": "provider.use", "resource": "anthropic", "effect": "allow" },

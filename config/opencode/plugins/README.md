@@ -45,7 +45,9 @@ Continue sends `Continue.` directly without a parent completion notice.
 Click a non-running child's status icon or use `/lanes-close` to close every non-running child in the sidebar through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
 The sidebar hides closed children.
 Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
-Only Collab delegates, with one level of children.
+Collab delegates, and among its children only `verify/decide` may, limited to read-only agents by its frontmatter permissions.
+`experimental.subagent_depth` is 2 in `opencode.json`, so the decider's children cannot launch anything.
+`lanes` lists only the caller's direct children, so Collab's list omits the decider's children.
 
 ## Mail
 

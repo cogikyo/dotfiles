@@ -12,6 +12,7 @@ routes:
   review/*: openai/gpt-6.1-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.1-sol high
+  verify/decide: claude/claude-fable-5-2 high
 fallbacks:
   claude/claude-opus-5-5: cursor/claude-opus-5-5
   claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
@@ -116,6 +117,7 @@ Pick a builder by how much the brief settles.
 ### Verifiers
 
 - Use a verifier when a claim decides the design or verdict.
+- Launch `verify/decide` on its route at COLLAB.md's checkpoints; its model entry below covers cost and caps.
 
 ## When to deviate
 
@@ -144,6 +146,12 @@ Use the effort ladder for each step.
 
 - Reasoning: `high` by default, `medium` for fully specified work, and `xhigh` for hard or ambiguous steps.
 
+### `claude-fable-5-2`
+
+- Routes only `verify/decide`, at `high`; keep it there rather than raising effort for a risky change.
+- No fallback while the decider is tested; COLLAB.md says what Collab does without a packet.
+- Four replays cost 3 to 6.5 minutes and about 100K tokens per checkpoint.
+
 ### `openai/gpt-6.1-sol`
 
 - Reasoning: `high` by default; `xhigh` is available.
@@ -168,7 +176,9 @@ Use the effort ladder for each step.
 ### `xai/grok-4.7`
 
 - Grok is available through `xai`, `cursor`, and `opencode-go`; scout routes use Cursor's C pool.
-- Route web scouting and quick context searches there freely; treat findings as leads and verify claims that decide a design.
+- Route web scouting and quick context searches there freely, and verify claims that decide a design.
+- Weigh findings from Grok on any provider, or from Cursor's own models, below Opus, Sol, and Fable findings.
+  - Claude served through Cursor's O pool is the same model and keeps full weight.
 - The `x` tool runs the Grok CLI on the xAI pool for native X search; Collab keeps it for `/x` and routes other X research to scouts or verifiers.
 - A standing seat in web councils; see Scouts.
 
@@ -199,5 +209,5 @@ Usage is internal routing data.
 Check `usage_status` before any dispatch outside `claude` or `cursor`, route those steps around known caps yourself, and choose routes without reporting headroom or account switches.
 Mention usage only when the user asks, or when every route for a step is capped.
 
-- With three accounts, Claude headroom is the norm, so every Claude route defaults to Opus.
+- With three accounts, Claude headroom is the norm, so every Claude route except `verify/decide` defaults to Opus.
 - OpenAI's weekly window tends to reset mostly unspent, so Sol and Astra leaves stay cheap to add.
