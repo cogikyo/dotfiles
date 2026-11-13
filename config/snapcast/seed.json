@@ -10,7 +10,7 @@
         {
           "id": "costello-tv",
           "host": { "name": "costello", "mac": "9c:bf:0d:01:c3:05" },
-          "config": { "instance": 1, "name": "TV", "latency": 63, "volume": { "muted": false, "percent": 100 } }
+          "config": { "instance": 1, "name": "TV", "latency": 72, "volume": { "muted": false, "percent": 100 } }
         }
       ]
     },
