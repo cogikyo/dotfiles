@@ -17,7 +17,7 @@ timer:
 audio:
   source_max: 100
   sink_max: 100
-  volume_step: 10
+  volume_step: 1
   default_sink_volume: 69
   default_source_volume: 100
   fallback_sinks:

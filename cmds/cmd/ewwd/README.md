@@ -40,7 +40,7 @@ Triggered by eww button clicks and scroll events.
 # Audio
 ewwd action audio toggle_mute <sink|source> # toggle mute
 ewwd action audio cycle_device <sink|source>
-ewwd action audio change_volume sink up   # adjust ±10
+ewwd action audio change_volume sink up   # adjust by audio.volume_step
 ewwd action audio set_volume sink 60      # set a volume, capped at sink_max or source_max
 ewwd action audio reset_volume both       # reset preset volumes
 ewwd action bluetooth toggle              # connect or disconnect headphones
@@ -82,8 +82,18 @@ When the tracked headphones' wear state changes, the default sink and source fol
 Taking them off or disconnecting while worn selects the first available sink in `audio.fallback_sinks` (Snapcast, then HDMI) and `audio.fallback_source`.
 Unknown wear state, other disconnects, and connecting while not worn leave the default sink alone, including across an ewwd restart.
 Cycling the sink by hand cancels a pending switch to the headphones.
-With `audio.snapcast.sink` as the default, right-click opens the `speakers` popup instead of `pulsemixer`.
-Its first row controls the sink's volume and mute; the remaining rows control each connected client from `audio.snapcast.rpc`.
+With `audio.snapcast.sink` as the default, right-click on the speaker control in the `music` window grows the audio pill downward with speaker controls instead of opening `pulsemixer`.
+A second right-click closes them, and so does moving the pointer off the pill.
+The first row controls the sink's volume and mute; the remaining rows control each connected client from `audio.snapcast.rpc`.
+The compact `bar` has no room to grow, so its right-click still opens `pulsemixer`.
+The `audio` signal's `sink_kind` is `group` for the Snapcast sink, `headphones` for a Bluetooth sink, and `speaker` otherwise.
+Each Snapcast speaker's `kind` is `node` for a client on a `node-*` host, `tv` for a client on this host, and `speaker` otherwise.
+The bar picks each control's icon from these kinds.
+Volume actions publish the requested volume at once and coalesce pending writes per control, hiding older readbacks until those writes finish.
+Audio volume writes target the last observed default PipeWire node; when a refresh sees a new default, it drops queued writes but does not cancel a write already in flight.
+Snapcast requests time out after 2 s; ewwd then reconnects and resends the volumes and mutes still waiting.
+Rejected action requests print `error: …` and exit 1.
+Audio volume and Snapcast actions return silently when accepted; failures after acceptance go to the daemon log.
 If the tracked headphones stay connected and not worn for 10 minutes, ewwd disconnects them to save battery.
 Each new connection restarts the countdown, since the headphones can reconnect on their own while off-head.
 In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.

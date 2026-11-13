@@ -141,19 +141,25 @@
   }
 }
 
+$audio-radius: 33px;
+
 .audio {
   background: $bg;
   color: $blu-2;
   border-top: 1px solid $blu-2;
   margin: 16px 8px 30px;
   border-right: 3px solid $blu-2;
-  border-radius: 420px 17px 420px 69px;
+  border-radius: $audio-radius $audio-radius * 17 / 420 $audio-radius $audio-radius * 69 / 420;
   box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
   padding: 4px 0.9em 4px 1.3em;
 
   &-hover {
     border-color: $orn-3;
     box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.42);
+  }
+
+  &-open {
+    border-bottom: 2px solid $orn-3;
   }
 
   &-unavailable,
@@ -266,6 +272,59 @@
         font-size: 16px;
         margin: 8px 8px 7px;
       }
+    }
+  }
+}
+
+.speakers {
+  font-size: 14px;
+  border-top: 1px solid $glc-3;
+  margin: 6px 0 8px;
+  padding: 6px 0 4px;
+
+  &-row {
+    padding: 4px 0;
+  }
+
+  &-group {
+    border-bottom: 1px solid $glc-3;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+
+  &-mute {
+    min-width: 24px;
+
+    &:hover {
+      color: $orn-3;
+    }
+  }
+
+  &-muted {
+    color: $glc-4;
+  }
+
+  &-percent {
+    color: $blu-3;
+  }
+
+  &-scale {
+    trough {
+      min-height: 4px;
+      border-radius: 2px;
+      background: $glc-2;
+    }
+
+    highlight {
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    slider {
+      min-width: 12px;
+      min-height: 12px;
+      border-radius: 50%;
+      background: $blu-3;
     }
   }
 }

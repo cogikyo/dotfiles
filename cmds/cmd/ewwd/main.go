@@ -194,9 +194,12 @@ func cmdAction() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println(resp)
 	if daemonResponseFailed(resp) {
+		fmt.Println(resp)
 		os.Exit(1)
+	}
+	if resp != "ok" {
+		fmt.Println(resp)
 	}
 }
 
@@ -220,7 +223,7 @@ Query/Subscribe (for eww):
 Actions (for eww buttons/scrolls):
   ewwd action audio toggle_mute <sink|source> Toggle device mute
   ewwd action audio cycle_device <sink|source> Select next available device
-  ewwd action audio change_volume sink up   Adjust ±10
+  ewwd action audio change_volume sink up   Adjust by audio.volume_step
   ewwd action audio reset_volume both        Reset preset volumes
   ewwd action bluetooth toggle               Toggle tracked headphones
   ewwd action bluetooth reconnect            Reconnect tracked headphones

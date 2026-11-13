@@ -150,7 +150,7 @@
 ;; ----------------------------------------------------------------------------
 ;; cpu
 
-(deflisten cpu-columns :initial "[]"
+(defpoll cpu-columns :interval "10s" :initial "[]"
   'jq -nc "[range($(( $(nproc --all) / 2 )))]"')
 
 (defwidget cpu [compact key]

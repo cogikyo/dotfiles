@@ -341,6 +341,7 @@ hl.window_rule({
 
 hl.layer_rule({ match = { namespace = [[^(hyprpaper)$]] }, order = 1 })
 hl.layer_rule({ match = { namespace = [[^(mpvpaper)$]] }, order = 0 })
+hl.layer_rule({ match = { namespace = [[^(eww-music)$]] }, no_anim = true })
 hl.layer_rule({
 	name = "launcher",
 	match = { namespace = [[^(rofi)$]] },
@@ -407,6 +408,10 @@ hl.config({
 	},
 	cursor = {
 		no_hardware_cursors = true,
+	},
+	layers = {
+		-- Keep the top-layer eww music window below fullscreen video.
+		allow_new_top_layers_over_existing_fullscreen = false,
 	},
 	master = {
 		allow_small_split = true,
