@@ -323,7 +323,7 @@
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :y "62px")
   (eventbox :onhoverlost "eww close speakers"
-    (box :class "speakers" :orientation "v" :space-evenly false
+    (box :class "speakers-panel" :orientation "v" :space-evenly false
       (speaker-volume :name {audio-info.sink_name} :class "speakers-group"
         :visible {audio-info.sink_group}
         :value {audio-info.sink}
