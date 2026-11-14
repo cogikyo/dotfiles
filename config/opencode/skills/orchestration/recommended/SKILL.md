@@ -16,7 +16,6 @@ After compaction, call `workflow` for stored status, then always send one `scout
 Give the leaf that status and ask it to find the newest finished workflow in session history, then recover work since that boundary; if none exists, read from the session's start.
 Read earlier user words as needed to establish the original ask and approvals still in force.
 The leaf reports the user's asks and decisions, open questions, waiting items with check commands, and uncommitted work with owners.
-It also reports whether the user's own words started a driven run, its named scope, whether a final report ended it, and whether later user messages stopped it or moved to another task.
 Rebuild the thesis from that report and use stored workflow status for step state.
 Check every approval Collab is acting on against what the user actually said.
 Re-check waiting items with their recorded commands.
@@ -77,4 +76,4 @@ More than four open decisions usually means Collab is asking what it should deci
 Answers approve only the steps they name; an unanswered decision stays open and its step waits.
 If the user closes the form without answering, keep the decisions open as listed in the restatement and their steps waiting; do not ask again.
 When nothing is open, skip the call and continue with the stated decisions inside approved work.
-If the scout traces an active driven run to the user's own words, with no final report ending it or later user message stopping it or moving to another task, load `drive` first and follow its **Driven runs** rules: decide open in-scope items, record them under Decided, skip routine approval, and continue in the same turn.
+While drive is on under COLLAB.md's Boundaries, load `drive` first and follow its **Driven runs** rules: decide open in-scope items, record them under Decided, skip routine approval, and continue in the same turn.

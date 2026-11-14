@@ -6,7 +6,7 @@ import { cell, locate, overlay, type Prompt } from "./prompt.ts";
 
 type Context = Plugin.Context;
 
-const glyph = { steer: "\u{f048a}", queue: "\u{f1163}" };
+export const glyph = { steer: "\u{f048a}", queue: "\u{f1163}" };
 const gap = 2;
 const [queued, setQueued] = createSignal(false);
 

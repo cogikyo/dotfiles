@@ -6,7 +6,7 @@ description: Use on /done, a request to finish and close, or COLLAB.md's automat
 # Done
 
 Collab runs this procedure in the current session, in the order below, on `/done`, a request to finish and close, or the finish point in `COLLAB.md`.
-Either trigger approves the comment pass, retro handling below, removing landed worktrees, deleting this session tree's own scratch and stopping processes running from it, and closing finished lanes and the session.
+Either trigger approves the comment pass, retro handling below, removing landed worktrees, deleting this session tree's own scratch and stopping processes running from it, turning drive off, and closing finished lanes and the session.
 It approves nothing else; Git operations follow Collab's `Git` rules.
 
 ## Comments
@@ -57,6 +57,7 @@ Close without asking; `/done` or the automatic finish point already approves clo
 On a user's `/done` or request to finish and close, ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without tagging.
 The automatic finish point requires those blockers to be absent; deferred retro candidates become `ISSUES` instead.
 Load `clear-lanes` and close finished lanes under its judgment.
+Call `drive_off` even when drive looks off.
 Choose the state and flags below, then call `tools.opencode.session_tag` through `execute`, omitting `sessionID`.
 
 ## Tags

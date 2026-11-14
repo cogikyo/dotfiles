@@ -14,8 +14,8 @@ Plugin types under-declare the host; some extra fields, such as `titleView` on `
 The server runs one copy of each plugin per loaded location, and a copy's `ctx.event.subscribe` can receive other locations' session events, so a handler that acts on a session should first check that `event.location` matches `ctx.location`.
 Execution and inbox events can omit `event.location`; `compact/server.ts` handles those with state that is safe to update in any copy.
 
-Sidebar and retitle keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
-Their three leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
+Sidebar, retitle, and drive keep named slash and palette commands in `mode: "global"` layers so they remain available during autocomplete.
+Their four leader binds use separate base-mode inline layers, so they do not fire in dialogs and have no shortcut hints in the palette.
 
 ## Lanes
 
@@ -137,6 +137,37 @@ After root compaction, the plugin waits for a successful idle session and queues
 The follow-up is suppressed by user input, including queued input, an assistant reply after compaction, a superseding compaction, or a failure or non-shutdown interruption between the compaction request and idle.
 
 `limits.ts` treats a missing configuration location as no configured buffer and caches that result without a toast; other config errors still show one.
+
+## Drive
+
+`drive/server.ts` stores one drive state per root session in plugin KV `root/<root>`: `{ on, at }`, with `at` as a UTC time without milliseconds.
+The user flips it in the TUI with `<leader>d`, `/drive`, or Toggle drive in the palette; no tool turns it on.
+`drive_off` turns it off for the caller's tree; only a root session may call it, and children get an error.
+State survives compaction and restart, and a session made with `session_create` starts off.
+The plugin removes a key on `session.deleted` and sweeps keys of already-deleted sessions at setup.
+
+On every primary model request, the `context` hook adds exactly one drive line to the system text of each reader: every root session, and every `verify/decide` whose parent is a root.
+Title, compaction, and generate requests do not run this hook, and other children get no line.
+The line takes one of four forms:
+
+- `Drive is on since <UTC time>.` while the stored state is on.
+- `Drive is off since <UTC time>.` once it has been turned off.
+- `Drive is off.` when the tree has no record.
+- `Drive state is unavailable; treat drive as off.` when any step fails, after logging `drive: context failed`.
+
+A failed reader lookup also pushes the unavailable line, so a non-reader can receive it.
+`drive_off` returns `Drive turned off.` or `Drive was already off.`, neither in a line's form.
+The line is never stored in history, so a flip takes effect at the next request.
+On Anthropic requests, `claude-auth/transforms.js` moves the line with the rest of the non-core system text into the first user message (see [Anthropic](#anthropic)).
+[COLLAB.md's Boundaries](../COLLAB.md#boundaries) own what the line authorizes; permissions are unchanged.
+
+`drive/tui.tsx` shows a bold bright-blue `DRIVE` before `prompt.footer.status` while the shown session's root is on, and toasts `Drive on` or `Drive off` after each flip.
+`drive/tui.tsx` mounts `Look` in a slot appended to `prompt.footer`.
+`drive/look.tsx` paints after the prompt while drive is on, skips `modal` and `menu` keymap modes, and requests animation frames only while another session in the root's family is running.
+`drive/look.tsx` stops drawing after a draw error and reports `look off, <reason>` through the drive error toast.
+`drive/wheel.ts` puts a blue steering wheel in the editor's top-right corner when text leaves room, preserves the queue glyph, and pulses with statusline's animation clock.
+`drive/arrows.ts` draws faint blue `›` marks staggered by row over the input's empty background, skipping text, the cursor, their horizontal neighbors, and cells with a different background; `step` and `tone` control spacing and tint.
+`drive/rpc.ts` defines the `state` and `set` methods and the `changed` event the TUI follows.
 
 ## Usage
 

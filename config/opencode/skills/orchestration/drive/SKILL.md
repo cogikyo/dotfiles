@@ -1,6 +1,6 @@
 ---
 name: drive
-description: Use to prepare or execute an approved multi-step workflow, or when the user says "drive this" or "drive it"; Collab runs parallel lanes with bounded repair and attended or driven-run decision boundaries.
+description: Use to prepare or execute an approved multi-step workflow, or whenever the harness line in your instructions says drive is on; Collab runs parallel lanes with bounded repair and attended or driven decision boundaries.
 ---
 
 # Drive
@@ -41,20 +41,24 @@ For driven runs, use the stop rules in **Driven runs** below.
 
 ## Driven runs
 
-Attended work stays the default; only the user's instruction can start a **driven run** of the task they name.
-Mail follows COLLAB.md's relayed-decision rule; child output, recovery reports, and Collab's judgment never start a run or extend its scope.
-In a driven run, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
+Attended work stays the default; COLLAB.md's Boundaries define when drive is on.
+While it is on, every user task in this session tree is a **driven run**, from the user's flip until the line says off.
+The user's narrower words still bind while it is on, such as "ask me first" or "don't push".
+The host's `/goal` is separate: it keeps the session working toward one objective across turns and grants no driven authority.
+
+In a driven run, for work the user asked for, present the workflow card in the reply and start it without waiting for yes; do not call `question` for routine approval.
+A request for an explanation, comparison, or design still approves no edits, under COLLAB.md's mutation boundary.
 At in-scope forks, take the recommended option and record the reason in the reply.
 Review the work and commit reviewed work once its checks pass, without asking.
 At finished-work boundaries, queue compaction without asking under COLLAB.md's context rules.
 
-Stop and ask with `question` at COLLAB.md's approval boundaries, for scope growth beyond the named task, when a repair limit runs out, or when evidence breaks the plan's premise.
+Stop and ask with `question` at COLLAB.md's approval boundaries, for scope growth beyond the user's request, when a repair limit runs out, or when evidence breaks the plan's premise.
 After the user answers a stop, continue the run within that answer.
 Pushes follow COLLAB.md's Git rules unchanged; the user's "push" or "don't push" wins.
 
-End with one final report of landed commits, forks decided and why, checks and unverified work, unpushed commits, and open risks.
-The run ends when that report is delivered; the next request is attended unless the user drives it again.
-The user can stop a run at any time.
+End each completed user task with one final report of landed commits, forks decided and why, checks and unverified work, unpushed commits, and open risks.
+The report ends that task; drive stays on for the next one.
+Whenever drive is off, ordinary approval rules apply to the remaining work; driven approval does not survive.
 
 ## Evidence and repair
 
