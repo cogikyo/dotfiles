@@ -143,6 +143,7 @@ None launches builders or a decider, and their children launch nothing.
   - For read-only children, give caged children (`review/*`, `scout/*`, `verify/source`, `verify/web`) only `$OPENCODE_SCRATCH` as write scope and other children only a literal `/tmp/opencode/<task>/` path; pass the variable literally, because your session ID names the parent's directory, not the child's.
     - Write fixtures whose text mentions Git commands yourself and pass their paths, because child shell Git deny globs also check heredoc bodies.
   - Required checks, acceptance conditions, report shape, and decisions that return to you.
+  - For a code review, the path `~/.config/opencode/skills/improve/weeds/checklist.md` and the ask to read only entries for the diff's languages and mark a sighting the diff adds as `weed: <name>`.
   - Principles the child should apply for this task beyond those its agent file names.
   - User overrides and presentation needs the child should carry.
 
