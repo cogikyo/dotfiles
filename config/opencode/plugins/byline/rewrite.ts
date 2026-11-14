@@ -98,15 +98,15 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
   };
   const rows = scroll.content.getChildren();
   const session = context.data.session;
-  const stops = (row: Renderable) => {
+  const preset = (row: Renderable) => {
     if (sessionID === undefined) return;
     if (session.message.get(sessionID, row.id)?.type === "user") return "prompt";
-    return question(row, native(row), { context, sessionID, ledger }) ? "stop" : undefined;
+    return question(row, native(row), { context, sessionID, ledger }) ? "plain" : undefined;
   };
   try {
     const inner = new Set<Renderable>();
     const scanned = rows.flatMap((row, index) => {
-      const item = classify(row, scan, stops(row), index === rows.length - 1);
+      const item = classify(row, scan, preset(row), index === rows.length - 1);
       if (item.kind !== "content") return [item];
       const entries = mail.nested(row);
       for (const entry of entries) inner.add(entry.row);
@@ -184,9 +184,9 @@ function halt(ledger: Ledger, stage: Stage) {
   stage.clear();
 }
 
-function classify(row: Renderable, scan: Scan, stop: "prompt" | "stop" | undefined, last: boolean): Item {
+function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefined, last: boolean): Item {
   const box = native(row).at(-1);
-  if (stop) return { kind: stop, row };
+  if (kind) return { kind, row };
   const letter = mail.letter(row);
   if (letter) return letter;
   const [only, ...extra] = box ? native(box) : [];

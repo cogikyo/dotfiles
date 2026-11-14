@@ -60,7 +60,7 @@ function ask(question: Question, input: typeof Input.Type, cd: string | undefine
   const text = [input.reason, ...(cd ? ["", `in ${tilde(cd)}`] : []), "", input.command].join("\n");
   return question
     .execute({ questions: [{ header: "Terminal", question: text, options: choices }] }, context)
-    .pipe(Effect.map(({ output }) => (Schema.is(Answered)(output) ? (output.answers[0]?.[0] ?? "") : "")));
+    .pipe(Effect.map(({ metadata }) => (Schema.is(Answered)(metadata) ? (metadata.answers[0]?.[0] ?? "") : "")));
 }
 
 function manual(cd: string | undefined) {
@@ -76,7 +76,7 @@ function typed(answer: string) {
   return [
     `The user typed their own answer instead of choosing Run it or Run manually: "${answer}"`,
     "No window opened and nothing ran.",
-    "If the answer asks something or voices doubt, answer it in text and end your turn; otherwise act on it.",
+    "If the answer asks something or voices doubt, answer it; otherwise act on it.",
     "Do not call `terminal` again for this command unless the user asks.",
   ].join(" ");
 }

@@ -93,23 +93,23 @@ See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notic
 
 ## Question
 
-`question/server.ts` wraps the built-in `question` tool's `execute` with `Effect.raceFirst` and hooks its calls; it adds no tool, key, state file, or TUI slot.
+`question/server.ts` wraps the built-in tool to store one queued form per session and return at once.
+The agent then writes its full reply as final text and ends the turn.
+An `experimental.idle` hook opens the real form below that reply, raced against the [Mail](#mail) parked-mail deadline.
+Questions stay short; the reply above the form carries the explanation.
 Wrap built-in tools that open forms through the Effect API to keep the calling fiber's location; promise-API `editor.update` drops `form.created`'s location, so the popup never appears.
 
-Before each call, the wrapper prepends the calling message's nearest progress update to the first question's text when available; no assistant text part is required.
-It searches backward from this call for reasoning whose decoded signature prefix contains `narration`, stopping at any intervening tool part.
-The stored tool input stays unchanged, and the model result has the original question text restored.
-No note, an unreadable signature, or a failed history read opens the popup unchanged; failed reads log `question: history read failed; asking without the note`.
-Anthropic treats signatures as opaque, so format changes can silently leave the popup without a note.
+Answers resume the session as the next message and remain visible in the transcript.
+Dismissal does not resume it; the user can answer in chat.
+Mail withdrawal applies only while the session is mailable and resumes it with instructions to read the mail first.
+Interrupts and errors clear the stored form so it cannot open later.
+The `terminal` tool's popup stays synchronous.
 
-After a completed call, any answer not exactly matching an option label triggers a reminder to answer questions or doubt in text and end the turn without `question`.
-The reminder replaces `You can now continue with the user's answers in mind.`, or is appended if that sentence is absent.
+Outcome descriptions use `Answered`, `Dismissed`, `Withdrew`, or `Dropped` plus the question count.
+Without Byline, the host shows a line such as `◈ Dismissed 1 question`.
+See [Byline](#byline) for outcome boxes and colors.
 
-The wrapper races `question` calls against the [Mail](#mail) parked-mail deadline, withdrawing the popup only while the session is mailable.
-A store read failure logs `question: withdraw check failed` and cannot trigger withdrawal.
-The tool error directs the model to read the mail before asking again.
-
-After host updates, recheck that closing sentence in `toModelContent`, `metadata.answers`, option values matching labels, progress-update reasoning and signatures being available before tool execution, and wrapped forms publishing a location so the popup appears without a reconnect.
+After host updates, recheck wrapped forms publishing a location so the popup appears without a reconnect.
 
 ## Compact
 
@@ -121,7 +121,7 @@ Each level is sent at most once per compaction cycle; a step that crosses severa
 With a running workflow, soft nudges say to keep going if the remaining steps fit before 300K.
 At a natural break with no lanes in flight, repair pending, or open user question, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
 Without a running workflow, soft nudges say to compact without asking past 150K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
-Ask through `question` only if that point is unclear, subject to COLLAB.md's answer-first rule.
+Ask through `question` only if that point is unclear.
 The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, repair pending, or open user question, and commit finished work.
 Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
 In a driven run, commit finished work and queue compaction without asking.
@@ -482,12 +482,21 @@ Question-tool rows end the commentary slot.
 Mail delivered mid-turn still joins a `---`…`---` reply block only when no user message comes between them.
 At low verbosity the sender's `mail` call folds into `+ N tools`; the host's `grouping/session.ts` exempts only `question` from tool grouping.
 
-Each completed question-tool block becomes one rounded box in the theme's accent color, titled with the question count.
+Byline matches each queued outcome to its call by message ID and call ID.
+It replaces the outcome row with a rounded box titled with the question count.
+The box sits below the reply the form opened under, before the user's next message.
+The call's own row stays `→ Asked N questions`.
+Older synchronous question parts still show their box at the call.
+
 Each question shows its header, text, and all options with descriptions.
 Picked options get `✓`; the recommended option gets `★`, green when picked and orange otherwise.
-Typed answers get `✎` and keep their paragraphs; dismissed forms show `Dismissed`.
-Pending questions and the live form stay native.
+Typed answers get `✎` and keep their paragraphs.
+Answered boxes use accent borders and titles.
+Outcome footers read `Dismissed`, `Withdrawn for waiting mail`, or `Not answered`.
+For those three outcomes, the border, title, and footer use the theme's muted tone.
+The live form stays native.
 Unrecognized renderer layouts leave the plain transcript in place.
+After host updates, recheck `metadata.answers` and answer values matching option labels.
 
 ## Code blocks
 

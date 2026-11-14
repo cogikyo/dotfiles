@@ -34,7 +34,7 @@ const STOP =
 const Ends = Schema.Struct({ end: Schema.Literal(true) });
 
 const description =
-  "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 150K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule.";
+  "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 150K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.";
 
 // A stored id marks a pending delivery; delivered records omit it.
 const Nudged = Schema.Struct({
@@ -55,7 +55,7 @@ const BOUNDARY = [
   `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)}.`,
   "For other compaction, past 150K, call compact without asking once a commit lands or the task is done.",
   "The point must be clear: no edits, lanes, or repairs in flight and no open question, including an unanswered user question; do not compact mid-task while delivering findings, a proposal, or open choices.",
-  "Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule, and call compact after approval.",
+  "Ask through the question tool only if that point is unclear, and call compact after approval.",
   "In a driven run, commit finished work and queue compact without asking.",
   "If the user already declined compaction at this nudge, do not ask again.",
 ].join(" ");
@@ -67,7 +67,7 @@ const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
   },
   strong: {
     running: `Finish up now: start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, no repair pending, and no open question, including an unanswered user question, and commit finished work; if context is still at least ${label(floor)}, the plugin compacts after the turn that ends the workflow, and \`recommended\` resumes the unfinished steps.`,
-    idle: "Finish up now: start no new work, commit finished work, and queue compact without asking at the next clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear, subject to COLLAB.md's answer-first rule. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
+    idle: "Finish up now: start no new work, commit finished work, and queue compact without asking at the next clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
   },
 };
 

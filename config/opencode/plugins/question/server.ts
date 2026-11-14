@@ -1,75 +1,40 @@
 import { Plugin } from "@opencode/plugin/effect";
-import { SessionMessage } from "@opencode/schema/session-message";
 import { Tool } from "@opencode/schema/tool";
-import { Effect, Schema } from "effect";
+import { Cause, DateTime, Effect, Exit, Option, Predicate, Schema, Scope } from "effect";
 import * as store from "../mail/store.ts";
-
-const close = "You can now continue with the user's answers in mind.";
-
-export const nudge =
-  "At least one answer was typed rather than picked. A typed answer may ask something or voice doubt; if one does, answer it in text and end your turn without calling `question`, and act on it only once the user confirms. Otherwise, continue with the user's answers in mind.";
 
 const WITHDRAWN =
   "Popup withdrawn for waiting mail; the user did not answer it and nothing ran. Read the mail first: if it relays the user's decision here, act on it without asking again; otherwise do what the mail needs, then call this tool again if you still need the user.";
 
-const Asked = Schema.Struct({
-  questions: Schema.Array(Schema.Struct({ options: Schema.Array(Schema.Struct({ label: Schema.String })) })),
-});
+const QUEUED =
+  "Queued. Now write your full reply as this turn's final text and end the turn; the form opens under it, and the answers arrive as the next message.";
+
+const TWICE = "A form is already queued for this turn; ask every question in one call.";
+
+const DISMISSED =
+  "The user dismissed your questions without answering and will reply in chat; take their next message as the answer.";
+
+const usage = [
+  "- The call returns at once and queues the form. After it, write your full reply as this turn's final text and end the turn; the form opens under your reply, and the answers arrive as the next message",
+  "- Ask every question in one call",
+].join("\n");
 
 const Answered = Schema.Struct({ answers: Schema.Array(Schema.Array(Schema.String)) });
 
-export function typed(input: unknown, metadata: unknown) {
-  if (!Schema.is(Asked)(input) || !Schema.is(Answered)(metadata)) return false;
-  return metadata.answers.some((answers, index) => {
-    const labels = new Set(input.questions[index]?.options.map((option) => option.label));
-    return answers.some((answer) => !labels.has(answer));
-  });
-}
-
-export function reword(content: Tool.Result["content"]): Tool.Result["content"] {
-  if (typeof content !== "string") return [...(content ?? []), { type: "text", text: nudge }];
-  return content.includes(close) ? content.replace(close, nudge) : `${content} ${nudge}`;
-}
-
-// Opus 5.5 sends pre-tool prose as reasoning marked only by "narration" in its base64 signature.
-// Anthropic says not to parse signatures; if the format changes, popups just lose the note.
-const narrated = (signature: unknown) => {
-  if (typeof signature !== "string") return false;
-  try {
-    return atob(signature.slice(0, 80)).includes("narration");
-  } catch {
-    return false;
-  }
+type Execute = Tool.Info["execute"];
+type Queued = {
+  readonly ask: Execute;
+  readonly input: { readonly questions: readonly unknown[] };
+  readonly context: Tool.Context;
+  readonly at: number;
 };
+type State = "answered" | "dismissed" | "withdrawn" | "failed";
 
-export function note(messages: readonly SessionMessage.Info[], messageID: SessionMessage.ID, callID: string) {
-  const message = messages.findLast(({ id }) => id === messageID);
-  if (message?.type !== "assistant") return undefined;
-  const end = message.content.findIndex((part) => part.type === "tool" && part.id === callID);
-  if (end < 0) return undefined;
-  for (const part of message.content.slice(0, end).toReversed()) {
-    if (part.type === "tool") return undefined;
-    if (part.type === "reasoning" && narrated(part.native?.["signature"])) return part.text.trim() || undefined;
-  }
-  return undefined;
-}
-
-/** Show the note in the popup, but keep the original question in the model's result. */
-export const annotated = (
-  execute: Tool.Info["execute"],
-  input: { readonly questions: readonly [{ readonly question: string }, ...unknown[]] },
-  context: Tool.Context,
-  text: string,
-) => {
-  const [first, ...rest] = input.questions;
-  const shown = `${text}\n\n${first.question}`;
-  return execute({ ...input, questions: [{ ...first, question: shown }, ...rest] }, context).pipe(
-    Effect.map((result) =>
-      typeof result.content === "string"
-        ? { ...result, content: result.content.replace(`"${shown}"`, () => `"${first.question}"`) }
-        : result,
-    ),
-  );
+const verbs: Record<State, string> = {
+  answered: "Answered",
+  dismissed: "Dismissed",
+  withdrawn: "Withdrew",
+  failed: "Dropped",
 };
 
 const due = (file: string, sessionID: string) =>
@@ -83,41 +48,101 @@ const withdraw = (file: string, sessionID: string) =>
     return yield* new Tool.Error({ message: WITHDRAWN });
   });
 
+const current = (entry: Queued, time: { readonly busy?: DateTime.Utc }) =>
+  time.busy !== undefined && DateTime.toEpochMillis(time.busy) <= entry.at;
+
+const dismissed = (cause: Cause.Cause<unknown>) =>
+  cause.reasons.some(
+    (reason) => Cause.isDieReason(reason) && Predicate.isTagged(reason.defect, "QuestionTool.CancelledError"),
+  );
+
+const asked = new Set<string>();
+const queued = new Map<string, Queued>();
+
 export default Plugin.define({
   id: "question",
   effect: (ctx) =>
     Effect.gen(function* () {
       const file = store.located(ctx.app.channel);
+      const scope = yield* Scope.Scope;
 
-      const noted = (context: Tool.Context) =>
-        ctx.session.context({ sessionID: context.sessionID }).pipe(
-          Effect.map((messages) => note(messages, context.messageID, context.id)),
-          Effect.catchCause((cause) =>
-            Effect.logError("question: history read failed; asking without the note", cause).pipe(Effect.as(undefined)),
-          ),
-        );
+      const queue = (ask: Execute, input: Queued["input"], context: Tool.Context) =>
+        Effect.gen(function* () {
+          const { time } = yield* ctx.session.get({ sessionID: context.sessionID }).pipe(Effect.orDie);
+          const known = queued.get(context.sessionID);
+          if (known && current(known, time)) return yield* new Tool.Error({ message: TWICE });
+          queued.set(context.sessionID, { ask, input, context, at: Date.now() });
+          return { content: QUEUED };
+        });
+
+      const open = ({ ask, input, context }: Queued) =>
+        Effect.gen(function* () {
+          const { sessionID, messageID, id: callID } = context;
+          const count = input.questions.length;
+          const note = (state: State, text: string, answers?: readonly (readonly string[])[]) => ({
+            sessionID,
+            text,
+            description: `${verbs[state]} ${count} ${count === 1 ? "question" : "questions"}`,
+            metadata: { source: "question", messageID, callID, state, ...(answers && { answers }) },
+          });
+          const exit = yield* Effect.exit(Effect.raceFirst(ask(input, context), withdraw(file, sessionID)));
+          if (Exit.isSuccess(exit)) {
+            const { content, metadata } = exit.value;
+            const answers = Schema.is(Answered)(metadata) ? metadata.answers : [];
+            yield* ctx.session.synthetic(
+              note("answered", typeof content === "string" ? content : JSON.stringify(content), answers),
+            );
+            return;
+          }
+          if (Cause.hasInterruptsOnly(exit.cause)) return yield* Effect.interrupt;
+          if (dismissed(exit.cause)) {
+            yield* ctx.session.wait({ sessionID }).pipe(
+              Effect.andThen(ctx.session.synthetic({ ...note("dismissed", DISMISSED), resume: false })),
+              Effect.tapCause((cause) => Effect.logError("question: dismissal note failed", cause)),
+              Effect.ignore,
+              Effect.forkIn(scope),
+            );
+            return;
+          }
+          const error = Cause.findErrorOption(exit.cause);
+          if (Option.isNone(error)) return yield* Effect.failCause(exit.cause);
+          const { message } = error.value;
+          yield* ctx.session.synthetic(note(message === WITHDRAWN ? "withdrawn" : "failed", message));
+        });
+
+      yield* ctx.tool.hook("execute.before", (event) =>
+        Effect.sync(() => {
+          if (event.tool === "question") asked.add(event.id);
+        }),
+      );
 
       yield* ctx.tool.transform((editor) => {
         // Keep this on the Effect API: the promise API drops form.created's location, hiding the popup.
         editor.update("question", (tool) => {
-          const execute = tool.execute;
+          const ask = tool.execute;
+          tool.description = `${tool.description}\n${usage}`;
+          delete tool.output;
           tool.execute = (input, context) =>
-            Effect.gen(function* () {
-              const text = yield* noted(context);
-              return yield* Effect.raceFirst(
-                text === undefined ? execute(input, context) : annotated(execute, input, context, text),
-                withdraw(file, context.sessionID),
-              );
-            });
+            asked.delete(context.id)
+              ? queue(ask, input, context)
+              : Effect.raceFirst(ask(input, context), withdraw(file, context.sessionID)).pipe(
+                  Effect.map(({ content, metadata }) => ({ content, metadata })),
+                );
         });
       });
 
-      yield* ctx.tool.hook("execute.after", (event) =>
-        Effect.sync(() => {
-          if (event.tool !== "question" || event.status !== "completed") return;
-          if (!typed(event.input, event.result.metadata)) return;
-          event.result = { ...event.result, content: reword(event.result.content) };
-        }),
+      yield* ctx.session.hook("experimental.idle", ({ sessionID }) =>
+        Effect.gen(function* () {
+          const entry = queued.get(sessionID);
+          if (!entry) return;
+          queued.delete(sessionID);
+          const { time } = yield* ctx.session.get({ sessionID }).pipe(Effect.orDie);
+          if (current(entry, time)) yield* open(entry);
+        }).pipe(
+          Effect.catchCause((cause) =>
+            Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.logError("question: queued form failed", cause),
+          ),
+        ),
       );
     }),
 });

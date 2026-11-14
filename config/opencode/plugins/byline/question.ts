@@ -21,21 +21,26 @@ type Tool = Extract<Extract<Message, { type: "assistant" }>["content"][number], 
 type Option = { label: string; name: string; star: boolean; description: string };
 type Ask = { header: string; question: string; options: readonly Option[] };
 type Answer = readonly string[] | undefined;
-type Form = { asks: readonly Ask[]; answers?: readonly (readonly string[])[] };
+type Form = { asks: readonly Ask[]; answers?: readonly (readonly string[])[]; note?: string };
 type Tones = { accent: RGBA; text: RGBA; muted: RGBA; rule: RGBA; agreed: RGBA; star: RGBA };
 type Paint = { renderer: CliRenderer; tones: Tones; column: number; room: number };
 type Scan = { context: Context; sessionID: string; ledger: Ledger };
 
 const recommended = /\s*\(recommended\)\s*$/i;
+const outcomes = /^(Answered|Dismissed|Withdrew|Dropped) \d+ questions?$/;
 const headings = /^(# Questions|Asked \d+ questions?|(⋯ )?Asking questions…)$/;
+const notes = new Map([
+  ["dismissed", "Dismissed"],
+  ["withdrawn", "Withdrawn for waiting mail"],
+  ["failed", "Not answered"],
+]);
 const shown = new WeakMap<Renderable, { key: string; node: Renderable }>();
 
 export function question(row: Renderable, blocks: readonly Renderable[], { context, sessionID, ledger }: Scan) {
   const [block, ...extra] = blocks;
-  const part = find(row, block, context, sessionID);
-  if (part?.name !== "question") return false;
-  const form = parse(part.state);
-  if (!form || !block || extra.length > 0 || !hosts(block, form)) {
+  const form = lookup(row, block, context, sessionID);
+  if (form === undefined) return false;
+  if (!form || !block || extra.length > 0 || !hosts(block)) {
     revert(row, blocks, ledger);
     return true;
   }
@@ -56,6 +61,52 @@ export function question(row: Renderable, blocks: readonly Renderable[], { conte
   return true;
 }
 
+function lookup(row: Renderable, block: Renderable | undefined, context: Context, sessionID: string) {
+  const part = find(row, block, context, sessionID);
+  if (part?.name === "question") return parse(part.state) ?? false;
+  const message = outcome(row, block, context, sessionID);
+  if (!message) return;
+  const { messageID, callID, state, answers } = message.metadata ?? {};
+  if (typeof messageID !== "string") return false;
+  const call = context.data.session.message.get(sessionID, messageID);
+  const asked =
+    call?.type === "assistant"
+      ? call.content.find((item): item is Tool => item.type === "tool" && item.id === callID)
+      : undefined;
+  const asks = asked && questions(asked.state);
+  if (!asks) return false;
+  if (state === "answered") return answered(asks, answers) ?? false;
+  const note = typeof state === "string" ? notes.get(state) : undefined;
+  return note ? { asks, note } : false;
+}
+
+function outcome(row: Renderable, block: Renderable | undefined, { data }: Context, sessionID: string) {
+  if (row.id?.startsWith("session-part:")) return;
+  const caption = heading(block, outcomes);
+  if (!caption) return;
+  const messages = data.session.message.list(sessionID);
+  const positions = new Map(messages.map((message, index) => [message.id, index]));
+  const at = (node: Renderable) => positions.get(/^session-part:([^:]+):/.exec(node.id)?.[1] ?? node.id);
+  const rows = row.parent?.getChildren() ?? [];
+  const index = rows.indexOf(row);
+  const low =
+    rows
+      .slice(0, index)
+      .map(at)
+      .findLast((value) => value !== undefined) ?? -1;
+  const high =
+    rows
+      .slice(index + 1)
+      .map(at)
+      .find((value) => value !== undefined) ?? messages.length;
+  return messages
+    .slice(low + 1, high)
+    .find(
+      (message): message is Extract<Message, { type: "synthetic" }> =>
+        message.type === "synthetic" && message.metadata?.source === "question" && message.description === caption,
+    );
+}
+
 function find(row: Renderable, block: Renderable | undefined, { data }: Context, sessionID: string) {
   const [, messageID, partID] = /^session-part:([^:]+):(.+)$/.exec(row.id) ?? [];
   const message = data.session.message.get(sessionID, messageID ?? row.id);
@@ -66,19 +117,27 @@ function find(row: Renderable, block: Renderable | undefined, { data }: Context,
   );
 }
 
-function heading(block: Renderable | undefined) {
+function heading(block: Renderable | undefined, pattern = headings) {
   const [first] = block?.getChildren() ?? [];
   const row = plain(first) === undefined ? (first?.getChildren() ?? []) : [];
-  return [first, ...row].map(plain).find((text) => text !== undefined && headings.test(text));
+  return [first, ...row].map(plain).find((text) => text !== undefined && pattern.test(text));
 }
 
 function parse(state: unknown): Form | undefined {
+  const asks = questions(state);
+  if (!asks || !record(state)) return;
+  if (state.status === "error") return dismissed(state.error) ? { asks, note: "Dismissed" } : undefined;
+  if (state.status !== "completed" || !record(state.metadata)) return;
+  return answered(asks, state.metadata.answers);
+}
+
+function questions(state: unknown) {
   if (!record(state) || !record(state.input) || !Array.isArray(state.input.questions)) return;
   const asks = state.input.questions.map(ask);
-  if (asks.length === 0 || !asks.every((item) => item !== undefined)) return;
-  if (state.status === "error") return dismissed(state.error) ? { asks } : undefined;
-  if (state.status !== "completed" || !record(state.metadata)) return;
-  const answers = state.metadata.answers;
+  return asks.length > 0 && asks.every((item): item is Ask => item !== undefined) ? asks : undefined;
+}
+
+function answered(asks: readonly Ask[], answers: unknown): Form | undefined {
   if (!Array.isArray(answers) || answers.length !== asks.length || !answers.every(strings)) return;
   return { asks, answers };
 }
@@ -106,10 +165,10 @@ function dismissed(error: unknown) {
   return record(error) && typeof error.message === "string" && error.message.includes("user dismissed");
 }
 
-function hosts(block: Renderable, form: Form) {
+function hosts(block: Renderable) {
   const title = heading(block);
-  if (form.answers) return "border" in block && block.border !== false && title === "# Questions";
-  return /^Asked \d+ questions?$/.test(title ?? "");
+  if (title === "# Questions") return "border" in block && block.border !== false;
+  return /^Asked \d+ questions?$/.test(title ?? "") || heading(block, outcomes) !== undefined;
 }
 
 function inset(block: Renderable) {
@@ -130,12 +189,13 @@ function palette(context: Context): Tones {
   };
 }
 
-function build({ asks, answers }: Form, paint: Paint) {
+function build({ asks, answers, note }: Form, paint: Paint) {
   const { renderer, tones } = paint;
   const root = new BoxRenderable(renderer, {
     border: true,
     borderStyle: "rounded",
-    borderColor: tones.accent,
+    borderColor: answers ? tones.accent : tones.muted,
+    titleColor: answers ? tones.accent : tones.muted,
     title: ` ${asks.length} ${asks.length === 1 ? "question" : "questions"} `,
     paddingLeft: paint.column - 1,
     paddingRight: 1,
@@ -145,7 +205,7 @@ function build({ asks, answers }: Form, paint: Paint) {
     if (index > 0) root.add(new BoxRenderable(renderer, { border: ["top"], borderColor: tones.rule, flexShrink: 0 }));
     for (const node of section(item, answers?.[index], paint)) root.add(node);
   }
-  if (!answers) root.add(new TextRenderable(renderer, { content: "Dismissed", fg: tones.muted, marginTop: 1 }));
+  if (note) root.add(new TextRenderable(renderer, { content: note, fg: tones.muted, marginTop: 1 }));
   owned.add(root);
   return root;
 }
