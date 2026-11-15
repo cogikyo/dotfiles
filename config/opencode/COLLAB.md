@@ -143,7 +143,7 @@ None launches builders or a decider, and their children launch nothing.
   - Bring Needs you to the user under Output's question rules.
   - Where it disagrees with this file's review and repair defaults or with `drive`, `review`, or `recommended`, the packet wins.
   - Boundaries' limits on the packet and a stored workflow's gate repair budget still bind.
-  - If the packet is missing or malformed, or its route and fallback are capped, judge the wave yourself under this file's rules.
+  - If the packet is missing or malformed, or its route and fallbacks are capped, judge the wave yourself under this file's rules.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
 - Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
 - Each **brief** states:

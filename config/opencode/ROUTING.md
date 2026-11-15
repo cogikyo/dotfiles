@@ -15,7 +15,7 @@ routes:
   verify/*: openai/gpt-6.1-sol high
   verify/decide: claude/claude-fable-5-2 high
 fallbacks:
-  claude/claude-fable-5-2: openai/gpt-6.1-sol
+  claude/claude-fable-5-2: claude/claude-opus-5-5
   claude/claude-opus-5-5: cursor/claude-opus-5-5
   claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
   cursor/claude-opus-5-5: opencode-go/grok-4.7
@@ -150,8 +150,13 @@ Use the effort ladder for each step.
 ### `claude-fable-5-2`
 
 - Routes only `verify/decide`, at `high`; keep it there rather than raising effort for a risky change.
-- Falls back to `openai/gpt-6.1-sol` when Fable's pool is capped, without a variant; lanes treats OpenAI as open, so Collab checks its usage before launch.
-- When Fable's F window is capped, Collab passes `openai/gpt-6.1-sol#high` itself because the automatic fallback drops the variant.
+- Decide falls back Fable → Opus → Astra; Sol makes no decide calls.
+  - Astra and Sol share one weekly window, so Sol cannot rescue Astra's cap.
+- Before a decide launch, Collab checks usage and passes the first open pick.
+  - Use the route first, then `claude/claude-opus-5-5#high`.
+  - If both are capped, pass `openai/gpt-6-astra#high`.
+  - Automatic hops drop the variant and continue through Cursor to Grok.
+- If all three are capped, Collab follows COLLAB.md's capped-decider rule.
 - In 61 runs since Nov 13, Fable averaged about $2.40 per run and took 3 to 15 minutes; it costs twice Opus per token.
 
 ### `openai/gpt-6.1-sol`
@@ -165,7 +170,8 @@ Use the effort ladder for each step.
 
 ### `openai/gpt-6-astra`
 
-- Use only as a **council seat** or **parallel leaf**, never as the primary.
+- Use as a **council seat** or **parallel leaf**, unless it must lead decide.
+  - That fallback applies only when Fable and Opus are capped.
 - Reasoning: `high`, `xhigh`, and `max` are available.
 - Fallback: Opus when OpenAI is capped, because Astra and Sol share one OpenAI window.
 - Strength relative to Sol and Opus on this work is untested; record evidence as councils compare it.
