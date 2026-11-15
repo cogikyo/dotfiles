@@ -1,0 +1,50 @@
+pipewire_stream: re-anchor chunk timestamps after a capture stall
+
+--- a/server/streamreader/pipewire_stream.cpp
++++ b/server/streamreader/pipewire_stream.cpp
+@@ -38,6 +38,7 @@
+ #include <cerrno>
+ #include <cstring>
+ #include <memory>
++#include <utility>
+ 
+ using namespace std;
+ using namespace std::chrono_literals;
+@@ -46,6 +47,7 @@
+ {
+ 
+ static constexpr auto LOG_TAG = "PipeWireStream";
++static constexpr auto kMaxLag = 200ms;
+ 
+ #ifdef __clang__
+ #pragma GCC diagnostic push
+@@ -213,14 +215,23 @@
+             // Send chunk if playing or sending silence
+             if ((state_ == ReaderState::kPlaying) || ((state_ == ReaderState::kIdle) && send_silence_))
+             {
+-                if (first_)
+-                {
+-                    first_ = false;
+-                    tvEncodedChunk_ = std::chrono::steady_clock::now() - chunk_->duration<std::chrono::nanoseconds>();
+-                }
++                auto now = std::chrono::steady_clock::now();
++                bool reanchor = std::exchange(first_, false);
+ 
+                 // Post to the strand to ensure thread safety
+-                boost::asio::post(strand_, [this, chunk = *chunk_]() mutable { chunkRead(chunk); });
++                boost::asio::post(strand_, [this, chunk = *chunk_, now, reanchor]() mutable
++                {
++                    auto duration = chunk.duration<std::chrono::nanoseconds>();
++                    auto lag = now - duration - tvEncodedChunk_;
++                    if (reanchor || (lag > kMaxLag))
++                    {
++                        if (!reanchor)
++                            LOG(INFO, LOG_TAG) << "Stream time lags by " << std::chrono::duration_cast<std::chrono::milliseconds>(lag).count()
++                                               << " ms, resetting stream time\n";
++                        tvEncodedChunk_ = now - duration;
++                    }
++                    chunkRead(chunk);
++                });
+             }
+         }
+     }

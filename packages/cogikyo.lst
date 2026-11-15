@@ -1,6 +1,7 @@
 # official
+boost
 qemu-user-static
 qemu-user-static-binfmt
 
-# aur
+# local
 snapcast
