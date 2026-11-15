@@ -8,12 +8,14 @@ routes:
   scout/*: claude/claude-opus-5-5 high
   scout/context: claude/claude-sonnet-5-5 high
   scout/dirty: claude/claude-sonnet-5-5 high
+  scout/session: openai/gpt-6.1-sol high
   scout/web: xai/grok-4.7 high
   review/*: openai/gpt-6.1-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.1-sol high
   verify/decide: claude/claude-fable-5-2 high
 fallbacks:
+  claude/claude-fable-5-2: openai/gpt-6.1-sol
   claude/claude-opus-5-5: cursor/claude-opus-5-5
   claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
   cursor/claude-opus-5-5: opencode-go/grok-4.7
@@ -116,7 +118,7 @@ Pick a builder by how much the brief settles.
 ### Verifiers
 
 - Use a verifier when a claim decides the design or verdict.
-- Launch `verify/decide` on its route at COLLAB.md's checkpoints; its model entry below covers cost and caps.
+- Launch `verify/decide` on its route only for COLLAB.md's critical calls; its model entry below covers cost and caps.
 
 ## When to deviate
 
@@ -148,8 +150,9 @@ Use the effort ladder for each step.
 ### `claude-fable-5-2`
 
 - Routes only `verify/decide`, at `high`; keep it there rather than raising effort for a risky change.
-- No fallback while the decider is tested; COLLAB.md says what Collab does without a packet.
-- Four replays cost 3 to 6.5 minutes and about 100K tokens per checkpoint.
+- Falls back to `openai/gpt-6.1-sol` when Fable's pool is capped, without a variant; lanes treats OpenAI as open, so Collab checks its usage before launch.
+- When Fable's F window is capped, Collab passes `openai/gpt-6.1-sol#high` itself because the automatic fallback drops the variant.
+- In 61 runs since Nov 13, Fable averaged about $2.40 per run and took 3 to 15 minutes; it costs twice Opus per token.
 
 ### `openai/gpt-6.1-sol`
 

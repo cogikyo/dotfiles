@@ -72,7 +72,7 @@ A tag means the entry was seen in a review of code whose code-writing lanes all 
 It does not claim the model wrote the flagged line.
 A review's code-writing lanes are the `build/general`, `build/patch`, and `build/owner` sessions anywhere under its top-level session, created before the review.
 Walk the review's parent links up to that top-level session.
-_A `verify/decide` checkpoint or `build/owner` launches most reviews, so the review's own parent usually has no code lanes._
+_A `verify/decide` or `build/owner` session can launch reviews, so the review's own parent may have no code lanes._
 Read each lane's model from its session record.
 When those lanes ran more than one model, or the tree has no code lane, the sighting counts as seen and updates `untagged`.
 

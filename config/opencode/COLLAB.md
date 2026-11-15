@@ -105,7 +105,7 @@ When planning or review turns into implementation, keep the approved boundary or
 ## Delegation
 
 Main-thread context is scarce in every session, so delegate work by default.
-Keep design via `scheme`, decisions, running `drive`, Git, and integration here, and review and synthesis via `review` where no checkpoint applies.
+Keep design via `scheme`, decisions, running `drive`, Git, and integration here, and review and synthesis via `review` unless a critical call needs the decider.
 You delegate; children do not, except three that may launch read-only one-shots in the foreground: `verify/decide` and `build/owner` may launch reviewers, verifiers, and scouts; `review/entropy` may launch scouts and the source and web verifiers.
 None launches builders or a decider, and their children launch nothing.
 `lanes` does not list these helpers; owner and entropy reports name the helpers they used.
@@ -125,25 +125,25 @@ None launches builders or a decider, and their children launch nothing.
   - Mark results at gates through `workflow`; `drive` owns the execution and repair loop.
   - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta changes it.
 - Use a **fresh one-shot reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
-  - For reviews you run outside a checkpoint, keep reviewers whose findings drive repairs in lanes so reruns check their own findings.
+  - For reviews you run without the decider, keep reviewers whose findings drive repairs in lanes so reruns check their own findings.
   - After the user says the change works, default to one review round, then commit; repeat only if the user asks or the first round finds a blocker.
-- Launch a fresh **`verify/decide`** one-shot on its route at each checkpoint:
-  - When a review or verify wave is due or returns, and again when a repair returns, before any further repair.
-  - Before a question that would block work reaches the user, except live-check Ready calls and verdicts.
-  - When a workflow ends, before the final report.
-  - Skip it at idle moments and for quick fixes outside a workflow; in four replays a checkpoint cost 3 to 6.5 minutes and about 100K tokens.
-  - In a workflow card, it is a `verify/decide` step ahead of the gate it informs.
+- **Decide most calls here**: review triage, clean repair rechecks, routine approvals and questions, and workflow closeouts stay with Collab unless a trigger below applies.
+- Launch a fresh **`verify/decide`** one-shot on its route only for a **critical call** when:
+  - A review or verify wave returns blocking or disputed findings.
+  - The decision touches production, deploys, stored user data, migrations, or irreversible or destructive state, or settles a design that changes a public contract, schema, or ownership boundary.
+  - While drive is on, a question would otherwise need the user, except live-check Ready calls and verdicts.
+  - In a workflow card, it is an `if:` `verify/decide` step ahead of the gate it informs.
 - The decider's **brief** is mechanical, in place of the brief contents below:
-  - The parent session ID, the checkpoint kind, and the wave's child session IDs.
+  - The parent session ID, the trigger for the critical call, and the wave's child session IDs.
   - The pending question verbatim and the reviewers you picked.
   - The resolved repository, worktree, and branch, and a literal `/tmp/opencode/<task>/` scratch path.
-  - By default pass the picks unrun; it launches them and ingests any that already ran, so full reports stay out of your context.
+  - For a wave trigger, name the reviewer sessions you already ran and read; pass picks unrun only for the other triggers.
   - Leave out narrative and finding summaries; it reads the user's words and the evidence itself, and a summary would pass on your drift.
 - **Act on its packet** as written: run Next, make its workflow marks, send its mail drafts, treat Answered for you as settled, and follow Health.
   - Bring Needs you to the user under Output's question rules.
   - Where it disagrees with this file's review and repair defaults or with `drive`, `review`, or `recommended`, the packet wins.
   - Boundaries' limits on the packet and a stored workflow's gate repair budget still bind.
-  - If the packet is missing or malformed, or its route is capped, judge the wave yourself under this file's rules.
+  - If the packet is missing or malformed, or its route and fallback are capped, judge the wave yourself under this file's rules.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
 - Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
 - Each **brief** states:
@@ -172,7 +172,8 @@ A **lane** is a reusable direct child.
 - **Run independent work in the background**; judge each result before releasing dependent work.
   - Background calls return immediately, so keep the user conversation and other ready work moving.
 - Send **repairs** back to the lane that built the change.
-  - If two repair rounds on one change still draw blockers, apply `doubt` and bring the premise back to the user before a third.
+  - If two repair rounds on one change still draw blockers, apply `doubt` and bring the premise back for approval before a third.
+    A third round needs the user's yes, or the packet's Answered for you while drive is on.
 - Close finished lanes; a closed lane can't be resumed.
 - Use a **new lane name** or an unnamed read-only one-shot when the scope needs a different owner or independence from earlier rounds.
 - **Parallel lanes** can share one worktree when their writes are mostly disjoint.
@@ -184,7 +185,7 @@ A **lane** is a reusable direct child.
 
 - A **council** gives fresh review leaves the same brief and baseline in parallel.
   - Participants do not see sibling output.
-- At a checkpoint, pass the seats to the decider as picks; otherwise synthesize their findings here with `review`, and keep **material dissent**.
+- For a critical call, pass the seats to the decider as picks; otherwise synthesize their findings here with `review`, and keep **material dissent**.
 
 ## Workflow proposals
 
@@ -244,7 +245,7 @@ Git authority lives here: you plan and run in-scope Git work, and other children
 Send cross-session handoffs with **`mail`** instead of files for the user to relay.
 Set `kind` to `info` when no reply is needed, or `ask` when one is.
 Write the body in three sentences: the key problem or ask, the key solution or uncertainty, and the key decision or action; put larger artifacts in files and give their paths.
-Before you mail a question, read the other session's transcript with `sessions`, a `scout/session`, or the decider, and drop the question if the transcript answers it.
+Before you mail a question, read the other session's transcript with `sessions` or a `scout/session`, and drop the question if the transcript answers it.
 Send no acknowledgment-only reply to info; answer asks with `mail` and `replyTo` set to the ask's mail ID, even when you can't act or are waiting on the user.
 Mail without asking when another session's work depends on this session's result.
 Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.
