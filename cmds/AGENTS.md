@@ -35,7 +35,7 @@ Apply `converge` before changing state-mutating commands or setup stages.
 - `internal/machine` writes `/etc/dctl/machine` as `key=value` data with required keys `preset`, `cpu`, `gpus`, `form`, `backlight`, `wifi`, `wlan`, `yubikeys`, and `lane`; `../config/hypr/machine.lua` consumes only `lane` and `backlight`.
   - Keep `internal/machine` standard-library-only; prompts belong to `internal/dctl/setup.AskMachine`.
   - The hostname is an installer answer written to `/etc/hostname`; it is not a record key.
-- `internal/dctl/packages/targets.go` owns the ISO groups under `/opt/dctl/targets/`: `common` (base, AUR, local), `amd`, and `intel`.
+- `internal/dctl/packages/targets.go` owns the ISO groups under `/opt/dctl/targets/`: `common` (base, AUR, local recipes not in `cogikyo.lst`), `amd`, and `intel`.
 - `internal/machine.Profile.Files` owns rendered CPU-affinity and Wi-Fi blacklist paths; never duplicate them in `../system/` or put static lane drop-ins in `../config/systemd/user/`.
 - `luks` uses the record's `yubikeys` count (0–2) and always requires confirmed paper recovery; zero keys must still permit Secure Boot and boot-TOTP enrollment.
 - `../system/etc/initcpio/install/sd-totp` and `internal/dctl/secureboot/totp.go` share the boot-TOTP marker path and tpm2-totp error strings; keep them aligned.

@@ -16,7 +16,7 @@ const common = "common"
 
 func (l Lists) Targets() Targets {
 	t := Targets(maps.Clone(l.Vendor))
-	t[common] = unique(slices.Concat(l.Base, l.AUR, l.Local))
+	t[common] = unique(slices.Concat(l.Base, l.AUR, l.Offline()))
 	return t
 }
 

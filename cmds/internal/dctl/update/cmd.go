@@ -20,7 +20,9 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/gobuild"
+	"dotfiles/cmds/internal/machine"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -40,7 +42,21 @@ func cmd(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all, 
 	if errors.Is(err, ui.ErrCanceled) {
 		return err
 	}
-	return errors.Join(err, recipes(ctx, u, root, run, all, pick(lists.Local, only)))
+	requested := pick(lists.Local, only)
+	if len(requested) == 0 {
+		return err
+	}
+	p, perr := machine.Read(machine.Path)
+	if perr != nil {
+		return errors.Join(err, perr)
+	}
+	names := pick(lists.Recipes(p), only)
+	if len(only) > 0 {
+		if gated := slices.DeleteFunc(requested, func(n string) bool { return slices.Contains(names, n) }); len(gated) > 0 {
+			u.Info("cogikyo-only recipes skipped with cogikyo=off: %s", strings.Join(gated, ", "))
+		}
+	}
+	return errors.Join(err, recipes(ctx, u, root, run, all, names))
 }
 
 func pick(names, only []string) []string {
@@ -247,15 +263,18 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 			continue
 		}
 		u.Info("%s: %s → %s", name, have, want)
-		args, build := []string{"-sfiC"}, execx.Interactive(run)
+		build := execx.Interactive(run)
 		if all {
-			args, build = append(args, "--noconfirm"), run
+			build = run
 		} else if ok, err := u.Proceed(fmt.Sprintf("Rebuild %s?", name)); err != nil {
 			return err
 		} else if !ok {
 			continue
 		}
-		if err := build.Run(ctx, dir, "makepkg", args...); err != nil {
+		if err := setup.Sudo(ctx, u, "rebuild "+name, "dctl update --only "+name); err != nil {
+			return err
+		}
+		if err := packages.Build(ctx, build, root.Packages(), name, all); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
 		}
 	}

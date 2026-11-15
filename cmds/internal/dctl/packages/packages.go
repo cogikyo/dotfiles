@@ -78,7 +78,7 @@ func Load(dir string) (Lists, error) {
 	return l, errors.Join(errs...)
 }
 
-// Payload includes every vendor set for offline installs, but excludes Extra.
+// Payload includes all vendor sets, but excludes Extra and Cogikyo.
 func (l Lists) Payload() []string {
 	return l.Targets().Select(Vendors)
 }
@@ -96,6 +96,28 @@ func (l Lists) Apps(p machine.Profile) []string {
 		return unique(slices.Concat(l.Extra, l.Cogikyo))
 	}
 	return l.Extra
+}
+
+func (l Lists) Offline() []string {
+	return slices.DeleteFunc(slices.Clone(l.Local), func(name string) bool { return slices.Contains(l.Cogikyo, name) })
+}
+
+func (l Lists) Recipes(p machine.Profile) []string {
+	if p.Cogikyo {
+		return l.Local
+	}
+	return l.Offline()
+}
+
+func (l Lists) split(names []string) (local, other []string) {
+	for _, name := range names {
+		if slices.Contains(l.Local, name) {
+			local = append(local, name)
+		} else {
+			other = append(other, name)
+		}
+	}
+	return local, other
 }
 
 var record = machine.Path
@@ -166,7 +188,7 @@ func missing(ctx context.Context, dir string, run execx.Runner) (official, other
 	if err != nil {
 		return nil, nil, err
 	}
-	return absent(l.Official(p.Vendors()), have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
+	return absent(l.Official(p.Vendors()), have), absent(unique(slices.Concat(l.AUR, l.Offline())), have), nil
 }
 
 var coreDB = "/var/lib/pacman/sync/core.db"

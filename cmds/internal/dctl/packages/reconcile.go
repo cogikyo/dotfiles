@@ -73,14 +73,12 @@ func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []st
 			picked = append(picked, name)
 		}
 	}
-	local := set(slices.Values(l.Local))
-	if names := absent(picked, local); len(names) > 0 {
-		if err := install(ctx, run, names, "--sudoloop"); err != nil {
-			return err
-		}
+	local, other := l.split(picked)
+	if err := install(ctx, run, other, "--sudoloop"); err != nil {
+		return err
 	}
-	if names := slices.DeleteFunc(picked, func(name string) bool { return !local[name] }); len(names) > 0 {
-		u.Warn("build local packages with `makepkg -si` in packages/<name>: %s", strings.Join(names, " "))
+	if len(local) > 0 {
+		u.Warn("build local packages with `makepkg -si` in packages/<name>: %s", strings.Join(local, " "))
 	}
 	return nil
 }

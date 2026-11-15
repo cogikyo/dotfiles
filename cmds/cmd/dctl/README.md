@@ -164,7 +164,7 @@ The optional `vpn` stage does not gate security enrollment.
 | machine    | —                           | Hardware profile                  |
 | system     | machine                     | Overlay, rendered files, services |
 | network    | —                           | Network and DNS                   |
-| packages   | machine, system, network    | Base, vendor, AUR, local packages |
+| packages   | machine, system, network    | Offline package set               |
 | home       | packages                    | Links and fonts                   |
 | extra      | home, network               | Background apps                   |
 | secrets    | system                      | Restore private files             |
@@ -271,6 +271,7 @@ Setup installs missing official packages and starts extra applications in the ba
 Missing AUR and local base packages need manual installation.
 
 - `packages` reads base, selected AMD/Intel vendor, AUR, and local inputs under `packages/`.
+  - Local recipes named in `cogikyo.lst` are Cogikyo-only and belong to `extra`, not this stage.
   - Intel adds `sof-firmware`; `linux-firmware-intel`, `linux-firmware-mediatek`, and `linux-firmware-realtek` stay in base.
   - Missing official packages trigger `pacman -Syu --noconfirm --needed`.
   - No official packages missing means no upgrade from this stage.
@@ -280,14 +281,17 @@ Missing AUR and local base packages need manual installation.
   yay -S <name>
   ```
 
-- Build missing local recipes from their `packages/<name>` directory:
+- Build missing offline local recipes from their `packages/<name>` directory:
 
   ```sh
   makepkg -si
   ```
 
-- `extra` upgrades pacman packages and installs missing `extra.lst` entries via yay.
-  - With `cogikyo=on` in `/etc/dctl/machine`, it also installs missing `packages/cogikyo.lst` entries.
+- `extra` installs missing `extra.lst` entries and, with `cogikyo=on`, `cogikyo.lst` entries.
+  - When entries are missing, it first upgrades pacman packages, then uses yay for official/AUR entries.
+  - It builds local entries with `makepkg --config packages/makepkg.conf -sfiC --noconfirm`.
+  - The config loads `/etc/makepkg.conf` through `source_makepkg_config`, then sets `PACMAN_AUTH=(sudo -n)`.
+    Background installs use the sudo credentials dctl keeps alive.
   - Its `extra-docker` item selects the `rootless` Docker context, creating it if needed.
     It starts the user `docker.service` if needed before switching and passes only when the context is `rootless` and the daemon reports `name=rootless`.
     While `/var/lib/docker` or `/var/lib/containerd` exists and the context isn't `rootless`, it refuses to switch: migrate first.
@@ -456,7 +460,7 @@ Named steps omit that prompt and retain this order.
 3. `packages`: reconcile installed packages with the lists.
 4. `setup`: reapply drifted `system`, `home`, and `firefox` setup stages.
 5. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
-6. `cmd`: rebuild dotfiles commands and installed local recipes whose versions differ.
+6. `cmd`: rebuild dotfiles commands and eligible installed local recipes whose versions differ.
 7. `plugin`: build Hyprland plugins for the installed Hyprland version.
 8. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
 9. `bridge`: repair the checkout and service as in `setup bridge`.
@@ -467,8 +471,10 @@ Named steps omit that prompt and retain this order.
 - `--all` or global `--yes` skips step/recipe prompts, accepts the setup plan, and passes `--noconfirm`.
   - It never installs or removes package-list drift.
   - Building uncommitted `cmds/` still needs `--dirty`.
-- `--only NAME,...` limits `cmd` to named commands or local recipes.
+- `--only NAME,...` limits `cmd` to named commands or eligible local recipes.
   - With no step names it selects `cmd`; explicit step names must include `cmd`.
+  - It cannot enable Cogikyo-only recipes with `cogikyo=off`; requested ones are reported as skipped.
+  - Recipe selection needs `/etc/dctl/machine`; command-only selection does not.
 
 `setup` uses live checks and fixes only pending items, without pulling in other setup stages.
 It checks `system` as the user first and uses sudo when needed to check or reapply changed `system/` files, including Firefox policies.
@@ -486,7 +492,10 @@ A running ewwd also restarts when `ewwd.yaml` or `hyprd.yaml` is newer than its 
   - Without `--dirty`, `--all` or `--yes` warn and skip the build.
   - With none of these flags, a terminal asks for consent, default **No**; without a terminal, the build fails and names `--dirty`.
 - **Local recipes** with different installed versions ask separately, default **Yes**.
-  - Rebuilds via `makepkg -sfiC`, cleaning `src/`; `--all` skips prompts.
+  - Cogikyo-only recipes are eligible only with `cogikyo=on`.
+  - Rebuilds use `makepkg --config packages/makepkg.conf -sfiC`, cleaning `src/`.
+  - dctl authenticates sudo before each build if needed and keeps credentials alive during it.
+  - `--all` skips recipe prompts and adds `--noconfirm`.
 - **Hyprland plugin**: `dctl update plugin` builds `cmds/plugins/caret/` against the installed headers.
   - Needs a C++ compiler, `make`, and pkg-config metadata for `hyprland`, `pixman-1`, and `libdrm`.
   - Uncommitted plugin sources are skipped unless `--dirty` is set.
@@ -501,8 +510,8 @@ Lua loads `caret-<hl.version()>.so` when present; the plugin refuses to initiali
 
 ### Package reconciliation
 
-Reconciliation treats base, selected vendor lists, AUR, extra, and local recipes as the desired set.
-It includes `cogikyo.lst` only with `cogikyo=on`; when off, packages listed only there count as unlisted.
+Reconciliation treats base, selected vendor lists, AUR, extra, and non-Cogikyo local recipes as the desired set.
+With `cogikyo=on`, it also includes `cogikyo.lst` and its local recipes; otherwise packages listed only there count as unlisted.
 It needs `/etc/dctl/machine`; if missing, run `dctl setup machine` first.
 It changes package reasons before prompting, so cancelling is not a complete undo.
 
@@ -550,7 +559,7 @@ dctl iso build --fresh
 ```
 
 - Bundles a depth-1 clone; working-tree changes and full history are excluded.
-- Resolves base, both AMD/Intel vendor sets, AUR, and local recipes; missing packages stop the build.
+- Resolves base, both AMD/Intel vendor sets, AUR, and non-Cogikyo local recipes; missing packages stop the build.
 - `extra.lst` and `cogikyo.lst` must exist, but their packages are not in the offline payload; use `dctl setup extra` after installation.
 - Declared recipe PGP keys must be provided under recipe `keys/pgp/*.asc`.
 - Uses `/var/cache/dctl-iso/` for caching; concurrent builds are refused.

@@ -16,40 +16,49 @@ import (
 )
 
 func Extra(dir, opencode string, run execx.Runner) setup.Stage {
-	pending := func(ctx context.Context) ([]string, error) {
+	pending := func(ctx context.Context) (Lists, []string, error) {
 		l, err := Load(dir)
 		if err != nil {
-			return nil, err
+			return l, nil, err
 		}
 		p, err := profile()
 		if err != nil {
-			return nil, err
+			return l, nil, err
 		}
 		have, err := installed(ctx, run)
 		if err != nil {
-			return nil, err
+			return l, nil, err
 		}
-		return absent(l.Apps(p), have), nil
+		return l, absent(l.Apps(p), have), nil
 	}
 	return setup.Stage{Name: "extra", Background: true, Items: []setup.Item{
 		{
 			Name: "extra-installed",
 			Check: func(ctx context.Context) error {
-				names, err := pending(ctx)
+				_, names, err := pending(ctx)
 				if err != nil || len(names) == 0 {
 					return err
 				}
 				return fmt.Errorf("%d packages missing: %s", len(names), strings.Join(names, " "))
 			},
 			Fix: func(ctx context.Context) error {
-				names, err := pending(ctx)
+				l, names, err := pending(ctx)
 				if err != nil || len(names) == 0 {
 					return err
 				}
 				if err := run.Run(ctx, "", "sudo", slices.Concat([]string{"-n", "pacman"}, Upgrade(true))...); err != nil {
 					return err
 				}
-				return install(ctx, run, names, "--sudoflags=-n")
+				local, other := l.split(names)
+				if err := install(ctx, run, other, "--sudoflags=-n"); err != nil {
+					return err
+				}
+				for _, name := range local {
+					if err := Build(ctx, run, dir, name, true); err != nil {
+						return fmt.Errorf("%s: %w", name, err)
+					}
+				}
+				return nil
 			},
 		},
 		{
@@ -142,6 +151,9 @@ func rootfulData() error {
 }
 
 func install(ctx context.Context, run execx.Runner, names []string, sudo ...string) error {
+	if len(names) == 0 {
+		return nil
+	}
 	if err := synced(); err != nil {
 		return err
 	}
@@ -171,4 +183,13 @@ func install(ctx context.Context, run execx.Runner, names []string, sudo ...stri
 		}
 	}
 	return nil
+}
+
+func Build(ctx context.Context, run execx.Runner, dir, name string, noconfirm bool) error {
+	defer setup.Keepalive(ctx)()
+	args := []string{"--config", filepath.Join(dir, "makepkg.conf"), "-sfiC"}
+	if noconfirm {
+		args = append(args, "--noconfirm")
+	}
+	return run.Run(ctx, filepath.Join(dir, name), "makepkg", args...)
 }

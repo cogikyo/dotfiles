@@ -33,7 +33,7 @@ func Start(ctx context.Context, u *ui.UI, s Stage, force bool, home string) (wai
 		return nil, err
 	}
 	run, stop := context.WithCancel(context.WithoutCancel(ctx))
-	keep := keepalive(run)
+	keep := Keepalive(run)
 	var r Report
 	var applyErr error
 	done := make(chan struct{})
@@ -128,7 +128,7 @@ func Sudo(ctx context.Context, u *ui.UI, why, rerun string) error {
 	return nil
 }
 
-func keepalive(ctx context.Context) context.CancelFunc {
+func Keepalive(ctx context.Context) context.CancelFunc {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		tick := time.NewTicker(time.Minute)

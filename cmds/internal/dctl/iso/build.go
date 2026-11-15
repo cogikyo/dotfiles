@@ -332,7 +332,8 @@ func (b *build) compile(ctx context.Context, src string, l packages.Lists) (stri
 		}
 		sources[name] = key
 	}
-	for _, name := range l.Local {
+	local := l.Offline()
+	for _, name := range local {
 		if err := b.run.Run(ctx, "", "cp", "-rT", filepath.Join(lists, name), filepath.Join(recipes, name)); err != nil {
 			return "", err
 		}
@@ -342,7 +343,7 @@ func (b *build) compile(ctx context.Context, src string, l packages.Lists) (stri
 		}
 		sources[name] = key
 	}
-	names := slices.Concat(l.AUR, l.Local)
+	names := slices.Concat(l.AUR, local)
 	gnupg := filepath.Join(b.tmp, "gnupg")
 	if err := errors.Join(os.Mkdir(gnupg, 0o700), mkdir(gnupg, b.owner)); err != nil {
 		return "", err

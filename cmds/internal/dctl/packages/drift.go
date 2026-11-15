@@ -59,7 +59,7 @@ func drift(ctx context.Context, run execx.Runner, l Lists, p machine.Profile) (D
 	if err := errors.Join(herr, nerr, ferr, oerr, derr, lerr); err != nil {
 		return Drift{}, err
 	}
-	listed := set(slices.Values(slices.Concat(l.Official(p.Vendors()), l.AUR, l.Apps(p), l.Local)))
+	listed := set(slices.Values(slices.Concat(l.Official(p.Vendors()), l.AUR, l.Apps(p), l.Recipes(p))))
 	return classify(listed, have, native, foreign, orphans, deps, leaves), nil
 }
 
