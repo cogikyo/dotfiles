@@ -1,10 +1,13 @@
 package session
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -66,11 +69,7 @@ func WatchPower(done <-chan struct{}, s *state.State, lock *Lock) {
 	}
 }
 
-var glavaExecs = [][]string{
-	{"glava", "-e", "bars_rc.glsl"},
-	{"glava", "-e", "bars_r_rc.glsl"},
-	{"glava", "-e", "radial_rc.glsl"},
-}
+var glavaRCs = []string{"bars_rc.glsl", "bars_r_rc.glsl", "radial_rc.glsl"}
 
 var glavaMu sync.Mutex
 
@@ -83,18 +82,86 @@ func SyncGLava(s *state.State, locked bool) {
 		return
 	}
 	want := s.Profile().GLava && !s.GetScreenShare() && !(locked && unplugged())
+	source := sync.OnceValue(glavaSource)
 	glavaMu.Lock()
 	defer glavaMu.Unlock()
-	for _, argv := range glavaExecs {
-		cmdline := strings.Join(argv, " ")
-		running := exec.Command("pgrep", "-fx", cmdline).Run() == nil
+	for _, rc := range glavaRCs {
+		match := "^glava -e " + regexp.QuoteMeta(rc) + "( |$)"
+		running := exec.Command("pgrep", "-f", match).Run() == nil
 		switch {
 		case want && !running && !locked:
-			if err := detach.Start(exec.Command(argv[0], argv[1:]...)); err != nil {
-				fmt.Fprintf(os.Stderr, "hyprd glava: start %q: %v\n", cmdline, err)
+			cmd := exec.Command("glava", "-e", rc)
+			if src := source(); src != "" {
+				cmd.Args = append(cmd.Args, "-r", fmt.Sprintf("setsource %q", src))
+			}
+			if err := detach.Start(cmd); err != nil {
+				fmt.Fprintf(os.Stderr, "hyprd glava: start %q: %v\n", strings.Join(cmd.Args, " "), err)
 			}
 		case !want && running:
-			exec.Command("pkill", "-fx", cmdline).Run()
+			exec.Command("pkill", "-f", match).Run()
 		}
 	}
+}
+
+func glavaSource() string {
+	source, err := snapclientMonitor()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd glava: source: %v\n", err)
+	}
+	return source
+}
+
+type pactlSink struct {
+	Index      int               `json:"index"`
+	Name       string            `json:"name"`
+	Monitor    string            `json:"monitor_source"`
+	Properties map[string]string `json:"properties"`
+}
+
+type pactlSinkInput struct {
+	Sink       int               `json:"sink"`
+	Properties map[string]string `json:"properties"`
+}
+
+func snapclientMonitor() (string, error) {
+	out, err := exec.Command("pactl", "get-default-sink").Output()
+	if err != nil {
+		return "", fmt.Errorf("default sink: %w", err)
+	}
+	var sinks []pactlSink
+	if err := pactlList("sinks", &sinks); err != nil {
+		return "", err
+	}
+	def := strings.TrimSpace(string(out))
+	if !slices.ContainsFunc(sinks, func(sink pactlSink) bool {
+		return sink.Name == def && sink.Properties["application.name"] == "Snapcast"
+	}) {
+		return "", nil
+	}
+	var inputs []pactlSinkInput
+	if err := pactlList("sink-inputs", &inputs); err != nil {
+		return "", err
+	}
+	i := slices.IndexFunc(inputs, func(input pactlSinkInput) bool {
+		return input.Properties["application.name"] == "Snapclient"
+	})
+	if i < 0 {
+		return "", nil
+	}
+	j := slices.IndexFunc(sinks, func(sink pactlSink) bool { return sink.Index == inputs[i].Sink })
+	if j < 0 {
+		return "", fmt.Errorf("snapclient sink %d not listed", inputs[i].Sink)
+	}
+	return sinks[j].Monitor, nil
+}
+
+func pactlList(kind string, v any) error {
+	out, err := exec.Command("pactl", "-f", "json", "list", kind).Output()
+	if err != nil {
+		return fmt.Errorf("list %s: %w", kind, err)
+	}
+	if err := json.Unmarshal(out, v); err != nil {
+		return fmt.Errorf("list %s: %w", kind, err)
+	}
+	return nil
 }
