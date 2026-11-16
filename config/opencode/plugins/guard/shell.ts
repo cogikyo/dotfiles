@@ -140,6 +140,7 @@ export function launches(source: string, dir?: string, known: Record<string, str
 }
 
 function steady(source: string, launched: Launch[]) {
+  source = source.replace(/\$\(\([\d\s()+*/%<>&|^~!?:.-]*\)\)/gu, "0");
   if (source.includes("((") || definition.test(source)) return false;
   for (let at = source.indexOf("$"); at >= 0; at = source.indexOf("$", at + 1)) {
     simple.lastIndex = at;
@@ -275,7 +276,7 @@ function peel(words: string[], scope: Scope, start = 0) {
       ...words.slice(index + 1).map((arg, at) => (name === "rm" ? (scope.temporary.get(index + at + 1) ?? arg) : arg)),
     ];
     launched.push({ command, dir });
-    moved ||= resets.has(name);
+    moved ||= resets.has(name) || (name === "emulate" && emulation(words, index + 1).script);
     if (flags(command).some(({ flag }) => chdirs[name]?.includes(flag))) dir = undefined;
     const next = unwrap(name, words, index + 1, { ...scope, dir }, launched);
     if (next === undefined) {
@@ -305,7 +306,7 @@ function nested(name: string, words: string[], start: number, scope: Scope): Lau
     return handoff(name, words, start, scope);
   }
   if (strings.has(name) || evaluates(name, args)) return [{ command: unseen, dir: scope.dir }];
-  if (shells.has(name) || name === "eval" || name === "source" || name === ".") return [];
+  if (shells.has(name) || name === "eval" || name === "emulate" || name === "source" || name === ".") return [];
   if (name !== "find") {
     if (!invokes(args)) return [];
     if (!scope.handoffs) return [{ command: unseen, dir: scope.dir }];
@@ -453,9 +454,25 @@ function invokes(args: string[]) {
   return args.some((arg, at) => shells.has(path.basename(arg)) && /^-[A-Za-z]*c/u.test(args[at + 1] ?? ""));
 }
 
+function emulation(words: string[], start: number) {
+  const front = interpreter(words, start);
+  return front.script ? front : interpreter(words, front.next + 1);
+}
+
 function unwrap(name: string, words: string[], start: number, scope: Scope, launched: Launch[]) {
   if (name === "eval") {
     launched.push(...walk(words.slice(start).join(" "), scope.dir, scope));
+    return undefined;
+  }
+  if (name === "emulate") {
+    if ([...scope.dynamic].some((at) => at >= start)) {
+      launched.push({ command: unseen, dir: scope.dir });
+      return undefined;
+    }
+    const { next, script } = emulation(words, start);
+    if (!script) return undefined;
+    const body = words[next];
+    launched.push(...(body === undefined ? [{ command: unseen, dir: scope.dir }] : walk(body, scope.dir, scope)));
     return undefined;
   }
   if (shells.has(name)) {
