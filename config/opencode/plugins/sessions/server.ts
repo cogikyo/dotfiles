@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin";
+import { Model } from "@opencode/schema/model";
 import { Option, Schema } from "effect";
 import { fileURLToPath } from "node:url";
 import { located } from "../mail/store.ts";
@@ -114,6 +115,21 @@ const tagDescription = [
   "Only top-level sessions can call it.",
 ].join(" ");
 
+const ModelInput = Schema.Struct({
+  sessionID: Schema.String.annotate({ description: "Top-level session to switch." }),
+  model: Schema.String.annotate({
+    description: "`provider/model#variant`; omit `#variant` for the default.",
+  }),
+});
+
+const ModelOutput = Schema.Struct({ sessionID: Schema.String, model: Schema.String });
+
+const modelDescription = [
+  "Switch a top-level session's stored model, validated against available models.",
+  "Starts no turn; send mail to wake the session. Refuses child sessions and other sessions flagged REFUSALS.",
+  "Only top-level sessions can call it.",
+].join(" ");
+
 export default Plugin.define({
   id: "sessions",
   async setup(ctx) {
@@ -157,6 +173,36 @@ export default Plugin.define({
           return {
             output: { sessionID, title: next },
             content: `${changed ? "Tagged" : "Already tagged"} session ${sessionID}: ${next}`,
+          };
+        },
+      });
+      editor.add({
+        name: "session_model",
+        description: modelDescription,
+        input: ModelInput,
+        output: ModelOutput,
+        options: { namespace: "opencode", codemode: true, pinned: true },
+        execute: async (input, context) => {
+          const caller = await ctx.session.get({ sessionID: context.sessionID });
+          if (caller.parentID) throw new Error("session_model: only top-level sessions can switch models");
+          const session = await ctx.session.get({ sessionID: input.sessionID });
+          if (session.parentID)
+            throw new Error(`session_model: ${input.sessionID} is a child session; lanes route child models`);
+          if (session.id !== caller.id && tag(session.title)?.flags.includes("refusals"))
+            throw new Error(`session_model: ${input.sessionID} is hidden from agents by the refusals flag`);
+          const model = input.model.trim();
+          const ref = Model.Ref.parse(model);
+          const { data } = await ctx.model.list();
+          const found = data.find((info) => info.providerID === ref.providerID && info.id === ref.id);
+          if (!found) throw new Error(`session_model: ${ref.providerID}/${ref.id} is not an available model`);
+          if (ref.variant && !found.variants.some((option) => option.id === ref.variant))
+            throw new Error(
+              `session_model: ${ref.providerID}/${ref.id} has no ${ref.variant} variant; it has ${found.variants.map((option) => option.id).join(", ")}`,
+            );
+          await ctx.session.switchModel({ sessionID: session.id, model: ref });
+          return {
+            output: { sessionID: session.id, model },
+            content: `Switched session ${session.id} "${session.title ?? ""}" to ${model}`,
           };
         },
       });

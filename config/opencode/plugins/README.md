@@ -384,6 +384,10 @@ It replaces the tag, preserves an existing `refusals` flag and the rest of the t
 It refuses another session flagged `REFUSALS` without echoing its title.
 Only top-level sessions can call it or be tagged; `sessionID` defaults to the caller, and a missing title becomes `New session - <ISO time>`.
 
+`sessions/server.ts` also exposes `tools.opencode.session_model` to switch a top-level session's stored model to a `provider/model#variant` ref.
+It validates the ref against available models and starts no turn; send mail to wake the session.
+Only top-level sessions can call it; it refuses child sessions and other sessions flagged `REFUSALS`.
+
 `sessions/tui.tsx` binds `ctrl+o` to Open and `ctrl+r` to Recent; `sessions/open.tsx` serves both pickers.
 The `ctrl+r` opener does not fire in modal dialogs except from Recent or Open.
 `<leader>shift+return` sends `/done` with no arguments to the root session.
