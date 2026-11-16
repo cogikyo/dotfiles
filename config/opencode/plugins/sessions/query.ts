@@ -3,7 +3,8 @@ import type { Query } from "./server.ts";
 import { retag, tag, title } from "./tags.ts";
 
 const excerpt = 800;
-const brief = 160;
+const ceiling = 50_000;
+const sizes: Partial<Record<Query["query"], Record<string, number>>> = { tools: { input: 160 } };
 const tables = ["session_v2", "session_message", "project"];
 const store = `s_${crypto.randomUUID().replaceAll("-", "")}`;
 const filters: Record<string, string> = { session_v2: "id", session_message: "session_id" };
@@ -23,8 +24,7 @@ type Cursor = { table: string; keyed: boolean };
 class Slice {
   constructor(
     readonly text: string,
-    readonly size: number,
-    readonly from = 0,
+    readonly from: number,
   ) {}
 }
 
@@ -70,10 +70,7 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
          ORDER BY m.seq, c.key
          LIMIT ?3 OFFSET ?4`,
       )
-      .all(required(args.session, "session"), args.tool ?? null, args.limit, args.offset ?? 0)
-      .map((row) =>
-        Object.assign(row, { input: typeof row.input === "string" ? new Slice(row.input, brief) : row.input }),
-      ),
+      .all(required(args.session, "session"), args.tool ?? null, args.limit, args.offset ?? 0),
   part: (db, args) => {
     const address = required(args.part, "part");
     const [id, index] = address.split("#");
@@ -156,7 +153,7 @@ function detail(item: Item, whole: boolean, from: number) {
     status,
     input: input === undefined ? undefined : JSON.stringify(input),
     length: output.length,
-    output: new Slice(output, excerpt, from),
+    output: new Slice(output, from),
     error: error ? (error.message ?? JSON.stringify(error)) : undefined,
   };
 }
@@ -257,15 +254,17 @@ function member(next: Op[], register: number, sets: Set<number>) {
   return test?.opcode === "NotFound" && test.p3 === register && sets.has(test.p1);
 }
 
-function clip(value: unknown, redact: (text: string) => string) {
+function clip(value: unknown, size: number) {
+  return typeof value === "string" && value.length > size ? `${value.slice(0, size)}…` : value;
+}
+
+function shape(row: Row, redact: (text: string) => string) {
   // Redact before clipping or paging, which could split a hidden title and prevent a match.
-  if (value instanceof Slice) {
-    const text = redact(value.text).slice(value.from);
-    return text.length > value.size ? `${text.slice(0, value.size)}…` : text;
-  }
-  if (typeof value !== "string") return value;
-  const text = redact(value);
-  return text.length > excerpt ? `${text.slice(0, excerpt)}…` : text;
+  const open = (value: unknown) =>
+    value instanceof Slice ? redact(value.text).slice(value.from) : typeof value === "string" ? redact(value) : value;
+  return Object.fromEntries(
+    Object.entries(row).map(([name, value]) => [name, stamp(name, clip(open(value), ceiling))]),
+  );
 }
 
 function required(value: string | undefined, name: string) {
@@ -280,18 +279,10 @@ function time(value: string | undefined, name: string) {
   return ms;
 }
 
-function render(rows: Row[], hidden: number, redact: (text: string) => string) {
-  const body =
-    rows.length === 0
-      ? "no rows"
-      : rows
-          .map((row) =>
-            JSON.stringify(
-              Object.fromEntries(Object.entries(row).map(([name, value]) => [name, clip(value, redact)])),
-              stamp,
-            ),
-          )
-          .join("\n");
+function render(rows: Row[], hidden: number, size: Record<string, number> = {}) {
+  const cut = (row: Row) =>
+    Object.fromEntries(Object.entries(row).map(([name, value]) => [name, clip(value, size[name] ?? excerpt)]));
+  const body = rows.length === 0 ? "no rows" : rows.map((row) => JSON.stringify(cut(row))).join("\n");
   return hidden ? `${body}\n(${hidden} sessions hidden by the refusals flag)` : body;
 }
 
@@ -375,7 +366,8 @@ export function run(path: string, args: Query) {
     try {
       refuse(db, hidden, args);
       db.run("PRAGMA query_only=ON");
-      return render(queries[args.query](db, args), hidden.size, redact);
+      const rows = queries[args.query](db, args).map((row) => shape(row, redact));
+      return { rows, hidden: hidden.size, content: render(rows, hidden.size, sizes[args.query]) };
     } catch (error) {
       throw new Error(redact(error instanceof Error ? error.message : String(error)), { cause: error });
     }
@@ -388,7 +380,7 @@ if (import.meta.main) {
   try {
     const path = process.argv[2];
     if (!path) throw new Error("usage: query.ts <opencode.db> < query.json");
-    process.stdout.write(JSON.stringify({ output: run(path, JSON.parse(await Bun.stdin.text())) }));
+    process.stdout.write(JSON.stringify(run(path, JSON.parse(await Bun.stdin.text()))));
   } catch (error) {
     process.stdout.write(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
   }

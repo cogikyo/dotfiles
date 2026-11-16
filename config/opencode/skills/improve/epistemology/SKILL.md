@@ -33,7 +33,7 @@ Do not claim complete coverage when the cap or window truncated the store.
 
 ## Store
 
-Read sessions through the `sessions` tool.
+Read sessions through `tools.opencode.sessions` inside `execute`; it returns `{ rows, hidden }`.
 Pass `$ARGUMENTS` values as tool arguments or `params`; do not write them into SQL text.
 
 `session_v2.directory` is the authority for current-directory selection.
@@ -41,7 +41,7 @@ Do not join `project` or build a project-resolution layer; many sessions use `pr
 
 1. Select candidates with `list`, filtered by `directory` and `since`; it returns top-level sessions with their `agent`, so user-role text is human input.
 2. Pull children with `list` and `parent` only after selecting a relevant parent, or when delegation behavior is the focus.
-3. Read one session at a time with `text`, filtered by `role` or `match` when the focus is known.
+3. Read selected sessions with `text`, filtered by `role` or `match` when the focus is known.
 4. Use `tools` for a session's tool inventory; filter `tool: "skill"` to see skill calls, whose input carries the skill `id`.
 5. Read one `part` for its input and output only after that item matters, using the returned `<message ID>#<index>` address.
 

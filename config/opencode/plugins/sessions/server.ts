@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { located } from "../mail/store.ts";
 import { flags, retag, states, tag, title } from "./tags.ts";
 
-const cap = 20;
+const cap = 1000;
 const timeout = 30_000;
 
 const text = (description: string) => Schema.optional(Schema.String.annotate({ description }));
@@ -39,7 +39,7 @@ const Input = Schema.Struct({
   ),
   limit: Schema.optional(
     Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: cap })).annotate({
-      description: `Row limit, at most ${cap}; list defaults to 12.`,
+      description: `Row limit, at most ${cap}; defaults to 12 for list and 20 otherwise.`,
     }),
   ),
   offset: count("Rows to skip for paging."),
@@ -47,17 +47,29 @@ const Input = Schema.Struct({
 
 export type Query = typeof Input.Type & { readonly limit: number };
 
-const Reply = Schema.Union([Schema.Struct({ output: Schema.String }), Schema.Struct({ error: Schema.String })]);
+const Output = Schema.Struct({
+  rows: Schema.Array(Schema.Record(Schema.String, Schema.Json)).annotate({
+    description: "Result rows in query order; strings longer than 50,000 characters end in `…`.",
+  }),
+  hidden: Schema.Int.annotate({ description: "Sessions hidden from agents by the refusals flag." }),
+});
+
+const Reply = Schema.Union([
+  Schema.Struct({ ...Output.fields, content: Schema.String }),
+  Schema.Struct({ error: Schema.String }),
+]);
 
 const description = [
-  `Read-only queries over the local OpenCode session store. Each call returns at most ${cap} JSON rows; text is capped at 800 characters.`,
-  "- list: sessions by directory, agent, parent, and time, newest first; top-level only unless `parent` or `nested` is set.",
-  "- text, reasoning: one session's text or reasoning excerpts, oldest first.",
-  "- tools: one session's tool calls with status and a short input excerpt, without outputs.",
-  "- part: one item's input, output, and error excerpts; page long output with `from`. Row IDs `<message ID>#<n>` address item n of an assistant message's content.",
-  "- sql: one read-only SELECT over session_v2, session_message (session_id, type, seq, data JSON), and project; json_each is allowed; bind every value through `params`; `offset` skips result rows.",
-  "  Filter session_message by session_id, as in `m.session_id = ?` or `m.session_id IN (SELECT id FROM session_v2 WHERE …)`; the tool rejects queries that would scan it.",
-  "  Assistant data.content[] holds items whose `$.type` is text, reasoning, or tool; a tool item has its tool name at `$.name` (not `$.tool`) and `$.state.status`, `$.state.input`, and `$.state.error`.",
+  "Read-only session history: `tools.opencode.sessions` inside `execute` returns `{ rows, hidden }`; `hidden` is store-wide.",
+  "Batch related queries per question; use `Promise.allSettled` for independent calls.",
+  "Filter locally; return counts, IDs, and short excerpts. Bound paging loops by page count and report rejected calls' errors.",
+  "Defaults: 12 rows for list, 20 otherwise; max 1000. Strings cap at 50,000 characters (`…`); host-visible output caps at 2,000 lines/50 KiB.",
+  "- list: newest first; top-level unless `parent` or `nested` is set. Rows: id, parent, agent, title, directory, created, updated.",
+  "- text, reasoning: one session, oldest first. Rows: id, role, type, created, length (full text length), text.",
+  "- tools: calls without outputs. Rows: id, created, tool, status, input (JSON text).",
+  "- part: input/output/error and full output `length`; page output with `from`. Assistant addresses: `<message ID>#<index>`; bare IDs read non-assistant text.",
+  "- sql: one SELECT/WITH over session_v2, session_message (session_id, type, seq, data JSON), project, sqlite_schema; json_each/json_tree allowed. Bind values through `params`; `offset` skips rows.",
+  "  Filter session_message by session_id, as in `m.session_id = ?`; scans are rejected. Assistant data.content[] items use `type`; tool items use `name` (not `tool`) and `state.status/input/error`.",
 ].join("\n");
 
 async function query(input: Query, store: string, signal: AbortSignal) {
@@ -81,7 +93,7 @@ async function query(input: Query, store: string, signal: AbortSignal) {
   const reply = Schema.decodeUnknownOption(Schema.fromJsonString(Reply))(stdout);
   if (Option.isNone(reply)) throw new Error(`sessions query failed: ${stderr.trim().slice(-1000) || "no output"}`);
   if ("error" in reply.value) throw new Error(reply.value.error);
-  return reply.value.output;
+  return reply.value;
 }
 
 const TagInput = Schema.Struct({
@@ -111,14 +123,16 @@ export default Plugin.define({
         name: "sessions",
         description,
         input: Input,
-        options: { codemode: false },
-        execute: async (input, context) => ({
-          content: await query(
-            { ...input, limit: input.limit ?? (input.query === "list" ? 12 : cap) },
+        output: Output,
+        options: { namespace: "opencode", codemode: true, pinned: true },
+        execute: async (input, context) => {
+          const { content, ...output } = await query(
+            { ...input, limit: input.limit ?? (input.query === "list" ? 12 : 20) },
             store,
             context.signal,
-          ),
-        }),
+          );
+          return { output, content };
+        },
       });
       editor.add({
         name: "session_tag",

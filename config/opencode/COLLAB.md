@@ -245,7 +245,7 @@ Git authority lives here: you plan and run in-scope Git work, and other children
 Send cross-session handoffs with **`mail`** instead of files for the user to relay.
 Set `kind` to `info` when no reply is needed, or `ask` when one is.
 Write the body in three sentences: the key problem or ask, the key solution or uncertainty, and the key decision or action; put larger artifacts in files and give their paths.
-Before you mail a question, read the other session's transcript with `sessions` or a `scout/session`, and drop the question if the transcript answers it.
+Before you mail a question, read the other session's transcript with `tools.opencode.sessions` inside `execute` or a `scout/session`, and drop the question if the transcript answers it.
 Send no acknowledgment-only reply to info; answer asks with `mail` and `replyTo` set to the ask's mail ID, even when you can't act or are waiting on the user.
 Mail without asking when another session's work depends on this session's result.
 Before removing or reshaping a feature, `ask` coupled sessions at plan time about work or deployment dependencies, including sessions whose branches build on a branch you change.

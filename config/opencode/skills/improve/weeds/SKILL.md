@@ -84,7 +84,7 @@ That becomes testable when the builder route changes model.
 
 ## Collect
 
-Gather `weed: <name>` labels from every repository with paged `sessions` `sql` queries, 20 rows per call.
+Gather `weed: <name>` labels from every repository with `sql` queries through `tools.opencode.sessions` inside `execute`; set `limit` up to 1000 per call.
 Read assistant-role text only, so a brief that quotes a label does not count as a sighting.
 Read from each entry's `judged` date, and from each candidate's first-seen date.
 

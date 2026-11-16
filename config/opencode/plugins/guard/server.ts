@@ -15,6 +15,7 @@ import { enter } from "./shell.ts";
 const cage = path.join(home, ".local/bin/cage");
 const ttl = 24 * 60 * 60 * 1000;
 const pushes = new Map<string, { reason: string; time: number }>();
+const fetches = new Set<string>();
 const runs = path.join(scratch, "runs.jsonl");
 const allowed = [
   "shell",
@@ -24,11 +25,12 @@ const allowed = [
   "webfetch",
   "websearch",
   "skill",
-  "sessions",
+  "opencode_sessions",
   "x",
   "diagram",
   "workflow",
   "subagent",
+  "execute",
 ];
 const files: Record<string, { key: string; recursive: boolean; required: boolean }> = {
   read: { key: "path", recursive: false, required: true },
@@ -121,6 +123,8 @@ export default Plugin.define({
           if (!assert) {
             return yield* new Tool.Error({ message: "guard cannot ask webfetch permission on this OpenCode host" });
           }
+          const key = `${context.sessionID} ${context.messageID} ${context.id}`;
+          fetches.add(key);
           yield* assert({
             sessionID: context.sessionID,
             agent: context.agent,
@@ -129,7 +133,7 @@ export default Plugin.define({
             save: ["*"],
             metadata: { ...input },
             source: { type: "tool", messageID: context.messageID, id: context.id },
-          });
+          }).pipe(Effect.ensuring(Effect.sync(() => fetches.delete(key))));
           const result = yield* Effect.tryPromise({
             try: (signal) => fetchPublic(input, signal),
             catch: (error) => new Tool.Error({ message: `Unable to fetch ${input.url}: ${(error as Error).message}` }),
@@ -270,8 +274,14 @@ export default Plugin.define({
       yield* ctx.permission.hook("evaluate", (event) =>
         Effect.sync(() => {
           prune(Date.now());
+          const key = event.source && `${event.sessionID} ${event.source.messageID} ${event.source.id}`;
+          if (event.action === "webfetch" && readOnly(event.agent) && !(key && fetches.has(key))) {
+            event.effect = "deny";
+            event.message = "read-only agents fetch only through the `webfetch` tool, not from Code Mode scripts";
+            return;
+          }
           // Keep the record: an "always" reply re-evaluates pending requests.
-          const pending = event.source && pushes.get(`${event.sessionID} ${event.source.messageID} ${event.source.id}`);
+          const pending = key && pushes.get(key);
           if (event.action !== "shell" || !pending || event.effect !== "allow") return;
           event.effect = "ask";
           event.message = pending.reason;

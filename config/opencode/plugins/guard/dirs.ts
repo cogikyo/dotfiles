@@ -15,8 +15,9 @@ const defaults: Record<string, string> = {
 const entry = /^XDG_([A-Z]+)_DIR="([^"]*)"/gmu;
 const exempt: Record<string, readonly string[] | "all"> = {
   edit: ["oldString"],
+  execute: "all",
   grep: ["pattern"],
-  sessions: "all",
+  opencode_sessions: "all",
 };
 const prefix = ["~", "\\$HOME", "\\$\\{HOME\\}", RegExp.escape(home)].join("|");
 

@@ -4,7 +4,8 @@ mode: subagent
 color: "#f08898"
 permissions:
   - { "action": "edit", "resource": "*", "effect": "deny" }
-  - { "action": "execute", "resource": "*", "effect": "deny" }
+  - { "action": "opencode_session_*", "resource": "*", "effect": "deny" }
+  - { "action": "opencode_worktree_*", "resource": "*", "effect": "deny" }
 ---
 
 You are review/debug.

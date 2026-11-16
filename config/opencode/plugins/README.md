@@ -215,13 +215,14 @@ For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when t
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 It also denies `systemd-run` unit names starting with `cogikyo-` (`-u`/`--unit`), protecting the voice-loop bus rights granted to `cogikyo-voice.scope`, which Cullyn's key creates.
 For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.
-Use `x` for X search, `sessions` for history, and `session_create` for new sessions.
+Use `x` for X search, `tools.opencode.sessions` inside `execute` for history, and `session_create` for new sessions.
 Prefer `workdir`; V2 resolves each remaining `cd` argument against it, so chained relative changes can cause false external-directory prompts.
 The `context`, `compaction`, and `generate` hooks describe parallel calls and the shell environment: zsh without unquoted `$var` word-splitting outside the read-only set, or offline `bash -c` in cage for read-only agents.
 
-For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `sessions`, `x`, `diagram`, `workflow`, and `subagent`; agent permissions can restrict these further.
+For `review/*`, `scout/*`, `verify/source`, and `verify/web`, the guard allows only `shell`, `read`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `opencode_sessions`, `x`, `diagram`, `workflow`, `execute`, and `subagent`; agent permissions can restrict these further.
 The global `subagent` deny keeps that last one from every read-only agent except `review/entropy`, whose frontmatter allows its helpers.
-Code Mode `execute` is excluded, and `verify/web` denies all shell calls.
+Their Code Mode scripts may call only those tools, including `tools.opencode.sessions`; the guard denies script `fetch` (use `webfetch`).
+Their frontmatter hides `opencode_session_*` and `opencode_worktree_*` management tools from the catalog, and `verify/web` denies all shell calls.
 Each read-only shell runs through [cage](../../../cmds/cmd/cage/README.md) offline, with writes limited to `~/.local/state/opencode/scratch/<session-id>`.
 `$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.
 The pattern checks are guardrails; cage supplies the kernel sandbox and trusts the scratch path the guard computes.
@@ -346,8 +347,12 @@ There is no tool, key, or TUI slot.
 
 ## Sessions
 
-`sessions/server.ts` exposes the read-only `sessions` tool over `${XDG_DATA_HOME:-~/.local/share}/opencode/opencode.db`.
-Queries return at most 20 rows and 800-character excerpts, with a 30-second subprocess deadline.
+`sessions/server.ts` exposes read-only history queries over `${XDG_DATA_HOME:-~/.local/share}/opencode/opencode.db` as `tools.opencode.sessions` inside `execute`, returning `{ rows, hidden }`.
+Agents denied `execute`, such as `verify/browser`, get the direct `opencode_sessions` tool with rendered text instead.
+Queries default to 12 rows for `list` and 20 otherwise, accept `limit` up to 1000, and keep a 30-second subprocess deadline.
+Code Mode strings stop at 50,000 characters with `…`; `text` and `part` rows include `length`, and `part` pages output with `from`.
+The direct tool keeps 800-character excerpts.
+Host-visible tool output stops at 2,000 lines or 50 KiB; return counts, IDs, and short excerpts rather than raw rows from scripts.
 Use `list`, `text`, `reasoning`, `tools`, or `part` before raw `sql`.
 Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-assistant text.
 Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
@@ -359,7 +364,8 @@ Only tags with a state count as closed; unknown names or misplaced states make a
 Writes deduplicate flags in the order above; see [done's tag criteria](../skills/orchestration/done/SKILL.md#tags) to choose them.
 
 `sessions/query.ts` filters session and message views to omit `REFUSALS` sessions and their descendants through child or fork links; the TUI still shows them.
-Successful queries append the store-wide hidden count when nonzero; direct session and part lookups refuse hidden targets.
+Successful Code Mode queries return the store-wide `hidden` count; rendered text appends it when nonzero.
+Direct session and part lookups refuse hidden targets.
 Visible text results and query errors replace exact hidden-title copies with `[hidden by refusals]` before clipping or paging.
 Plain-title copies are included only with at least two words and 10 characters, excluding default titles; matching is case-sensitive and covers up to two JSON-escape layers.
 

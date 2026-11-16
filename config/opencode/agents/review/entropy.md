@@ -6,7 +6,8 @@ permissions:
   - { "action": "x", "resource": "*", "effect": "allow" }
   - { "action": "edit", "resource": "*", "effect": "deny" }
   - { "action": "skill", "resource": "x", "effect": "allow" }
-  - { "action": "execute", "resource": "*", "effect": "deny" }
+  - { "action": "opencode_session_*", "resource": "*", "effect": "deny" }
+  - { "action": "opencode_worktree_*", "resource": "*", "effect": "deny" }
   - { "action": "subagent", "resource": "scout/*", "effect": "allow" }
   - { "action": "subagent", "resource": "verify/source", "effect": "allow" }
   - { "action": "subagent", "resource": "verify/web", "effect": "allow" }

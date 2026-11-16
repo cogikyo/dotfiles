@@ -18,7 +18,7 @@ Do not edit permissions, skills, or agents unless the user asks after the report
 Default to today and the current workspace.
 Treat `$ARGUMENTS` as the window: a session id, directory, agent, or time bound.
 
-Start with the `sessions` tool and any log evidence supplied by the user.
+Start with `tools.opencode.sessions` inside `execute` and any log evidence supplied by the user.
 Select sessions by directory and time, then inspect `tools` with `tool: "shell"` for failed calls.
 Use `part` with the returned `<message ID>#<index>` address to read the command, error, and output.
 Include `subagent` failures when the question concerns agent use or dispatch.

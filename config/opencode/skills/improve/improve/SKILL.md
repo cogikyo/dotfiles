@@ -30,7 +30,7 @@ Select top-level sessions only (`parent_id IS NULL`) and exclude the current ses
 Use `list` for exact-directory selection; prefix selection needs `sql` because `list.directory` is exact.
 For prefix selection, match the project path itself or paths beginning with that path plus `/`.
 Report the sampled top-level count and oldest-to-newest `time_updated` span once, disclosing any truncation without claiming full coverage.
-Report any store-wide hidden count from `sessions` as a coverage gap, not a count for the selected window or project.
+Read through `tools.opencode.sessions` inside `execute`; report its store-wide `hidden` count as a coverage gap, not a count for the selected window or project.
 Do not try to reach `REFUSALS`-hidden sessions another way.
 
 ### Triage

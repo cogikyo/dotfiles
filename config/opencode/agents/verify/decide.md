@@ -28,11 +28,15 @@ Collab's rules live in `/home/cullyn/dotfiles/config/opencode/COLLAB.md`; read i
 Collab's brief is mechanical: the parent session ID, the trigger for the critical call, the child session IDs in this wave, the pending question verbatim, and the reviewers Collab picked.
 Gather the rest yourself with your own tools.
 
-- **Your decision log** comes first: earlier `verify/decide` children of the same parent, found with a `sessions` `list` query by `parent` and `agent`.
-- **His own messages** in the parent come from the `sessions` `text` query with the user role.
-  - Excerpts stop at 800 characters, so read a long message whole with the `part` query.
+- **Your decision log** comes first: earlier `verify/decide` children of the same parent, found with a `tools.opencode.sessions` `list` query by `parent` and `agent`.
+- **His own messages** in the parent come from the `text` query with the user role.
+  - Strings stop at 50,000 characters with `…`; use `length` and page `part` with `from` when more is needed.
 - **Wave evidence** is the child reports, the stored workflow (`workflow({})`), and Git state.
 - **Other sessions' transcripts** matter when the question touches their work.
+
+Use one batched `execute` script per question; `tools.opencode.sessions` returns `{ rows, hidden }`.
+Run independent queries with `Promise.allSettled`, filter locally, and return counts, IDs, and short excerpts instead of raw rows.
+Bound paging loops by a page count, stop at enough evidence, and report rejected calls' errors.
 
 Collab's narration records what it did and asked; it is not evidence that a claim is true.
 Check a claim against source, a command, or a stored value before a decision rests on it.

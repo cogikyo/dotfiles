@@ -19,7 +19,7 @@ A supplied session ID or an `/improve` leaf brief selects past mode.
 Keep all transcript searches inside the target session and its children.
 
 Use what Collab remembers from the live conversation first.
-Use the `sessions` tool for compacted early turns, lane transcripts, and tool failures.
+Use `tools.opencode.sessions` inside `execute` for compacted early turns, lane transcripts, and tool failures.
 Quote minimally and omit secrets.
 
 ## Gather

@@ -41,7 +41,7 @@ Mail COGIKYO SCRIBE any cogikyo decisions or facts this session has not already 
 For each worktree this session tree created or worked in, skip any another open session is working in and follow `../../git/worktrees/SKILL.md`'s finished-task guard.
 Run `../../git/worktrees/landed.sh <worktree>`; on exit 0, remove the worktree and delete its branch under that skill; on exit 1, keep it and report the unique paths; on exit 2, keep it and report the refusal.
 
-Run [cleanup.sql](cleanup.sql) unchanged through `sessions` with `?1` = root session ID and `?2` = now − 3 days in epoch milliseconds.
+Run [cleanup.sql](cleanup.sql) unchanged through `tools.opencode.sessions` inside `execute` with `query: "sql"`, `?1` = root session ID and `?2` = now − 3 days in epoch milliseconds.
 Select existing `/tmp/opencode/<name>` paths with `shared = 0`; keep `shared = 1` paths and any of unclear ownership without asking (`REFUSALS` hides sessions from the shared check).
 Add `~/.local/state/opencode/scratch/<sessionID>/` for each session in the tree.
 Keep both scratch roots and the shared `runs.jsonl`.
@@ -77,7 +77,7 @@ Add each flag that applies:
 - `ISSUES`: the session hit friction the retro did not resolve.
 - `REVIEWME`: landed work deserves a later look, such as a risky or unreviewed change.
 - `TODO`: follow-up work remains.
-- `REFUSALS`: the session's content made a model stop or refuse; this excludes its history from agents' `sessions` queries.
+- `REFUSALS`: the session's content made a model stop or refuse; this excludes its history from agents' session-history queries.
 
 ## Report
 
