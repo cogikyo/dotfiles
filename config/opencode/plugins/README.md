@@ -203,7 +203,11 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 
 ## Guard
 
-`guard/server.ts` denies recognized shell Grok launches, OpenCode API calls, and credential or database reads.
+`guard/server.ts` denies recognized shell Grok launches and OpenCode API calls.
+For agents outside the read-only set, the credential gate covers recognized Claude `.credentials.json` and OpenCode `auth.json`, `service[-…].json`, and `opencode.db[-wal|-shm]` paths in shell arguments, native `read`, and `grep` pointed directly at a file.
+Native checks expand `~`, resolve relative paths against the session directory, and check realpaths.
+Shell checks also resolve literal operands and redirect targets against the command's cwd and every literal `cd`/`chdir`/`pushd` destination, checking realpaths only for credential-like basenames; variables, globs, substitutions, and runtime-built paths are not resolved.
+Credential basenames used as text can also reject when resolved against those candidate directories.
 `cd` is allowed; the guard folds one leading `cd <literal path>` into `workdir` after checking that the directory exists.
 It also rejects broad home or secret-ancestor `grep` and `glob` roots and checks commit-message shape for agents outside the read-only set.
 For agents outside the read-only set, `rm`, `find -delete`, and `find -exec rm` require paths inside `/tmp/opencode/`, written literally or through variables assigned earlier in the command, absolute or relative to a known `workdir` or `cd <dir> &&` target.
@@ -232,7 +236,7 @@ Caged agents skip opaque-handoff rejection, including for `trap`, except that `p
 `$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.
 The pattern checks are guardrails; cage supplies the kernel sandbox and trusts the scratch path the guard computes.
 
-`paths.ts` supplies one hide inventory for cage and native `read`, `grep`, `glob`, and file-backed `diagram` checks.
+For read-only agents, `paths.ts` supplies one hide inventory for cage and native `read`, `grep`, `glob`, and file-backed `diagram` checks; the uncaged credential gate uses the narrower set in `policy.ts`.
 Native checks walk symlinks hop by hop and refuse hidden paths, `/proc`, `/sys`, `/dev`, and every session's scratch `tmp/` or `cache/`; recursive searches also refuse roots containing protected paths.
 Read scratch `tmp/` or `cache/` files through the shell, or copy them to new names at the scratch root for native reads; overwriting an existing root file fails.
 Unlisted secret stores remain readable, so the inventory needs maintenance.

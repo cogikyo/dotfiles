@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { expand, home, located, temp, within } from "./paths.ts";
 import {
@@ -6,6 +6,8 @@ import {
   flags,
   type Launch,
   launches,
+  literalLaunches,
+  literalPath,
   maxDepth,
   opaque,
   redirection,
@@ -36,6 +38,45 @@ const credentials = [
   /(?:^|[\s/=@<>:])opencode\/service(?:-[\w.-]+)?\.json(?![\w.-])/u,
 ];
 const database = /(?:^|[\s/=@<>:])opencode[\w-]*\/(?:opencode\/)?opencode\.db(?:-wal|-shm)?(?![\w.-])/u;
+const credentialFiles = [...credentials, database].map((file) => new RegExp(`${file.source}$`, file.flags));
+const credentialName = /^(?:service.*\.json|auth\.json|opencode\.db.*|\.credentials\.json)$/u;
+
+export function credential(file: string) {
+  if (!credentialFiles.some((pattern) => pattern.test(file))) return undefined;
+  return database.test(file)
+    ? "the OpenCode database holds provider credentials; agents must not open it from the shell; use the `sessions` tool for session history"
+    : `\`${file}\` is a credential file; agents must not read it`;
+}
+
+function pathCredentials(launched: Launch[]) {
+  const found = new Set<string>();
+  const check = (file: string) => {
+    let reason = credential(file);
+    if (!reason && credentialName.test(path.basename(file))) {
+      try {
+        reason = credential(realpathSync(file));
+      } catch {
+        reason = undefined;
+      }
+    }
+    if (reason) found.add(reason);
+  };
+  for (const {
+    command: [name, ...words],
+    dirs,
+  } of launched) {
+    if (name === "cage" || dirs === undefined) continue;
+    for (const word of words) {
+      const file = literalPath(word, "/");
+      if (file === undefined) continue;
+      const full = expand(word);
+      if (path.isAbsolute(full)) check(file);
+      else for (const base of dirs) check(path.resolve(base, full));
+    }
+  }
+  return found;
+}
+
 const relocations =
   /\bGIT_(?:DIR|WORK_TREE|COMMON_DIR|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|CONFIG\w*)\b/u;
 const globals = new Set([
@@ -617,6 +658,8 @@ export function inspect(
       "the OpenCode database holds provider credentials; agents must not open it from the shell; use the `sessions` tool for session history",
     );
   }
+  if (!readOnly(agent))
+    for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
   if (!owners.has(agent ?? "")) {
     for (const problem of calls.map(git)) if (problem) found.add(problem);
   }

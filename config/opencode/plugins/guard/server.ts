@@ -3,13 +3,13 @@ import type { Permission } from "@opencode/schema/permission";
 import { Tool } from "@opencode/schema/tool";
 import { Effect } from "effect";
 import { statSync } from "node:fs";
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
 import { check, fetchPublic, type Request } from "./fetch.ts";
 import { confine, expand, home, scratch, secrets } from "./paths.ts";
-import { inspect, readOnly } from "./policy.ts";
+import { credential, inspect, readOnly } from "./policy.ts";
 import { enter } from "./shell.ts";
 
 const cage = path.join(home, ".local/bin/cage");
@@ -190,6 +190,17 @@ export default Plugin.define({
             });
           }
           if (restricted && event.tool in files) return yield* confined(event);
+          if (!restricted && (event.tool === "read" || event.tool === "grep")) {
+            const target = text(event.input, "path");
+            if (target) {
+              const lexical = yield* resolve(event.sessionID, target);
+              const real = yield* Effect.tryPromise(() => realpath(lexical)).pipe(
+                Effect.catch(() => Effect.succeed(undefined)),
+              );
+              const reason = credential(lexical) ?? (real === undefined ? undefined : credential(real));
+              if (reason) return yield* new Tool.Error({ message: `${event.tool} cannot use ${target}: ${reason}` });
+            }
+          }
           if (restricted && event.tool === "x") {
             const session = yield* ctx.session.get({ sessionID: event.sessionID }).pipe(Effect.orDie);
             return yield* record({

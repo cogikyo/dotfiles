@@ -1,10 +1,16 @@
 import path from "node:path";
-import { home, temp, within } from "./paths.ts";
+import { expand, home, temp, within } from "./paths.ts";
 
 export type Command = readonly [name: string, ...args: string[]];
-export type Launch = { command: Command; dir: string | undefined };
+export type Launch = { command: Command; dir: string | undefined; dirs?: ReadonlySet<string> };
 
-type Context = { depth: number; resolve: boolean; known: Record<string, string>; handoffs: boolean };
+type Context = {
+  depth: number;
+  resolve: boolean;
+  known: Record<string, string>;
+  handoffs: boolean;
+  paths?: { base: string; dirs: Set<string> };
+};
 type Scope = Context & {
   dir: string | undefined;
   bodies: string[];
@@ -139,6 +145,34 @@ export function launches(source: string, dir?: string, known: Record<string, str
   return walk(source, dir, { depth: 0, resolve: true, known, handoffs });
 }
 
+export function literalLaunches(source: string, dir: string, handoffs: boolean) {
+  return walk(source, dir, {
+    depth: 0,
+    resolve: false,
+    known: {},
+    handoffs,
+    paths: { base: dir, dirs: new Set([dir]) },
+  });
+}
+
+export function literalPath(word: string, dir: string | undefined) {
+  if (!word || /[$`*?[{]/u.test(word) || (word.startsWith("~") && word !== "~" && !word.startsWith("~/"))) {
+    return undefined;
+  }
+  const full = expand(word);
+  return path.isAbsolute(full) ? path.normalize(full) : dir === undefined ? undefined : path.resolve(dir, full);
+}
+
+function literalDestination(words: readonly string[], base: string | undefined) {
+  const [name, ...rest] = words;
+  if (name !== "cd" && name !== "chdir" && name !== "pushd") return undefined;
+  const args = operands(rest, 0);
+  if (args[0] === "--") args.shift();
+  if (args.length > 1 || args[0] === "-") return undefined;
+  const target = args[0] ?? (name === "cd" || name === "chdir" ? home : undefined);
+  return target === undefined ? undefined : literalPath(target, base);
+}
+
 function steady(source: string, launched: Launch[]) {
   source = source.replace(/\$\(\([\d\s()+*/%<>&|^~!?:.-]*\)\)/gu, "0");
   if (source.includes("((") || definition.test(source)) return false;
@@ -179,9 +213,14 @@ function walk(source: string, dir: string | undefined, context: Context): Launch
   if (context.depth > maxDepth) return [{ command: opaque, dir }];
   const bodies: string[] = [];
   const unquoted: string[] = [];
-  const lexer = new Lexer(unheredoc(source, bodies, unquoted), context).run();
+  const prepared = unheredoc(source, bodies, unquoted);
+  const lexer = new Lexer(prepared, context).run();
   const inner = { ...context, depth: context.depth + 1 };
   const launched = [
+    ...lexer.redirects.flatMap(({ segment, word }): Launch[] => {
+      const target = lexer.segments[segment][word + 1];
+      return target === undefined ? [] : [{ command: [redirection, target], dir, dirs: context.paths?.dirs }];
+    }),
     ...expansions(lexer, inner),
     ...unquoted.flatMap((body) => walk(`: "${body.replaceAll('"', '\\"')}"`, undefined, inner)),
   ];
@@ -198,6 +237,10 @@ function walk(source: string, dir: string | undefined, context: Context): Launch
       temporary: lexer.temporary[index],
     });
     launched.push(...step.launched);
+    if (context.paths) {
+      here = step.dir;
+      return;
+    }
     if (step.moved) {
       const clean = navigators.has(words[0]) && lexer.levels[index] === 0 && op === "&&" && !/\|/u.test(before);
       here = clean ? destination(words, here) : undefined;
@@ -275,7 +318,14 @@ function peel(words: string[], scope: Scope, start = 0) {
       name,
       ...words.slice(index + 1).map((arg, at) => (name === "rm" ? (scope.temporary.get(index + at + 1) ?? arg) : arg)),
     ];
-    launched.push({ command, dir });
+    launched.push({ command, dir, ...(scope.paths ? { dirs: scope.paths.dirs } : {}) });
+    if (scope.paths) {
+      const next = literalDestination(command, dir);
+      const base = literalDestination(command, scope.paths.base);
+      if (next !== undefined) scope.paths.dirs.add(next);
+      if (base !== undefined) scope.paths.dirs.add(base);
+      if (next !== undefined) dir = next;
+    }
     moved ||= resets.has(name) || (name === "emulate" && emulation(words, index + 1).script);
     if (flags(command).some(({ flag }) => chdirs[name]?.includes(flag))) dir = undefined;
     const next = unwrap(name, words, index + 1, { ...scope, dir }, launched);
@@ -285,8 +335,8 @@ function peel(words: string[], scope: Scope, start = 0) {
     }
     index = next;
   }
-  launched.push(...writes(words.slice(start), dir));
-  return { launched, moved };
+  if (!scope.paths) launched.push(...writes(words.slice(start), dir));
+  return { launched, moved, dir };
 }
 
 function writes(words: string[], dir: string | undefined): Launch[] {
@@ -581,6 +631,7 @@ function options(words: string[], start: number, spec: Spec) {
 
 class Lexer {
   readonly segments: string[][] = [[]];
+  readonly redirects: { segment: number; word: number }[] = [];
   readonly dynamic: Set<number>[] = [new Set()];
   readonly temporary: Map<number, string>[] = [new Map()];
   readonly subs: string[] = [];
@@ -594,6 +645,7 @@ class Lexer {
   readonly levels: number[] = [0];
   private readonly vars: Map<string, string>;
   private readonly resolve: boolean;
+  private readonly paths: boolean;
   private joined = false;
   private blocks = 0;
   private parens = 0;
@@ -605,10 +657,11 @@ class Lexer {
 
   constructor(
     private readonly source: string,
-    { resolve, known }: Context,
+    { resolve, known, paths }: Context,
     private readonly math = false,
   ) {
     this.resolve = resolve;
+    this.paths = paths !== undefined;
     this.vars = new Map(Object.entries(known));
   }
 
@@ -714,6 +767,7 @@ class Lexer {
     if (this.substitution()) return;
     if (this.comment()) return;
     if (this.arithmetic(this.at)) return this.split(";");
+    if (this.paths && (char === "<" || char === ">") && this.redirect()) return;
     this.at++;
     if (char === "&" && (/[<>]/u.test(this.source[this.at - 2] ?? "") || this.source[this.at] === ">")) {
       return this.take(char);
@@ -793,6 +847,20 @@ class Lexer {
   private comment() {
     if (this.open || this.source[this.at] !== "#") return false;
     this.at = until(this.source.indexOf("\n", this.at), this.source);
+    return true;
+  }
+
+  private redirect() {
+    const op = /^[<>]+[&|]?/u.exec(this.source.slice(this.at))?.[0];
+    if (op === undefined) return false;
+    if (!op.startsWith("<<")) {
+      if (!/^\d*$/u.test(this.word) && this.word !== "&") this.flush();
+      const segment = this.segments.length - 1;
+      this.redirects.push({ segment, word: this.segments[segment].length });
+    }
+    this.take(op);
+    this.at += op.length;
+    if (!op.startsWith("<<")) this.flush();
     return true;
   }
 
