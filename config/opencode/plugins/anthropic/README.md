@@ -27,7 +27,7 @@ Refresh locks (`claude-auth-refresh-<digest>.lock`) and recovery markers (`claud
 This fixed path matters when testing with an isolated V2 data directory.
 
 Missing credentials or terminal refresh failures that CLI recovery cannot resolve return an authentication error with the account's login command.
-Transient refresh failures return a rate-limit error with a retry hint.
+Transient refresh failures return a rate-limit error with a retry hint unless main-session failover succeeds.
 Authentication errors do not move a request to another account.
 
 ## Usage caps and failover
@@ -37,8 +37,10 @@ Among uncapped accounts, keep the lane's current account first, then prefer fres
 Trend leads because its 5-hour window limits how fast it can spend weekly usage, so it cannot be drained in a burst later.
 Cogikyo and Cullyn have no 5-hour window, so soonest-reset-first uses their weekly capacity before it expires.
 
-Only 429s identified as usage caps trigger failover to other open accounts.
-Sessions keep their replacement while the original account's in-memory cap mark lasts, unless the replacement is capped or unavailable.
+Usage-cap 429s trigger failover; Cogikyo and Cullyn main sessions also fail over on transient credential failures.
+Main-session failover uses the `ctrl+m` pick, updates the TUI, and saves the account, preserving model and variant across restarts and cap resets.
+Persistence skips title and compaction requests and user model changes made mid-request.
+Lanes and Trend roots keep replacements only while the original in-memory cap mark lasts, unless the replacement is capped or unavailable.
 If every alternative is capped or lacks usable credentials, the original 429 is returned.
 
 ## Verification

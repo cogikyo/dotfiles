@@ -38,7 +38,8 @@ The `claude` provider is the Anthropic account pool; the lanes plugin resolves i
 Each `fallbacks` entry names the next model to try when the source model's pool is capped; entries form a chain.
 
 Main sessions belong to the user and are not routed here.
-`ctrl+m` and main-session failover pick only Cogikyo or Cullyn; default and manual picks otherwise keep their account.
+`ctrl+m` and main-session failover pick only Cogikyo or Cullyn.
+On the first turn, main sessions matching the agent or config default on either account take the `ctrl+m` pick; later manual picks are untouched.
 
 Omit `model` on `subagent` to take the route; this is the normal case.
 To change reasoning effort, pass the model and its variant together, such as `claude/claude-opus-5-5#xhigh`.
@@ -72,10 +73,10 @@ Trend leads because its 5-hour window limits how fast it can spend weekly usage,
 Cogikyo and Cullyn have no 5-hour window, so soonest-reset-first uses their weekly capacity before it expires; `ctrl+m` and main-session failover exclude Trend and use that order.
 
 - **Enforced**: when every account is capped for Opus or Sonnet, lanes try the same model on Cursor's O pool, then `opencode-go/grok-4.7` if O is capped, without a variant and with a note for each switch.
-- When an account caps mid-request, the Anthropic plugin resends on the next open account; later requests in that session stay there until the cap resets.
+- Main-session caps and transient credential failures resend on the `ctrl+m` pick and save that account; lane stickiness lasts only until the cap resets.
 - Pass `anthropic/…`, `anthropic-personal/…`, or `anthropic-cullyn/…` only when the user names an account; that pins the account and skips the pick.
 - Opus and Sonnet both take `medium` through `max`; pick by the effort ladder.
-- Authentication failures return a blocker rather than trigger quota overflow.
+- Login failures block without moving accounts.
 
 ## Which agent
 

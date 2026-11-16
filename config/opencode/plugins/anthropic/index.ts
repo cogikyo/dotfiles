@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { Plugin } from "@opencode/plugin";
+import type { Model } from "@opencode/schema/model";
 import type { Session } from "@opencode/schema/session";
 import { Effect, Fiber } from "effect";
 import { claudeAccounts } from "./accounts.ts";
@@ -36,6 +37,8 @@ type Signed = {
 };
 
 type Pending = Signed | { failure: Response };
+
+type Turn = { sessionID: Session.ID; model: Model.Ref; kind: string };
 
 function apiError(status: number, type: string, message: string, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify({ type: "error", error: { type, message } }), {
@@ -103,7 +106,7 @@ export default Plugin.define({
           (error: unknown) => {
             roots.delete(sessionID);
             log(Effect.logWarning("anthropic: session lookup failed", { sessionID, error: String(error) }));
-            return true;
+            return false;
           },
         );
         roots.set(sessionID, known);
@@ -133,7 +136,7 @@ export default Plugin.define({
             `${account.id}: Claude credentials are unavailable or expired. Run ${account.loginCommand}.`,
           );
 
-    const open = async (model: string, skip: Account, sessionID: Session.ID) => {
+    const open = async (model: string, skip: Account | undefined, sessionID: Session.ID) => {
       const top = await root(sessionID);
       const now = Date.now();
       const list = (await survey(model, now)).map((usage) => {
@@ -141,7 +144,7 @@ export default Plugin.define({
         return until > now ? { ...usage, capped: [...usage.capped, until] } : usage;
       });
       return ranked(list)
-        .filter((usage) => usage.id !== skip.id)
+        .filter((usage) => usage.id !== skip?.id)
         .map((usage) => registry.get(usage.id)!)
         .filter((account) => account.main || !top);
     };
@@ -167,6 +170,103 @@ export default Plugin.define({
       return next;
     };
 
+    const moves = async (own: Account, sessionID: Session.ID) => own.main && (await root(sessionID));
+
+    const persist = (
+      sessionID: Session.ID,
+      model: Pick<typeof Model.Ref.Encoded, "id" | "variant">,
+      providerID: string,
+    ) =>
+      ctx.session
+        .switchModel({
+          sessionID,
+          model: { id: model.id, providerID, ...(model.variant && { variant: model.variant }) },
+        })
+        .catch((error: unknown) =>
+          log(
+            Effect.logWarning("anthropic: session model switch failed", {
+              sessionID,
+              providerID,
+              error: String(error),
+            }),
+          ),
+        );
+
+    const stay = async (own: Account, from: Account, next: Account, turn: Turn) => {
+      if (!(await moves(own, turn.sessionID))) return void own.sticky.set(turn.sessionID, next.id);
+      if (turn.kind !== "primary") return;
+      const session = await ctx.session.get({ sessionID: turn.sessionID }).catch(() => undefined);
+      if (!session) return;
+      const { model } = session;
+      const current =
+        !model ||
+        (model.providerID === from.id &&
+          model.id === turn.model.id &&
+          (model.variant ?? "default") === (turn.model.variant ?? "default"));
+      if (current) await persist(turn.sessionID, turn.model, next.id);
+    };
+
+    const shift = async (own: Account, turn: Turn, model: string) => {
+      const [next] = await open(model, own, turn.sessionID);
+      if (!next) return undefined;
+      const found = await next.credentials.get();
+      if (typeof found === "string") {
+        log(Effect.logWarning("anthropic: failover account unavailable", { providerID: next.id, failure: found }));
+        return undefined;
+      }
+      await stay(own, own, next, turn);
+      log(Effect.logInfo("anthropic: failover", { from: own.id, to: next.id, sessionID: turn.sessionID }));
+      return { account: next, found };
+    };
+
+    const acquire = async (own: Account, turn: Turn, model: string) => {
+      if (await moves(own, turn.sessionID)) {
+        const closed = own.until > Date.now();
+        const moved = closed ? await shift(own, turn, model) : undefined;
+        if (moved) return moved;
+        const found = await own.credentials.get();
+        if (found !== "transient" || closed) return { account: own, found };
+        return (await shift(own, turn, model)) ?? { account: own, found };
+      }
+      const account = await route(own, turn.sessionID, model);
+      const found = await account.credentials.get();
+      if (typeof found !== "string" || account === own) return { account, found };
+      log(Effect.logWarning("anthropic: failover account unavailable", { providerID: account.id, failure: found }));
+      own.sticky.delete(turn.sessionID);
+      return { account: own, found: await own.credentials.get() };
+    };
+
+    const start = async (sessionID: Session.ID) => {
+      const session = await ctx.session.get({ sessionID });
+      if (session.parentID) return;
+      const { input, output, cache } = session.tokens;
+      if (input + output + cache.read + cache.write > 0) return;
+      const [agent, fallback] = await Promise.all([
+        session.agent
+          ? ctx.agent.get({ agentID: session.agent }).then(({ data }) => data.model)
+          : ctx.agent
+              .list()
+              .then(({ data: [first] }) => (first?.mode === "subagent" || first?.hidden ? undefined : first?.model)),
+        ctx.model.default().then(({ data }) => data ?? undefined),
+      ]);
+      const defaults = [agent, fallback].filter((ref) => ref !== undefined);
+      const base = session.model ?? defaults[0];
+      if (!base || !registry.get(base.providerID)?.main) return;
+      if (!defaults.some((ref) => ref.providerID === base.providerID && ref.id === base.id)) return;
+      const [next] = await open(base.id, undefined, sessionID);
+      if (!next || next.id === base.providerID || typeof (await next.credentials.get()) === "string") return;
+      await persist(sessionID, base, next.id);
+      log(
+        Effect.logInfo("anthropic: new session on ranked account", { from: base.providerID, to: next.id, sessionID }),
+      );
+    };
+
+    await ctx.session.hook("prompt", async ({ sessionID }) => {
+      await start(sessionID).catch((error: unknown) => {
+        log(Effect.logWarning("anthropic: new session placement failed", { sessionID, error: String(error) }));
+      });
+    });
+
     for (const own of registry.values()) {
       await ctx.session.hook(
         "http.request",
@@ -178,19 +278,7 @@ export default Plugin.define({
           if (url.pathname === "/v1/messages" && !url.searchParams.has("beta")) url.searchParams.set("beta", "true");
           const text = request.body ? await request.clone().text() : undefined;
           const shaped = text ? shape(text) : { model: "unknown", body: undefined };
-          let account = await route(own, event.sessionID, shaped.model);
-          let found = await account.credentials.get();
-          if (typeof found === "string" && account !== own) {
-            log(
-              Effect.logWarning("anthropic: failover account unavailable", {
-                providerID: account.id,
-                failure: found,
-              }),
-            );
-            own.sticky.delete(event.sessionID);
-            account = own;
-            found = await own.credentials.get();
-          }
+          const { account, found } = await acquire(own, event, shaped.model);
           if (typeof found === "string") {
             event.request = new Request(request, { headers: base });
             pending.set(event.request, { failure: failure(own, found) });
@@ -279,11 +367,6 @@ export default Plugin.define({
             return response;
           };
 
-          const settled = await settle(state.account, state.token, watch(state.account, event.response));
-          if (typeof settled === "string") {
-            event.response = failure(state.account, settled);
-            return;
-          }
           const move = async (from: Account) => {
             for (const next of await open(state.model, from, sessionID)) {
               const found = await next.credentials.get();
@@ -302,21 +385,24 @@ export default Plugin.define({
               }
               const until = await capped(result, next.id, state.model);
               if (until === undefined) {
-                own.sticky.set(sessionID, next.id);
+                await stay(own, from, next, event);
                 log(Effect.logInfo("anthropic: failover", { from: from.id, to: next.id, sessionID }));
                 return result;
               }
               next.until = until;
               await result.body?.cancel();
             }
-            log(
-              Effect.logWarning("anthropic: every Claude account is capped", {
-                from: from.id,
-                sessionID,
-                until: new Date(from.until).toISOString(),
-              }),
-            );
           };
+
+          const settled = await settle(state.account, state.token, watch(state.account, event.response));
+          if (typeof settled === "string") {
+            const moved =
+              settled === "transient" && (await moves(own, sessionID)) ? await move(state.account) : undefined;
+            event.response = moved
+              ? transformResponseStream(clear.watch(state, sessionID, moved))
+              : failure(state.account, settled);
+            return;
+          }
 
           let response = settled;
           const until = await capped(response, state.account.id, state.model);
@@ -327,7 +413,16 @@ export default Plugin.define({
               statusText: response.statusText,
               headers: response.headers,
             });
-            response = (await move(state.account)) ?? original;
+            const moved = await move(state.account);
+            if (!moved)
+              log(
+                Effect.logWarning("anthropic: every Claude account is capped", {
+                  from: state.account.id,
+                  sessionID,
+                  until: new Date(until).toISOString(),
+                }),
+              );
+            response = moved ?? original;
           }
 
           event.response = transformResponseStream(clear.watch(state, sessionID, response));
