@@ -136,7 +136,7 @@ function fence(): Fence {
 function refusal(target: string, rules: Fence) {
   if (system.some((dir) => within(target, dir))) return `${target} is under /proc, /sys, or /dev`;
   if (churn(target, rules.roots)) {
-    return `${target} is under a session scratch tmp/ or cache/ directory, whose entries can be swapped while a host tool reads them`;
+    return `${target} is under a session scratch tmp/ or cache/ directory, whose entries can be swapped while a host tool reads them; read it through the shell with cat or sed -n, or copy it to a new name at the scratch root and read that (overwriting an existing root file fails)`;
   }
   if (rules.hidden.some((secret) => within(target, secret))) return `${target} is hidden from read-only agents`;
   return undefined;

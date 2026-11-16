@@ -15,7 +15,7 @@ import {
   wrapped,
 } from "./shell.ts";
 
-const unchecked = `the command nests substitutions, arithmetic, or inner shells more than ${maxDepth} levels deep, or puts a single quote, \`#\`, or backslash inside \`(( ))\`, so the guard cannot check every command; flatten it or split it into separate calls`;
+const unchecked = `the command nests substitutions, arithmetic, or inner shells more than ${maxDepth} levels deep, or contains arithmetic the guard cannot parse, so the guard cannot check every command; flatten it or split it into separate calls`;
 
 export function readOnly(agent: string | undefined) {
   if (!agent) return false;
@@ -492,7 +492,7 @@ function git({ args, cwd, local }: Invocation) {
 function invocations(launched: Launch[], local: boolean): Invocation[] {
   return launched.flatMap(({ command, dir }) => {
     const script = remote(command);
-    if (script !== undefined) return invocations(launches(script), false);
+    if (script !== undefined) return invocations(launches(script, undefined, {}, false), false);
     const [name, ...args] = command;
     if (name === "find") {
       return args.flatMap((arg, at) => {
@@ -558,15 +558,15 @@ export function inspect(
   workdir: string,
   known: Record<string, string> = {},
 ) {
-  const launched = launches(source, workdir, known);
+  const launched = launches(source, workdir, known, !owners.has(agent ?? ""));
   const commands = launched.map(({ command }) => command);
   const calls = invocations(launched, !relocations.test(source) && !launched.some(tampers));
   const found = new Set<string>();
   if (commands.includes(opaque)) found.add(unchecked);
   const blind = commands.includes(unseen) || /\bTRAP[A-Z]+\s*\(\s*\)|\bfunction\s+TRAP[A-Z]/u.test(source);
-  if (blind && !owners.has(agent ?? "")) {
+  if (blind && !owners.has(agent ?? "") && (!readOnly(agent) || commands.some(([name]) => name === "parallel"))) {
     found.add(
-      "the command hands a shell script to another program or to a builtin that runs it later (`find -exec`, `watch`, `trap`, `alias`, and similar), or passes shell options the guard does not parse, so the guard cannot check its git or `rm` calls; run the commands directly or with plain `sh -c`",
+      "the command hands another program or a deferred builtin a script whose body or execution context the guard cannot recover literally, or passes shell options the guard does not parse, so the guard cannot check its git or `rm` calls; pass a literal script body or run the commands directly",
     );
   }
   if (commands.includes(streamed)) {

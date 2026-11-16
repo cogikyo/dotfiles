@@ -1,14 +1,20 @@
 import path from "node:path";
-import { home } from "./paths.ts";
+import { home, temp, within } from "./paths.ts";
 
 export type Command = readonly [name: string, ...args: string[]];
 export type Launch = { command: Command; dir: string | undefined };
 
-type Context = { depth: number; resolve: boolean; known: Record<string, string> };
-type Scope = Context & { dir: string | undefined; bodies: string[] };
+type Context = { depth: number; resolve: boolean; known: Record<string, string>; handoffs: boolean };
+type Scope = Context & {
+  dir: string | undefined;
+  bodies: string[];
+  dynamic: ReadonlySet<number>;
+  temporary: ReadonlyMap<number, string>;
+  literal?: boolean;
+};
 
 type Spec = { short: string; long: string[]; positional?: number };
-type Option = { flag: string; value?: string };
+type Option = { flag: string; value?: string; at: number };
 
 export const maxDepth = 8;
 export const opaque: Command = [""];
@@ -21,7 +27,7 @@ const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
 const heredoc =
   /(<<-?\s*)(['"]?)((?<=')[^'\n]+|(?<=")[^"\n]+|(?<!['"])[^\s;&|()<>'"\\]+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const marker = /^0?<<-?\uE000(\d+)$/u;
-const inert = new Set(["cd", "echo", "true", "false", "test", "[", "pwd", ":", "printf"]);
+const inert = new Set(["cd", "chdir", "echo", "true", "false", "test", "[", "pwd", ":", "printf"]);
 const builtins = new Set(
   [
     "alias autoload bg bind bindkey break builtin bye caller case cd chdir command compgen complete compopt continue coproc",
@@ -41,7 +47,7 @@ const definition = /\bfunction\s|[\w.-]\s*\(\s*\)/u;
 const leading = /^\s*cd[ \t]+('[^'\n]*'|"[^"\n]*"|[^\s;&|()<>'"]+)[ \t]*(?:&&|;|\n)\s*/u;
 const keywords = new Set(["!", "{", "}", "if", "then", "else", "elif", "do", "while", "until"]);
 const runners = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
-const strings = new Set(["watch", "parallel", "su", "runuser", "script", "flock", "tmux", "screen", "fc", "sched"]);
+const strings = new Set(["parallel", "su", "runuser", "script", "tmux", "screen", "fc", "sched"]);
 const switches = "abcdefghiklmnprstuvxBCEHPT";
 const toggles = new Set([
   "norc",
@@ -59,7 +65,7 @@ const openers = new Set(["{", "if", "while", "until", "for", "select", "case"]);
 const closers = new Set(["}", "fi", "done", "esac"]);
 const reference = /\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*)(?![\w[:({]))/uy;
 const literal = /^(?!~)[^$`]*$/u;
-const navigators = new Set(["cd", "pushd", "popd"]);
+const navigators = new Set(["cd", "chdir", "pushd", "popd"]);
 const resets = new Set([...navigators, "eval", "source", "."]);
 const breaks = new Set([";", "\n", "&", "||", "(", ")"]);
 const shells = new Set(["bash", "dash", "ksh", "sh", "zsh"]);
@@ -127,10 +133,10 @@ const wrappers: Record<string, Spec> = {
   },
 };
 
-export function launches(source: string, dir?: string, known: Record<string, string> = {}): Launch[] {
-  const blind = walk(source, dir, { depth: 0, resolve: false, known });
+export function launches(source: string, dir?: string, known: Record<string, string> = {}, handoffs = true): Launch[] {
+  const blind = walk(source, dir, { depth: 0, resolve: false, known, handoffs });
   if (!source.includes("$") || !steady(source, blind)) return blind;
-  return walk(source, dir, { depth: 0, resolve: true, known });
+  return walk(source, dir, { depth: 0, resolve: true, known, handoffs });
 }
 
 function steady(source: string, launched: Launch[]) {
@@ -183,7 +189,13 @@ function walk(source: string, dir: string | undefined, context: Context): Launch
   lexer.segments.forEach((words, index) => {
     const before = lexer.ops[index - 1] ?? "";
     const op = lexer.ops[index] ?? "";
-    const step = peel(words, { ...inner, dir: here, bodies });
+    const step = peel(words, {
+      ...inner,
+      dir: here,
+      bodies,
+      dynamic: lexer.dynamic[index],
+      temporary: lexer.temporary[index],
+    });
     launched.push(...step.launched);
     if (step.moved) {
       const clean = navigators.has(words[0]) && lexer.levels[index] === 0 && op === "&&" && !/\|/u.test(before);
@@ -201,7 +213,7 @@ function expansions({ subs, sums, hidden }: Lexer, context: Context): Launch[] {
     ...subs.flatMap((sub) => walk(sub, undefined, context)),
     ...sums.flatMap((sum) =>
       context.depth < maxDepth
-        ? expansions(new Lexer(sum, context).run(), { ...context, depth: context.depth + 1 })
+        ? expansions(new Lexer(sum, context, true).run(), { ...context, depth: context.depth + 1 })
         : [{ command: opaque, dir: undefined }],
     ),
   ];
@@ -209,7 +221,7 @@ function expansions({ subs, sums, hidden }: Lexer, context: Context): Launch[] {
 
 function destination([name, ...args]: string[], base: string | undefined) {
   if (name === "popd") return undefined;
-  if (args.length === 0) return name === "cd" ? home : undefined;
+  if (args.length === 0) return name === "cd" || name === "chdir" ? home : undefined;
   const [to] = args;
   if (args.length > 1 || to === "" || /^[~+-]/u.test(to) || /[$`*?[{]/u.test(to)) return undefined;
   if (to.split("/").includes("..")) return undefined;
@@ -242,11 +254,11 @@ function unheredoc(source: string, bodies: string[], unquoted: string[]) {
   });
 }
 
-function peel(words: string[], scope: Scope) {
+function peel(words: string[], scope: Scope, start = 0) {
   const launched: Launch[] = [];
   let moved = false;
   let dir = scope.dir;
-  let index = 0;
+  let index = start;
   while (index < words.length) {
     const word = words[index];
     if (assignment.test(word) || keywords.has(word)) {
@@ -258,18 +270,21 @@ function peel(words: string[], scope: Scope) {
       continue;
     }
     const name = path.basename(word);
-    const command: Command = [name, ...words.slice(index + 1)];
+    const command: Command = [
+      name,
+      ...words.slice(index + 1).map((arg, at) => (name === "rm" ? (scope.temporary.get(index + at + 1) ?? arg) : arg)),
+    ];
     launched.push({ command, dir });
     moved ||= resets.has(name);
     if (flags(command).some(({ flag }) => chdirs[name]?.includes(flag))) dir = undefined;
     const next = unwrap(name, words, index + 1, { ...scope, dir }, launched);
     if (next === undefined) {
-      launched.push(...nested(name, words.slice(index + 1), { ...scope, dir }));
+      launched.push(...nested(name, words, index + 1, { ...scope, dir }));
       break;
     }
     index = next;
   }
-  launched.push(...writes(words, dir));
+  launched.push(...writes(words.slice(start), dir));
   return { launched, moved };
 }
 
@@ -283,20 +298,117 @@ function writes(words: string[], dir: string | undefined): Launch[] {
   });
 }
 
-function nested(name: string, args: string[], scope: Scope): Launch[] {
+function nested(name: string, words: string[], start: number, scope: Scope): Launch[] {
+  const args = words.slice(start);
+  if (["watch", "flock"].includes(name)) {
+    if (!scope.handoffs) return [{ command: unseen, dir: scope.dir }];
+    return handoff(name, words, start, scope);
+  }
   if (strings.has(name) || evaluates(name, args)) return [{ command: unseen, dir: scope.dir }];
   if (shells.has(name) || name === "eval" || name === "source" || name === ".") return [];
-  if (name !== "find") return invokes(args) ? [{ command: unseen, dir: scope.dir }] : [];
+  if (name !== "find") {
+    if (!invokes(args)) return [];
+    if (!scope.handoffs) return [{ command: unseen, dir: scope.dir }];
+    return runner(name, words, start, scope);
+  }
   return args.flatMap((arg, at) => {
     if (!runners.has(arg)) return [];
     const end = args.findIndex((word, after) => after > at && (word === ";" || word === "+"));
-    const inner = args.slice(at + 1, end < 0 ? undefined : end);
+    const inner = args[at + 1];
     const dir = arg === "-exec" || arg === "-ok" ? scope.dir : undefined;
-    if (!shells.has(path.basename(inner[0] ?? ""))) return invokes(inner) ? [{ command: unseen, dir }] : [];
+    if (!shells.has(path.basename(inner ?? "")))
+      return invokes(args.slice(at + 1, end < 0 ? undefined : end)) ? [{ command: unseen, dir }] : [];
     const launched: Launch[] = [];
-    unwrap(path.basename(inner[0]), inner, 1, { ...scope, dir }, launched);
+    unwrap(
+      path.basename(inner),
+      words.slice(0, end < 0 ? undefined : start + end),
+      start + at + 2,
+      { ...scope, dir },
+      launched,
+    );
     return launched;
   });
+}
+
+function runner(name: string, words: string[], start: number, scope: Scope): Launch[] {
+  const blind = [{ command: unseen, dir: scope.dir }];
+  if (name !== "unshare" && (name !== "uv" || words[start] !== "run")) return blind;
+  const spec =
+    name === "unshare"
+      ? {
+          short: "RwSGl",
+          long: [
+            "root",
+            "wd",
+            "setuid",
+            "setgid",
+            "map-user",
+            "map-group",
+            "map-users",
+            "map-groups",
+            "owner",
+            "setgroups",
+            "monotonic",
+            "boottime",
+            "load-interp",
+            "propagation",
+          ],
+        }
+      : {
+          short: "pw",
+          long: [
+            "with",
+            "with-editable",
+            "with-requirements",
+            "project",
+            "directory",
+            "python",
+            "package",
+            "env-file",
+            "index",
+            "index-url",
+            "extra-index-url",
+            "config-file",
+          ],
+        };
+  const { next, found } = options(words, name === "uv" ? start + 1 : start, spec);
+  if (name === "unshare" && found.some(({ flag }) => flag === "R" || flag === "root")) return blind;
+  if (name === "uv" && found.some(({ flag }) => ["m", "module", "s", "script", "gui-script"].includes(flag)))
+    return blind;
+  if (!shells.has(path.basename(words[next] ?? ""))) return blind;
+  const moved = found.some(({ flag }) => flag === "wd" || flag === "directory" || (name === "unshare" && flag === "w"));
+  return peel(words, { ...scope, dir: moved ? undefined : scope.dir, literal: true }, next).launched;
+}
+
+function handoff(name: string, words: string[], start: number, scope: Scope): Launch[] {
+  const blind = [{ command: unseen, dir: scope.dir }];
+  if (name === "watch") {
+    const { next, found } = options(words, start, { short: "n", long: ["interval"] });
+    if (found.some(({ flag }) => flag === "x" || flag === "exec"))
+      return peel(words, { ...scope, literal: true }, next).launched;
+    if (next >= words.length || [...scope.dynamic].some((index) => index >= next)) return blind;
+    return walk(words.slice(next).join(" "), scope.dir, scope);
+  }
+  return flock(words, start, scope);
+}
+
+function flock(words: string[], start: number, scope: Scope): Launch[] {
+  const blind = [{ command: unseen, dir: scope.dir }];
+  const spec = {
+    short: "wEc",
+    long: ["wait", "timeout", "conflict-exit-code", "command"],
+  };
+  const front = options(words, start, spec);
+  const trailing = options(words, front.next + 1, spec);
+  const end = words.indexOf("--", start);
+  if ([...scope.dynamic].some((index) => index >= start && (end < 0 || index < end))) return blind;
+  const script = [...front.found, ...trailing.found].find(({ flag }) => flag === "c" || flag === "command");
+  if (script) {
+    if (script.value === undefined || scope.dynamic.has(script.at)) return blind;
+    return walk(script.value, scope.dir, scope);
+  }
+  const command = trailing.next;
+  return command >= words.length ? [] : peel(words, { ...scope, literal: true }, command).launched;
 }
 
 function evaluates(name: string, args: string[]) {
@@ -355,7 +467,11 @@ function unwrap(name: string, words: string[], start: number, scope: Scope, laun
     if (noexec) return undefined;
     if (script) {
       const body = words[next];
-      launched.push(...(body === undefined ? [{ command: unseen, dir: scope.dir }] : walk(body, scope.dir, scope)));
+      launched.push(
+        ...(body === undefined || (scope.literal && scope.dynamic.has(next))
+          ? [{ command: unseen, dir: scope.dir }]
+          : walk(body, scope.dir, scope)),
+      );
       return undefined;
     }
     const file = operands(words, next)[0];
@@ -423,21 +539,23 @@ function options(words: string[], start: number, spec: Spec) {
   const found: Option[] = [];
   let index = start;
   while (index < words.length && words[index].startsWith("-")) {
+    const position = index;
     const word = words[index++];
     if (word === "--") break;
     if (word.startsWith("--")) {
       const [flag, ...rest] = word.slice(2).split("=");
       const value = rest.length ? rest.join("=") : spec.long.includes(flag) ? words[index++] : undefined;
-      found.push({ flag, value });
+      found.push({ flag, value, at: index > position + 1 ? index - 1 : position });
       continue;
     }
     for (let at = 1; at < word.length; at++) {
       const flag = word[at];
       if (!spec.short.includes(flag)) {
-        found.push({ flag });
+        found.push({ flag, at: position });
         continue;
       }
-      found.push({ flag, value: word.slice(at + 1) || words[index++] });
+      const value = word.slice(at + 1) || words[index++];
+      found.push({ flag, value, at: index > position + 1 ? index - 1 : position });
       break;
     }
   }
@@ -446,6 +564,8 @@ function options(words: string[], start: number, spec: Spec) {
 
 class Lexer {
   readonly segments: string[][] = [[]];
+  readonly dynamic: Set<number>[] = [new Set()];
+  readonly temporary: Map<number, string>[] = [new Map()];
   readonly subs: string[] = [];
   readonly sums: string[] = [];
   hidden = false;
@@ -460,19 +580,40 @@ class Lexer {
   private joined = false;
   private blocks = 0;
   private parens = 0;
+  private uncertain = false;
+  private referenced: string | undefined;
+  private created: string | undefined;
+  private readonly creations: Map<number, string>[] = [new Map()];
+  private readonly dirs = new Map<string, string>();
 
   constructor(
     private readonly source: string,
     { resolve, known }: Context,
+    private readonly math = false,
   ) {
     this.resolve = resolve;
     this.vars = new Map(Object.entries(known));
   }
 
   run() {
-    while (this.at < this.source.length) this.step();
+    while (this.at < this.source.length) {
+      if (!this.math) this.step();
+      else if (this.source[this.at] === "\\") this.escape();
+      else if (!this.substitution()) this.at++;
+    }
     this.flush();
     return this;
+  }
+
+  literal(name: string) {
+    return (
+      this.segments.length === 1 &&
+      this.segments[0][0] === name &&
+      !this.subs.length &&
+      !this.sums.length &&
+      !this.hidden &&
+      !this.dynamic[0].size
+    );
   }
 
   private split(char: string) {
@@ -485,6 +626,9 @@ class Lexer {
     if (char === ")") this.parens = Math.max(0, this.parens - 1);
     this.levels.push(this.blocks + this.parens);
     this.segments.push([]);
+    this.dynamic.push(new Set());
+    this.temporary.push(new Map());
+    this.creations.push(new Map());
     this.joined = char !== "\n" && char !== ";" && !(char === "&" && !pair);
   }
 
@@ -494,23 +638,34 @@ class Lexer {
     if (openers.has(first)) this.blocks++;
     if (closers.has(first)) this.blocks = Math.max(0, this.blocks - 1);
     const pure = words.length > 0 && words.every((word) => assignment.test(word));
-    for (const word of words) this.vars.delete(/^([A-Za-z_]\w*)\+?=/u.exec(word)?.[1] ?? word);
-    if (!pure || !definite || this.blocks > 0 || this.parens > 0) return;
     for (const word of words) {
+      const name = /^([A-Za-z_]\w*)\+?=/u.exec(word)?.[1] ?? word;
+      this.vars.delete(name);
+      this.dirs.delete(name);
+    }
+    if (!pure || !definite || this.blocks > 0 || this.parens > 0) return;
+    for (const [index, word] of words.entries()) {
       const at = word.indexOf("=");
+      const name = word.slice(0, at);
+      this.vars.delete(name);
+      this.dirs.delete(name);
       const value = word.slice(at + 1);
-      if (literal.test(value)) this.vars.set(word.slice(0, at), value);
+      if (literal.test(value)) this.vars.set(name, value);
+      const created = this.creations[this.segments.length - 1].get(index);
+      if (created !== undefined) this.dirs.set(name, created);
     }
   }
 
-  private variable() {
-    if (!this.resolve) return false;
+  private variable(quoted: boolean) {
+    if (this.source[this.at] !== "$") return false;
     reference.lastIndex = this.at;
     const match = reference.exec(this.source);
     const name = match?.[1] ?? match?.[2];
-    const value = name === undefined || specials.test(name) ? undefined : this.vars.get(name);
-    if (value === undefined) return false;
-    this.take(value);
+    if (name === undefined || !match) return false;
+    const value = !this.resolve || specials.test(name) ? undefined : this.vars.get(name);
+    const whole = this.word === "";
+    this.take(value ?? match[0], value === undefined);
+    if (quoted && whole && value === undefined) this.referenced = this.dirs.get(name);
     this.at = reference.lastIndex;
     return true;
   }
@@ -548,7 +703,7 @@ class Lexer {
     }
     if (/[\n;&|()]/u.test(char)) return this.split(char);
     if (/\s/u.test(char)) return this.flush();
-    this.take(char);
+    this.take(char, char === "$");
   }
 
   private escape() {
@@ -562,7 +717,10 @@ class Lexer {
     this.at++;
     while (this.at < this.source.length && this.source[this.at] !== '"') {
       if (this.source[this.at] === "\\") this.escape();
-      else if (!this.substitution()) this.take(this.source[this.at++]);
+      else if (!this.substitution(true)) {
+        const char = this.source[this.at++];
+        this.take(char, char === "$");
+      }
     }
     this.at++;
   }
@@ -574,12 +732,12 @@ class Lexer {
     this.at = end + 1;
   }
 
-  private substitution() {
-    if (this.variable() || this.process()) return true;
+  private substitution(quoted = false) {
+    if (this.variable(quoted) || this.process()) return true;
     const start = this.at;
     let end: number;
     if (this.source[start] === "$" && this.arithmetic(start + 1)) {
-      this.take("$()");
+      this.take("$()", true);
       return true;
     }
     if (this.source.startsWith("$(", start)) {
@@ -591,7 +749,12 @@ class Lexer {
     } else {
       return false;
     }
-    this.take("$()");
+    const created =
+      this.resolve && /^[A-Za-z_]\w*=$/u.test(this.word)
+        ? temporary(this.source.slice(start + (this.source[start] === "`" ? 1 : 2), end))
+        : undefined;
+    this.take("$()", true);
+    this.created = created;
     this.at = end + 1;
     return true;
   }
@@ -600,7 +763,7 @@ class Lexer {
     if (open < this.bound || !this.source.startsWith("((", open)) return false;
     const end = closing(this.source, open + 2) + 1;
     const body = this.source.slice(open + 2, end - 1);
-    if (this.source[end] !== ")" || /['"#\\`]/u.test(body)) {
+    if (this.source[end] !== ")") {
       this.bound = end;
       this.hidden ||= /['#\\]/u.test(this.source.slice(open, end));
       return false;
@@ -616,16 +779,54 @@ class Lexer {
     return true;
   }
 
-  private take(text: string) {
+  private take(text: string, dynamic = false) {
+    this.referenced = undefined;
+    this.created = undefined;
+    this.uncertain ||= dynamic;
     this.word += text;
     this.open = true;
   }
 
   private flush() {
-    if (this.open) this.segments[this.segments.length - 1].push(this.word);
+    if (this.open) {
+      const index = this.segments.length - 1;
+      const at = this.segments[index].length;
+      if (this.uncertain) this.dynamic[index].add(at);
+      if (this.referenced !== undefined) this.temporary[index].set(at, this.referenced);
+      if (this.created !== undefined) this.creations[index].set(at, this.created);
+      this.segments[index].push(this.word);
+    }
     this.word = "";
     this.open = false;
+    this.uncertain = false;
+    this.referenced = undefined;
+    this.created = undefined;
   }
+}
+
+function temporary(source: string) {
+  const lexer = new Lexer(source, { depth: 0, resolve: false, known: {}, handoffs: false }).run();
+  if (!lexer.literal("mktemp")) return undefined;
+  const [, ...args] = lexer.segments[0];
+  const { next, found } = options(args, 0, { short: "p", long: ["suffix"] });
+  if (args.length - next > 1 || !found.some(({ flag }) => flag === "d" || flag === "directory")) return undefined;
+  if (
+    found.some(
+      ({ flag, value }) =>
+        !["d", "directory", "q", "quiet", "p", "tmpdir", "suffix"].includes(flag) ||
+        (["p", "tmpdir", "suffix"].includes(flag) && value === undefined) ||
+        (flag === "suffix" && value?.includes("/")),
+    )
+  )
+    return undefined;
+  const base = found.findLast(({ flag }) => flag === "p" || flag === "tmpdir")?.value;
+  const suffix = found.findLast(({ flag }) => flag === "suffix")?.value ?? "";
+  if (/[\s$`*?[{]|\.\./u.test(args.join(""))) return undefined;
+  const template = args[next] ?? "tmp.XXXXXXXXXX";
+  if (!path.isAbsolute(base ?? "/") || !/X{3}[^/]*$/u.test(template)) return undefined;
+  const target = base === undefined ? template : path.resolve(base, template);
+  if (!within(path.dirname(target), temp)) return undefined;
+  return target + suffix;
 }
 
 const escapes: Record<string, string> = {
