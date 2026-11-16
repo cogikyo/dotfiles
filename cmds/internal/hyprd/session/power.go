@@ -123,6 +123,8 @@ type pactlSinkInput struct {
 	Properties map[string]string `json:"properties"`
 }
 
+// snapclientMonitor selects audio after Snapserver's playback buffer.
+// GLava's auto source reads the Snapcast default sink before that buffer.
 func snapclientMonitor() (string, error) {
 	out, err := exec.Command("pactl", "get-default-sink").Output()
 	if err != nil {
