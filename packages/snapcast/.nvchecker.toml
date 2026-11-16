@@ -1,0 +1,5 @@
+[snapcast]
+source = "git"
+git = "https://github.com/snapcast/snapcast"
+prefix = "v"
+exclude_regex = ".*-.*"

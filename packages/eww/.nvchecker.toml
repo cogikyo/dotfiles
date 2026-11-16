@@ -1,0 +1,4 @@
+[eww]
+source = "git"
+git = "https://github.com/elkowar/eww"
+prefix = "v"

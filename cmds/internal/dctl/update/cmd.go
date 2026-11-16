@@ -244,7 +244,7 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 		}
 	}
 	var errs []error
-	var current, absent []string
+	var current, absent, watched []string
 	for _, name := range names {
 		have, ok := installed[name]
 		if !ok {
@@ -252,6 +252,9 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 			continue
 		}
 		dir := filepath.Join(root.Packages(), name)
+		if _, err := os.Stat(filepath.Join(dir, ".nvchecker.toml")); err == nil {
+			watched = append(watched, dir)
+		}
 		info, err := run.Output(ctx, dir, "makepkg", "--printsrcinfo")
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
@@ -283,6 +286,9 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 	}
 	if len(absent) > 0 {
 		u.Info("not installed: %s", strings.Join(absent, ", "))
+	}
+	for _, r := range releases(ctx, run, watched) {
+		u.Row(r.level, r.msg)
 	}
 	return errors.Join(errs...)
 }

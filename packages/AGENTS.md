@@ -32,5 +32,8 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 - Put cogikyo-only packages, including local recipes, in `cogikyo.lst`.
   `dctl setup extra`, reconciliation, and local recipe updates select them only with `cogikyo=on` in `/etc/dctl/machine` (absent means off).
 - Keep every local recipe in yay's `--ignore`; setup builds local entries with the shared `makepkg.conf` overlay.
+- Opt local recipes into `dctl update cmd`'s warn-only upstream release check with `<pkg>/.nvchecker.toml`.
+  - Use a section named for `pkgbase`, `source = "git"`, the upstream `git` URL, and the tag `prefix`.
+  - `librepods-max2` and `cursor-sdk-bridge` keep unwatched commit pins; the bridge has no PKGBUILD.
 - `dctl update packages` reconciles the system with the lists; packages kept from its removal checklist are inserted into `extra.lst` under `# official` or `# aur`.
 - A binary at `~/.local/bin/eww` shadows the packaged eww from `eww/`.

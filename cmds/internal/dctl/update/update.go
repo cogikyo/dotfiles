@@ -74,7 +74,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all, dirty bool, only []
 		},
 		{
 			Name: "cmd",
-			Plan: "build dotfiles commands; rebuild local packages when versions differ",
+			Plan: "build dotfiles commands; rebuild local packages when versions differ; check upstream releases",
 			Run: func(ctx context.Context) error {
 				return cmd(ctx, u, root, run, all, dirty, only)
 			},

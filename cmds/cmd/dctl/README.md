@@ -461,6 +461,9 @@ Named steps omit that prompt and retain this order.
 4. `setup`: reapply drifted `system`, `home`, and `firefox` setup stages.
 5. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
 6. `cmd`: rebuild dotfiles commands and eligible installed local recipes whose versions differ.
+   - Check upstream releases for selected installed recipes with `.nvchecker.toml` via one `pkgctl version check` call.
+   - Newer releases show WARN; lookup failures or missing `pkgctl`/`nvchecker` show INFO without failing the step.
+   - The check never rebuilds or changes pins; edit pins manually.
 7. `plugin`: build Hyprland plugins for the installed Hyprland version.
 8. `bun`: install OpenCode plugin dependencies from `config/opencode/bun.lock`.
 9. `bridge`: repair the checkout and service as in `setup bridge`.

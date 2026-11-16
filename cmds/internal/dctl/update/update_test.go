@@ -23,6 +23,7 @@ type fake struct {
 	dirty   string
 	rebuild string
 	unit    string
+	release string
 	calls   []string
 }
 
@@ -53,6 +54,9 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 			return f.rebuild, errors.New("exit status 1")
 		}
 		return f.rebuild, nil
+	}
+	if strings.HasPrefix(line, "env GIT_TERMINAL_PROMPT=0 pkgctl version check ") {
+		return f.release, nil
 	}
 	if line == "ewwd status" || strings.HasPrefix(line, "systemctl --user restart ") {
 		return "", nil

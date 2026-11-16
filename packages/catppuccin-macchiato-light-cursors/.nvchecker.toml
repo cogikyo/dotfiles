@@ -1,0 +1,4 @@
+[catppuccin-macchiato-light-cursors]
+source = "git"
+git = "https://github.com/catppuccin/cursors"
+prefix = "v"
