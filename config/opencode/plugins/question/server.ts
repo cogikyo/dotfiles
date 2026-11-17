@@ -47,6 +47,7 @@ declare global {
   var questionTyped: Map<string, number> | undefined;
 }
 
+// Share the map across hot reloads so waiting forms see typing reports from new handlers.
 globalThis.questionTyped ??= new Map();
 const typed = globalThis.questionTyped;
 
