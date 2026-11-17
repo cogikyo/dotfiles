@@ -2,6 +2,7 @@ import { Plugin } from "@opencode/plugin/effect";
 import { Tool } from "@opencode/schema/tool";
 import { Cause, DateTime, Effect, Exit, Option, Predicate, Schema, Scope } from "effect";
 import * as store from "../mail/store.ts";
+import { api } from "./rpc.ts";
 
 const WITHDRAWN =
   "Popup withdrawn for waiting mail; the user did not answer it and nothing ran. Read the mail first: if it relays the user's decision here, act on it without asking again; otherwise do what the mail needs, then call this tool again if you still need the user.";
@@ -42,11 +43,27 @@ const due = (file: string, sessionID: string) =>
     Effect.catchCause((cause) => Effect.logError("question: withdraw check failed", cause).pipe(Effect.as(false))),
   );
 
+declare global {
+  var questionTyped: Map<string, number> | undefined;
+}
+
+globalThis.questionTyped ??= new Map();
+const typed = globalThis.questionTyped;
+
+const held = (sessionID: string) => Date.now() - (typed.get(sessionID) ?? 0) < store.patience.normal;
+
+const report = ({ sessionID }: { readonly sessionID: string }) =>
+  Effect.sync(() => {
+    if (typed.has(sessionID)) typed.set(sessionID, Date.now());
+    return {};
+  });
+
 const withdraw = (file: string, sessionID: string) =>
   Effect.gen(function* () {
-    while (!(yield* due(file, sessionID))) yield* Effect.sleep(store.poll);
+    typed.set(sessionID, 0);
+    while (held(sessionID) || !(yield* due(file, sessionID))) yield* Effect.sleep(store.poll);
     return yield* new Tool.Error({ message: WITHDRAWN });
-  });
+  }).pipe(Effect.ensuring(Effect.sync(() => typed.delete(sessionID))));
 
 const current = (entry: Queued, time: { readonly busy?: DateTime.Utc }) =>
   time.busy !== undefined && DateTime.toEpochMillis(time.busy) <= entry.at;
@@ -65,6 +82,8 @@ export default Plugin.define({
     Effect.gen(function* () {
       const file = store.located(ctx.app.channel);
       const scope = yield* Scope.Scope;
+
+      yield* ctx.rpc.register(api, { typed: report }).pipe(Effect.orDie);
 
       const queue = (ask: Execute, input: Queued["input"], context: Tool.Context) =>
         Effect.gen(function* () {

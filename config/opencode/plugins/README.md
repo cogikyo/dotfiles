@@ -68,10 +68,10 @@ A dismissed question or permission prompt can leave a stale execution claim; the
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 An in-memory `waking` set prevents duplicate wakes in the service process; cross-process races are accepted because one service process hosts the sessions.
 
-Parked mail withdraws a `question` popup after 5 minutes, or 5 seconds for urgent mail, checked every 2 seconds.
-The same timing sets permission prompts aside by rejecting them with feedback, never approving them.
+Parked mail withdraws a `question` popup after 5 minutes, or 5 seconds for urgent mail, checked every 2 seconds, unless the session's last typing report is less than 5 minutes old, even for urgent mail.
+The same mail-age timing sets permission prompts aside by rejecting them with feedback, never approving them.
 The host rejects the session's whole pending permission batch, including `terminal` requests.
-Terminal popups and permission prompts have no exemption; open Kitty windows and child sessions' prompts and popups are untouched.
+Terminal popups and permission prompts have no other exemption; open Kitty windows and child sessions' prompts and popups are untouched.
 `patience` and `poll` in `mail/store.ts` own these timings.
 
 `mail/tui.tsx` shows only open items: unread mail here, an ask owed, mail waiting in the target, or a sent ask with no reply yet.
@@ -98,6 +98,9 @@ The agent then writes its full reply as final text and ends the turn.
 An `experimental.idle` hook opens the real form below that reply, raced against the [Mail](#mail) parked-mail deadline.
 Questions stay short; the reply above the form carries the explanation.
 Wrap built-in tools that open forms through the Effect API to keep the calling fiber's location; promise-API `editor.update` drops `form.created`'s location, so the popup never appears.
+
+`question/tui.ts` reports keypresses and pastes in a focused question form through `question.typed` RPC, at most once a second per session.
+The server's typing hold uses `store.patience.normal`, survives hot reloads in process-global state, and clears when the form settles.
 
 Answers resume the session as the next message and remain visible in the transcript.
 Dismissal does not resume it; the user can answer in chat.
