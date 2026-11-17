@@ -1,11 +1,16 @@
 import { Plugin } from "@opencode/plugin";
 import { Effect, Fiber, Schema } from "effect";
-import { Catalog, MCP, version, type Tool } from "./mcp.ts";
+import { Browsers } from "./browsers.ts";
+import { Catalog, chrome, engines, MCP, type Engine, type Tool } from "./mcp.ts";
 import { leadpier, Preview } from "./preview.ts";
+import { redact } from "./redact.ts";
 
 const Target = Schema.Struct({ url: Schema.String });
+const navigations = new Set(["navigate_page", "new_page"]);
 const web = new Set(["http:", "https:"]);
-const hidden = new Set(["take_heapsnapshot"]); // Heap snapshots can expose the seeded authentication token.
+const hidden = new Set(["chrome-devtools_take_heapsnapshot"]); // Heap snapshots can expose the seeded authentication token.
+const redacted = new Set(["firefox-devtools_list_network_requests", "firefox-devtools_get_network_request"]);
+const saving = ["saveTo", "preview"];
 
 export default Plugin.define({
   id: "browser",
@@ -13,75 +18,65 @@ export default Plugin.define({
     const fiber = Fiber.getCurrent();
     if (!fiber) throw new Error("browser: setup started outside the plugin fiber");
     const log = Effect.runForkWith(fiber.context);
-    const browsers = new Map<string, Promise<MCP>>();
+    const browsers = new Browsers((message, { browser, error }) =>
+      log(Effect.logError(message, { browser, error: explain(error) })),
+    );
     const preview = new Preview(leadpier);
-    let catalog: readonly Tool[] = [];
-
-    const forget = (sessionID: string, browser: Promise<MCP>) => {
-      if (browsers.get(sessionID) === browser) browsers.delete(sessionID);
-    };
-
-    const open = (sessionID: string) => {
-      const existing = browsers.get(sessionID);
-      if (existing) return existing;
-      const opening = MCP.connect();
-      browsers.set(sessionID, opening);
-      opening.then(
-        (browser) => browser.exited.then(() => forget(sessionID, opening)),
-        () => forget(sessionID, opening),
-      );
-      return opening;
-    };
-
-    const closing = new Set<Promise<void>>();
+    const catalogs = new Map<Engine, readonly Tool[]>();
 
     const close = (sessionID: string) => {
       preview.forget(sessionID);
-      const browser = browsers.get(sessionID);
-      if (!browser) return;
-      browsers.delete(sessionID);
-      const done = browser
-        .catch(() => undefined)
-        .then((mcp) => mcp?.close())
-        .catch((error: unknown) => {
-          log(Effect.logError("browser: close failed", { sessionID, error: explain(error) }));
-        })
-        .finally(() => closing.delete(done));
-      closing.add(done);
+      browsers.close(sessionID);
     };
 
     await ctx.tool.transform((editor) => {
-      for (const item of catalog.filter((tool) => !hidden.has(tool.name)))
-        editor.add({
-          name: `chrome-devtools_${item.name}`,
-          description: item.description ?? item.name,
-          input: item.inputSchema,
-          options: { codemode: false },
-          async execute(input, context) {
-            const url = Schema.is(Target)(input) ? input.url : undefined;
-            if (url !== undefined && url !== "about:blank" && !web.has(URL.parse(url)?.protocol ?? ""))
-              throw new Error(`${item.name} only opens http(s) URLs: ${url}`);
-            const result = await preview.call(context.sessionID, () => open(context.sessionID), item.name, input ?? {});
-            const text = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
-            if (result.isError) throw new Error(text || `${item.name} failed`);
-            return {
-              content: result.content.map((part) =>
-                part.type === "text"
-                  ? part
-                  : { type: "file" as const, uri: `data:${part.mimeType};base64,${part.data}`, mime: part.mimeType },
-              ),
-            };
-          },
-        });
+      for (const [engine, catalog] of catalogs)
+        for (const item of catalog) {
+          const name = `${engine.name}_${item.name}`;
+          if (hidden.has(name)) continue;
+          editor.add({
+            name,
+            description: item.description ?? item.name,
+            input: unsaved(item.inputSchema),
+            options: { codemode: false },
+            async execute(input, context) {
+              check(name, item.name, input);
+              const result =
+                engine === chrome
+                  ? await preview.call(
+                      context.sessionID,
+                      () => browsers.get(chrome, context.sessionID),
+                      item.name,
+                      input ?? {},
+                    )
+                  : await browsers.call(engine, context.sessionID, item.name, input ?? {});
+              const content = redacted.has(name)
+                ? result.content.map((part) => (part.type === "text" ? { ...part, text: redact(part.text) } : part))
+                : result.content;
+              const text = content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
+              if (result.isError) throw new Error(text || `${item.name} failed`);
+              return {
+                content: content.map((part) =>
+                  part.type === "text"
+                    ? part
+                    : { type: "file" as const, uri: `data:${part.mimeType};base64,${part.data}`, mime: part.mimeType },
+                ),
+              };
+            },
+          });
+        }
     });
 
     const controller = new AbortController();
-    discover(ctx)
-      .then((tools) => {
-        catalog = tools;
-        return ctx.tool.reload();
-      })
-      .catch((error: unknown) => log(Effect.logError("browser: tool discovery failed", { error: explain(error) })));
+    for (const engine of engines)
+      discover(ctx, engine)
+        .then((tools) => {
+          catalogs.set(engine, tools);
+          return ctx.tool.reload();
+        })
+        .catch((error: unknown) =>
+          log(Effect.logError("browser: tool discovery failed", { engine: engine.name, error: explain(error) })),
+        );
 
     (async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal }))
@@ -99,17 +94,33 @@ export default Plugin.define({
     return async () => {
       controller.abort();
       preview.clear();
-      for (const sessionID of browsers.keys()) close(sessionID);
-      await Promise.all(closing);
+      await browsers.clear();
     };
   },
 });
 
-async function discover(ctx: Plugin.Context) {
-  const key = `catalog/${version}`;
+function check(name: string, tool: string, input: unknown) {
+  if (typeof input === "object" && input !== null && saving.some((key) => key in input))
+    throw new Error(`${name} does not save files`);
+  const url = navigations.has(tool) && Schema.is(Target)(input) ? input.url : undefined;
+  if (url !== undefined && url !== "about:blank" && !web.has(URL.parse(url)?.protocol ?? ""))
+    throw new Error(`${tool} only opens http(s) URLs: ${url}`);
+}
+
+function unsaved(schema: Tool["inputSchema"]) {
+  const { properties } = schema;
+  if (properties === null || typeof properties !== "object" || Array.isArray(properties)) return schema;
+  return {
+    ...schema,
+    properties: Object.fromEntries(Object.entries(properties).filter(([key]) => !saving.includes(key))),
+  };
+}
+
+async function discover(ctx: Plugin.Context, engine: Engine) {
+  const key = `catalog/${engine.name}/${Bun.hash(engine.argv.join("\0")).toString(36)}`;
   const cached = await ctx.storage.get(key);
   if (Schema.is(Catalog)(cached)) return cached;
-  const client = await MCP.connect();
+  const client = await MCP.connect(engine);
   try {
     const tools = await client.tools();
     await ctx.storage.set(key, tools);

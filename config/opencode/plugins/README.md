@@ -451,24 +451,39 @@ There is no key, TUI slot, or separate state file.
 
 ## Browser
 
-`browser/server.ts` exposes `chrome-devtools_*` tools from `chrome-devtools-mcp` 1.7.0 with one isolated Chromium process per session.
-It opens headed and closes the MCP process and forgets the preview login on execution success, failure, interruption, or session deletion.
-The user `headless-reap.timer` also kills headless Chromium and Firefox older than 3 hours on a 15-minute schedule; headed browsers are excluded.
-URL-bearing calls accept HTTP(S) or `about:blank`; MCP launch patterns restrict network schemes.
-The tool catalog lives in plugin KV `catalog/1.7.0`.
-`browser/tui.tsx` places browser workspaces after `sidebar.content`, subscribes through `hyprd`, and focuses a workspace when clicked.
-It needs `/usr/bin/chromium`, `npx`, and `hyprd` for headed workspace controls; there is no key or separate plugin state file.
+`browser/server.ts` exposes `chrome-devtools_*` from `chrome-devtools-mcp` 1.13.0 and `firefox-devtools_*` from Mozilla's `@mozilla/firefox-devtools-mcp` 0.10.7.
+Each session gets one isolated process per engine used: headed Chromium or headless Firefox.
+Tool names and arguments differ between engines.
+Chromium keeps mobile, touch, DPR, performance traces, Lighthouse, and LeadPier preview auto-login; Firefox has no DPR, touch, mobile-UA, throttling, or color-scheme emulation, traces, or Lighthouse.
+Firefox viewport resizing checks layout, not mobile-device behavior.
 
-`browser/preview.ts` signs in automatically on `navigate_page` URL calls or `new_page` calls to `https://lpadmin.cullyn.dev` or `https://lpuser.cullyn.dev`.
-It reads the `leadpier-preview` keyring entry that Cullyn sets with `cogictl secret set leadpier-preview` and authenticates as preview user 12919 (`cullyn@trendcapital.com`, admin).
-Each execution logs in again on its first matching navigation and caches the login until execution ends.
-Each matching URL navigation seeds the page's `authentication` localStorage entry before the app loads, only when the entry is absent, including after browser relaunches or in new browser contexts.
+`browser/mcp.ts` launches Chromium with `--no-page-id-routing` and network-scheme allowlist patterns.
+Firefox has no URL allowlist; the plugin limits direct `navigate_page` and `new_page` URLs in both engines to HTTP(S) or `about:blank`.
+The catalog cache key is `catalog/<engine>/<hash of launch command>`.
+Both engines need `npx` and their executable: `/usr/bin/chromium` or `/usr/bin/firefox-developer-edition`.
+`browser/tui.tsx` uses `hyprd` to list and focus headed browser workspaces after `sidebar.content`; headless Firefox has no window.
+
+For signed-in Firefox checks, the user creates the agent template, signs in to the needed sites, then closes its window:
+
+```bash
+mkdir -p ~/.config/mozilla/firefox/opencode-agent && firefox-developer-edition --new-instance --profile ~/.config/mozilla/firefox/opencode-agent
+```
+
+If that template exists, `browser/profile.ts` copies it into a unique directory under `~/.config/mozilla/firefox/opencode-agent-runs/` for each Firefox session, excluding saved passwords, Sync state, and locks.
+The plugin closes both engines and forgets preview login state on execution success, failure, interruption, or session deletion, and removes the Firefox copy after process exit.
+The user `headless-reap.timer` runs every 15 minutes: it kills headless Chromium and Firefox older than 3 hours and runs `profile-reap` to remove orphaned copies older than 10 minutes.
+Headed browsers and profiles still referenced by a user process are excluded from reaping.
+Agents may use signed-in sessions but never type credentials, create accounts, or change account settings; when signed out, they report `sign-in needed: <site>` and stop that check.
+
+`browser/preview.ts` provides Chromium-only auto-login on direct `navigate_page` URL calls or `new_page` calls to `https://lpadmin.cullyn.dev` or `https://lpuser.cullyn.dev`.
+It reads the `leadpier-preview` keyring entry set with `cogictl secret set leadpier-preview` and authenticates as preview user 12919 (`cullyn@trendcapital.com`, admin), caching login state for the execution and browser User-Agent.
+Matching URL navigation seeds `authentication` localStorage before the app loads when absent or when replacing a token issued during that execution, including after relaunches or in new contexts.
 Clicked links, redirects, and back/forward/reload do not seed the session; navigate to the URL directly.
-If the app logs out, the next matching URL navigation seeds the session again.
 
-The plugin hides `take_heapsnapshot` from agents.
-`browser/mcp.ts` launches MCP with `--redactNetworkHeaders`, which hides headers such as `Authorization` but does not redact request or response bodies.
-Agents must still avoid reading or returning authentication data and sensitive page content.
+The plugin hides Chromium's `take_heapsnapshot`, strips `saveTo` and `preview` from tool inputs, and rejects calls supplying either field.
+Chromium uses `--redactNetworkHeaders`; `browser/redact.ts` applies Chrome's header allowlist to Firefox network output.
+Signed-in Firefox runs collect no request or response bodies; throwaway-profile Firefox runs still collect bodies, and URLs are not redacted in any run.
+Sensitive page content remains unredacted; agents must not read or return authentication data or other secrets.
 
 ## Statusline
 

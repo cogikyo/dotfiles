@@ -145,7 +145,7 @@ None launches builders or a decider, and their children launch nothing.
   - Boundaries' limits on the packet and a stored workflow's gate repair budget still bind.
   - If the packet is missing or malformed, or its route and fallbacks are capped, judge the wave yourself under this file's rules.
 - Before relaying a lane's **design pick**, check its justification and rejected alternatives against the source, including whether an installed library or existing helper already does the job.
-- Before calling **visual work done**, inspect the render; use the user's browser, Firefox, when browser behavior matters.
+- Before calling **visual work done**, inspect the render; name the engine each check needs, Firefox or Chromium, in the browser brief.
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
   - Read-only or exact write scope, and the evidence already settled; never authorize writes the agent's contract forbids.

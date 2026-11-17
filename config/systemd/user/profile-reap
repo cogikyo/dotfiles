@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+runs="$HOME/.config/mozilla/firefox/opencode-agent-runs"
+[[ -d $runs ]] || exit 0
+while IFS= read -r -d '' dir; do
+  pgrep -u "$UID" -f -- "$dir" >/dev/null && continue
+  echo "removing orphaned profile $dir"
+  rm -rf -- "$dir"
+done < <(find "$runs" -mindepth 1 -maxdepth 1 -type d -mmin +10 -print0)

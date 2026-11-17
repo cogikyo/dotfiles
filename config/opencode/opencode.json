@@ -120,6 +120,7 @@
     { "action": "external_directory", "resource": "/home/cullyn/.mozilla/firefox/**", "effect": "deny" },
     { "action": "external_directory", "resource": "/home/cullyn/.config/mozilla/firefox/**", "effect": "deny" },
     { "action": "chrome-devtools_*", "resource": "*", "effect": "deny" },
+    { "action": "firefox-devtools_*", "resource": "*", "effect": "deny" },
     { "action": "usage_status", "resource": "*", "effect": "deny" },
     { "action": "lanes", "resource": "*", "effect": "deny" },
     { "action": "lanes_close", "resource": "*", "effect": "deny" },

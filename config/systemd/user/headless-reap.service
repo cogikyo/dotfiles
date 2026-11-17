@@ -1,9 +1,10 @@
 [Unit]
-Description=Kill headless browsers older than 3 hours
+Description=Kill headless browsers older than 3 hours and remove orphaned agent profiles
 
 [Service]
 Type=oneshot
 Environment="PATTERN=^[^ ]*/((chromium|chrome|firefox) (.* )?--?headless(=[^ ]*)?|headless_shell|chrome-headless-shell)( |$)"
 ExecStart=/usr/bin/pgrep --older 10800 -u %U -af ${PATTERN}
 ExecStart=/usr/bin/pkill --older 10800 -u %U -ef ${PATTERN}
+ExecStart=%h/.config/systemd/user/profile-reap
 SuccessExitStatus=1

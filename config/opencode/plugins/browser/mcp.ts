@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
 import { Schema } from "effect";
 
@@ -9,7 +10,37 @@ const Tool = Schema.Struct({
 });
 export type Tool = typeof Tool.Type;
 
-export const version = "1.7.0";
+export interface Engine {
+  readonly name: string;
+  readonly argv: readonly string[];
+}
+
+export const chrome: Engine = {
+  name: "chrome-devtools",
+  argv: [
+    "chrome-devtools-mcp@1.13.0",
+    "--isolated",
+    "--executablePath=/usr/bin/chromium",
+    "--chromeArg=--opencode-browser-qa",
+    "--no-usage-statistics",
+    "--no-page-id-routing",
+    "--redactNetworkHeaders",
+    ...["http", "https", "ws", "wss"].map((scheme) => `--allowedUrlPattern=${scheme}://*:*`),
+  ],
+};
+
+export const firefox: Engine = {
+  name: "firefox-devtools",
+  argv: [
+    "@mozilla/firefox-devtools-mcp@0.10.7",
+    "--headless",
+    "--firefox-path=/usr/bin/firefox-developer-edition",
+    "--tools=pages,snapshot,input,screenshot,script,utilities,console,network,debugging",
+  ],
+};
+
+export const engines = [chrome, firefox];
+
 export const Catalog = Schema.Array(Tool);
 const Tools = Schema.Struct({ tools: Catalog });
 
@@ -35,30 +66,17 @@ export class MCP {
   private readonly done = Promise.withResolvers<void>();
   private readonly pending = new Map<number, { resolve: (value: unknown) => void; reject: (cause: Error) => void }>();
 
-  private constructor() {
-    this.child = spawn(
-      "npx",
-      [
-        "-y",
-        `chrome-devtools-mcp@${version}`,
-        "--isolated",
-        "--executablePath=/usr/bin/chromium",
-        "--chromeArg=--opencode-browser-qa",
-        "--no-usage-statistics",
-        "--redactNetworkHeaders",
-        ...["http", "https", "ws", "wss"].map((scheme) => `--allowedUrlPattern=${scheme}://*:*`),
-      ],
-      { stdio: ["pipe", "pipe", "pipe"] },
-    );
+  private constructor(engine: Engine, args: readonly string[]) {
+    this.child = spawn("npx", ["-y", ...engine.argv, ...args], { cwd: tmpdir(), stdio: ["pipe", "pipe", "pipe"] });
     this.child.stderr.resume();
     this.child.stdin.on("error", (cause) => this.fail(cause));
     createInterface({ input: this.child.stdout }).on("line", (line) => this.receive(line));
     this.child.once("error", (cause) => this.fail(cause));
-    this.child.once("close", (code) => this.fail(new Error(`Chrome DevTools MCP exited with ${code}`)));
+    this.child.once("close", (code) => this.fail(new Error(`${engine.argv[0]} exited with ${code}`)));
   }
 
-  static async connect() {
-    const client = new MCP();
+  static async connect(engine: Engine, args: readonly string[] = []) {
+    const client = new MCP(engine, args);
     try {
       await client.request("initialize", {
         protocolVersion: "2025-06-18",
