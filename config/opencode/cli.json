@@ -72,6 +72,8 @@
   "session": {
     "verbosity": "low",
     "thinking": "hide",
-    "sidebar": "auto"
-  }
+    "sidebar": "auto",
+    "grouping": "auto"
+  },
+  "animations": true
 }
