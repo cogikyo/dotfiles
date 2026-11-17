@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
-import { expand, home, located, temp, within } from "./paths.ts";
+import { expand, firefox, home, located, temp, within } from "./paths.ts";
 import {
   type Command,
   flags,
@@ -40,12 +40,17 @@ const credentials = [
 const database = /(?:^|[\s/=@<>:])opencode[\w-]*\/(?:opencode\/)?opencode\.db(?:-wal|-shm)?(?![\w.-])/u;
 const credentialFiles = [...credentials, database].map((file) => new RegExp(`${file.source}$`, file.flags));
 const credentialName = /^(?:service.*\.json|auth\.json|opencode\.db.*|\.credentials\.json)$/u;
+const databaseReason =
+  "the OpenCode database holds provider credentials; agents must not open it from the shell; use the `sessions` tool for session history";
+const profile = /[\s/=@<>:'"(,`]\.(?:config\/)?mozilla(?:\/firefox(?![\w.-])|\/?(?![^\s'"),;`]))/u;
+const profileReason =
+  "Firefox profile folders (`~/.config/mozilla/firefox`, `~/.mozilla/firefox`) hold the user's cookies, saved logins, and site storage; agents must not read, copy, or archive them; browser checks go through `verify/browser`";
 
 export function credential(file: string) {
+  const target = path.resolve(file);
+  if (firefox.some((root) => within(target, root) || target === path.dirname(root))) return profileReason;
   if (!credentialFiles.some((pattern) => pattern.test(file))) return undefined;
-  return database.test(file)
-    ? "the OpenCode database holds provider credentials; agents must not open it from the shell; use the `sessions` tool for session history"
-    : `\`${file}\` is a credential file; agents must not read it`;
+  return database.test(file) ? databaseReason : `\`${file}\` is a credential file; agents must not read it`;
 }
 
 function pathCredentials(launched: Launch[]) {
@@ -66,6 +71,7 @@ function pathCredentials(launched: Launch[]) {
     dirs,
   } of launched) {
     if (name === "cage" || dirs === undefined) continue;
+    for (const dir of dirs) check(dir);
     for (const word of words) {
       const file = literalPath(word, "/");
       if (file === undefined) continue;
@@ -653,11 +659,8 @@ export function inspect(
   for (const secret of args.flatMap((arg) => credentials.map((file) => file.exec(arg)?.[0])).filter(Boolean)) {
     found.add(`\`${secret?.replace(/^[\s/=@<>:]/u, "")}\` is a credential file; agents must not read it`);
   }
-  if (args.some((arg) => database.test(arg))) {
-    found.add(
-      "the OpenCode database holds provider credentials; agents must not open it from the shell; use the `sessions` tool for session history",
-    );
-  }
+  if (args.some((arg) => database.test(arg))) found.add(databaseReason);
+  if (args.some((arg) => profile.test(arg))) found.add(profileReason);
   if (!readOnly(agent))
     for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
   if (!owners.has(agent ?? "")) {

@@ -6,6 +6,7 @@ import path from "node:path";
 export const home = homedir();
 export const scratch = path.join(home, ".local/state/opencode/scratch");
 export const temp = "/tmp/opencode";
+export const firefox = [".mozilla/firefox", ".config/mozilla/firefox"].map((root) => path.join(home, root));
 
 const stores = [".local/share", ".local/state"].map((store) => path.join(home, store));
 const opencodeSecret = /^(?:auth\.json|account\.json|opencode\.db(?:-wal|-shm)?|service(?:-[\w.-]+)?\.json)$/u;
@@ -44,8 +45,6 @@ const fixed = [
   ".histfile",
   ".pki",
   ".config/gh",
-  ".mozilla/firefox",
-  ".config/mozilla/firefox",
   ".config/chromium",
   ".config/BraveSoftware",
   ".config/Slack",
@@ -93,7 +92,7 @@ export function secrets() {
   const claude = entries(home)
     .filter((entry) => entry.isDirectory() && entry.name.startsWith(".claude"))
     .flatMap((entry) => claudeStores.map((store) => path.join(home, entry.name, store)));
-  return [...fixed, ...claude, ...files];
+  return [...fixed, ...firefox, ...claude, ...files];
 }
 
 function canonical(target: string) {
