@@ -48,6 +48,7 @@ type AudioConfig struct {
 	NameMappings        map[string]string `yaml:"name_mappings"`         // node.nick or node.name -> display alias
 	FallbackSinks       []string          `yaml:"fallback_sinks"`
 	HeadphonesSource    string            `yaml:"headphones_source"`
+	HeadphonesUpstream  string            `yaml:"headphones_upstream"`
 	FallbackSource      string            `yaml:"fallback_source"`
 	Snapcast            SnapcastConfig    `yaml:"snapcast"`
 }

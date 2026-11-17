@@ -612,17 +612,32 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 
 func (a *Audio) reconcileSource(ctx context.Context) {
 	wear, _ := a.latestWear()
-	key, want, other := "fallback_source", a.config.FallbackSource, a.config.HeadphonesSource
-	if wear.state == "worn" {
-		if wear.sourcePinned {
+	upstream := false
+	if wear.state == "worn" && a.config.HeadphonesUpstream != "" {
+		nodes, err := listAudioNodes(ctx, "source")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: audio: headphones_upstream: %v\n", err)
 			return
 		}
-		key, want, other = "headphones_source", a.config.HeadphonesSource, a.config.FallbackSource
+		upstream = slices.ContainsFunc(nodes, func(n audioNode) bool { return n.is(a.config.HeadphonesUpstream) })
 	}
-	if !a.source.is(other) {
+	key, want := sourceTarget(a.config, wear, a.source, upstream)
+	if key == "" {
 		return
 	}
 	a.selectConfigured(ctx, "source", key, want)
+}
+
+func sourceTarget(cfg config.AudioConfig, wear wearChange, current audioDevice, upstream bool) (key, name string) {
+	headphones := wear.state == "worn" && (cfg.HeadphonesUpstream == "" || upstream)
+	switch {
+	case headphones && !wear.sourcePinned && current.is(cfg.FallbackSource):
+		return "headphones_source", cfg.HeadphonesSource
+	case !headphones && current.is(cfg.HeadphonesSource):
+		// AirPodsVoice without its upstream records silence, so even a manual pin must give way.
+		return "fallback_source", cfg.FallbackSource
+	}
+	return "", ""
 }
 
 func (a *Audio) selectConfigured(ctx context.Context, deviceType, key string, names ...string) {

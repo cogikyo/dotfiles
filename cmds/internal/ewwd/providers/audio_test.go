@@ -81,6 +81,45 @@ func TestAudioResetFollowsQueuedVolume(t *testing.T) {
 	}
 }
 
+func TestSourceTarget(t *testing.T) {
+	cfg := config.AudioConfig{HeadphonesSource: "AirPodsVoice", HeadphonesUpstream: "AirPodsHiRes", FallbackSource: "cochlea-node-1"}
+	legacy := cfg
+	legacy.HeadphonesUpstream = ""
+	off := wearChange{state: "not_worn"}
+	worn := wearChange{state: "worn"}
+	pinned := wearChange{state: "worn", sourcePinned: true}
+	tests := []struct {
+		name     string
+		cfg      config.AudioConfig
+		wear     wearChange
+		current  string
+		upstream bool
+		want     string
+	}{
+		{"not worn leaves headphones", cfg, off, "AirPodsVoice", false, "cochlea-node-1"},
+		{"worn without upstream leaves headphones", cfg, worn, "AirPodsVoice", false, "cochlea-node-1"},
+		{"worn with upstream picks headphones", cfg, worn, "cochlea-node-1", true, "AirPodsVoice"},
+		{"worn without upstream keeps fallback", cfg, worn, "cochlea-node-1", false, ""},
+		{"worn with upstream keeps headphones", cfg, worn, "AirPodsVoice", true, ""},
+		{"not worn keeps fallback", cfg, off, "cochlea-node-1", false, ""},
+		{"not worn keeps other mic", cfg, off, "alsa_input.pci-0000_c2_00.6.analog-stereo", false, ""},
+		{"worn keeps other mic", cfg, worn, "alsa_input.pci-0000_c2_00.6.analog-stereo", true, ""},
+		{"pinned keeps fallback", cfg, pinned, "cochlea-node-1", true, ""},
+		{"pinned without upstream leaves headphones", cfg, pinned, "AirPodsVoice", false, "cochlea-node-1"},
+		{"startup leaves headphones", cfg, wearChange{}, "AirPodsVoice", true, "cochlea-node-1"},
+		{"no upstream configured picks headphones", legacy, worn, "cochlea-node-1", false, "AirPodsVoice"},
+		{"no upstream configured keeps pin", legacy, pinned, "AirPodsVoice", false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, got := sourceTarget(tt.cfg, tt.wear, audioDevice{node: tt.current}, tt.upstream)
+			if got != tt.want {
+				t.Fatalf("sourceTarget = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestAudioDeviceSwitchDropsQueuedVolume(t *testing.T) {
 	a, writes, release := testAudio(t)
 

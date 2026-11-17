@@ -78,8 +78,11 @@ ewwd action weather refresh               # refetch unless fetched <10m ago
 The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
 While `audio.snapcast.sink` is available, the speaker control cycles only between it and the tracked headphones.
 Otherwise cycling skips disconnected ports and output monitors, and keeps each device's volume and mute state.
-When the tracked headphones' wear state changes, the default sink and source follow: putting them on selects their Bluetooth sink once it appears and `audio.headphones_source` as the source.
-Taking them off or disconnecting while worn selects the first available sink in `audio.fallback_sinks` (Snapcast, then HDMI) and `audio.fallback_source`.
+When the tracked headphones' wear state changes, putting them on selects their Bluetooth sink once it appears.
+Taking them off or disconnecting while worn selects the first available sink in `audio.fallback_sinks` (Snapcast, then HDMI).
+Source switching is limited to `audio.headphones_source` (AirPodsVoice) and `audio.fallback_source` (Den), leaving other defaults alone.
+The headphones source requires worn headphones and, if configured, a listed `audio.headphones_upstream` (AirPodsHiRes).
+Manual source cycling pins the choice unless the headphones source is no longer wanted; it then switches to the fallback, since AirPodsVoice without its upstream records silence.
 Unknown wear state, other disconnects, and connecting while not worn leave the default sink alone, including across an ewwd restart.
 Cycling the sink by hand cancels a pending switch to the headphones.
 With `audio.snapcast.sink` as the default, right-click on the speaker control in the `music` window grows the audio pill downward with speaker controls instead of opening `pulsemixer`.
