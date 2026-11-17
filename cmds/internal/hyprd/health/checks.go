@@ -28,6 +28,9 @@ const (
 	quotaClear   = 0.70
 )
 
+// OpenCode keeps zombies until command eviction to prevent PID reuse.
+const zombieKeeper = "opencode-pty"
+
 func (h *history) findings(ctx context.Context, window time.Duration, procs []proc) ([]Finding, map[string]bool) {
 	cut := time.Unix(h.Taken, 0).Add(-window).Unix()
 	start := slices.IndexFunc(h.Minutes, func(m minute) bool { return m.At > cut })
@@ -221,7 +224,7 @@ func (h *history) zombieFindings(procs []proc) []Finding {
 	var found []Finding
 	for _, ppid := range slices.Sorted(maps.Keys(children)) {
 		kids := children[ppid]
-		if len(kids) < zombieCount {
+		if len(kids) < zombieCount || comms[ppid] == zombieKeeper {
 			continue
 		}
 		subject := fmt.Sprintf("%s (pid %d)", cmp.Or(comms[ppid], "?"), ppid)

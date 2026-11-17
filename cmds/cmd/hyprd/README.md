@@ -316,6 +316,7 @@ It watches CPU use grouped by executable and working directory, steady memory gr
 `hyprd health` evaluates recorded history, up to a minute old, without sampling; failed units and quotas are queried live.
 After a restart, it errors until the first sample.
 A zombie counts after two consecutive samples find it unreaped.
+Children of `opencode-pty` are excluded: it keeps zombies until command eviction to prevent PID reuse.
 System RAM use is `(MemTotal - MemAvailable) / MemTotal`.
 A `ram` finding opens when the latest 10 samples are all at or above 80%, and resolves only when all 10 are below 75%.
 Quota checks read this user's usage and hard limits on `/tmp` and `/dev/shm` with `quotactl_fd`; `df` reports the whole tmpfs.
