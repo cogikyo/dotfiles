@@ -7,6 +7,7 @@ const root = path.join(homedir(), ".config/mozilla/firefox");
 const template = path.join(root, "opencode-agent");
 const runs = path.join(root, "opencode-agent-runs");
 
+// Keep cookies and site storage so copied profiles retain site sign-ins.
 const skipped = new Set([
   "lock",
   ".parentlock",
