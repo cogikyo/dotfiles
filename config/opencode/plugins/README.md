@@ -117,18 +117,18 @@ After host updates, recheck wrapped forms publishing a location so the popup app
 ## Compact
 
 `compact/server.ts` exposes `compact` with no input, queuing compaction after the current turn.
-After a successful root `workflow end` at or above 100K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
+After a successful root `workflow end` at or above 250K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
 The tool result ends with a line telling the agent to end the turn without starting new work; after compaction, `recommended` proposes what comes next.
-Root sessions receive soft nudges at 150K and 200K tokens and a strong "finish up now" nudge at 250K.
+Root sessions receive soft nudges at 250K and 300K tokens and a strong "finish up now" nudge at 325K.
 Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
-With a running workflow, soft nudges say to keep going if the remaining steps fit before 300K.
+With a running workflow, soft nudges say to keep going if the remaining steps fit before 350K.
 At a natural break with no lanes in flight, repair pending, or open user question, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
-Without a running workflow, soft nudges say to compact without asking past 150K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
+Without a running workflow, soft nudges say to compact without asking past 250K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
 Ask through `question` only if that point is unclear.
 The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, repair pending, or open user question, and commit finished work.
 Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
 In a driven run, commit finished work and queue compaction without asking.
-At 300K tokens, the plugin forces root-session compaction at a step boundary, even mid-task.
+At 350K tokens, the plugin forces root-session compaction at a step boundary, even mid-task.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
 Every root compaction stores a fixed recovery summary without a model call: “Compaction finished. This session is `<id>`. Load the `recommended` skill and follow it.”
@@ -496,7 +496,7 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 `<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
 
 `statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
-It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 300K for root sessions.
+It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 350K for root sessions.
 The gauge starts with ㊌ (water) while idle and ㊋ (fire) while the session runs.
 While running, the fire glyph fades between the gauge color and up to 35% red over a two-second cycle; a wave sweeps only the dots, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
@@ -582,7 +582,7 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
-Start and status show root context, headroom to forced compaction at 300K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
+Start and status show root context, headroom to forced compaction at 350K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
 A gate's result carries only when the steps it judges, through its `after` dependencies and repair loop, are unchanged.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.

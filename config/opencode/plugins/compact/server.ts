@@ -7,7 +7,7 @@ import { Effect, Fiber, Schema } from "effect";
 import { api as workflow } from "../workflow/rpc.ts";
 import { ceiling, due, type Level, levels } from "./limits.ts";
 
-const floor = 100_000;
+const floor = 250_000;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -34,7 +34,7 @@ const STOP =
 const Ends = Schema.Struct({ end: Schema.Literal(true) });
 
 const description =
-  "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 150K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.";
+  "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 250K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.";
 
 // A stored id marks a pending delivery; delivered records omit it.
 const Nudged = Schema.Struct({
@@ -53,7 +53,7 @@ function label(tokens: number) {
 
 const BOUNDARY = [
   `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)}.`,
-  "For other compaction, past 150K, call compact without asking once a commit lands or the task is done.",
+  "For other compaction, past 250K, call compact without asking once a commit lands or the task is done.",
   "The point must be clear: no edits, lanes, or repairs in flight and no open question, including an unanswered user question; do not compact mid-task while delivering findings, a proposal, or open choices.",
   "Ask through the question tool only if that point is unclear, and call compact after approval.",
   "In a driven run, commit finished work and queue compact without asking.",

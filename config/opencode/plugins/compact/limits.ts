@@ -8,12 +8,12 @@ const share = 0.15;
 const buffers = new Map<string, Promise<number | string | undefined>>();
 
 // Keep below the native trigger in threshold() when changing opencode.json limits or buffer.
-export const ceiling = 300_000;
+export const ceiling = 350_000;
 
 export const levels = [
-  { tokens: 150_000, kind: "soft" },
-  { tokens: 200_000, kind: "soft" },
-  { tokens: 250_000, kind: "strong" },
+  { tokens: 250_000, kind: "soft" },
+  { tokens: 300_000, kind: "soft" },
+  { tokens: 325_000, kind: "strong" },
 ] as const;
 
 export type Level = (typeof levels)[number];
