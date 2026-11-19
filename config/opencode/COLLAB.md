@@ -310,7 +310,7 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
   - Do not repeat a dismissed form; unless it is a live-check verdict, state the assumption in text or drop it.
 - Open a reply to a returning lane or delivered mail with a block between two `---` rules: one line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
-  - For delivered mail, name the sender, then state what you learned, the action taken, and whether you sent a reply.
+  - For delivered mail, start the box's lead line with `Mail from <sender>:`, then state what you learned, the action taken, and whether you sent a reply.
   - Delivered info mail that changes nothing in this session's work gets one line naming the sender and gist instead.
   - Results only; no paragraphs, nesting, or wrapping.
   - Keep each bullet under 80 characters, including its marker.
