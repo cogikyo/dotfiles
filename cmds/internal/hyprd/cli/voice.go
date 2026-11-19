@@ -34,5 +34,6 @@ func Voice() {
 
 func organStatus(organ string) string {
 	out, _ := exec.Command(filepath.Join(config.CogikyoBin, organ), "status").Output()
-	return strings.TrimSpace(string(out))
+	mode, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	return mode
 }
