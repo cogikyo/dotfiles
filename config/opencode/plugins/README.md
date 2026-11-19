@@ -528,27 +528,33 @@ Git polling and configuration caches live in memory; this plugin has no tool or 
 `byline/tui.tsx` hides primary-agent labels, currently Collab, on the prompt model row and assistant message footers, and gives the prompt model name the agent color.
 Non-primary agents keep their labels; assistant footers also keep the native label below 28 terminal columns.
 
-Each successful subagent notice and Collab's `---`…`---` reply block form one indented box, tinted in the lane's role color with a flush right edge bar.
-The rules are hidden and text wraps inside the box.
+Each successful subagent notice gets an indented box in the lane's role color with a flush right edge bar.
+In boxed replies, Byline hides the `---` rules and wraps text inside the box.
 The notice puts the subagent's description on the left and `icon Scope / icon Agent · model/variant · tokens` on the right, truncating the description first when space is short.
 Lane icons, colors, model names, and token counts use the same source as the Lanes sidebar.
 
 New lane notices reveal the whole row in about 1.2 s: build forge, review scan, scout ping, or verify decode.
-The icon then breathes while Collab replies, then settles.
 Newly delivered mail opens and types its header behind a pink cursor in up to about 2.6 s, ending with a blink and postmark stamp.
-The body fades as typing ends; the icon then breathes until the delivering turn ends or its joined reply box closes.
+The mail body fades as typing ends.
+After their reveals, lane and delivered-mail icons breathe until the turn ends or their reply box closes, even when the box opens after a prompt.
 Newly sent mail types its header, then closes and seals in at most about 1.1 s without breathing.
 Both mail reveals play only for fresh items; received freshness uses delivery time, so long-parked mail still reveals on arrival.
 Set `animations` to `false` in `cli.json` to keep these effects static.
 
 Failed and cancelled lanes show a red `✗` and the state word without a box.
-User messages and question-tool blocks end the current lane or mail box.
+
+User prompts and question-tool rows split boxes visually.
+A lane notice or delivered mail whose reply block has not opened stays pending across those rows.
+Collab's next `---` blocks take matching slots in delivery order within each kind.
+A lead line starting with `Mail from` takes a mail slot; any other lead line takes a lane slot, or a mail slot when no lane is pending.
+Matched blocks use the lane's role color or mail pink and join the notice or mail box when adjacent.
+Blocks without a matching slot stay unboxed.
+
+Pending slots drop when the turn ends or when the reply does not open with `---`.
+A new mail delivery replaces the previous pending mail slot.
 
 Delivered mail and the sender's completed `mail` tool call render in pink boxes with the peer, subject, and body.
 The header shows the kind glyph, keeps `<kind> · <time>` on the right, and cuts long subjects with `…` instead of wrapping.
-After parked mail is delivered at turn start, a reply whose first Markdown part starts with `---` gets its own pink commentary box, even with the user's prompt between the mail and reply.
-Question-tool rows end the commentary slot.
-Mail delivered mid-turn still joins a `---`…`---` reply block only when no user message comes between them.
 At low verbosity the sender's `mail` call folds into `+ N tools`; the host's `grouping/session.ts` exempts only `question` from tool grouping.
 
 Byline matches each queued outcome to its call by message ID and call ID.

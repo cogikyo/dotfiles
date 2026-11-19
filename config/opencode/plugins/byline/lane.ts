@@ -13,7 +13,7 @@ export type Lane = Tint & {
 };
 export type Letter = Tint & { icon: Text & { fg: RGBA | undefined }; text: Text; full: string };
 export type Mark = { node: Renderable; x: number; glyph: string };
-type Block = { node: Renderable; hr: boolean; tail: boolean };
+type Block = { node: Renderable; hr: boolean; tail: boolean; mail: boolean };
 export type Item =
   | { kind: "notice" | "failed"; row: Renderable; lane: Lane }
   | { kind: "mail" | "sent"; row: Renderable; lane: Letter }
@@ -22,7 +22,7 @@ export type Item =
 type Unit = { node: Renderable; row: boolean; rule: boolean; flush?: boolean; cut?: boolean; lane?: Tint };
 export type Run = { lane: Tint; top: Renderable; bottom: Renderable };
 
-type Head = { lane: Tint; inside: boolean; pending: Unit[]; note?: boolean };
+type Head = { lane: Tint; inside: boolean; pending: Unit[]; crossed?: boolean };
 type Value = { unit: number; value: number };
 
 export const layout = { flow: 3, left: 4, right: 1, pad: 2 };
@@ -32,40 +32,34 @@ export const dashes = /\n[ \t]*-{3,}[ \t]*\n*$/;
 const point: number = Yoga.Unit.Point;
 const percent: number = Yoga.Unit.Percent;
 // Preserve incoming lane state when earlier rows leave the mounted window.
-const carry = new WeakMap<Renderable, readonly Pick<Head, "lane" | "inside" | "note">[]>();
+const carry = new WeakMap<Renderable, readonly Pick<Head, "lane" | "inside" | "crossed">[]>();
 const widths = new WeakMap<Renderable, number | "auto" | `${number}%`>();
-const notes = new WeakMap<Renderable, Tint>();
 
-export function walk(items: readonly Item[], tint?: RGBA) {
+export function walk(items: readonly Item[]) {
   const units: Unit[] = [];
   const closed = new Set<Tint>();
-  let mailed = false;
   const first = items[0];
-  let open: Head[] = (first ? (carry.get(first.row) ?? []) : []).map(({ lane, inside, note }) => ({
+  let open: Head[] = (first ? (carry.get(first.row) ?? []) : []).map(({ lane, inside, crossed }) => ({
     lane,
     inside,
-    note,
+    crossed,
     pending: [],
   }));
   for (const item of items) {
     carry.set(
       item.row,
-      open.map(({ lane, inside, note }) => ({ lane, inside, note })),
+      open.map(({ lane, inside, crossed }) => ({ lane, inside, crossed })),
     );
-    if (item.kind === "notice" || item.kind === "mail") {
+    if (item.kind === "notice" || item.kind === "mail")
       open = arrive({ kind: item.kind, row: item.row, lane: item.lane }, open, units);
-      mailed ||= item.kind === "mail";
-      continue;
-    }
-    if (item.kind === "sent") units.push({ node: item.row, row: true, rule: false, lane: item.lane });
+    else if (item.kind === "sent") units.push({ node: item.row, row: true, rule: false, lane: item.lane });
     else if (item.kind === "markdown") open = read(item, open, units, closed);
     else if (item.kind === "content") place({ node: item.row, row: true, rule: false }, open, units);
     else {
-      if (item.kind === "stop" || item.kind === "prompt")
-        open = commentary(item.row, item.kind === "prompt" && mailed ? tint : undefined);
+      if (item.kind === "stop") open = [];
+      else if (item.kind === "prompt") open = cross(open);
       units.push({ node: item.row, row: true, rule: false });
     }
-    mailed = false;
   }
   return { units, closed, open };
 }
@@ -75,37 +69,41 @@ type Arrival = { kind: "notice" | "mail"; row: Renderable; lane: Tint };
 function arrive(item: Arrival, open: readonly Head[], units: Unit[]): Head[] {
   units.push({ node: item.row, row: true, rule: false, lane: item.lane });
   const mail = item.kind === "mail";
-  const kept = open.filter((head) => head.inside || !(head.note || (mail && "full" in head.lane)));
+  const kept = open.filter((head) => head.inside || !(mail && "full" in head.lane));
   return [...kept, { lane: item.lane, inside: false, pending: [] }];
 }
 
-function commentary(row: Renderable, tint?: RGBA): Head[] {
-  if (!tint) return [];
-  const lane = notes.get(row) ?? { tone: tint };
-  notes.set(row, lane);
-  return [{ lane, inside: false, pending: [], note: true }];
+function cross(open: readonly Head[]): Head[] {
+  return open.flatMap(({ lane, inside }) => (inside ? [] : [{ lane, inside, pending: [], crossed: true }]));
 }
 
 function settle(item: Extract<Item, { kind: "markdown" }>, open: Head[]) {
-  const [head] = open;
+  const [lead] = open;
   const [block] = item.blocks;
-  if (head?.note && !head.inside && !block?.hr) open.shift();
+  return lead?.crossed && !lead.inside && !block?.hr ? open.filter((head) => !head.crossed) : open;
 }
 
-function read(item: Extract<Item, { kind: "markdown" }>, open: Head[], units: Unit[], closed: Set<Tint>) {
-  settle(item, open);
+function read(item: Extract<Item, { kind: "markdown" }>, slots: Head[], units: Unit[], closed: Set<Tint>) {
+  const open = settle(item, slots);
   const [lead] = open;
   const waiting = lead !== undefined && !lead.inside;
   let rules = 0;
   let opened = false;
+  let stray = false;
   for (const block of item.blocks) {
-    const [head] = open;
-    if (!head || !(block.hr || block.tail)) {
-      place({ node: block.node, row: false, rule: false, flush: opened }, open, units);
+    if (!(block.hr || block.tail)) {
+      place({ node: block.node, row: false, rule: false, flush: opened }, stray ? [] : open, units);
       opened = false;
       continue;
     }
     rules++;
+    const head = stray ? undefined : pick(open, block.mail);
+    if (!head) {
+      units.push({ node: block.node, row: false, rule: false });
+      stray = !stray;
+      opened = false;
+      continue;
+    }
     if (block.tail) place({ node: block.node, row: false, rule: false, flush: opened, cut: true }, open, units);
     else units.push({ node: block.node, row: false, rule: true, lane: head.lane });
     opened = false;
@@ -116,10 +114,22 @@ function read(item: Extract<Item, { kind: "markdown" }>, open: Head[], units: Un
     }
     head.inside = true;
     opened = block.hr;
-    if (!head.note) for (const unit of head.pending) unit.lane = head.lane;
+    if (!head.crossed) for (const unit of head.pending) unit.lane = head.lane;
     head.pending = [];
   }
   return rules === 0 && waiting && !item.streaming ? [] : open;
+}
+
+function pick(open: Head[], mail: boolean) {
+  const [first] = open;
+  if (first?.inside) return first;
+  const lane = mail ? -1 : open.findIndex((head) => !("full" in head.lane));
+  const index = lane < 0 ? open.findIndex((head) => "full" in head.lane) : lane;
+  if (index < 0) return;
+  const [head] = open.splice(index, 1);
+  if (first && first !== head) first.pending = [];
+  open.unshift(head);
+  return head;
 }
 
 function place(unit: Unit, open: readonly Head[], units: Unit[]) {
@@ -131,7 +141,7 @@ function place(unit: Unit, open: readonly Head[], units: Unit[]) {
 
 export function grow(open: readonly Head[], live: (lane: Tint) => boolean) {
   for (const head of open) {
-    if (head.inside || head.note || !live(head.lane)) continue;
+    if (head.inside || head.crossed || !live(head.lane)) continue;
     for (const unit of head.pending) unit.lane = head.lane;
   }
 }

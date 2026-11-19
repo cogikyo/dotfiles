@@ -25,6 +25,7 @@ type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
 
 const separator = " · ";
+const sender = /^[*_\s]*Mail from\b/;
 
 const tones = {
   rule: RGBA.fromHex("#3f4578"),
@@ -119,7 +120,7 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
       ledger.restore(item.row);
       return [];
     });
-    const { units, closed, open } = walk(items, mail.tone);
+    const { units, closed, open } = walk(items);
     const found = match(items, closed, session, sessionID);
     grow(open, (lane) => found.get(lane)?.live === true);
     apply(units, ledger);
@@ -201,17 +202,14 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
     if (turned(only)) return { kind: "stop", row };
   }
   if (!marked(only)) return { kind: "content", row };
-  const blocks = only._blockStates.flatMap((state) =>
-    state.renderable
-      ? [
-          {
-            node: state.renderable,
-            hr: state.token.type === "hr",
-            tail: (state.token.type === "paragraph" || state.token.type === "heading") && dashes.test(state.token.raw),
-          },
-        ]
-      : [],
-  );
+  const states = only._blockStates;
+  const blocks = states.flatMap((state, index) => {
+    if (!state.renderable) return [];
+    const hr = state.token.type === "hr";
+    const tail = (state.token.type === "paragraph" || state.token.type === "heading") && dashes.test(state.token.raw);
+    const lead = hr || tail ? states.slice(index + 1).find((next) => next.token.type !== "space") : undefined;
+    return [{ node: state.renderable, hr, tail, mail: sender.test(lead?.token.raw ?? "") }];
+  });
   return { kind: "markdown", row, blocks, streaming: last && only.streaming };
 }
 

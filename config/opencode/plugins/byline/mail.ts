@@ -15,7 +15,7 @@ type Part = [text: string, color: RGBA];
 type Scan = { context: Context; ledger: Ledger };
 type Extra = { parent: Renderable; key: string; style: Record<string, unknown>; content: string };
 
-export const tone = colors.pink;
+const tone = colors.pink;
 const marks = new Set<string>(Object.values(glyphs));
 const separator = " · ";
 const letters = new WeakMap<Renderable, Letter>();
