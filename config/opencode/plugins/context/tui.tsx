@@ -119,6 +119,8 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
     const content = node?.parent;
     const scroll = node && scrollbox(node);
     if (!content || !scroll) return false;
+    // In OpenTUI 0.8.4, the parent resize hook sees the new content.height while node.height is a round behind.
+    // Using node.height here can flip the section open and closed until the 8-round LayoutLimit aborts the frame.
     const own = shown ? heading + list().length : heading;
     return content.height - own + heading + list().length <= scroll.viewport.height;
   }, false);
