@@ -113,14 +113,15 @@ function Sidebar(props: { context: Context; sessionID: string; prompts: Prompts 
       scroll.viewport.off("resize", relayout);
     });
   });
-  const fits = createMemo(() => {
+  const fits = createMemo((shown: boolean) => {
     layout();
     const node = box();
     const content = node?.parent;
     const scroll = node && scrollbox(node);
     if (!content || !scroll) return false;
-    return content.height - node.height + heading + list().length <= scroll.viewport.height;
-  });
+    const own = shown ? heading + list().length : heading;
+    return content.height - own + heading + list().length <= scroll.viewport.height;
+  }, false);
 
   return (
     <Show when={list().length > 0}>
@@ -152,7 +153,7 @@ function Row(props: { context: Context; entry: Item }) {
         {`${hovered() ? glyph.nvim : props.entry.icon} `}
       </text>
       <text fg={hovered() ? hover : props.context.theme.text.muted} wrapMode="none" flexShrink={1}>
-        {props.entry.label}
+        {props.entry.label.replace(/\s*\n\s*/g, " ")}
       </text>
     </box>
   );
