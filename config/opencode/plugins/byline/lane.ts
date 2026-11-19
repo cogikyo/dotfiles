@@ -37,6 +37,7 @@ const widths = new WeakMap<Renderable, number | "auto" | `${number}%`>();
 
 export function walk(items: readonly Item[]) {
   const units: Unit[] = [];
+  // A slot can leave the layout while its icon is still eligible to breathe.
   const closed = new Set<Tint>();
   let { open, done } = restore(items[0]?.row);
   for (const item of items) {

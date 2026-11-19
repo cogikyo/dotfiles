@@ -25,6 +25,7 @@ type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
 
 const separator = " · ";
+// COLLAB.md prescribes this lead line for replies to delivered mail.
 const sender = /^[*_\s]*Mail from\b/;
 const partial = /^-{1,2}$/;
 
@@ -214,6 +215,7 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
     const lead = hr || tail ? states.slice(index + 1).find((next) => next.token.type !== "space") : undefined;
     return [{ node: state.renderable, hr, tail, mail: sender.test(lead?.token.raw ?? "") }];
   });
+  // A footer can follow streaming Markdown, so row position cannot decide completion.
   const done = !only.streaming;
   const [first, ...rest] = shown;
   const stub = !done && (!first || (rest.length === 0 && partial.test(first.token.raw.trim())));
