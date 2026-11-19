@@ -177,6 +177,22 @@ Use the effort ladder for each step.
 - Fallback: Opus when OpenAI is capped, because Astra and Sol share one OpenAI window.
 - Strength relative to Sol and Opus on this work is untested; record evidence as councils compare it.
 
+### `gemini/*`
+
+- Models: `gemini-4-neon` and `gemini-4-hydrogen` take `low` to `xhigh`, and `gemini-4-carbon` takes `low` to `high`.
+  - No route names them, so pass `gemini/<model>#<variant>` explicitly.
+- Runs Google's own agent on the Google AI Ultra subscription; it never bills through an API key or Cloud project.
+- **Read-only lanes only:** it cannot edit, so it never serves a builder.
+  - It runs its own tools, not OpenCode's, and gets the brief without OpenCode's system prompt.
+  - Name any role or skill file the lane needs in the brief.
+- Use Neon as a **parallel review leaf** or **council seat** beside Sol; Carbon and Hydrogen are untested on real review work.
+  - On one known-answer file, Neon at `high` found everything a Sol baseline found plus four real bugs Sol missed; all four reproduced.
+  - One review through the plugin took about 8 minutes and 256K tokens.
+- All Gemini models share one 5-hour and one weekly window; one Neon `high` review used about 1% of the 5-hour window.
+  - Lanes check both windows, but with no Gemini fallback a capped window only adds a note, so drop a capped seat yourself.
+- A Gemini lane refuses to start in a folder whose `.agents/` holds hooks, server config, or plugins.
+  - The check covers the session folder and its parents up to the repository root.
+
 ### `claude-sonnet-5-5`
 
 - Routes `scout/context` and `scout/dirty` at `high`; also available as an explicit pick when speed matters.

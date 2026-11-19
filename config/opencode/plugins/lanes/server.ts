@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { held, located, opened } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { count, measured } from "./label.ts";
-import { pick, pool, resume } from "./pick.ts";
+import { guarded, pick, resume } from "./pick.ts";
 import { format, parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
 import { admit, checklist } from "./step.ts";
@@ -301,7 +301,7 @@ export default Plugin.define({
 
       const resolve = Effect.fn("lanes.resolve")(function* (input: Input, existing: Session.Info | undefined) {
         const explicit = input.model ? parseRef(input.model) : undefined;
-        if (explicit && explicit.providerID !== pool) return { model: input.model, note: undefined };
+        if (explicit && !guarded.has(explicit.providerID)) return { model: input.model, note: undefined };
         const routing = yield* readRouting;
         const route = explicit ?? routeFor(routing.routes, input.agent);
         if (!route) return { model: undefined, note: undefined };

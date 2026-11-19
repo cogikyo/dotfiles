@@ -1,10 +1,12 @@
 import { claudeAccounts } from "../anthropic/accounts.ts";
 import { ranked, reopens, staleAfter, survey } from "../anthropic/pool.ts";
 import { inspectProviderCache } from "../usage/cache.ts";
-import { usageProviders } from "../usage/providers.ts";
+import { usageProviders, type UsageProviderSpec } from "../usage/providers.ts";
 import { format, type Ref } from "./routing.ts";
 
 export const pool = "claude";
+
+export const guarded = new Set<string>([pool, usageProviders.gemini.id]);
 
 type Step = { ref: Ref; spent?: string; notes: string[] };
 
@@ -30,24 +32,49 @@ async function claude(route: Ref, current: Ref | undefined): Promise<Step> {
   };
 }
 
+async function reading({ id, staleAfterMS }: UsageProviderSpec) {
+  const { issue, ageMS, windows } = await inspectProviderCache(id, staleAfterMS);
+  if (ageMS !== undefined && ageMS > staleAfterMS) return `is stale (${minutes(ageMS)})`;
+  if (issue && !(issue === "error" && ageMS !== undefined && windows.length)) return `is unusable (${issue})`;
+  return windows;
+}
+
 async function cursor(route: Ref): Promise<Step> {
   const window = own.test(route.id) ? "C" : "O";
-  const { id, staleAfterMS } = usageProviders.cursor;
-  const { issue, ageMS, windows } = await inspectProviderCache(id, staleAfterMS);
+  const windows = await reading(usageProviders.cursor);
   const open = (why: string) => ({
     ref: route,
     notes: [`lanes: Cursor usage ${why}; treating the ${window} pool as open.`],
   });
-  if (ageMS !== undefined && ageMS > staleAfterMS) return open(`is stale (${minutes(ageMS)})`);
-  if (issue && !(issue === "error" && ageMS !== undefined && windows.length)) return open(`is unusable (${issue})`);
+  if (typeof windows === "string") return open(windows);
   const found = windows.find((item) => item.label === window);
   if (!found || found.usedPercent === undefined) return open(`has no ${window} window`);
   if (found.postReset || found.usedPercent < 100) return { ref: route, notes: [] };
   return { ref: route, spent: `the Cursor ${window} pool is spent for ${route.id}`, notes: [] };
 }
 
-const check = (ref: Ref, current: Ref | undefined): Promise<Step> | Step =>
-  ref.providerID === pool ? claude(ref, current) : ref.providerID === "cursor" ? cursor(ref) : { ref, notes: [] };
+async function gemini(route: Ref): Promise<Step> {
+  const windows = await reading(usageProviders.gemini);
+  const open = (why: string) => ({ ref: route, notes: [`lanes: Gemini usage ${why}; treating it as open.`] });
+  if (typeof windows === "string") return open(windows);
+  const spent = windows.find((item) => !item.postReset && item.usedPercent !== undefined && item.usedPercent >= 100);
+  if (spent) return { ref: route, spent: `the Gemini ${spent.label} window is spent for ${route.id}`, notes: [] };
+  const missing = ["H", "W"].filter((tag) => windows.find((item) => item.label === tag)?.usedPercent === undefined);
+  return missing.length ? open(`has no ${missing.join("/")} window`) : { ref: route, notes: [] };
+}
+
+function check(ref: Ref, current: Ref | undefined): Promise<Step> | Step {
+  switch (ref.providerID) {
+    case pool:
+      return claude(ref, current);
+    case usageProviders.cursor.id:
+      return cursor(ref);
+    case usageProviders.gemini.id:
+      return gemini(ref);
+    default:
+      return { ref, notes: [] };
+  }
+}
 
 function chain(route: Ref, fallbacks: Record<string, Ref>) {
   const refs = [route];

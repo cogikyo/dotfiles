@@ -36,6 +36,11 @@ export const usageProviders = {
     label: "Cursor",
     staleAfterMS: 10 * 60_000,
   },
+  gemini: {
+    id: "gemini",
+    label: "Gemini",
+    staleAfterMS: 10 * 60_000,
+  },
   opencodeGo: {
     id: "opencode-go",
     label: "OpenCode",

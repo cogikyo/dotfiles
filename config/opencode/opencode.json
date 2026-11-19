@@ -420,6 +420,36 @@
           "limit": { "input": 425000 }
         }
       }
+    },
+    "gemini": {
+      "models": {
+        "gemini-4-neon": {
+          "name": "Gemini 4 Neon",
+          "variants": [
+            { "id": "low", "settings": { "effort": "low" } },
+            { "id": "medium", "settings": { "effort": "medium" } },
+            { "id": "high", "settings": { "effort": "high" } },
+            { "id": "xhigh", "settings": { "effort": "xhigh" } }
+          ]
+        },
+        "gemini-4-carbon": {
+          "name": "Gemini 4 Carbon",
+          "variants": [
+            { "id": "low", "settings": { "effort": "low" } },
+            { "id": "medium", "settings": { "effort": "medium" } },
+            { "id": "high", "settings": { "effort": "high" } }
+          ]
+        },
+        "gemini-4-hydrogen": {
+          "name": "Gemini 4 Hydrogen",
+          "variants": [
+            { "id": "low", "settings": { "effort": "low" } },
+            { "id": "medium", "settings": { "effort": "medium" } },
+            { "id": "high", "settings": { "effort": "high" } },
+            { "id": "xhigh", "settings": { "effort": "xhigh" } }
+          ]
+        }
+      }
     }
   },
   "experimental": {
@@ -433,7 +463,8 @@
       { "action": "provider.use", "resource": "xai", "effect": "allow" },
       { "action": "provider.use", "resource": "opencode-go", "effect": "allow" },
       { "action": "provider.use", "resource": "cursor", "effect": "allow" },
-      { "action": "provider.use", "resource": "neumann", "effect": "allow" }
+      { "action": "provider.use", "resource": "neumann", "effect": "allow" },
+      { "action": "provider.use", "resource": "gemini", "effect": "allow" }
     ]
   }
 }

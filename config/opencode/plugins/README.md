@@ -204,6 +204,34 @@ Clearing invalidates cached prompt prefixes, so the 50K minimum batches cache re
 Anthropic reports usage after clearing (probed live 2026-10-15), so native compaction and the compact plugin's ceilings measure the cleared size.
 The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, and `inputTokens` because V2 discards `applied_edits`.
 
+## Gemini
+
+`gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP as a read-only lane model.
+It needs `agy` from the AUR package `antigravity-cli`, signed in on a Google AI subscription, and `bun` on PATH for its hook.
+`opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
+The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini) says when to use them.
+Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCode's system prompt or tools.
+`gemini/agy.ts` removes `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
+A turn also fails after 10 minutes without an update from the agent.
+`usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before a Gemini launch.
+
+The agent's settings live in `${XDG_STATE_HOME:-~/.local/state}/opencode/gemini/`, passed as `--gemini-dir`; the user's own `~/.gemini` is left alone.
+On every start, the plugin rewrites `antigravity-cli/settings.json` to `{"toolPermission":"strict"}` and `config/hooks.json` to one `PreToolUse` hook on every tool that runs `gemini/hook.ts`.
+Copies of the plugin loaded from different checkouts share this folder and overwrite each other's hook path.
+It refuses to start when the session folder, or a parent up to the repository root, holds `.agents/hooks.json`, `mcp_config.json`, `plugins.json`, or `plugins/`, because those can run code outside the policy.
+
+`gemini/policy.ts` judges each call in the hook and again in the ACP permission request.
+A lane may use `read_file` and, in the session folder, the plain-word commands `pwd`, `ls` without recursion, and `git log`, `show`, `diff`, and `blame` with listed read-only flags.
+Paths on [guard's](#guard) secret list stay hidden, and `ls` or `git` also refuses a folder that contains one.
+Everything else is refused with a reason the model sees, including writes, sub-agents, and shell syntax beyond words and quotes.
+OpenCode shows a refused call as a tool error with empty output.
+
+The policy has known gaps:
+
+- A repository's own `.git/config` can name programs, such as `diff.external` or `core.fsmonitor`, that an allowed `git` command starts.
+- `git show` can print tracked files under a hidden path, such as `git show HEAD:<path>`.
+- `ls` shows file names, and `ls -l` shows symlink targets even when they point into hidden paths.
+
 ## Guard
 
 `guard/server.ts` denies recognized shell Grok launches and OpenCode API calls.
