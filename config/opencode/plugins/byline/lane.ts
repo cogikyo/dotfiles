@@ -17,8 +17,8 @@ type Block = { node: Renderable; hr: boolean; tail: boolean; mail: boolean };
 export type Item =
   | { kind: "notice" | "failed"; row: Renderable; lane: Lane }
   | { kind: "mail" | "sent"; row: Renderable; lane: Letter }
-  | { kind: "plain" | "stop" | "prompt" | "content"; row: Renderable }
-  | { kind: "markdown"; row: Renderable; blocks: readonly Block[]; streaming: boolean };
+  | { kind: "plain" | "stop" | "retry" | "prompt" | "content"; row: Renderable }
+  | { kind: "markdown"; row: Renderable; blocks: readonly Block[]; streaming: boolean; done: boolean; stub: boolean };
 type Unit = { node: Renderable; row: boolean; rule: boolean; flush?: boolean; cut?: boolean; lane?: Tint };
 export type Run = { lane: Tint; top: Renderable; bottom: Renderable };
 
@@ -32,59 +32,71 @@ export const dashes = /\n[ \t]*-{3,}[ \t]*\n*$/;
 const point: number = Yoga.Unit.Point;
 const percent: number = Yoga.Unit.Percent;
 // Preserve incoming lane state when earlier rows leave the mounted window.
-const carry = new WeakMap<Renderable, readonly Pick<Head, "lane" | "inside" | "crossed">[]>();
+const carry = new WeakMap<Renderable, { heads: readonly Pick<Head, "lane" | "inside" | "crossed">[]; done: boolean }>();
 const widths = new WeakMap<Renderable, number | "auto" | `${number}%`>();
 
 export function walk(items: readonly Item[]) {
   const units: Unit[] = [];
   const closed = new Set<Tint>();
-  const first = items[0];
-  let open: Head[] = (first ? (carry.get(first.row) ?? []) : []).map(({ lane, inside, crossed }) => ({
-    lane,
-    inside,
-    crossed,
-    pending: [],
-  }));
+  let { open, done } = restore(items[0]?.row);
   for (const item of items) {
-    carry.set(
-      item.row,
-      open.map(({ lane, inside, crossed }) => ({ lane, inside, crossed })),
-    );
+    carry.set(item.row, { heads: open.map(({ lane, inside, crossed }) => ({ lane, inside, crossed })), done });
     if (item.kind === "notice" || item.kind === "mail")
-      open = arrive({ kind: item.kind, row: item.row, lane: item.lane }, open, units);
+      open = arrive({ kind: item.kind, row: item.row, lane: item.lane }, open, units, closed);
     else if (item.kind === "sent") units.push({ node: item.row, row: true, rule: false, lane: item.lane });
-    else if (item.kind === "markdown") open = read(item, open, units, closed);
-    else if (item.kind === "content") place({ node: item.row, row: true, rule: false }, open, units);
+    else if (item.kind === "markdown") {
+      open = read(item, open, units, closed);
+      done = item.done;
+    } else if (item.kind === "content") place({ node: item.row, row: true, rule: false }, open, units);
     else {
-      if (item.kind === "stop") open = [];
-      else if (item.kind === "prompt") open = cross(open);
+      if (item.kind === "stop") drop(open, closed);
+      if (item.kind === "stop" || item.kind === "retry") open = [];
+      else if (item.kind === "prompt") open = cross(open, closed, done);
       units.push({ node: item.row, row: true, rule: false });
     }
   }
   return { units, closed, open };
 }
 
+function restore(row: Renderable | undefined): { open: Head[]; done: boolean } {
+  const saved = row && carry.get(row);
+  const open = (saved?.heads ?? []).map(({ lane, inside, crossed }) => ({ lane, inside, crossed, pending: [] }));
+  return { open, done: saved?.done ?? false };
+}
+
 type Arrival = { kind: "notice" | "mail"; row: Renderable; lane: Tint };
 
-function arrive(item: Arrival, open: readonly Head[], units: Unit[]): Head[] {
+function arrive(item: Arrival, open: readonly Head[], units: Unit[], closed: Set<Tint>): Head[] {
   units.push({ node: item.row, row: true, rule: false, lane: item.lane });
   const mail = item.kind === "mail";
-  const kept = open.filter((head) => head.inside || !(mail && "full" in head.lane));
-  return [...kept, { lane: item.lane, inside: false, pending: [] }];
+  const evicted = (head: Head) => mail && !head.inside && "full" in head.lane;
+  drop(open.filter(evicted), closed);
+  return [...open.filter((head) => !evicted(head)), { lane: item.lane, inside: false, pending: [] }];
 }
 
-function cross(open: readonly Head[]): Head[] {
-  return open.flatMap(({ lane, inside }) => (inside ? [] : [{ lane, inside, pending: [], crossed: true }]));
+function cross(open: readonly Head[], closed: Set<Tint>, done: boolean): Head[] {
+  return open.flatMap(({ lane, inside }) => {
+    if (!inside) return [{ lane, inside, pending: [], crossed: true }];
+    if (done) closed.add(lane);
+    return [];
+  });
 }
 
-function settle(item: Extract<Item, { kind: "markdown" }>, open: Head[]) {
+function settle(item: Extract<Item, { kind: "markdown" }>, open: Head[], closed: Set<Tint>) {
   const [lead] = open;
   const [block] = item.blocks;
-  return lead?.crossed && !lead.inside && !block?.hr ? open.filter((head) => !head.crossed) : open;
+  if (!lead?.crossed || lead.inside || block?.hr) return open;
+  const crossed = open.filter((head) => head.crossed);
+  if (!item.stub) drop(crossed, closed);
+  return open.filter((head) => !head.crossed);
+}
+
+function drop(heads: readonly Head[], closed: Set<Tint>) {
+  for (const { lane } of heads) closed.add(lane);
 }
 
 function read(item: Extract<Item, { kind: "markdown" }>, slots: Head[], units: Unit[], closed: Set<Tint>) {
-  const open = settle(item, slots);
+  const open = settle(item, slots, closed);
   const [lead] = open;
   const waiting = lead !== undefined && !lead.inside;
   let rules = 0;
@@ -117,7 +129,12 @@ function read(item: Extract<Item, { kind: "markdown" }>, slots: Head[], units: U
     if (!head.crossed) for (const unit of head.pending) unit.lane = head.lane;
     head.pending = [];
   }
-  return rules === 0 && waiting && !item.streaming ? [] : open;
+  return rules > 0 || !waiting || item.streaming ? open : abandon(item, open, closed);
+}
+
+function abandon(item: Extract<Item, { kind: "markdown" }>, open: readonly Head[], closed: Set<Tint>): Head[] {
+  if (item.done) drop(open, closed);
+  return [];
 }
 
 function pick(open: Head[], mail: boolean) {

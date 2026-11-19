@@ -536,21 +536,21 @@ Lane icons, colors, model names, and token counts use the same source as the Lan
 New lane notices reveal the whole row in about 1.2 s: build forge, review scan, scout ping, or verify decode.
 Newly delivered mail opens and types its header behind a pink cursor in up to about 2.6 s, ending with a blink and postmark stamp.
 The mail body fades as typing ends.
-After their reveals, lane and delivered-mail icons breathe until the turn ends or their reply box closes, even when the box opens after a prompt.
+After their reveals, lane and delivered-mail icons breathe until their reply box closes or their slot drops; a queued row, a retry footer, or a still-streaming reply (even a partial `--`) does not by itself stop breathing.
 Newly sent mail types its header, then closes and seals in at most about 1.1 s without breathing.
 Both mail reveals play only for fresh items; received freshness uses delivery time, so long-parked mail still reveals on arrival.
 Set `animations` to `false` in `cli.json` to keep these effects static.
 
 Failed and cancelled lanes show a red `✗` and the state word without a box.
 
-User prompts and question-tool rows split boxes visually.
+User prompts, question-tool rows, and retry footers split boxes visually.
 A lane notice or delivered mail whose reply block has not opened stays pending across those rows.
 Collab's next `---` blocks take matching slots in delivery order within each kind.
 A lead line starting with `Mail from` takes a mail slot; any other lead line takes a lane slot, or a mail slot when no lane is pending.
 Matched blocks use the lane's role color or mail pink and join the notice or mail box when adjacent.
 Blocks without a matching slot stay unboxed.
 
-Pending slots drop when the turn ends or when the reply does not open with `---`.
+Pending slots drop at turn end, when a finished reply contains no `---`, or when a reply after a prompt starts with text instead of `---`.
 A new mail delivery replaces the previous pending mail slot.
 
 Delivered mail and the sender's completed `mail` tool call render in pink boxes with the peer, subject, and body.

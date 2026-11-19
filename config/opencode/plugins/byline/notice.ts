@@ -87,6 +87,12 @@ export function locate(items: readonly Item[], messages: readonly Message[]) {
   return items.map(({ row }) => positions.get(/^session-part:([^:]+):/.exec(row.id)?.[1] ?? row.id));
 }
 
+export function retrying(items: readonly Item[], messages: readonly Message[], at: number) {
+  const index = locate(items.slice(0, at + 1), messages).findLast((value) => value !== undefined);
+  const message = index === undefined ? undefined : messages[index];
+  return message?.type === "assistant" && message.retry !== undefined;
+}
+
 export function compose(lane: Lane, child: string | undefined, scan: Scan): Mark | undefined {
   const { text, tone, title, summary } = lane;
   const box = text.parent;

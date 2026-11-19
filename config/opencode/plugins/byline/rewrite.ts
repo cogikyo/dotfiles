@@ -13,7 +13,7 @@ import type { Plugin } from "@opencode/plugin/tui";
 import type { Mail } from "../mail/mail.ts";
 import type { Post, Stage } from "./draw.ts";
 import { apply, dashes, grow, runs, walk, type Item, type Letter, type Tint } from "./lane.ts";
-import { compose, flatten, match, notice } from "./notice.ts";
+import { compose, flatten, match, notice, retrying } from "./notice.ts";
 import { question } from "./question.ts";
 import { leaves, native, owned, textual, type Ledger, type Text } from "./ledger.ts";
 import * as mail from "./mail.ts";
@@ -26,6 +26,7 @@ type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number
 
 const separator = " · ";
 const sender = /^[*_\s]*Mail from\b/;
+const partial = /^-{1,2}$/;
 
 const tones = {
   rule: RGBA.fromHex("#3f4578"),
@@ -114,7 +115,9 @@ export function transcript(anchor: Renderable, names: Names, ledger: Ledger, { c
       return [item as Item].concat(entries);
     });
     const posts = mail.resolve(scanned, session, sessionID);
-    const items = scanned.flatMap((item): Item[] => {
+    const messages = sessionID === undefined ? [] : session.message.list(sessionID);
+    const items = scanned.flatMap((item, at): Item[] => {
+      if (item.kind === "stop") return [{ kind: retrying(scanned, messages, at) ? "retry" : "stop", row: item.row }];
       if (!mail.candidate(item) || posts.has(item.lane)) return [item];
       if (!inner.has(item.row)) return [{ kind: "content", row: item.row }];
       ledger.restore(item.row);
@@ -203,6 +206,7 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
   }
   if (!marked(only)) return { kind: "content", row };
   const states = only._blockStates;
+  const shown = states.filter((state) => state.renderable);
   const blocks = states.flatMap((state, index) => {
     if (!state.renderable) return [];
     const hr = state.token.type === "hr";
@@ -210,7 +214,10 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
     const lead = hr || tail ? states.slice(index + 1).find((next) => next.token.type !== "space") : undefined;
     return [{ node: state.renderable, hr, tail, mail: sender.test(lead?.token.raw ?? "") }];
   });
-  return { kind: "markdown", row, blocks, streaming: last && only.streaming };
+  const done = !only.streaming;
+  const [first, ...rest] = shown;
+  const stub = !done && (!first || (rest.length === 0 && partial.test(first.token.raw.trim())));
+  return { kind: "markdown", row, blocks, streaming: last && !done, done, stub };
 }
 
 function byline(text: Text, names: Names, ledger: Ledger) {
