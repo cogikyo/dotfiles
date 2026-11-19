@@ -4,15 +4,15 @@ routes:
   build/general: claude/claude-opus-5-5 high
   build/git: claude/claude-opus-5-5 high
   build/patch: claude/claude-opus-5-5 medium
-  build/scribe: openai/gpt-6.1-sol high
+  build/scribe: openai/gpt-6.2-sol high
   scout/*: claude/claude-opus-5-5 high
   scout/context: claude/claude-sonnet-5-5 high
   scout/dirty: claude/claude-sonnet-5-5 high
-  scout/session: openai/gpt-6.1-sol high
+  scout/session: openai/gpt-6.2-sol high
   scout/web: xai/grok-4.7 high
-  review/*: openai/gpt-6.1-sol high
+  review/*: openai/gpt-6.2-sol high
   review/entropy: claude/claude-opus-5-5 xhigh
-  verify/*: openai/gpt-6.1-sol high
+  verify/*: openai/gpt-6.2-sol high
   verify/decide: claude/claude-fable-5-2 high
 fallbacks:
   claude/claude-fable-5-2: claude/claude-opus-5-5
@@ -131,7 +131,7 @@ Pick a builder by how much the brief settles.
   - Run a parallel OpenAI scout on the same brief when a second independent read could change the answer.
   - Use `verify/*` to settle an open claim, to double-check a claim the answer or design rests on, or as a council seat that guards against shared assumptions.
   - Prefer `verify/web` or an OpenAI `scout/web` over answering external facts from memory.
-- Pass `openai/gpt-6-astra#high` or `openai/gpt-6.1-sol#high` when Collab picks one explicitly.
+- Pass `openai/gpt-6.2-astra#high` or `openai/gpt-6.2-sol#high` when Collab picks one explicitly.
 - Convene a council for harness changes, production-impact findings, and design verdicts, with a **fresh Opus reviewer** beside Sol or Astra.
   - Reserve the Opus seat for those cases; other councils run Sol and Astra seats.
   - Give Opus a different lens when risks span lenses, but not an adversarial one; keep seats on the same lens only for high-stakes changes where model diversity is the point.
@@ -155,12 +155,12 @@ Use the effort ladder for each step.
   - Astra and Sol share one weekly window, so Sol cannot rescue Astra's cap.
 - Before a decide launch, Collab checks usage and passes the first open pick.
   - Use the route first, then `claude/claude-opus-5-5#high`.
-  - If both are capped, pass `openai/gpt-6-astra#high`.
+  - If both are capped, pass `openai/gpt-6.2-astra#high`.
   - Automatic hops drop the variant and continue through Cursor to Grok.
 - If all three are capped, Collab follows COLLAB.md's capped-decider rule.
 - In 61 runs since Nov 13, Fable averaged about $2.40 per run and took 3 to 15 minutes; it costs twice Opus per token.
 
-### `openai/gpt-6.1-sol`
+### `openai/gpt-6.2-sol`
 
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5#high` yourself.
@@ -169,7 +169,7 @@ Use the effort ladder for each step.
 - Gathers wide context well and makes sound architecture calls.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
-### `openai/gpt-6-astra`
+### `openai/gpt-6.2-astra`
 
 - Use as a **council seat** or **parallel leaf**, unless it must lead decide.
   - That fallback applies only when Fable and Opus are capped.

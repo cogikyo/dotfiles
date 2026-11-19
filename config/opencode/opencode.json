@@ -332,17 +332,17 @@
     },
     "openai": {
       "models": {
-        "gpt-6.1-sol": {
+        "gpt-6.2-sol": {
           "name": "Sol",
           "settings": {
             "reasoningEffort": "high"
           },
           "limit": { "input": 425000 }
         },
-        "gpt-6.1-sol-fast": {
+        "gpt-6.2-sol-fast": {
           "name": "Sol Fast"
         },
-        "gpt-6-astra": {
+        "gpt-6.2-astra": {
           "limit": { "input": 425000 }
         }
       }
