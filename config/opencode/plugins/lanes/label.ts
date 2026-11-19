@@ -46,6 +46,7 @@ const scopes: Partial<Record<string, string>> = {
   source: "\u{f0169}",
   test: "\u{f0093}",
   browser: "\u{f0cfd}",
+  decide: "\u{f05d1}",
 };
 
 const families: [RegExp, string][] = [
