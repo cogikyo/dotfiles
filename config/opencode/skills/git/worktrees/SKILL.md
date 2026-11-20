@@ -1,6 +1,6 @@
 ---
 name: worktrees
-description: Use for any branch or worktree creation, switch, or removal, and for resolving `path@branch` targets; verifies checkouts and manages named safe lifecycle operations.
+description: Use for any branch or worktree creation, switch, or removal, and for resolving `path@branch` targets.
 ---
 
 # Worktrees

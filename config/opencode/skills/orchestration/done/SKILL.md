@@ -1,11 +1,11 @@
 ---
 name: done
-description: Use on /done, a request to finish and close, or COLLAB.md's automatic finish point; Collab runs comments, commits, retro judgment, and cleanup, then closes finished lanes and tags the session.
+description: Use on /done, a request to finish and close, or COLLAB.md's automatic finish point.
 ---
 
 # Done
 
-Collab runs this procedure in the current session, in the order below, on `/done`, a request to finish and close, or the finish point in `COLLAB.md`.
+Collab runs these steps in order.
 Either trigger approves the comment pass, retro handling below, removing landed worktrees, deleting this session tree's own scratch and stopping processes running from it, turning drive off, and closing finished lanes and the session.
 It approves nothing else; Git operations follow Collab's `Git` rules.
 
@@ -20,8 +20,7 @@ Skip when no code changed or a scribe pass already ran after the last edit.
 Load `commit` and commit this session's reviewed work.
 Ask one question with the `question` tool only when ownership of a path or hunk is unclear.
 Leave other sessions' work dirty and skip when nothing is left.
-After committing, push new commits under `COLLAB.md`'s `Git` rules where pushes need no yes.
-Leave pushes that need the user's yes unpushed and name them in the report.
+Push where COLLAB.md needs no yes; report unpushed commits.
 
 ## Retro
 
@@ -53,7 +52,6 @@ Write each selected path literally, without trailing slashes; do not build a pat
 
 ## Close
 
-Close without asking; `/done` or the automatic finish point already approves closure.
 On a user's `/done` or request to finish and close, ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without tagging.
 The automatic finish point requires those blockers to be absent; deferred retro candidates become `ISSUES` instead.
 Load `clear-lanes` and close finished lanes under its judgment.

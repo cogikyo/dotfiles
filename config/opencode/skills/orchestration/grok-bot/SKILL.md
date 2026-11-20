@@ -1,6 +1,6 @@
 ---
 name: grok-bot
-description: Use when the user asks to talk to Grok Bot or one of its bots by name, or to hand work to Grok Bot's cloud agents; Collab runs `bot.ts` from the current session.
+description: Use when the user asks to talk to Grok Bot or one of its bots by name, or to hand work to Grok Bot's cloud agents.
 ---
 
 # Grok Bot

@@ -1,6 +1,6 @@
 ---
 name: x
-description: Use when the user invokes /x or asks for live X/Twitter community signal, maintainer chatter, adoption, or native Grok X search. Load this skill and call the `x` tool from the current session.
+description: Use when the user invokes /x or asks for live X/Twitter community signal, maintainer chatter, adoption, or native Grok X search.
 ---
 
 # X

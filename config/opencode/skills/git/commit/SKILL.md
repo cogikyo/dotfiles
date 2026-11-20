@@ -1,13 +1,11 @@
 ---
 name: commit
-description: Use for any commit, including "commit all" or "commit this", and for finishing an active merge; inspects dirty scope, selects atomic commits, and stages only approved changes.
+description: Use for any commit, including "commit all" or "commit this", and for finishing an active merge.
 ---
 
 # Commit
 
-Use this procedure to create atomic conventional commits or finish an already-started merge.
 **Approved scope** means this session's reviewed changes or the active brief's exact scope; it needs no user yes.
-Include another session's work only after coordinating with its owner.
 
 ## Preflight
 
@@ -26,22 +24,12 @@ Stop when scope, repository, branch, worktree, or ownership is ambiguous.
 
 An ordinary commit edits no content; only an active merge's conflicted files may change.
 
-## Choose a mode
+## Select stories
 
-Choose the smallest mode that fits the inspected state.
-Do not ask for a choice between Single and Partial when the diff makes the answer clear.
-
-- **Single** creates one commit from whole files whose changes all belong to one story.
-- **Partial** creates one commit from selected hunks because its files also contain other work.
-- **Complex** detangles an approved dirty scope into a sequence of atomic commits.
-
-Single and Partial create exactly one commit.
-Complex repeats Single or Partial for one story at a time.
-Use Complex when the approved scope contains several atomic stories, unless the active brief limits the workflow to one commit.
-
-A clean worktree is not the success condition.
-Single and Partial preserve unrelated or later work as dirty state.
-Complex commits all approved stories, then reports any unapproved or blocked remainder.
+Commit one atomic story at a time, and repeat across stories unless the active brief limits the workflow to one commit.
+Do not ask the user how to split when the diff makes it clear.
+A clean worktree is not the goal; leave unrelated or later work dirty.
+With several approved stories, commit them all, then report any unapproved or blocked remainder.
 
 ### Find each story
 
@@ -54,8 +42,7 @@ Strong split signals include:
 - Body bullets describe concerns without one shared intent.
 - The scope contains distinct features, fixes, or maintenance work.
 
-In Single or Partial mode, propose a split and stop when more than one story is present.
-In Complex mode, use the split as the commit sequence.
+When the active brief limits the workflow to one commit and more than one story is present, propose a split and stop; otherwise use the split as the commit sequence.
 Keep one coherent cross-file behavior together even when it touches many files.
 
 ### Stage one story
@@ -74,7 +61,7 @@ Applying it with `git apply --cached` changes the index without changing the wor
 - Do not discard worktree content.
 
 Stop when mixed hunks or pre-existing staged state cannot be isolated with index-only operations.
-After a Partial commit and after every Complex commit, inspect all remaining staged and unstaged changes again.
+After a partial commit, and after every commit in a multi-story workflow, inspect the remaining staged and unstaged changes.
 
 ## Write the message
 
@@ -169,7 +156,6 @@ A hook failure does not expand edit authority.
 5. Run the smallest relevant check, stage the exact repaired hunks, and retry.
 
 Treat hook-created worktree changes as real changes and inspect them before staging.
-Do not assume they are harmless formatter churn or discard them.
 Do not amend the failed attempt; retry an uncreated commit or report an unexpected existing commit before continuing.
 
 For substantive, unrelated, or ambiguous failures, stop and report the failing hook, affected paths, and smallest likely repair.
@@ -213,4 +199,3 @@ Inspect final status plus staged and unstaged diffs.
 Summarize the message, affected paths, hooks or checks, preserved dirty state, and residual risk.
 Report the landed commit list with the story and files per commit.
 Include merge resolutions when applicable.
-Surface any unresolved ambiguity without guessing.

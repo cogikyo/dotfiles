@@ -1,12 +1,11 @@
 ---
 name: review
-description: Use to judge code changes, plans, incident hypotheses, or systems; Collab reviews in-session or synthesizes independent review leaves and councils without implementing fixes.
+description: Use to judge code changes, plans, incident hypotheses, or systems.
 ---
 
 # Review
 
 Inspect the target for consequential errors and report criticisms that survive evidence gathering.
-Collab runs this procedure in-session for focused review, broad investigation, and council synthesis.
 A specialist lens is optional; general review covers cross-cutting problems that do not fit one leaf.
 
 ## Frame and inspect
@@ -14,10 +13,10 @@ A specialist lens is optional; general review covers cross-cutting problems that
 Identify the target, baseline, governing claims, exclusions, and likely failure consequences.
 Follow actual risk instead of a fixed checklist.
 Look for unsupported assumptions, invalid state transitions, hidden coupling, unsafe boundaries, partial failures, and acceptance claims that nobody can check.
-Separate observation, inference, and conjecture, then trace reachability and consequence before you assign severity.
+Trace reachability and consequence before you assign severity.
 Call a finding a **blocker** only when a reproduced or source-proven failure supports it; otherwise label it **unverified**.
 Inspect source or request one discriminating piece of evidence when it could change the verdict.
-Report only findings the evidence supports, and keep scope where the target sets it.
+Keep scope where the target sets it.
 Recommend repairs without applying them during the review.
 
 ## Use independent contexts
@@ -41,7 +40,6 @@ Criticize your own provisional verdict when a causal leap, missing alternative, 
 A council is parallel review leaves on one frozen brief, baseline, and acceptance question, synthesized by Collab.
 Council seats do not see each other's output until all results return.
 Select the strongest candidate, take compatible better mechanisms from the others, or reject every candidate.
-Weigh evidence over vote counts.
 
 ## Return
 

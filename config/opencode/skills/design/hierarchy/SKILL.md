@@ -1,11 +1,10 @@
 ---
 name: hierarchy
-description: Use with design when building or reviewing visual hierarchy, typography, layout, spacing, grouping, cards, borders, or shadows; makes prominence follow the user's task.
+description: Use with design when building or reviewing visual hierarchy, typography, layout, spacing, grouping, cards, borders, or shadows.
 ---
 
 # Hierarchy
 
-Read `design` first for the attention principle, shared test, floor, and project override.
 This skill owns visual ordering and structure; use `copy`, `color`, or `motion` for those treatments.
 
 ## Order the view
@@ -20,6 +19,7 @@ _A clear order lets people find the task without inspecting every element._
 - Use **size, weight, contrast, and position** to express importance consistently.
   - Start with a small type scale, usually three or four sizes and two or three weights.
   - Align related elements so the reading order matches their relationship.
+- Check the rendered reading order and readability.
 
 ## Group before enclosing
 
@@ -27,6 +27,7 @@ _A clear order lets people find the task without inspecting every element._
   - Keep related items closer than separate groups.
 - Add a **container** only when it explains a boundary or interaction.
   - Prefer spacing or a divider to nesting cards inside cards.
+- Check whether grouping remains clear after removal, including at narrow widths.
 - Declare an edge or elevation **once**: choose a border or a shadow when both do the same job.
   - _Repeated outlines make readers sort the containers before reaching their content._
 - Make **structural markers** carry information.
@@ -42,12 +43,5 @@ Apply the parent's test to these examples of **borrowed importance** or unneeded
   - Keep a metric-led view when the metric genuinely leads the task.
 - **Container accumulation:** nested cards, every item boxed, or a border and shadow defining the same surface.
 - **False order:** `01/02/03` section markers on content with no sequence.
-
-## Procedure
-
-1. Name the focal point and intended reading order in the view's current state.
-2. Apply the parent's test to competing treatments and structural chrome.
-3. Check whether grouping remains clear after removal, including at narrow widths.
-4. Check the rendered order and readability; report unseen states instead of assuming they work.
 
 Credits: [Anthropic frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), [Impeccable](https://impeccable.style/anti-patterns), [Refactoring UI](https://www.refactoringui.com/book) (chapter titles only), and [Linear's calmer interface](https://linear.app/now/behind-the-latest-design-refresh).

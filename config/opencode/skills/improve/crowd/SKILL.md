@@ -1,6 +1,6 @@
 ---
 name: crowd
-description: Use when the user invokes /crowd, or as /improve's solution phase after problems are confirmed. Collab opens a scout/web lane that searches X, the web, and published skills and agent setups for ideas that solve named problems.
+description: Use when the user invokes /crowd, or as /improve's solution phase after problems are confirmed; searches X, the web, and published skills and agent setups.
 ---
 
 # Crowd

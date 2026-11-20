@@ -1,7 +1,6 @@
 # Weeds checklist
 
 Code problems models keep writing across repositories, and how to make each one impossible.
-Reviewers read only the entries for the diff's languages and mark a sighting the diff adds as `weed: <name>`.
 Only a `/weeds` run edits this file; its rules are in `SKILL.md` beside it.
 
 ## Entries

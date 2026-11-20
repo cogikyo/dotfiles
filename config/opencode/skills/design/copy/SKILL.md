@@ -1,11 +1,10 @@
 ---
 name: copy
-description: Use with design when writing, reviewing, or trimming user-facing words on any product surface; covers truthful claims, labels, messages, and word-level clutter.
+description: Use with design when writing, reviewing, or trimming user-facing words on any product surface.
 ---
 
 # Copy
 
-Read `design` first for the attention principle, shared test, floor, and project override.
 Work on **words**; load `hierarchy`, `color`, or `motion` when the approved scope includes visual emphasis.
 
 ## The test
@@ -14,6 +13,8 @@ Work on **words**; load `hierarchy`, `color`, or `motion` when the approved scop
   - Shorten surviving text as far as clarity allows, keeping the parent's floor.
 - Give each string **one job** and say each idea once.
   - _Readers should not have to separate new information from repetition._
+- Prefer a better label, familiar icon, or layout over explanatory text.
+- Use the product's dominant term for each concept.
 
 ## Truth
 
@@ -23,11 +24,6 @@ Work on **words**; load `hierarchy`, `color`, or `motion` when the approved scop
 
 ## Clutter tells
 
-> [!INFO] Filling space
->
-> Words need a **reader need**, even when there is room for them.
-
-_Repeated context makes readers spend time separating new information from what they already know._
 Apply the parent's test to these word-level tells:
 
 - **Repeated context:** text that says what the screen already shows.
@@ -41,6 +37,8 @@ Apply the parent's test to these word-level tells:
 
 ## Surfaces
 
+Include loading, empty, error, disabled, and permission-denied states.
+
 - **Actions:** name the result, such as "Save view" rather than "Submit"; use no trailing period.
 - **Errors:** say what happened and what to do next, without apology, blame, or codes the reader cannot act on.
 - **Confirmations:** use only for destructive or hard-to-undo actions; name the object and consequence.
@@ -50,17 +48,9 @@ Apply the parent's test to these word-level tells:
   - Check optional hints are available to the intended input methods.
 - **Labels:** keep one line and use sentence case unless the product has a convention.
   - Use one term per concept across the product.
+  - Check the render when layout decides whether a label is needed or fits.
 - **Keyboard hints:** show only non-standard shortcuts.
 - **CLI/TUI output and logs:** lead with the result and print only what the reader acts on.
 - **Landing and marketing pages:** give each section one message; use no filler stats or unsourced social proof.
-
-## Procedure
-
-1. Find every user-visible string in scope, including loading, empty, error, disabled, and permission-denied states.
-2. Apply **the test** to each, keeping the parent's floor.
-3. Prefer a better label, familiar icon, or layout over explanatory text.
-   - Keep the accessible name and stay within the approved change scope.
-4. Align terms with the product's dominant term for each concept.
-5. Check the rendered result when layout decides whether a label is needed or fits.
 
 Credits: [Anthropic frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), [Impeccable](https://impeccable.style/anti-patterns), and [NN/g tooltip guidelines](https://www.nngroup.com/articles/tooltip-guidelines/).

@@ -1,11 +1,11 @@
 ---
 name: balance
-description: Use with design whenever a dense view must show all its content and still guide attention, or when the user says "balance" or "balancing stones"; owns the rendered loop across rounds.
+description: Use with design whenever a dense view must show all its content and still guide attention, or when the user says "balance" or "balancing stones".
 ---
 
 # Balancing stones
 
-Read `design` first; `hierarchy` owns the individual levers.
+`hierarchy` owns the individual levers.
 A dense view is balanced when all its content fits, the eye lands where the task starts, and no element pulls so hard that its neighbours disappear.
 The answer depends on the content, so find it on the rendered view instead of planning it in advance.
 

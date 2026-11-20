@@ -1,6 +1,6 @@
 ---
 name: epistemology
-description: Use when the user invokes /epistemology or asks to mine OpenCode sessions for evidence-backed improvements to skills, agent instructions, command wrappers, the global AGENTS.md, ROUTING.md, or a project AGENTS.md. Collab owns it. Returns proposals without applying them.
+description: Use when the user invokes /epistemology or asks to mine OpenCode sessions for evidence-backed improvements to skills, agent instructions, command wrappers, the global AGENTS.md, ROUTING.md, or a project AGENTS.md.
 ---
 
 # Epistemology
@@ -11,6 +11,7 @@ Apply `mechanize` before choosing an owner for a recurring correction in Find.
 
 Collab owns this attended procedure.
 Do not dispatch it.
+Return proposals without applying them in this procedure.
 
 ## Scope
 

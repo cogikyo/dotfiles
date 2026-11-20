@@ -1,6 +1,6 @@
 ---
 name: diagram
-description: Use ONLY for an already-chosen source-derived architecture diagram, boxed relationship, or annotated directory tree in documentation or a justified comment; covers the glyph alphabet, wall and layout rules, and validation with the `diagram` tool, not numbered execution workflows.
+description: Use ONLY for an already-chosen source-derived architecture diagram, boxed relationship, or annotated directory tree in documentation or a justified comment, not workflow fences.
 ---
 
 # Documentation diagram

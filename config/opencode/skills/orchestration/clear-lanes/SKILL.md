@@ -1,6 +1,6 @@
 ---
 name: clear-lanes
-description: Use when the user invokes /clear-lanes or asks to close stale delegate lanes; Collab closes finished named lanes with lanes_close and reports interrupted or stalled one-shots in the current session.
+description: Use when the user invokes /clear-lanes or asks to close stale delegate lanes.
 ---
 
 # Clear lanes

@@ -1,11 +1,11 @@
 ---
 name: prose
-description: Use when writing or editing prose that lands in a file or gets published, such as docs, agent prompts, skills, comments, commit messages, or PR bodies, including when Collab writes directly; owns style, evidence, structure, and editing procedure, with documentation and diagram subskills.
+description: Use when writing or editing prose that lands in a file or gets published, such as docs, agent prompts, skills, comments, commit messages, or PR bodies, including when Collab writes directly.
 ---
 
 # Prose
 
-This skill owns universal prose style and the writing procedure.
+This skill owns universal prose style.
 It does not change the owner's write scope or authority.
 
 ## Compose
@@ -19,23 +19,14 @@ Read the subskills the task needs; they combine freely:
 Attention-friendly presentation keeps a document's necessary explanation and safety context.
 User-facing product text belongs to `copy` (`design/copy/SKILL.md`), under the `design` skills.
 
-## Procedure
-
-Identify the intended reader, their task or question, and the source that supports the answer.
-Inspect relevant code, config, commands, or supplied evidence before making technical claims; neighboring writing can inform vocabulary and voice but cannot override source truth.
-Verify exact names, options, constraints, and examples, and expose missing evidence instead of filling it with expectations.
-
-Choose content and structure for the reader's need, then remove repetition before polishing sentences.
-Lead with the answer or result; readers often read the opening and the summary first, then jump to the parts they need.
-Keep a qualification with the claim it limits, and preserve a causal explanation when removing it would invite a wrong inference.
-Read the result as a new reader: can they understand the claim, make the intended decision, or complete the task without guessing?
-Report source conflicts and unverified claims rather than hiding them with confident wording.
-
 ## Style
 
 Put one sentence on each source line in comments and Markdown prose, unless two very short sentences fit comfortably on one line.
 Keep related sentence lines adjacent so they render as one paragraph; do not manually wrap them or insert a blank line merely because a sentence ended.
 Use blank lines between real Markdown blocks, including paragraphs, headings, lists, callouts, and fences.
+
+Lead with the answer or result; readers often read the opening and the summary first, then jump to the parts they need.
+Keep a qualification with the claim it limits, and preserve a causal explanation when removing it would invite a wrong inference.
 
 Keep each paragraph about one topic, with adjacent sentence lines when it needs development.
 Prefer concise, complete sentences over dense paragraphs or a series of extremely short sentences.

@@ -1,12 +1,10 @@
 ---
 name: docs
-description: Use with prose to write or shorten READMEs, guides, usage notes, repository documentation, agent prompts, and skills; admits task-relevant information and removes cross-section duplication before sentence polishing.
+description: Use with prose to write or shorten READMEs, guides, usage notes, repository documentation, agent prompts, and skills.
 ---
 
 # Repository documentation
 
-Read `prose` for audience and source-fidelity procedure.
-This skill covers repository documentation, agent prompts, and skills read by agents and humans.
 Let the intended reader's task determine the document's scope and sections; there is no mandatory README outline.
 
 ## Admit information
@@ -40,11 +38,7 @@ This rule is a trial; `retro` proposes removing examples where they caused probl
 
 ## Structure and emphasis
 
-Apply `prose`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.
-Do not convert connected prose into bullets only to make it look scannable.
-
-- Use **bold** for a rule's key term so a reader scanning the file lands on it; never bold whole sentences.
-- Use _italics_ for the short human reason so agents and humans can see why the rule matters to the reader.
+Use _italics_ for a short reason only when it covers cases the rule doesn't name.
 
 Use `INFO` callouts for principles or a file's defining rule that the reader must internalize.
 Use `IMPORTANT` for a rule whose omission could cause a wrong decision, unsafe action, or broken result.
@@ -57,17 +51,3 @@ Give peer callouts their own headings, as the virtues in `AGENTS.md` do.
 
 Keep one callout per concept; do not wrap ordinary content or whole sections.
 Do not flatten or remove existing callouts unless the brief asks you to.
-
-## Deletion judgment
-
-If a README introduction says "Run `serve` to start the local server" and its usage block already shows that command, remove the sentence unless it contributes a prerequisite or meaningful result.
-Do not replace it with a shorter slogan.
-
-If both an architecture section and a deployment section explain worker ownership, keep the explanation where readers need to understand ownership.
-Move a deployment-only exception beside the deployment action before deleting the duplicate section.
-
-If a reset guide is an independent entry point, keep "This deletes local data" immediately before its reset command even when a reference page documents the same effect.
-The local warning prevents a mistake; a link alone would not do that job.
-
-Finish with a cold-reader pass against the inspected source and the complete document.
-Check that deletion preserved necessary conditions and qualifications, examples remain valid, and every surviving section earns its space.

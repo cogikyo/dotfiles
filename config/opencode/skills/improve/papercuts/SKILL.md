@@ -1,6 +1,6 @@
 ---
 name: papercuts
-description: Use when the user invokes /papercuts or asks to diagnose failed commands, permission denials, or agent misuse in OpenCode sessions. Collab owns it. Read-only unless the user asks to apply a fix.
+description: Use when the user invokes /papercuts or asks to diagnose failed commands, permission denials, or agent misuse in OpenCode sessions.
 ---
 
 # Papercuts

@@ -1,6 +1,6 @@
 ---
 name: design
-description: Use when building or reviewing product interfaces, visual design, or copy; owns the attention budget, shared deletion test, and routing to copy, hierarchy, balance, color, and motion.
+description: Use when building or reviewing product interfaces, visual design, or copy.
 ---
 
 # Design
@@ -17,7 +17,6 @@ Keep user-named forms and layouts; offer reviewer alternatives as notes, not reb
 > - Every element and every unit of emphasis spends it.
 > - Spend it on what the user needs to understand or do.
 
-_More things to read or notice make the important things harder to find._
 Presence itself signals importance; adding emphasis increases that claim.
 
 ## The test

@@ -1,13 +1,9 @@
 ---
 name: workflow
-description: Use to write workflow fences for proposals with parallel lanes, conditions, joins, or bounded repair, and launches of two or more children; the TUI renders the card and dependency graph.
+description: Use to write workflow fences for proposals with parallel lanes, conditions, joins, or bounded repair, and launches of two or more children.
 ---
 
 # Workflow fence
-
-Follow `COLLAB.md`'s Delegation rule for proposals, launches, and approved waves.
-The approved contract sets authority and routing; this skill defines the declarative fence.
-Use `diagram` for source-derived architecture diagrams and annotated trees.
 
 ## Declare the work
 
@@ -26,7 +22,7 @@ Write the fence in **reply text** before `workflow({ start: true })`; it cannot 
 - **Children:** use `role/scope [lane] provider/model[#variant]` as the owner.
   - Roles are `build`, `review`, `scout`, and `verify`; scope is the agent name after the slash.
   - The optional lane is a kebab-case name for its concern, such as `preset-tests`; omit it for a one-shot child.
-  - Require the model token to match the child's launch; add `why:` only for a departure from `ROUTING.md`'s routes and guidance.
+  - Require the model token to match the child's launch.
 - **Details:** indent each line by two spaces under its step.
   - Use `- text` for what the step does; builder checklists name the files or behavior they change.
   - Use `done: text` only for specific acceptance beside a checklist, never as the only detail line; omit generic verdicts.
@@ -49,6 +45,5 @@ End each workflow at a commit, compaction into the next workflow, a `you` gate, 
 Keep cheap checks inside their owning step, avoid splitting one assignment by file, and check parallel write scopes for overlap.
 A gate marks only Collab's routing, acceptance, or repair-versus-return decision; routine report receipt needs none.
 Name each repair's owner and invalidated evidence in Collab's repair brief, not the card; record its limit through `repair: … max K`.
-Usually resume the same lane with findings as a delta, then repeat the affected checks.
 Tie dependency guarantees to source locations and the exact version in use.
 Denied permission, exhausted repair, and missing approval return a blocker unless an approved permitted route remains.

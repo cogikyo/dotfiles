@@ -1,6 +1,6 @@
 ---
 name: improve
-description: Use when the user invokes /improve or asks for an improvement sweep over recent OpenCode sessions. Collab owns it.
+description: Use when the user invokes /improve or asks for an improvement sweep over recent OpenCode sessions.
 ---
 
 # Improve
@@ -81,7 +81,6 @@ Call `tools.opencode.session_tag` through `execute` with `sessionID`, lowercase 
 
 Load `crowd` for the confirmed problems, then combine local fixes with any crowd ideas into ranked proposals.
 Use epistemology's smallest-owner list, plus `opencode.json` permissions and plugins or tools.
-Prefer editing or deleting over adding, and rank the strongest evidence first.
 Keep papercuts' permission protections and omit secrets from evidence.
 
 ## Apply

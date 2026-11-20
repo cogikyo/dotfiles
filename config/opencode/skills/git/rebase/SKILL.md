@@ -59,7 +59,6 @@ Confirm the final tip is the expected descendant of the approved onto commit.
 Run the approved checks and confirm that no rebase metadata remains.
 
 Do not push, force, mutate remotes, stash, switch branches, or create or remove worktrees.
-Do not start a merge or complete a merge commit.
 Do not create an ordinary unrelated commit.
 Do not reset, clean, disable hooks, change Git configuration, or edit unrelated files.
 Do not chain into another Git workflow.

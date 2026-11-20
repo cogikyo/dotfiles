@@ -1,6 +1,6 @@
 ---
 name: cogikyo
-description: Use when work or decisions touch Cullyn's homelab, home network, Cloudflare zones, NAS, hosts (costello, edge, neumann, abbott, apps, analytics), deploys or LeadPier previews on his apps host, cogictl, kiln, porter, vagariOS, hgmx.dev, cullyn.dev, alrodriguez.studio, cogikyo.com, or his apartment audio and voice project; read the KB and mail deltas to COGIKYO SCRIBE.
+description: Use when work or decisions touch Cullyn's homelab, home network, Cloudflare zones, NAS, hosts (costello, edge, neumann, abbott, apps, analytics), deploys or LeadPier previews on his apps host, cogictl, kiln, porter, vagariOS, hgmx.dev, cullyn.dev, alrodriguez.studio, cogikyo.com, or his apartment audio and voice project.
 ---
 
 # Cogikyo

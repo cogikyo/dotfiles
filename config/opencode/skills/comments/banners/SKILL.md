@@ -1,6 +1,6 @@
 ---
 name: banners
-description: Use with comments for structural code or config banners, subsection labels, and external-document blocks; covers admission, hierarchy, glyph families, and display-cell alignment.
+description: Use with comments for structural code or config banners, subsection labels, and external-document blocks.
 ---
 
 # Banners

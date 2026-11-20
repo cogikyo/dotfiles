@@ -1,6 +1,6 @@
 ---
 name: weeds
-description: Use when the user invokes /weeds or asks to hunt the code problems models keep writing and make them impossible with lints, types, or reshapes. Collab owns it. It learns across repositories through one shared checklist in dotfiles, its only write besides approved fixes, even when the examined repository is dotfiles.
+description: Use when the user invokes /weeds or asks to hunt the code problems models keep writing and make them impossible with lints, types, or reshapes.
 ---
 
 # Weeds
@@ -78,9 +78,6 @@ When those lanes ran more than one model, or the tree has no code lane, the sigh
 
 The current code model is the model on the `build/general` line of `ROUTING.md`.
 When it changes, entries keep their old tags and are judged under the new model by the same rule, so the list turns over with the model.
-
-Every first entry was seen under one model, `claude-opus-5-5`, at lane level, so the tags cannot yet show which problems belong to a model.
-That becomes testable when the builder route changes model.
 
 ## Collect
 
