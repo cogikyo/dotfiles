@@ -26,6 +26,11 @@ export const usageProviders = {
     label: claudeAccounts.cullyn.label,
     staleAfterMS: 10 * 60_000,
   },
+  gemini: {
+    id: "gemini",
+    label: "Gemini",
+    staleAfterMS: 10 * 60_000,
+  },
   xai: {
     id: "xai",
     label: "xAI",
@@ -34,11 +39,6 @@ export const usageProviders = {
   cursor: {
     id: "cursor",
     label: "Cursor",
-    staleAfterMS: 10 * 60_000,
-  },
-  gemini: {
-    id: "gemini",
-    label: "Gemini",
     staleAfterMS: 10 * 60_000,
   },
   opencodeGo: {

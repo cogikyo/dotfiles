@@ -39,9 +39,9 @@ export default Plugin.define({
       anthropicUsage,
       anthropicPersonalUsage,
       anthropicCullynUsage,
+      geminiUsage,
       xaiUsage,
       cursorUsage,
-      geminiUsage,
       opencodeGoUsage(credentials),
     ];
 
