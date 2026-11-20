@@ -25,7 +25,7 @@ export const geminiUsage: ProviderAdapter = {
 async function load(): Promise<ProviderUsage> {
   let proc: Bun.Subprocess<"ignore", "pipe", "ignore">;
   try {
-    proc = Bun.spawn([binary, "--print", "/usage", "--output-format", "json"], {
+    proc = Bun.spawn(["setsid", "--wait", binary, "--print", "/usage", "--output-format", "json"], {
       env: environment(),
       stdin: "ignore",
       stdout: "pipe",

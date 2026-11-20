@@ -3,6 +3,7 @@ import { anthropicCullynUsage, anthropicPersonalUsage, anthropicUsage } from "./
 import { cursorUsage } from "./cursor.ts";
 import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
+import { geminiUsage } from "./gemini.ts";
 import { refresh } from "./poll.ts";
 import { Schema } from "effect";
 import { Definition, Snapshot } from "./rpc.ts";
@@ -38,6 +39,7 @@ export default Plugin.define({
       anthropicUsage,
       anthropicPersonalUsage,
       anthropicCullynUsage,
+      geminiUsage,
       xaiUsage,
       cursorUsage,
       opencodeGoUsage(credentials),
