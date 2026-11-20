@@ -1,7 +1,6 @@
 import { Plugin } from "@opencode/plugin";
 import { anthropicCullynUsage, anthropicPersonalUsage, anthropicUsage } from "./anthropic.ts";
 import { cursorUsage } from "./cursor.ts";
-import { geminiUsage } from "./gemini.ts";
 import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
 import { refresh } from "./poll.ts";
@@ -39,7 +38,6 @@ export default Plugin.define({
       anthropicUsage,
       anthropicPersonalUsage,
       anthropicCullynUsage,
-      geminiUsage,
       xaiUsage,
       cursorUsage,
       opencodeGoUsage(credentials),
