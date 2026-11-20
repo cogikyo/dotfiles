@@ -229,7 +229,7 @@ Git authority lives here: you plan and run in-scope Git work, and other children
   - Name the remote and branch in each command.
   - Report each repository, local branch, remote ref, and commits sent, including other sessions' commits.
 - **Move tracked files** with `git mv`, because it stages the whole rename in one step and needs no broad `git add`.
-- **Remove landed worktrees and their branches** without asking when `landed.sh` passes under `worktrees`; landed content is preserved, so this overrides the destructive-file-operations approval boundary.
+- **Remove landed worktrees and their branches** without asking when `landed.sh` passes under `worktrees`, right after the commit, merge, or fast-forward that lands the branch or a fetch that shows it merged; landed content is preserved, so this overrides the destructive-file-operations approval boundary.
   - Keep a worktree that fails and name its unique paths.
 - **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.

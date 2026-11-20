@@ -188,6 +188,7 @@ If safe continuation or abort is uncertain, stop and report the exact OIDs and c
 - Do not chain into another Git procedure.
 
 Completing an already-started merge is the only integration exception.
+Removing this session's landed worktree and branch under Finish is the only worktree, branch, and chaining exception.
 
 ## Finish
 
@@ -195,6 +196,9 @@ Inspect final status plus staged and unstaged diffs.
 
 - After a commit, verify it with `git show` and record its OID with `git rev-parse`.
 - After a handoff, report the staged paths, exact command, and that no OID exists yet.
+
+When the commit, a merge, or a fast-forward puts a worktree's branch on the main branch, remove that worktree and delete its branch under `worktrees` without asking.
+Scope this to the worktree whose work this session landed; never sweep other worktrees.
 
 Summarize the message, affected paths, hooks or checks, preserved dirty state, and residual risk.
 Report the landed commit list with the story and files per commit.

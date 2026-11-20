@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Usage: landed.sh <worktree> [target-ref]
-# Exit 0: removing the worktree and its branch loses nothing the target lacks.
-# Exit 1: prints each path whose content exists only in the worktree.
+# Usage: landed.sh <worktree> [target-ref] (default: main checkout's branch or its upstream)
+# Exit 0: target contains all non-ignored worktree changes.
+# Exit 1: unlanded paths or nested repositories.
 # Exit 2: refused.
 set -euo pipefail
 export GIT_LITERAL_PATHSPECS=1
@@ -15,16 +15,38 @@ refuse() {
 wt=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is not a worktree"
 main=$(git -C "$wt" worktree list --porcelain | sed -n '1s/^worktree //p')
 [[ $wt != "$main" ]] || refuse "$wt is the main checkout"
-target=${2:-$(git -C "$main" symbolic-ref --quiet --short HEAD)} || refuse "main checkout is detached; pass a target ref"
-git -C "$wt" rev-parse --quiet --verify "$target^{commit}" >/dev/null || refuse "unknown target $target"
-[[ ! -e $wt/.gitmodules ]] || refuse "$wt has submodules"
+if (($# == 2)); then
+  targets=("$2")
+else
+  branch=$(git -C "$main" symbolic-ref --quiet --short HEAD) || refuse "main checkout is detached; pass a target ref"
+  targets=("$branch")
+  if up=$(git -C "$main" rev-parse --abbrev-ref "$branch@{upstream}" 2>/dev/null) &&
+    git -C "$wt" rev-parse --quiet --verify "$up^{commit}" >/dev/null &&
+    [[ $(git -C "$wt" rev-parse "$up^{commit}") != $(git -C "$wt" rev-parse "$branch^{commit}") ]]; then
+    targets+=("$up")
+  fi
+fi
+for target in "${targets[@]}"; do
+  git -C "$wt" rev-parse --quiet --verify "$target^{commit}" >/dev/null || refuse "unknown target $target"
+done
 
 for op in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG; do
   [[ ! -e $(git -C "$wt" rev-parse --path-format=absolute --git-path "$op") ]] || refuse "$op in progress in $wt"
 done
 
+head=$(git -C "$wt" rev-parse --quiet --verify 'HEAD^{commit}') || refuse "$wt has no commits"
+objects=$(git -C "$wt" rev-parse --path-format=absolute --git-path objects)
+index=$(git -C "$wt" rev-parse --path-format=absolute --git-path index)
+
 tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT
+mkdir "$tmp/objects"
+export GIT_INDEX_FILE=$tmp/index GIT_OBJECT_DIRECTORY=$tmp/objects GIT_ALTERNATE_OBJECT_DIRECTORIES=$objects
+if [[ -e $index ]]; then
+  cp -- "$index" "$GIT_INDEX_FILE"
+else
+  git -C "$wt" read-tree "$head"
+fi
 
 # Refuse stderr too: Git can warn and omit unreadable paths without failing.
 list() {
@@ -33,16 +55,12 @@ list() {
   git -C "$wt" "$@" >"$out" 2>"$out.err" && [[ ! -s $out.err ]] || refuse "git $*: $(<"$out.err")"
 }
 
-entry() {
-  if [[ -z $1 ]]; then
-    git -C "$wt" ls-files --format='%(objectmode) %(objectname)' -- "$2"
-  else
-    git -C "$wt" ls-tree --format='%(objectmode) %(objectname)' "$1" -- "$2"
-  fi
-}
-
-# Strip only readlink's final newline; the target can contain newlines.
-link() { readlink -- "$1" | head -c -1 | git -C "$wt" hash-object --stdin; }
+list modes ls-files -z --format='%(objectmode)'
+list tracked ls-tree -r -z --format='%(objectmode)' "$head"
+modules=$(git -C "$wt" rev-parse --path-format=absolute --git-path modules)
+[[ ! -e $wt/.gitmodules && ! -e $modules ]] || refuse "$wt has submodules"
+! grep -qzx 160000 "$tmp/modes" "$tmp/tracked" || refuse "$wt has submodules"
+staged=$(git -C "$wt" write-tree) || refuse "cannot write the index tree of $wt"
 
 # The worktree may live under main, so exclude its subtree.
 overlay() {
@@ -51,76 +69,83 @@ overlay() {
   [[ $real == "$main"/* && $real != "$wt" && $real != "$wt"/* ]]
 }
 
-here() {
-  local path=$wt/$1 oid
-  if [[ -L $path ]]; then
-    oid=$(link "$path") || return 1
-    echo "120000 $oid"
-  elif [[ -d $path ]]; then
-    echo directory
-  elif [[ -e $path ]]; then
-    [[ -f $path && -r $path ]] || return 1
-    oid=$(git -C "$wt" hash-object -- "$1") || return 1
-    if [[ -x $path ]]; then echo "100755 $oid"; else echo "100644 $oid"; fi
-  fi
-}
-
-unique=()
-
-# Accept unchanged branch content when the target has advanced since checkout.
-check() {
-  local code=$1 path=$2 want head index got
-  if [[ $code == '??' && -L $wt/$path ]] && overlay "$wt/$path"; then return 0; fi
-  want=$(entry "$target" "$path")
-  head=$(entry HEAD "$path")
-  index=$(entry "" "$path")
-  [[ $index == "$head" || $index == "$want" ]] || { unique+=("$path (staged)") && return; }
-  if [[ $code == [Ss] && ! -e $wt/$path && ! -L $wt/$path ]]; then
-    got=$index
-  else
-    got=$(here "$path") || refuse "cannot read $wt/$path"
-  fi
-  [[ $got == "$index" || $got == "$want" ]] || unique+=("$path")
-}
-
-kept() {
-  local copy=$main/$1
-  overlay "$copy" && cmp -s -- "$wt/$1" "$copy" || return 1
-  if [[ -x $wt/$1 ]]; then [[ -x $copy ]]; else [[ ! -x $copy ]]; fi
-}
-
-list committed diff -z --name-only --no-renames "$(git -C "$wt" merge-base HEAD "$target")" HEAD
-while IFS= read -r -d '' path; do
-  [[ $(entry HEAD "$path") == "$(entry "$target" "$path")" ]] || unique+=("$path (committed)")
-done <"$tmp/committed"
+nested=()
+: >"$tmp/paths"
+: >"$tmp/flags"
 
 list changed status -z --porcelain=v1 --no-renames --untracked-files=all --ignored=no
 while IFS= read -r -d '' line; do
   path=${line:3}
-  if [[ $path == */ ]]; then unique+=("$path (nested repository)"); else check "${line:0:2}" "$path"; fi
+  if [[ $path == */ ]]; then
+    nested+=("$path (nested repository)")
+  elif [[ ${line:0:2} == '??' && -L $wt/$path ]] && overlay "$wt/$path"; then
+    continue
+  elif [[ ${line:1:1} != ' ' ]]; then
+    printf '%s\0' "$path" >>"$tmp/paths"
+  fi
 done <"$tmp/changed"
 
 list flagged ls-files -z -v
 while IFS= read -r -d '' line; do
-  if [[ ${line:0:1} == [a-zS] ]]; then check "${line:0:1}" "${line:2}"; fi
+  path=${line:2}
+  [[ ${line:0:1} == [a-zS] ]] || continue
+  [[ ${line:0:1} == [Ss] && ! -e $wt/$path && ! -L $wt/$path ]] && continue
+  printf '%s\0' "$path" >>"$tmp/paths"
+  printf '%s\0' "$path" >>"$tmp/flags"
 done <"$tmp/flagged"
 
-list ignored status -z --porcelain=v1 --ignored=traditional --untracked-files=all
-while IFS= read -r -d '' line; do
-  [[ ${line:0:2} == '!!' ]] || continue
-  path=${line:3}
-  if [[ $path == */ ]]; then
-    unique+=("$path (nested repository)")
-  elif [[ -L $wt/$path ]]; then
-    overlay "$wt/$path" || [[ -L $main/$path && $(link "$wt/$path") == "$(link "$main/$path")" ]] ||
-      unique+=("$path (ignored)")
-  else
-    kept "$path" || unique+=("$path (ignored)")
-  fi
-done <"$tmp/ignored"
+list unflag update-index --no-assume-unchanged -z --stdin <"$tmp/flags"
+list unskip update-index --no-skip-worktree -z --stdin <"$tmp/flags"
+list update update-index --add --remove -z --stdin <"$tmp/paths"
+tree=$(git -C "$wt" write-tree) || refuse "cannot write the worktree's tree"
+snapshot() {
+  GIT_AUTHOR_NAME=landed GIT_AUTHOR_EMAIL=landed@localhost GIT_COMMITTER_NAME=landed GIT_COMMITTER_EMAIL=landed@localhost \
+    git -C "$wt" commit-tree --no-gpg-sign -p "$head" -m landed "$1" || refuse "cannot snapshot $wt"
+}
+states=(committed "$head")
+[[ $staged == "$(git -C "$wt" rev-parse "$head^{tree}")" ]] || states+=(staged "$(snapshot "$staged")")
+[[ $tree == "$staged" ]] || states+=(uncommitted "$(snapshot "$tree")")
 
-if ((${#unique[@]})); then
+check() {
+  local target=$1 label=$2 commit=$3 status=0 result path
+  git -C "$wt" merge-tree --write-tree -z --name-only --no-messages "$target" "$commit" >"$tmp/merge" 2>"$tmp/merge.err" || status=$?
+  ((status <= 1)) || refuse "git merge-tree $target: $(<"$tmp/merge.err")"
+  { IFS= read -r -d '' result && mapfile -d '' -t conflicts; } <"$tmp/merge"
+  ((status == 0)) && [[ $result == "$(git -C "$wt" rev-parse "$target^{tree}")" ]] && return
+  while IFS= read -r -d '' path; do
+    [[ -n $path && -z ${seen[$path]-} ]] || continue
+    seen[$path]=1
+    missing+=("$path ($label)")
+  done < <(
+    git -C "$wt" diff-tree -r -z --name-only --no-renames "$target" "$result"
+    printf '%s\0' "${conflicts[@]}"
+  )
+  return 1
+}
+
+passed=
+unique=()
+declare -A seen
+for target in "${targets[@]}"; do
+  missing=()
+  seen=()
+  pass=1
+  for ((i = 0; i < ${#states[@]}; i += 2)); do
+    check "$target" "${states[i]}" "${states[i + 1]}" || pass=
+  done
+  if [[ -n $pass ]]; then
+    passed=$target
+    unique=()
+    break
+  fi
+  if [[ $target == "${targets[0]}" ]] || ((${#missing[@]} < ${#unique[@]})); then
+    unique=("${missing[@]}")
+  fi
+done
+unique=("${nested[@]}" "${unique[@]}")
+
+if [[ -z $passed ]] || ((${#unique[@]})); then
   printf 'unique: %s\n' "${unique[@]}"
   exit 1
 fi
-echo "landed: $wt holds nothing $target lacks"
+echo "landed: $wt holds nothing $passed lacks"

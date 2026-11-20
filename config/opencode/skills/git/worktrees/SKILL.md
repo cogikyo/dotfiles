@@ -87,18 +87,20 @@ For creation, include the starting ref; distinguish a Git checkout that exists f
 
 Remove only a worktree whose work started and whose task finished; a fresh worktree passes the check below trivially.
 Never remove one another open session is working in or whose task has not finished.
-Run `./landed.sh <worktree> [target-ref]` from this skill directory; the target defaults to the branch checked out in the main checkout.
-Exit 0 prints `landed: …` when all committed and uncommitted changes match the target, plus any ignored directories removal would lose; report those directories before removal.
+Fetch the remote first when the repository has one.
+Run `./landed.sh <worktree> [target-ref]` from this skill directory; the target defaults to the main checkout's branch, and the check also passes when that branch's upstream contains the work.
+Exit 0 prints `landed: …` when all committed and uncommitted changes match the target or that upstream; ignored files do not count.
 On exit 0, remove without asking: use `git worktree remove --force -- <path>` when dirty and `git worktree remove -- <path>` otherwise, then delete its branch under Named branch lifecycle.
 On exit 1, keep the worktree and report each `unique: <path>`; removal needs the user's yes for that named path.
-On exit 2, keep it and report the refusal: the path is the main checkout, a Git operation is in progress, or the main checkout is detached with no target supplied.
+On exit 2, keep it and report the printed refusal.
+Before removing a worktree the current session lives in, move the session to the main checkout with `tools.opencode.session_move` inside `execute`.
 Use Git's worktree operations rather than deleting a live worktree directory by hand.
 
 ## Named branch lifecycle
 
 Create a branch only with its approved name and starting OID, using `git branch -- <name> <base-OID>`; this does not switch the current checkout.
 For deletion, verify the named branch's tip and confirm it is not attached to any worktree or owned by another task.
-After `landed.sh` passes and the worktree is removed, delete its branch without asking with `git branch -d -- <name>`; use `git branch -D -- <name>` only if Git refuses because the content landed by squash or copied files rather than merge.
+After `landed.sh` passes and the worktree is removed, delete its branch without asking with `git branch -d -- <name>`; use `git branch -D -- <name>` if `git branch -d` refuses.
 For other branch deletion, require approval and prove the tip is reachable from the approved retained ref; use `git branch -d -- <name>` and stop if Git refuses.
 Do not rename branches, switch existing checkouts, or prune or repair worktree metadata under this workflow.
 After each mutation, inspect branch refs, worktree list, and status and report what changed and what remains preserved.
