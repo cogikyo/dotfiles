@@ -1,13 +1,11 @@
 package session
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +69,8 @@ func WatchPower(done <-chan struct{}, s *state.State, lock *Lock) {
 
 var glavaRCs = []string{"bars_rc.glsl", "bars_r_rc.glsl", "radial_rc.glsl"}
 
+const glavaFeed = "glava-feed"
+
 var glavaMu sync.Mutex
 
 // SyncGLava starts or stops the desktop visualizers to match the display profile, share mode, and lock.
@@ -82,7 +82,7 @@ func SyncGLava(s *state.State, locked bool) {
 		return
 	}
 	want := s.Profile().GLava && !s.GetScreenShare() && !(locked && unplugged())
-	source := sync.OnceValue(glavaSource)
+	feed := sync.OnceValue(hasGLavaFeed)
 	glavaMu.Lock()
 	defer glavaMu.Unlock()
 	for _, rc := range glavaRCs {
@@ -91,8 +91,9 @@ func SyncGLava(s *state.State, locked bool) {
 		switch {
 		case want && !running && !locked:
 			cmd := exec.Command("glava", "-e", rc)
-			if src := source(); src != "" {
-				cmd.Args = append(cmd.Args, "-r", fmt.Sprintf("setsource %q", src))
+			// PipeWire can silently route GLava to the default mic if the named source is missing.
+			if feed() {
+				cmd.Args = append(cmd.Args, "-r", fmt.Sprintf("setsource %q", glavaFeed))
 			}
 			if err := detach.Start(cmd); err != nil {
 				fmt.Fprintf(os.Stderr, "hyprd glava: start %q: %v\n", strings.Join(cmd.Args, " "), err)
@@ -103,67 +104,16 @@ func SyncGLava(s *state.State, locked bool) {
 	}
 }
 
-func glavaSource() string {
-	source, err := snapclientMonitor()
+func hasGLavaFeed() bool {
+	out, err := exec.Command("pactl", "list", "short", "sources").Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd glava: source: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hyprd glava: sources: %v\n", err)
+		return false
 	}
-	return source
-}
-
-type pactlSink struct {
-	Index      int               `json:"index"`
-	Name       string            `json:"name"`
-	Monitor    string            `json:"monitor_source"`
-	Properties map[string]string `json:"properties"`
-}
-
-type pactlSinkInput struct {
-	Sink       int               `json:"sink"`
-	Properties map[string]string `json:"properties"`
-}
-
-// snapclientMonitor selects audio after Snapserver's playback buffer.
-// GLava's auto source reads the Snapcast default sink before that buffer.
-func snapclientMonitor() (string, error) {
-	out, err := exec.Command("pactl", "get-default-sink").Output()
-	if err != nil {
-		return "", fmt.Errorf("default sink: %w", err)
+	for line := range strings.Lines(string(out)) {
+		if f := strings.Fields(line); len(f) > 1 && f[1] == glavaFeed {
+			return true
+		}
 	}
-	var sinks []pactlSink
-	if err := pactlList("sinks", &sinks); err != nil {
-		return "", err
-	}
-	def := strings.TrimSpace(string(out))
-	if !slices.ContainsFunc(sinks, func(sink pactlSink) bool {
-		return sink.Name == def && sink.Properties["application.name"] == "Snapcast"
-	}) {
-		return "", nil
-	}
-	var inputs []pactlSinkInput
-	if err := pactlList("sink-inputs", &inputs); err != nil {
-		return "", err
-	}
-	i := slices.IndexFunc(inputs, func(input pactlSinkInput) bool {
-		return input.Properties["application.name"] == "Snapclient"
-	})
-	if i < 0 {
-		return "", nil
-	}
-	j := slices.IndexFunc(sinks, func(sink pactlSink) bool { return sink.Index == inputs[i].Sink })
-	if j < 0 {
-		return "", fmt.Errorf("snapclient sink %d not listed", inputs[i].Sink)
-	}
-	return sinks[j].Monitor, nil
-}
-
-func pactlList(kind string, v any) error {
-	out, err := exec.Command("pactl", "-f", "json", "list", kind).Output()
-	if err != nil {
-		return fmt.Errorf("list %s: %w", kind, err)
-	}
-	if err := json.Unmarshal(out, v); err != nil {
-		return fmt.Errorf("list %s: %w", kind, err)
-	}
-	return nil
+	return false
 }

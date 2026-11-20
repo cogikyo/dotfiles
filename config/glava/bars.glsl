@@ -6,7 +6,7 @@
 #define BAR_OUTLINE_WIDTH 0
 
 /* Appearance */
-#define AMPLIFY 356
+#define AMPLIFY 231
 #define USE_ALPHA 0
 #define GRADIENT_POWER 69
 #define GRADIENT (d / GRADIENT_POWER + 0.69)

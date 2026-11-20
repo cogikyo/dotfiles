@@ -8,7 +8,7 @@
 #define BAR_OUTLINE_WIDTH 0
 
 /* Appearance */
-#define AMPLIFY 180
+#define AMPLIFY 117
 #define COLOR (#6380ec * ((d / 180) + 0.69))
 #define ROTATE (PI/1.75)
 #define INVERT 0

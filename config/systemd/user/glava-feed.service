@@ -1,0 +1,15 @@
+[Unit]
+Description=GLava feed: the default sink before volume, delayed to the speakers
+After=pipewire.service
+BindsTo=pipewire.service
+ConditionHost=costello
+
+[Service]
+# The TV's Snapcast HDMI output lagged snapcast.monitor by 381.0 ms on 2026-11-19.
+# Re-measure if the Snapcast buffer changes.
+ExecStart=/usr/bin/pw-loopback -n glava-feed -d 0.381 -i "{ stream.capture.sink = true }" -o '{ media.class = Audio/Source node.name = glava-feed node.description = "GLava feed" }'
+Restart=on-failure
+Slice=session.slice
+
+[Install]
+WantedBy=pipewire.service

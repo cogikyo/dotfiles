@@ -29,7 +29,7 @@ out vec4 fragment;
 
 #define BAR_WIDTH 2.0
 #define BAR_GAP 2.0
-#define AMPLIFY 1.5
+#define AMPLIFY 0.975
 #define EDGE_START 0.15
 #define EDGE_END 0.25
 #define EDGE_POWER 2.2

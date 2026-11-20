@@ -6,4 +6,4 @@
 #define INVERT 1
 
 #undef AMPLIFY
-#define AMPLIFY 200
+#define AMPLIFY 130
