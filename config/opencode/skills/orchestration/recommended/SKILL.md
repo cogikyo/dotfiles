@@ -1,12 +1,11 @@
 ---
 name: recommended
-description: Use when the user invokes /recommended, or before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated; Collab queues independent questions, then writes the full restatement and recommendations as final text above the form.
+description: Use when the user invokes /recommended, or before asking for an approval that bundles several decisions or follows compaction, repair rounds, or a scope shift the user hasn't seen restated.
 ---
 
 # Recommended
 
 Give the user common knowledge of what Collab is deciding and why, so they can steer before more work lands.
-The user reads the full restatement above a short form in the same turn.
 A focus argument narrows Findings and Open to that topic; Thesis still covers the whole session.
 
 ## Rebuild
@@ -15,7 +14,6 @@ Rebuild the thesis from the user's own words, not lane conclusions or earlier re
 Read earlier user words as needed to establish the original ask and approvals still in force.
 Check every approval Collab is acting on against what the user actually said.
 Re-check waiting items with their recorded commands.
-Answer any question or "why" the user left pending before restating anything.
 If nothing changed since the last restatement, say so and briefly restate Thesis and Open only.
 
 In the first turn after root compaction, **restate from the checkpoint and `workflow` status** without waiting for verification, drawing the thesis from **User words**.
@@ -57,10 +55,6 @@ Omit a new card when nothing but the user's decisions is pending.
 Close the restatement with `## TL;DR`: the thesis and top recommendation in one sentence fitting one row.
 When something is open, say the questions follow.
 
-**Own the mechanism.**
-Inside approved work, implementation choices belong to Collab and go under Decided.
-Leave under Open only the user's workflow and preferences, scope, anything that replaces or discards their work, approval boundaries, and the repository's ask-first items.
-
 **Write for a reader returning cold.**
 Replace lane names, round and step numbers, file names, and internal labels with what they do, or define each on first use.
 
@@ -72,18 +66,12 @@ When one decision matters only under one answer to another, keep the first under
 ## Ask
 
 Call `question` once with every remaining open decision, most important first.
-The call queues the form and returns at once.
-Then write the full restatement and TL;DR as the turn's final text and end the turn.
-The form opens below that reply, and answers arrive as the next message.
 On a reply to the form, apply any steering first and drop the open decisions it settled.
-Restate any steering, including a typed custom answer, in a short paragraph before acting.
 
-Keep each question short and clear, _because the restatement stays visible above the form_.
-Put explanations in the final reply, after the turn's last tool call.
-Put the recommended option first, and let each option's description say what happens next.
+Let each option's description say what happens next.
 More than four open decisions usually means Collab is asking what it should decide.
 
 Answers approve only the steps they name; an unanswered decision stays open and its step waits.
-If the user closes the form without answering, keep the decisions open as listed in the restatement and their steps waiting; do not ask again.
+If the user closes the form without answering, keep its decisions open and their steps waiting.
 When nothing is open, skip the call and continue with the stated decisions inside approved work.
 While drive is on under COLLAB.md's Boundaries, load `drive` first and follow its **Driven runs** rules: decide open in-scope items, record them under Decided, skip routine approval, and continue in the same turn.
