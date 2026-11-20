@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { Agent } from "./acp.ts";
-import { environment } from "./agy.ts";
-import { decide, type Call, type Verdict } from "./policy.ts";
+import { environment, ownerEnv, profile } from "./agy.ts";
+import type { Call } from "./calls.ts";
+import type { Owner } from "./gate.ts";
 
 export type Update = {
   sessionUpdate: string;
@@ -27,14 +27,24 @@ export type Usage = {
 
 export type Result = { stopReason: string; usage?: Usage };
 
+export function add(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
+  if (!a || !b) return a ?? b;
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cachedReadTokens: (a.cachedReadTokens ?? 0) + (b.cachedReadTokens ?? 0),
+    thoughtTokens: (a.thoughtTokens ?? 0) + (b.thoughtTokens ?? 0),
+  };
+}
+
 export type Sink = {
   update: (update: Update) => void;
-  permission: (call: Call & Update, verdict: Verdict) => void;
+  permission: (call: Call & Update) => Promise<boolean>;
 };
 
 export type Start = {
   command: string;
-  directory: string;
+  owner: Owner;
   resume?: string;
 };
 
@@ -51,7 +61,6 @@ export function failure(code: "invalid_request" | "insufficient_quota", message:
 }
 
 const paid = /^Google AI (Plus|Pro|Ultra)\b/;
-const profile = join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "opencode", "gemini");
 const settings = join(profile, "antigravity-cli", "settings.json");
 const strict = `${JSON.stringify({ toolPermission: "strict" })}\n`;
 const hooks = join(profile, "config", "hooks.json");
@@ -66,15 +75,22 @@ export class Session {
   private config: Option[] = [];
   private reply: Promise<unknown> = Promise.resolve();
   private timer: Timer | undefined;
+  private asks = 0;
   private stalled: ((error: Error) => void) | undefined;
 
   private constructor(
     private readonly start: Start,
     private readonly sink: Sink,
   ) {
-    const env = { ...environment(), GIT_OPTIONAL_LOCKS: "0", GIT_PAGER: "cat", PAGER: "cat" };
+    const env = {
+      ...environment(),
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_PAGER: "cat",
+      PAGER: "cat",
+      [ownerEnv]: JSON.stringify(start.owner),
+    };
     const command = [start.command, "acp", "--sandbox", "--gemini-dir", profile];
-    this.agent = new Agent(command, start.directory, env, {
+    this.agent = new Agent(command, start.owner.directory, env, {
       notify: (method, params) => {
         if (method !== "session/update") return;
         this.touch();
@@ -90,10 +106,10 @@ export class Session {
 
   static async open(start: Start, sink: Sink) {
     const bun = Bun.which("bun");
-    if (!bun) throw failure("invalid_request", "bun was not found on PATH; the Gemini read-only hook needs it");
-    const unsafe = customizations(start.directory);
+    if (!bun) throw failure("invalid_request", "bun was not found on PATH; the Gemini tool hook needs it");
+    const unsafe = customizations(start.owner.directory);
     if (unsafe)
-      throw failure("invalid_request", `${unsafe} can run code outside the read-only policy; remove it first`);
+      throw failure("invalid_request", `${unsafe} can run code outside OpenCode's permission checks; remove it first`);
     const hook = { type: "command", command: `'${bun}' '${join(import.meta.dir, "hook.ts")}'`, timeout: 10 };
     await enforce(settings, strict);
     await enforce(hooks, `${JSON.stringify({ opencode: { PreToolUse: [{ matcher: "*", hooks: [hook] }] } })}\n`);
@@ -147,7 +163,7 @@ export class Session {
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
       clientInfo: { name: "opencode", version: "0" },
     });
-    const base = { cwd: this.start.directory, mcpServers: [] };
+    const base = { cwd: this.start.owner.directory, mcpServers: [] };
     let opened: Opened | undefined;
     if (this.start.resume) {
       opened = await this.agent
@@ -187,17 +203,25 @@ export class Session {
     this.config = result?.configOptions ?? this.config;
   }
 
-  private answer(params: { toolCall: Call & Update; options?: { optionId: string; kind: string }[] }) {
-    const verdict = decide(params.toolCall, this.start.directory);
-    this.sink.permission(params.toolCall, verdict);
-    const wanted = verdict.outcome === "allow" ? "allow_once" : "reject_once";
-    const option = verdict.outcome === "cancel" ? undefined : params.options?.find((item) => item.kind === wanted);
+  private async answer(params: { toolCall: Call & Update; options?: { optionId: string; kind: string }[] }) {
+    this.asks++;
+    clearTimeout(this.timer);
+    let allowed = false;
+    try {
+      allowed = await this.sink.permission(params.toolCall);
+    } finally {
+      this.asks--;
+      this.touch();
+    }
+    const wanted = allowed ? "allow_once" : "reject_once";
+    const option = params.options?.find((item) => item.kind === wanted);
     return { outcome: option ? { outcome: "selected", optionId: option.optionId } : { outcome: "cancelled" } };
   }
 
   private touch() {
     if (!this.stalled) return;
     clearTimeout(this.timer);
+    if (this.asks > 0) return;
     const stalled = this.stalled;
     this.timer = setTimeout(
       () => stalled(new Error(`Gemini agent sent no update for ${stall / 60_000} minutes`)),
@@ -208,8 +232,10 @@ export class Session {
 
 function customizations(directory: string) {
   for (let dir = directory; ; dir = dirname(dir)) {
-    const found = ["hooks.json", "mcp_config.json", "plugins.json", "plugins"]
-      .map((name) => join(dir, ".agents", name))
+    const found = [".agents", ".agent", "_agents", "_agent"]
+      .flatMap((root) =>
+        ["hooks.json", "mcp_config.json", "plugins.json", "plugins"].map((name) => join(dir, root, name)),
+      )
       .find((file) => existsSync(file));
     if (found) return found;
     if (existsSync(join(dir, ".git")) || dirname(dir) === dir) return undefined;

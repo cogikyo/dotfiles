@@ -8,13 +8,16 @@ import type {
   LanguageModelV3StreamResult,
   LanguageModelV3Usage,
 } from "@ai-sdk/provider";
+import type { Plugin } from "@opencode/plugin";
+import { Gate, type Owner } from "./gate.ts";
 import { plan } from "./history.ts";
-import { failure, Session, type Result, type Usage } from "./session.ts";
+import { add, failure, Session, type Result, type Usage } from "./session.ts";
 import { Transcript } from "./transcript.ts";
 
 export type Setup = {
   command: string;
-  locate: (owner: string | undefined) => Promise<string>;
+  permission: Plugin.Context["permission"];
+  locate: (owner: string | undefined, agent: string | undefined) => Promise<Owner>;
   seen: Map<string, number>;
 };
 
@@ -24,6 +27,8 @@ const stops: Record<string, LanguageModelV3FinishReason["unified"]> = {
   max_turn_requests: "length",
   cancelled: "other",
 };
+
+const followups = 2;
 
 export class Gemini implements LanguageModelV3 {
   readonly specificationVersion = "v3";
@@ -39,8 +44,9 @@ export class Gemini implements LanguageModelV3 {
     const owner = options.headers?.["x-opencode-session-id"];
     const effort = options.providerOptions?.gemini?.effort;
     const conversation = plan(options.prompt, owner);
-    const directory = await this.setup.locate(owner);
+    const located = await this.setup.locate(owner, options.headers?.["x-opencode-agent"]);
     let session: Session | undefined;
+    let gate: Gate | undefined;
     let cancelled = false;
     const stream = new ReadableStream<LanguageModelV3StreamPart>({
       start: async (controller) => {
@@ -49,32 +55,46 @@ export class Gemini implements LanguageModelV3 {
         };
         emit({ type: "stream-start", warnings: [] });
         const transcript = new Transcript(emit);
+        const judge = new Gate(this.setup.permission, located, transcript);
+        gate = judge;
         try {
           const known = conversation.known;
           const resume = known && (this.setup.seen.get(known.session) ?? 0) <= known.users ? known.session : undefined;
-          session = await Session.open({ command: this.setup.command, directory, resume }, transcript);
+          session = await Session.open(
+            { command: this.setup.command, owner: located, resume },
+            {
+              update: (update) => transcript.update(update),
+              permission: (call) => judge.judge(call),
+            },
+          );
           transcript.meta = conversation.meta(session.id);
+          judge.message = session.id;
           await session.configure(this.modelId, typeof effort === "string" ? effort : undefined);
           if (cancelled) return session.kill();
-          const result = await session.prompt(session.resumed ? conversation.next : conversation.full);
+          const first = await session.prompt(session.resumed ? conversation.next : conversation.full);
           if (transcript.meta) this.setup.seen.set(session.id, transcript.meta.users);
+          const result = await follow(session, judge, transcript, first);
           if (cancelled) return;
           await session.close();
           transcript.end();
-          this.check(result, transcript, session.tier);
+          if (!judge.declined) this.check(result, transcript, session.tier);
           emit({
             type: "finish",
-            finishReason: { unified: stops[result.stopReason] ?? "other", raw: result.stopReason },
+            finishReason: judge.declined
+              ? { unified: "stop", raw: "declined" }
+              : { unified: stops[result.stopReason] ?? "other", raw: result.stopReason },
             usage: usage(result.usage),
           });
           controller.close();
         } catch (error) {
+          await judge.stop();
           session?.kill();
           if (!cancelled) controller.error(error);
         }
       },
       cancel: async () => {
         cancelled = true;
+        await gate?.stop();
         await session?.cancel();
       },
     });
@@ -116,6 +136,24 @@ export class Gemini implements LanguageModelV3 {
       "invalid_request",
       `Gemini agent ended its turn on ${this.modelId} without a reply (stop reason "${result.stopReason}", ${transcript.calls} tool calls)`,
     );
+  }
+}
+
+async function follow(session: Session, gate: Gate, transcript: Transcript, first: Result): Promise<Result> {
+  let result = first;
+  for (let left = followups; ; left--) {
+    const refused = gate.take();
+    if (refused.length === 0 || gate.declined || gate.stopped) return result;
+    if (left === 0) {
+      transcript.say(
+        `OpenCode ended this turn after ${followups} follow-ups because the Gemini agent kept making tool calls it refused. The last refusals:\n${refused.join("\n")}`,
+      );
+      return result;
+    }
+    const next = await session.prompt(
+      `OpenCode refused these tool calls, so they did not run:\n${refused.join("\n")}\nContinue the task within these limits.`,
+    );
+    result = { ...next, usage: add(result.usage, next.usage) };
   }
 }
 

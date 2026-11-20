@@ -75,7 +75,7 @@ export class Agent {
       handlers.notify(message.method, message.params);
       return;
     }
-    this.reply(message, handlers);
+    void this.reply(message, handlers);
   }
 
   private async watch(name: string | undefined, handlers: Handlers) {
@@ -90,9 +90,9 @@ export class Agent {
     this.log = `${this.log}${line}\n`.slice(-4000);
   }
 
-  private reply(message: Message, handlers: Handlers) {
+  private async reply(message: Message, handlers: Handlers) {
     try {
-      this.send({ id: message.id, result: handlers.request(message.method!, message.params) });
+      this.send({ id: message.id, result: await handlers.request(message.method!, message.params) });
     } catch (error) {
       this.send({ id: message.id, error: { code: -32601, message: String(error) } });
     }

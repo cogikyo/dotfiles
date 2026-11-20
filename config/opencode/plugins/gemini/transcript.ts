@@ -1,11 +1,10 @@
 import type { LanguageModelV3StreamPart } from "@ai-sdk/provider";
 import type { Meta } from "./history.ts";
-import type { Call, Verdict } from "./policy.ts";
-import type { Sink, Update } from "./session.ts";
+import type { Update } from "./session.ts";
 
 type Block = { kind: "text" | "reasoning"; id: string };
 
-export class Transcript implements Sink {
+export class Transcript {
   meta: Meta | undefined;
   text = "";
   calls = 0;
@@ -13,7 +12,6 @@ export class Transcript implements Sink {
   private open: Block | undefined;
   private blocks = 0;
   private readonly tools = new Map<string, { name: string; settled: boolean }>();
-  private readonly refused: string[] = [];
 
   constructor(private readonly emit: (part: LanguageModelV3StreamPart) => void) {}
 
@@ -32,21 +30,12 @@ export class Transcript implements Sink {
       this.settle(update.toolCallId, result(update), update.status === "failed");
   }
 
-  permission(call: Call & Update, verdict: Verdict) {
-    if (verdict.outcome === "allow") return;
-    this.call(call);
-    const what = call.title ?? call.kind ?? "a tool call";
-    this.settle(call.toolCallId, `Refused by the read-only policy: ${verdict.reason}`, true);
-    this.refused.push(`- ${what}: ${verdict.reason}`);
+  say(text: string) {
+    this.chunk("text", { text });
   }
 
   end() {
     for (const [id, tool] of this.tools) if (!tool.settled) this.settle(id, "The agent reported no result", true);
-    if (this.refused.length)
-      this.chunk("text", {
-        type: "text",
-        text: `\n\nThe read-only policy refused ${this.refused.length === 1 ? "this request" : "these requests"}:\n${this.refused.join("\n")}\n`,
-      });
     this.close();
   }
 
@@ -71,7 +60,7 @@ export class Transcript implements Sink {
     this.open = undefined;
   }
 
-  private call(update: Update & { toolCallId?: string }) {
+  call(update: Update & { toolCallId?: string }) {
     const id = update.toolCallId!;
     if (this.tools.has(id)) return;
     const name = update.name ?? update.kind ?? "tool";
@@ -88,7 +77,7 @@ export class Transcript implements Sink {
     });
   }
 
-  private settle(id: string, value: string, error: boolean) {
+  settle(id: string, value: string, error: boolean) {
     const tool = this.tools.get(id);
     if (!tool || tool.settled) return;
     tool.settled = true;

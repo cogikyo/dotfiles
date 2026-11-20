@@ -2,63 +2,23 @@ import { Plugin } from "@opencode/plugin/effect";
 import type { Permission } from "@opencode/schema/permission";
 import { Tool } from "@opencode/schema/tool";
 import { Effect } from "effect";
-import { statSync } from "node:fs";
-import { appendFile, mkdir, realpath } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { commitRejection } from "./commit.ts";
-import { relocated } from "./dirs.ts";
 import { check, fetchPublic, type Request } from "./fetch.ts";
-import { confine, expand, home, scratch, secrets } from "./paths.ts";
-import { credential, inspect, readOnly } from "./policy.ts";
-import { enter } from "./shell.ts";
+import { scratch } from "./paths.ts";
+import { readOnly } from "./policy.ts";
+import { review, text } from "./review.ts";
 
-const cage = path.join(home, ".local/bin/cage");
 const ttl = 24 * 60 * 60 * 1000;
 const pushes = new Map<string, { reason: string; time: number }>();
 const fetches = new Set<string>();
 const runs = path.join(scratch, "runs.jsonl");
-const allowed = [
-  "shell",
-  "read",
-  "grep",
-  "glob",
-  "webfetch",
-  "websearch",
-  "skill",
-  "opencode_sessions",
-  "x",
-  "diagram",
-  "workflow",
-  "subagent",
-  "execute",
-];
-const files: Record<string, { key: string; recursive: boolean; required: boolean }> = {
-  read: { key: "path", recursive: false, required: true },
-  grep: { key: "path", recursive: true, required: false },
-  glob: { key: "path", recursive: true, required: false },
-  diagram: { key: "file", recursive: false, required: true },
-};
 
 type Assert = (
   input: Pick<Permission.Request, "sessionID" | "action" | "resources" | "save" | "metadata" | "source"> & {
     agent?: Tool.Context["agent"];
   },
 ) => Effect.Effect<void, Tool.Error>;
-
-function text(input: unknown, key: string) {
-  if (typeof input !== "object" || input === null) return undefined;
-  const value = (input as Record<string, unknown>)[key];
-  return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-function quote(word: string) {
-  return `'${word.replaceAll("'", `'\\''`)}'`;
-}
-
-function caged(command: string, dir: string) {
-  const hides = secrets().flatMap((secret) => ["--hide", quote(secret)]);
-  return [quote(cage), ...hides, quote(dir), "--", "bash", "-c", quote(command)].join(" ");
-}
 
 function record(run: Record<string, unknown>) {
   return Effect.tryPromise({
@@ -72,11 +32,6 @@ function record(run: Record<string, unknown>) {
 
 function prune(now: number) {
   for (const [key, held] of pushes) if (now - held.time > ttl) pushes.delete(key);
-}
-
-function broad(root: string) {
-  const prefix = root.endsWith("/") ? root : `${root}/`;
-  return root === home || secrets().some((secret) => secret === root || secret.startsWith(prefix));
 }
 
 function describe(event: { agent: string; tools: Record<string, { description: string }> }) {
@@ -105,12 +60,6 @@ export default Plugin.define({
           Effect.map((session) => session.location.directory as string),
           Effect.orDie,
         );
-
-      const resolve = (sessionID: Parameters<typeof directory>[0], target: string | undefined) => {
-        const expanded = expand(target ?? ".");
-        if (path.isAbsolute(expanded)) return Effect.succeed(path.normalize(expanded));
-        return directory(sessionID).pipe(Effect.map((base) => path.resolve(base, expanded)));
-      };
 
       const assert = (ctx.permission as unknown as { assert?: Assert }).assert;
 
@@ -141,30 +90,6 @@ export default Plugin.define({
           return { output: result, content: result.output, metadata: { contentType: result.contentType } };
         });
 
-      const confined = (event: { tool: string; sessionID: Parameters<typeof directory>[0]; input: unknown }) =>
-        Effect.gen(function* () {
-          const file = files[event.tool];
-          const input = event.input as Record<string, unknown>;
-          if (typeof input !== "object" || input === null) return;
-          const raw = input[file.key];
-          const sentinel = event.tool === "glob" && (raw === "undefined" || raw === "null");
-          const target = typeof raw === "string" && !sentinel ? raw : undefined;
-          if (target === undefined && file.required) return;
-          const base = yield* directory(event.sessionID);
-          input[file.key] = yield* Effect.tryPromise({
-            try: () => confine(target ?? ".", base, file.recursive),
-            catch: (error) => {
-              const code = (error as NodeJS.ErrnoException).code;
-              const missing = code === "ENOENT" || code === "ENOTDIR";
-              return new Tool.Error({
-                message: missing
-                  ? `${event.tool} cannot use ${target ?? base}: no such file or directory`
-                  : `${event.tool} cannot use ${target ?? base}: ${(error as Error).message}; read-only agents can read it only through the sandboxed shell, if at all`,
-              });
-            },
-          });
-        });
-
       yield* ctx.tool.transform((editor) => {
         editor.update("webfetch", (tool) => {
           const execute = tool.execute;
@@ -181,26 +106,19 @@ export default Plugin.define({
 
       yield* ctx.tool.hook("execute.before", (event) =>
         Effect.gen(function* () {
-          const stray = relocated(event.tool, event.input);
-          if (stray) return yield* new Tool.Error({ message: stray });
+          const base = yield* directory(event.sessionID);
+          const result = yield* Effect.promise(() =>
+            review({
+              tool: event.tool,
+              input: event.input,
+              agent: event.agent,
+              directory: base,
+              session: event.sessionID,
+            }),
+          );
+          if ("problem" in result) return yield* new Tool.Error({ message: result.problem });
+          if (result.input) Object.assign(event.input as Record<string, unknown>, result.input);
           const restricted = readOnly(event.agent);
-          if (restricted && !allowed.includes(event.tool)) {
-            return yield* new Tool.Error({
-              message: `read-only agents cannot call \`${event.tool}\`; they may call only ${allowed.map((name) => `\`${name}\``).join(", ")}`,
-            });
-          }
-          if (restricted && event.tool in files) return yield* confined(event);
-          if (!restricted && (event.tool === "read" || event.tool === "grep")) {
-            const target = text(event.input, "path");
-            if (target) {
-              const lexical = yield* resolve(event.sessionID, target);
-              const real = yield* Effect.tryPromise(() => realpath(lexical)).pipe(
-                Effect.catch(() => Effect.succeed(undefined)),
-              );
-              const reason = credential(lexical) ?? (real === undefined ? undefined : credential(real));
-              if (reason) return yield* new Tool.Error({ message: `${event.tool} cannot use ${target}: ${reason}` });
-            }
-          }
           if (restricted && event.tool === "x") {
             const session = yield* ctx.session.get({ sessionID: event.sessionID }).pipe(Effect.orDie);
             return yield* record({
@@ -215,56 +133,16 @@ export default Plugin.define({
               requested: text(event.input, "brief"),
             });
           }
-          if (event.tool === "grep" || event.tool === "glob") {
-            const root = yield* resolve(event.sessionID, text(event.input, "path"));
-            if (!broad(root)) return;
-            return yield* new Tool.Error({
-              message: `${event.tool} from ${root} would search the home directory or a secret store; use a narrower path`,
-            });
-          }
-          if (event.tool !== "shell") return;
-          const requested = text(event.input, "command");
-          if (!requested) return;
-          const base = yield* resolve(event.sessionID, text(event.input, "workdir"));
-          const { source: command, dir: cwd } = enter(requested, base);
-          if (command !== requested) {
-            if (!statSync(cwd, { throwIfNoEntry: false })?.isDirectory()) {
-              return yield* new Tool.Error({ message: `cd: ${cwd} is not a directory` });
-            }
-            Object.assign(event.input as Record<string, unknown>, { command, workdir: cwd });
-          }
-          const known: Record<string, string> = restricted
-            ? { OPENCODE_SCRATCH: path.join(scratch, event.sessionID) }
-            : {};
-          const review = inspect(command, event.agent, cwd, known);
-          const { problems } = review;
-          if (!restricted && review.commits.includes(undefined)) {
-            problems.push("the guard can't tell which repo this commit runs in; set `workdir` to the repo");
-          } else if (!restricted) {
-            for (const dir of new Set(review.commits)) {
-              const rejection = yield* Effect.promise(() => commitRejection(command, dir ?? cwd));
-              if (!rejection) continue;
-              problems.push(rejection);
-              break;
-            }
-          }
-          if (problems.length === 1) return yield* new Tool.Error({ message: problems[0] });
-          if (problems.length > 1) {
-            const list = problems.map((problem) => `- ${problem.replaceAll("\n", "\n  ")}`).join("\n");
-            return yield* new Tool.Error({
-              message: `the guard rejected this command for ${problems.length} reasons:\n${list}`,
-            });
-          }
+          if (event.tool !== "shell" || !text(event.input, "command")) return;
           if (!restricted) {
             const now = Date.now();
             prune(now);
-            if (review.push) {
-              pushes.set(`${event.sessionID} ${event.messageID} ${event.id}`, { reason: review.push, time: now });
+            if (result.push) {
+              pushes.set(`${event.sessionID} ${event.messageID} ${event.id}`, { reason: result.push, time: now });
             }
             return;
           }
-          const dir = path.join(scratch, event.sessionID);
-          (event.input as Record<string, unknown>).command = caged(command, dir);
+          if (!result.cage) return;
           const session = yield* ctx.session.get({ sessionID: event.sessionID }).pipe(Effect.orDie);
           yield* record({
             time: new Date().toISOString(),
@@ -275,9 +153,9 @@ export default Plugin.define({
             sessionID: event.sessionID,
             parentID: session.parentID,
             agent: event.agent,
-            workdir: cwd,
-            scratch: dir,
-            requested: command,
+            workdir: result.cage.workdir,
+            scratch: result.cage.scratch,
+            requested: result.cage.command,
           });
         }),
       );
