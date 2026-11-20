@@ -1,7 +1,7 @@
 import { readOnly } from "../guard/policy.ts";
 import { ownerEnv } from "./agy.ts";
-import { plan, refusal } from "./calls.ts";
-import { check, mark, type Owner } from "./gate.ts";
+import { check, mark, plan, refusal } from "./calls.ts";
+import type { Owner } from "./gate.ts";
 
 const input = JSON.parse(await Bun.stdin.text());
 const owner: Partial<Owner> = JSON.parse(process.env[ownerEnv] || "{}");

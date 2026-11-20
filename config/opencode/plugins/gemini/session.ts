@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Agent } from "./acp.ts";
 import { environment, ownerEnv, profile } from "./agy.ts";
+import { Bridge, type Tools } from "./bridge.ts";
 import type { Call } from "./calls.ts";
 import type { Owner } from "./gate.ts";
 
@@ -40,6 +41,7 @@ export function add(a: Usage | undefined, b: Usage | undefined): Usage | undefin
 export type Sink = {
   update: (update: Update) => void;
   permission: (call: Call & Update) => Promise<boolean>;
+  tools: Tools;
 };
 
 export type Start = {
@@ -110,12 +112,16 @@ export class Session {
     const unsafe = customizations(start.owner.directory);
     if (unsafe)
       throw failure("invalid_request", `${unsafe} can run code outside OpenCode's permission checks; remove it first`);
-    const hook = { type: "command", command: `'${bun}' '${join(import.meta.dir, "hook.ts")}'`, timeout: 10 };
+    const hook = {
+      type: "command",
+      command: `'${bun}' --config=/dev/null --no-env-file '${join(import.meta.dir, "hook.ts")}'`,
+      timeout: 10,
+    };
     await enforce(settings, strict);
     await enforce(hooks, `${JSON.stringify({ opencode: { PreToolUse: [{ matcher: "*", hooks: [hook] }] } })}\n`);
     const session = new Session(start, sink);
     try {
-      await session.handshake();
+      await session.handshake(bun);
     } catch (error) {
       session.agent.kill();
       throw error;
@@ -157,13 +163,18 @@ export class Session {
     this.agent.kill();
   }
 
-  private async handshake() {
+  private async handshake(bun: string) {
     await this.agent.request("initialize", {
       protocolVersion: 1,
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
       clientInfo: { name: "opencode", version: "0" },
     });
-    const base = { cwd: this.start.owner.directory, mcpServers: [] };
+    const bridge = await Bridge.open(bun, {
+      list: () => this.sink.tools.list(),
+      call: (name, input) => this.hold(() => this.sink.tools.call(name, input)),
+    });
+    void this.agent.exited.then(() => bridge.close());
+    const base = { cwd: this.start.owner.directory, mcpServers: [bridge.spec] };
     let opened: Opened | undefined;
     if (this.start.resume) {
       opened = await this.agent
@@ -204,18 +215,21 @@ export class Session {
   }
 
   private async answer(params: { toolCall: Call & Update; options?: { optionId: string; kind: string }[] }) {
+    const allowed = await this.hold(() => this.sink.permission(params.toolCall));
+    const wanted = allowed ? "allow_once" : "reject_once";
+    const option = params.options?.find((item) => item.kind === wanted);
+    return { outcome: option ? { outcome: "selected", optionId: option.optionId } : { outcome: "cancelled" } };
+  }
+
+  private async hold<T>(work: () => Promise<T>) {
     this.asks++;
     clearTimeout(this.timer);
-    let allowed = false;
     try {
-      allowed = await this.sink.permission(params.toolCall);
+      return await work();
     } finally {
       this.asks--;
       this.touch();
     }
-    const wanted = allowed ? "allow_once" : "reject_once";
-    const option = params.options?.find((item) => item.kind === wanted);
-    return { outcome: option ? { outcome: "selected", optionId: option.optionId } : { outcome: "cancelled" } };
   }
 
   private touch() {

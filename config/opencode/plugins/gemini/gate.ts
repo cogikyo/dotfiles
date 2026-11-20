@@ -1,10 +1,11 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import type { Plugin } from "@opencode/plugin";
-import { review } from "../guard/review.ts";
-import { cages } from "./agy.ts";
-import { needs, plan, sandbox, type Call, type Plan } from "./calls.ts";
+import { Agent, type Plugin } from "@opencode/plugin";
+import { Session } from "@opencode/schema/session";
+import type { SessionMessage } from "@opencode/schema/session-message";
+import { CallID } from "@opencode/schema/tool";
+import type { Called } from "./bridge.ts";
+import { bridged, check, needs, plan, wrapped, type Call } from "./calls.ts";
 import type { Update } from "./session.ts";
+import { called, decode, failed, listed, type Tool } from "./tools.ts";
 import type { Transcript } from "./transcript.ts";
 
 export type Owner = { session: string | undefined; agent: string | undefined; directory: string };
@@ -21,11 +22,15 @@ export class Gate {
   message = "";
   private refused: string[] = [];
   private readonly pending = new Set<string>();
+  private readonly approved: { id: string; tool: string; input: Record<string, unknown> }[] = [];
+  private readonly abort = new AbortController();
+  private tools: Promise<Map<string, Tool>> | undefined;
 
   constructor(
     private readonly permission: Permission,
     private readonly owner: Owner,
     private readonly transcript: Transcript,
+    private readonly catalog: () => Promise<Map<string, Tool>>,
   ) {}
 
   async judge(call: Call & Update): Promise<boolean> {
@@ -35,6 +40,11 @@ export class Gate {
     if (!session) return this.refuse(call, "this request has no OpenCode session to judge tool calls against");
     const steps = plan(call, this.owner.directory);
     if ("refuse" in steps) return this.refuse(call, steps.refuse);
+    const tool = bridged(call.name);
+    if (tool) {
+      this.approved.push({ id: call.toolCallId, tool, input: steps.input });
+      return true;
+    }
     const checked = await check(steps, { ...this.owner, session });
     if ("refuse" in checked) return this.refuse(call, checked.refuse);
     if (checked.cage && !(await wrapped(call.toolCallId, checked.cage)))
@@ -62,7 +72,7 @@ export class Gate {
         Promise.resolve(),
       );
     } catch (error) {
-      if (tag(error) === "Permission.DeclinedError") {
+      if (declines(error)) {
         this.declined = true;
         return this.decline(call);
       }
@@ -74,6 +84,44 @@ export class Gate {
     return true;
   }
 
+  async list() {
+    return [...(await this.available()).values()].flatMap((tool) => listed(tool) ?? []);
+  }
+
+  async call(name: string, input: Record<string, unknown>): Promise<Called> {
+    const call = this.claim(name, input);
+    if (!call) return failed(`OpenCode approved no pending \`${name}\` call`);
+    if (this.declined || this.stopped) return this.fail(call.id, declined);
+    const tool = (await this.available()).get(name);
+    const { session, agent } = this.owner;
+    if (!tool || !session || !agent) return this.fail(call.id, `\`${name}\` is not available to this agent`);
+    const checked = await check({ tool: name, input }, { ...this.owner, session });
+    if ("refuse" in checked) return this.fail(call.id, checked.refuse);
+    const decoded = await decode(tool, checked.input);
+    if ("problem" in decoded) return this.fail(call.id, decoded.problem);
+    this.pending.add(call.id);
+    try {
+      const context = {
+        sessionID: Session.ID.make(session),
+        agent: Agent.ID.make(agent),
+        messageID: this.message as SessionMessage.ID,
+        id: CallID.make(call.id),
+        signal: this.abort.signal,
+        progress: async () => {},
+      };
+      const result = called(await tool.execute(decoded.value, context));
+      const shown = result.content.map((item) => (item.type === "text" ? item.text : `[${item.mimeType} image]`));
+      this.transcript.settle(call.id, shown.join("\n"), false);
+      return result;
+    } catch (error) {
+      if (!declines(error)) return this.fail(call.id, error instanceof Error ? error.message : String(error));
+      this.declined = true;
+      return this.fail(call.id, declined);
+    } finally {
+      this.pending.delete(call.id);
+    }
+  }
+
   take() {
     const refused = this.refused;
     this.refused = [];
@@ -82,6 +130,7 @@ export class Gate {
 
   async stop() {
     this.stopped = true;
+    this.abort.abort();
     const session = this.owner.session;
     if (!session || this.pending.size === 0) return;
     const requests = await this.permission.list({ sessionID: session }).catch(() => []);
@@ -102,39 +151,29 @@ export class Gate {
     this.transcript.settle(call.toolCallId, declined, true);
     return false;
   }
+
+  private fail(id: string, reason: string) {
+    this.transcript.settle(id, reason, true);
+    return failed(reason);
+  }
+
+  private available() {
+    this.tools ??= this.catalog();
+    return this.tools;
+  }
+
+  private claim(tool: string, input: Record<string, unknown>) {
+    const same = this.approved.filter((call) => call.tool === tool);
+    const exact = same.find((call) =>
+      Object.entries(input).every(([key, value]) => JSON.stringify(value) === JSON.stringify(call.input[key])),
+    );
+    const call = exact ?? same[0];
+    if (call) this.approved.splice(this.approved.indexOf(call), 1);
+    return call;
+  }
 }
 
-export async function check(
-  steps: Exclude<Plan, { refuse: string }>,
-  owner: Owner & { session: string },
-): Promise<{ refuse: string } | { input: Record<string, unknown>; push?: string; cage?: ReturnType<typeof sandbox> }> {
-  if (!steps.tool) return { input: steps.input };
-  const result = await review({
-    tool: steps.tool,
-    input: steps.input,
-    agent: owner.agent,
-    directory: owner.directory,
-    session: owner.session,
-  }).catch((error: unknown) => ({ problem: `the guard could not check this call: ${String(error)}` }));
-  if ("problem" in result) return { refuse: result.problem };
-  if (!result.cage) return { input: { ...steps.input, ...result.input }, push: result.push };
-  const { command, workdir } = result.cage;
-  return { input: { command, workdir }, cage: sandbox(String(result.input?.command), workdir) };
-}
-
-export async function mark(id: string, cage: Record<string, unknown>) {
-  await mkdir(cages, { recursive: true });
-  await writeFile(join(cages, id), JSON.stringify(cage));
-}
-
-async function wrapped(id: string, cage: Record<string, unknown>) {
-  if (!/^[\w-]+$/.test(id)) return false;
-  const file = join(cages, id);
-  const marked = await readFile(file, "utf8").catch(() => undefined);
-  await rm(file, { force: true });
-  return marked === JSON.stringify(cage);
-}
-
-function tag(error: unknown) {
-  return typeof error === "object" && error !== null ? Reflect.get(error, "_tag") : undefined;
+function declines(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  return Reflect.get(error, "_tag") === "Permission.DeclinedError" || declines(Reflect.get(error, "error"));
 }

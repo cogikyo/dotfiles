@@ -12,12 +12,14 @@ import type { Plugin } from "@opencode/plugin";
 import { Gate, type Owner } from "./gate.ts";
 import { plan } from "./history.ts";
 import { add, failure, Session, type Result, type Usage } from "./session.ts";
+import type { Tool } from "./tools.ts";
 import { Transcript } from "./transcript.ts";
 
 export type Setup = {
   command: string;
   permission: Plugin.Context["permission"];
   locate: (owner: string | undefined, agent: string | undefined) => Promise<Owner>;
+  catalog: (owner: Owner) => Promise<Map<string, Tool>>;
   seen: Map<string, number>;
 };
 
@@ -55,7 +57,7 @@ export class Gemini implements LanguageModelV3 {
         };
         emit({ type: "stream-start", warnings: [] });
         const transcript = new Transcript(emit);
-        const judge = new Gate(this.setup.permission, located, transcript);
+        const judge = new Gate(this.setup.permission, located, transcript, () => this.setup.catalog(located));
         gate = judge;
         try {
           const known = conversation.known;
@@ -65,6 +67,7 @@ export class Gemini implements LanguageModelV3 {
             {
               update: (update) => transcript.update(update),
               permission: (call) => judge.judge(call),
+              tools: { list: () => judge.list(), call: (name, input) => judge.call(name, input) },
             },
           );
           transcript.meta = conversation.meta(session.id);

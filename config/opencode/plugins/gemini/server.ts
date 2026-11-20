@@ -2,6 +2,7 @@ import { Plugin, Provider } from "@opencode/plugin";
 import { binary } from "./agy.ts";
 import { holds, type Owner } from "./gate.ts";
 import { Gemini } from "./model.ts";
+import { catalog } from "./tools.ts";
 
 const id = Provider.ID.make("gemini");
 
@@ -38,7 +39,14 @@ export default Plugin.define({
       (event) => {
         const command = typeof event.options.command === "string" ? event.options.command : binary;
         event.sdk = {
-          languageModel: (model: string) => new Gemini(model, { command, permission: ctx.permission, locate, seen }),
+          languageModel: (model: string) =>
+            new Gemini(model, {
+              command,
+              permission: ctx.permission,
+              locate,
+              catalog: (owner) => catalog(ctx, owner),
+              seen,
+            }),
         };
       },
       { providerID: id },

@@ -1,7 +1,11 @@
 import { existsSync, statSync } from "node:fs";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { within } from "../guard/paths.ts";
+import { review } from "../guard/review.ts";
 import { launches, literalPath, opaque, redirection, streamed, unseen, type Launch } from "../guard/shell.ts";
+import { cages } from "./agy.ts";
+import type { Owner } from "./gate.ts";
 
 export type Call = {
   toolCallId: string;
@@ -25,11 +29,17 @@ const tools: Record<string, (input: Record<string, unknown>, directory: string) 
   command_status: (input) => ({ input }),
 };
 
+const prefix = "mcp_opencode_";
+
+export function bridged(name: unknown) {
+  return typeof name === "string" && name.startsWith(prefix) ? name.slice(prefix.length) : undefined;
+}
+
 export function refusal(name: unknown) {
-  if (typeof name === "string" && name in tools) return undefined;
+  if (typeof name === "string" && (name in tools || bridged(name))) return undefined;
   return `\`${String(name)}\` is not available in this OpenCode session; use ${Object.keys(tools)
     .map((tool) => `\`${tool}\``)
-    .join(", ")}`;
+    .join(", ")} or a \`${prefix}*\` tool`;
 }
 
 export function plan(call: Call, directory: string): Plan {
@@ -38,6 +48,7 @@ export function plan(call: Call, directory: string): Plan {
   const reason = refusal(call.name);
   if (reason) return { refuse: reason };
   const input = object(call.rawInput) ? call.rawInput : {};
+  if (bridged(call.name)) return { input };
   return tools[call.name!](input, directory);
 }
 
@@ -50,6 +61,37 @@ export function needs(tool: string | undefined, input: Record<string, unknown>, 
 
 export function sandbox(line: string, workdir: string) {
   return { CommandLine: line, Cwd: workdir, BypassSandbox: true };
+}
+
+export async function check(
+  steps: Exclude<Plan, { refuse: string }>,
+  owner: Owner & { session: string },
+): Promise<{ refuse: string } | { input: Record<string, unknown>; push?: string; cage?: ReturnType<typeof sandbox> }> {
+  if (!steps.tool) return { input: steps.input };
+  const result = await review({
+    tool: steps.tool,
+    input: steps.input,
+    agent: owner.agent,
+    directory: owner.directory,
+    session: owner.session,
+  }).catch((error: unknown) => ({ problem: `the guard could not check this call: ${String(error)}` }));
+  if ("problem" in result) return { refuse: result.problem };
+  if (!result.cage) return { input: { ...steps.input, ...result.input }, push: result.push };
+  const { command, workdir } = result.cage;
+  return { input: { command, workdir }, cage: sandbox(String(result.input?.command), workdir) };
+}
+
+export async function mark(id: string, cage: Record<string, unknown>) {
+  await mkdir(cages, { recursive: true });
+  await writeFile(path.join(cages, id), JSON.stringify(cage));
+}
+
+export async function wrapped(id: string, cage: Record<string, unknown>) {
+  if (!/^[\w-]+$/.test(id)) return false;
+  const marker = path.join(cages, id);
+  const marked = await readFile(marker, "utf8").catch(() => undefined);
+  await rm(marker, { force: true });
+  return marked === JSON.stringify(cage);
 }
 
 function file(tool: "read" | "write" | "edit", input: Record<string, unknown>, directory: string): Plan {
