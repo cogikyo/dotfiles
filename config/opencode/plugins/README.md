@@ -118,7 +118,7 @@ After host updates, recheck wrapped forms publishing a location so the popup app
 
 `compact/server.ts` exposes `compact` with no input, queuing compaction after the current turn.
 After a successful root `workflow end` at or above 250K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
-The tool result ends with a line telling the agent to end the turn without starting new work; after compaction, `recommended` proposes what comes next.
+The tool result tells the agent to end the turn without starting new work.
 Root sessions receive soft nudges at 250K and 300K tokens and a strong "finish up now" nudge at 325K.
 Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
 With a running workflow, soft nudges say to keep going if the remaining steps fit before 350K.
@@ -131,10 +131,17 @@ In a driven run, commit finished work and queue compaction without asking.
 At 350K tokens, the plugin forces root-session compaction at a step boundary, even mid-task.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
-Every root compaction stores a fixed recovery summary without a model call: “Compaction finished. This session is `<id>`. Load the `recommended` skill and follow it.”
+Every root compaction stores a script-built checkpoint with no model call or kept tail.
 This applies to `compact`, workflow end, the user's `/compact`, and the ceiling.
-The [`recommended` skill](../skills/orchestration/recommended/SKILL.md) owns state recovery.
+Its first line names the session ID and directs Collab to the [`recommended` skill](../skills/orchestration/recommended/SKILL.md), which owns recovery.
 Child sessions keep model summaries and delegate-scope instructions.
+
+The checkpoint uses the latest successfully ended workflow as its boundary, or session start if none has ended.
+It records stored workflow status, open lanes and a count of closed lanes, live `git status --short --branch` and `git worktree list`, and the last reply.
+It quotes user messages and question-form answers since the boundary verbatim, newest first, and puts older user words in a separate section.
+The renderer trims history toward a 64,000-character budget, roughly 16K tokens.
+History cuts show `[omitted: …]` with a message ID range or `[clipped: …]` inside a message.
+Failed sections show `Unavailable: <reason>`.
 
 After root compaction, the plugin waits for a successful idle session and queues a wake-up follow-up.
 The follow-up is suppressed by user input, including queued input, an assistant reply after compaction, a superseding compaction, or a failure or non-shutdown interruption between the compaction request and idle.

@@ -4,8 +4,12 @@ import { Event } from "@opencode/schema/event";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { TokenUsage } from "@opencode/schema/token-usage";
 import { Effect, Fiber, Schema } from "effect";
+import { located } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
+import { Ends, recovery, render } from "./checkpoint.ts";
+import { history } from "./history.ts";
 import { ceiling, due, type Level, levels } from "./limits.ts";
+import * as live from "./live.ts";
 
 const floor = 250_000;
 
@@ -22,16 +26,10 @@ const SUMMARY = [
 const CHILD =
   "- This is a delegate child session. Keep its brief's objective, write scope, exclusions, rules, and acceptance checks, as updated by later prompts.";
 
-function recovery(sessionID: string) {
-  return `Compaction finished. This session is \`${sessionID}\`. Load the \`recommended\` skill and follow it.`;
-}
-
 const WAKE = "Compaction finished while the session was idle; follow the recovery line in the checkpoint summary.";
 
 const STOP =
   "Compaction is queued and runs when this turn ends; end the turn now without starting new work. After compaction, `recommended` proposes what comes next.";
-
-const Ends = Schema.Struct({ end: Schema.Literal(true) });
 
 const description =
   "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 250K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.";
@@ -106,6 +104,7 @@ export default Plugin.define({
         return fallback;
       });
 
+    const file = located(ctx.app.channel);
     const tokens = new Map<string, number>();
     const primaries = new Map<string, Promise<boolean>>();
     const compacting = new Set<string>();
@@ -156,6 +155,23 @@ export default Plugin.define({
       );
     };
 
+    const section = <T>(what: string, work: () => Promise<T>): Promise<T | string> =>
+      live.within(5000, work()).catch((error: unknown) => {
+        fail(`checkpoint ${what}`, error);
+        return `Unavailable: ${explain(error)}`;
+      });
+
+    const checkpoint = async (sessionID: string) => {
+      const at = Date.now();
+      const [entries, flow, lanes, git] = await Promise.all([
+        section("history", async () => history(sessionID, file)),
+        section("workflow", () => live.tracked(ctx, sessionID)),
+        section("lanes", () => live.lanes(ctx, sessionID)),
+        section("git", async () => live.git((await ctx.session.get({ sessionID })).location.directory)),
+      ]);
+      return render({ sessionID, at, workflow: flow, lanes, git, history: entries });
+    };
+
     const size = async (sessionID: string) => {
       const known = tokens.get(sessionID);
       if (known !== undefined) return known;
@@ -191,7 +207,11 @@ export default Plugin.define({
     await ctx.session.hook("compaction", async (event) => {
       const root = await guard("compaction session lookup", primary(event.sessionID));
       if (root) {
-        event.result = { summary: recovery(event.sessionID), metadata: { keepID: null } };
+        const summary = await checkpoint(event.sessionID).catch((error: unknown) => {
+          fail("checkpoint", error);
+          return `${recovery(event.sessionID)}\n\nThe checkpoint could not be built: ${explain(error)}`;
+        });
+        event.result = { summary, metadata: { keepID: null } };
         return;
       }
       event.system.push({ type: "text", text: root === false ? `${SUMMARY}\n${CHILD}` : SUMMARY });

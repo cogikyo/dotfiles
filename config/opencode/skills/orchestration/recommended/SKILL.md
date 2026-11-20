@@ -12,15 +12,25 @@ A focus argument narrows Findings and Open to that topic; Thesis still covers th
 ## Rebuild
 
 Rebuild the thesis from the user's own words, not lane conclusions or earlier restatements.
-After compaction, call `workflow` for stored status, then always send one `scout/session` leaf over session history, bounded to the session ID in the compaction summary.
-Give the leaf that status and ask it to find the newest finished workflow in session history, then recover work since that boundary; if none exists, read from the session's start.
 Read earlier user words as needed to establish the original ask and approvals still in force.
-The leaf reports the user's asks and decisions, open questions, waiting items with check commands, and uncommitted work with owners.
-Rebuild the thesis from that report and use stored workflow status for step state.
 Check every approval Collab is acting on against what the user actually said.
 Re-check waiting items with their recorded commands.
 Answer any question or "why" the user left pending before restating anything.
-If nothing changed, say so and briefly restate Thesis and Open only.
+If nothing changed since the last restatement, say so and briefly restate Thesis and Open only.
+
+In the first turn after root compaction, **restate from the checkpoint and `workflow` status** without waiting for verification, drawing the thesis from **User words**.
+Before replying, launch one background `scout/session` leaf to verify the checkpoint.
+Bound the leaf to the session ID in the recovery line, give it the checkpoint's **Boundary**, and ask it to report only discrepancies and additions:
+
+- Check **Last reply** and **Workflow** completion claims against records.
+  - Verify that mail was sent, commits landed, and checks ran as claimed.
+- Find decisions or approvals from before the boundary that still bind.
+- Read the messages identified by `[omitted: …]` and `[clipped: …]` markers when they could change the work.
+
+Until the leaf reports, you may read, answer, restate, and ask.
+**Wait for the report** before writing, launching any other lane, committing, or pushing, even in a driven run.
+If the launch is refused, the leaf ends without a report, or `lanes` still shows it running about 15 minutes after launch, run the three checks yourself with `sessions` and Git and use that evidence in place of the report to lift the gate.
+After verification, correct the restatement if the findings change it; otherwise continue silently.
 
 ## Restate
 
