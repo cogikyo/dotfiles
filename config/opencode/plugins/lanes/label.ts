@@ -56,6 +56,9 @@ const families: [RegExp, string][] = [
   [/luna/, "luna"],
   [/astra/, "astra"],
   [/fable/, "fable"],
+  [/neon/, "neon"],
+  [/carbon/, "carbon"],
+  [/hydrogen/, "hydrogen"],
   [/grok/, "grok"],
   [/deepseek-v4.*-flash/, "v4 Flash"],
 ];
