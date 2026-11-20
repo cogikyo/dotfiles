@@ -214,12 +214,12 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 ## Gemini
 
 `gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP under the lane's assigned OpenCode agent rules.
-It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Google AI subscription, and `bun` on PATH for its hook.
+It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Google AI subscription, and `bun` on PATH for its hook and bridge shim.
 `opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
 The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini) says when to use them.
-Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCode's system prompt or tools.
+Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCode's system prompt, bridging allowed OpenCode tools over MCP.
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
-A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt is open.
+A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
 `usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
 
 The agent's settings live in `${XDG_STATE_HOME:-~/.local/state}/opencode/gemini/`, passed as `--gemini-dir`; the user's own `~/.gemini` is left alone.
@@ -229,8 +229,8 @@ It refuses to start when the session folder, or a parent up to the repository ro
 
 A `model.request` hook in `gemini/server.ts` passes the lane's agent in `x-opencode-agent`, and `gemini/session.ts` passes owner metadata to the hook in `OPENCODE_GEMINI_OWNER`.
 `gemini/calls.ts` translates `read_file`, `write_file`, `edit_file`, `run_command`, and `command_status` into OpenCode tool inputs and the permission checks native tools make.
-It refuses sub-agents, interaction requests, `search_web`, `send_command_input`, unknown tools, and any `BypassSandbox` set by the model.
-`gemini/gate.ts` first runs [guard's](#guard) shared `guard/review.ts`, then builds checks from the input guard approved, including rewritten working directories and resolved symlink targets.
+Both `gemini/hook.ts` and `gemini/calls.ts` admit only those five tools and bridged `mcp_opencode_*` names; sub-agents, interaction requests, `search_web`, `send_command_input`, other MCP servers, unknown tools, and any `BypassSandbox` set by the model are refused.
+For native tools, `gemini/gate.ts` first runs [guard's](#guard) shared `guard/review.ts`, then builds checks from the input guard approved, including rewritten working directories and resolved symlink targets.
 Each check goes through `ctx.permission.assert`, applying the lane agent's rules, session overrides, saved "always" rules, and `permission.evaluate` hooks (including guard's and Gemini's git-push ask holds); `ask` rules show a native prompt.
 
 Refused calls are answered `reject_once`, and after `agy` ends its turn, `gemini/model.ts` sends the refusal reasons back as a follow-up prompt.
@@ -239,6 +239,22 @@ A plain user decline ends the stream as declined without a follow-up.
 For read-only agents, `agy`'s own sandbox blocks the system calls [cage](../../../cmds/cmd/cage/README.md) needs, so `gemini/hook.ts` rewrites `run_command` into guard's caged form with `BypassSandbox: true` and writes a marker under `cages/<toolCallId>` in the profile directory.
 `gemini/gate.ts` refuses a caged call without a matching marker, and a hook crash or 10-second timeout blocks the tool.
 
+Each turn passes one stdio MCP server, `opencode`, in ACP `session/new` and `session/resume`.
+`gemini/bridge.ts` listens on a per-turn Unix socket under `bridge/` in the profile directory and requires a random token on the first line; `gemini/shim.ts` relays stdio to it.
+The socket closes when `agy` exits, and the next turn removes sockets whose owning process is dead.
+`gemini/tools.ts` lists registered tools that the lane's agent and session rules do not wholly deny, exposed to the model as `mcp_opencode_<tool>` and marked to load directly.
+It leaves out tools `agy` already has natively (`shell`, `read`, `write`, `edit`, `patch`), interactive and delegation tools (`question`, `subagent`, `terminal`, `mail`, `lanes`, `lanes_compact`, `lanes_close`, `opencode_session_create`, `drive_off`, `compact`), and `x`.
+`x` stays out because guard records its runs in execute hooks, which a direct call skips.
+`gemini/schema.ts` reduces each tool's input schema to the subset Gemini's function declarations accept and drops any tool it cannot reduce, because one rejected declaration fails the whole turn.
+
+When `agy` calls a bridged tool, `gemini/gate.ts` matches the approved permission request, runs guard's review on the raw input, decodes it with the tool's schema, and runs the tool as the lane's session and agent.
+Text output is capped at 2,000 lines or 50 KiB, with a note to narrow the query.
+Code Mode `execute` is not bridged because a plugin cannot run a Code Mode program, so Gemini lanes call each tool directly.
+Both `gemini/shim.ts` and `gemini/hook.ts` start Bun with `--config=/dev/null --no-env-file`, so a repository's `bunfig.toml` cannot preload code.
+
+The host caches each provider's SDK and language models for the server's lifetime, keyed on provider, package, and variant settings (`core/src/aisdk.ts`).
+Gemini plugin edits therefore reach only variants not yet used since the server started; already-used variants need an OpenCode restart.
+
 Known gaps:
 
 - Shell permission text comes from guard's parser and drops quoting.
@@ -246,6 +262,11 @@ Known gaps:
 - A symlink retargeted between approval and file open is not caught.
 - Gemini edits appear as Gemini tool rows without a diff, and OpenCode's formatter does not run on them.
 - `ls` inside cage shows hidden file names, the same as native read-only agents.
+- `agy`'s profile stores each turn's MCP config, including its token, and bridged results.
+  - That profile is not in guard's hide list.
+- Bridged approval matching falls back to the first queued call of the same name.
+- Bridged images are not resized.
+- MCP cancel notifications are ignored.
 
 ## Guard
 
