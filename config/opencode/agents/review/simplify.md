@@ -92,5 +92,3 @@ Stable, scan-friendly files and directories can exceed these numbers.
 - If nothing warrants changing, say so.
   - State material coverage limits once.
 - A no-change verdict is not general approval to ship.
-
-Reduction guidance informed by [Ponytail](https://github.com/DietrichGebert/ponytail) by Dietrich Gebert (MIT), expressed here for this review contract.
