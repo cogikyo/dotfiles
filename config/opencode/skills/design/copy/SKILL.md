@@ -52,5 +52,3 @@ Include loading, empty, error, disabled, and permission-denied states.
 - **Keyboard hints:** show only non-standard shortcuts.
 - **CLI/TUI output and logs:** lead with the result and print only what the reader acts on.
 - **Landing and marketing pages:** give each section one message; use no filler stats or unsourced social proof.
-
-Credits: [Anthropic frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), [Impeccable](https://impeccable.style/anti-patterns), and [NN/g tooltip guidelines](https://www.nngroup.com/articles/tooltip-guidelines/).

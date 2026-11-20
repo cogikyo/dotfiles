@@ -39,5 +39,3 @@ Apply the parent's test to these examples of **movement without change**:
 - **Static activity:** pulsing dots on unchanged status or blinking cursors on non-editable text.
 - **Routine spectacle:** bouncing controls, floating badges, or hover movement repeated across every card.
   - Keep static status still; use an activity indicator only for real ongoing work.
-
-Credits: [Emil Kowalski](https://emilkowal.ski/ui/you-dont-need-animations), [Anthropic frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), and [Impeccable](https://impeccable.style/anti-patterns).

@@ -36,5 +36,3 @@ Apply the parent's test to these examples of **decorative emphasis**:
 - **Gradient text:** changing hue across a headline or number without encoding information.
 - **Extra accents:** unrelated colors assigned to each icon, card, or section.
 - **Colored scenery:** decorative background washes, halos, or tinted icon tiles with no useful meaning.
-
-Credits: [Impeccable](https://impeccable.style/anti-patterns), [ibelick baseline-ui](https://github.com/ibelick/ui-skills/blob/main/skills/baseline-ui/SKILL.md), and [Linear's calmer interface](https://linear.app/now/behind-the-latest-design-refresh).

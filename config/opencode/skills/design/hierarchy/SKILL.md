@@ -43,5 +43,3 @@ Apply the parent's test to these examples of **borrowed importance** or unneeded
   - Keep a metric-led view when the metric genuinely leads the task.
 - **Container accumulation:** nested cards, every item boxed, or a border and shadow defining the same surface.
 - **False order:** `01/02/03` section markers on content with no sequence.
-
-Credits: [Anthropic frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), [Impeccable](https://impeccable.style/anti-patterns), [Refactoring UI](https://www.refactoringui.com/book) (chapter titles only), and [Linear's calmer interface](https://linear.app/now/behind-the-latest-design-refresh).

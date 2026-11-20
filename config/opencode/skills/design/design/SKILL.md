@@ -51,5 +51,3 @@ Load this parent before any subskill; combine only those the change touches.
 Stay within the approved scope; a copy pass does not authorize a layout or behavior change.
 Describe visual changes in words, never ASCII mockups; change one thing per round for the user to judge.
 When evidence or scope is missing, return the question instead of inventing intent.
-
-Credits: [NN/g progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/), [Impeccable](https://impeccable.style/anti-patterns), and [Linear's calmer interface](https://linear.app/now/behind-the-latest-design-refresh).

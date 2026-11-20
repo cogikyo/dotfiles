@@ -39,5 +39,3 @@ The answer depends on the content, so find it on the rendered view instead of pl
 
 - Every non-empty value stays on screen and nameable; removing or merging a field waits for the user.
 - On the look, the user's instinct wins; push back once, with a render.
-
-Credits: Christopher Alexander, _Notes on the Synthesis of Form_ (fit as the absence of misfits); Edward Tufte, _Envisioning Information_ (layering and separation); [37signals, "Use real content to judge a design"](https://signalvnoise.com/posts/2149-use-real-content-to-judge-a-design); [Hyperplexed, "I Rescued Abandoned UI Designs"](https://www.youtube.com/watch?v=1_y9qCIPhQ4).
