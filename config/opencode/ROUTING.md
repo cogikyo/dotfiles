@@ -4,7 +4,7 @@ routes:
   build/general: claude/claude-opus-5-5 high
   build/git: claude/claude-opus-5-5 high
   build/patch: claude/claude-opus-5-5 medium
-  build/scribe: openai/gpt-6.2-sol high
+  build/scribe: gemini/gemini-4-neon high
   scout/*: claude/claude-opus-5-5 high
   scout/context: claude/claude-sonnet-5-5 high
   scout/dirty: claude/claude-sonnet-5-5 high
@@ -20,6 +20,7 @@ fallbacks:
   claude/claude-sonnet-5-5: cursor/claude-sonnet-5-5
   cursor/claude-opus-5-5: opencode-go/grok-4.7
   cursor/claude-sonnet-5-5: opencode-go/grok-4.7
+  gemini/gemini-4-neon: openai/gpt-6.2-sol
 ---
 
 # Routing
@@ -112,7 +113,8 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 Pick a builder by how much the brief settles.
 
 - Route new or rewritten prose to `build/scribe` even inside a larger build; builders own the code.
-  - Pass `claude/claude-opus-5-5#high` for READMEs and large docs where every word matters; Sol stays the route for quick patches, edits, and comment passes.
+  - It routes to Neon `high`, with Sol as fallback when Gemini is capped.
+  - Name the scribe role file and any skill files the lane needs in the brief, because Gemini lanes get no OpenCode system prompt.
 - `build/git` suits one approved Git workflow too large for this context.
 - Builders add no comments; `build/scribe` owns comments.
 
@@ -165,7 +167,7 @@ Use the effort ladder for each step.
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: Opus when OpenAI is capped; route those steps to `claude/claude-opus-5-5#high` yourself.
 - Fast and cheap with plenty of usage, so use Sol alone for small checks and keep the Sol `review/*` and `verify/*` routes for routine work.
-- Best `build/scribe` for quick patches, edits, and comment passes, and best at browser QA and computer use.
+- Best at browser QA and computer use, and serves as the `build/scribe` fallback when Gemini is capped.
 - Gathers wide context well and makes sound architecture calls.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
@@ -180,17 +182,17 @@ Use the effort ladder for each step.
 ### `gemini/*`
 
 - Models: `gemini-4-neon` and `gemini-4-hydrogen` take `low` to `xhigh`, and `gemini-4-carbon` takes `low` to `high`.
-  - No route names them, so pass `gemini/<model>#<variant>` explicitly.
+  - Neon routes `build/scribe` at `high`, with Sol as fallback; pass `gemini/<model>#<variant>` explicitly for other roles or models.
 - Runs Google's own agent on the Google AI Ultra subscription; it never bills through an API key or Cloud project.
-- **Read-only lanes only:** it cannot edit, so it never serves a builder.
-  - It runs its own tools, not OpenCode's, and gets the brief without OpenCode's system prompt.
-  - Name any role or skill file the lane needs in the brief.
+- **Follows its assigned agent's rules:** builder lanes can edit and run commands, while read-only lanes stay read-only in cage.
+  - It runs its own tools under OpenCode's guard and permission checks, and gets only the brief with no OpenCode system prompt.
+  - Name any role or skill file the lane needs in the brief, including for `build/scribe`.
 - Use Neon as a **parallel review leaf** or **council seat** beside Sol; Carbon and Hydrogen are untested on real review work.
   - On one known-answer file, Neon at `high` found everything a Sol baseline found plus four real bugs Sol missed; all four reproduced.
   - One review through the plugin took about 8 minutes and 256K tokens.
 - All Gemini models share one 5-hour and one weekly window; one Neon `high` review used about 1% of the 5-hour window.
-  - Lanes check both windows, but with no Gemini fallback a capped window only adds a note, so drop a capped seat yourself.
-- A Gemini lane refuses to start in a folder whose `.agents/` holds hooks, server config, or plugins.
+  - Lanes check both windows and follow `fallbacks` when capped; Neon falls back to Sol, while Carbon and Hydrogen have no fallback and only add a note.
+- A Gemini lane refuses to start in a folder whose `.agents`, `.agent`, `_agents`, or `_agent` holds hooks, server config, or plugins.
   - The check covers the session folder and its parents up to the repository root.
 
 ### `claude-sonnet-5-5`

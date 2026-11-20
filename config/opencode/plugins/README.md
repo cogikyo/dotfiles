@@ -206,35 +206,44 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 
 ## Gemini
 
-`gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP as a read-only lane model.
-It needs `agy` from the AUR package `antigravity-cli`, signed in on a Google AI subscription, and `bun` on PATH for its hook.
+`gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP under the lane's assigned OpenCode agent rules.
+It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Google AI subscription, and `bun` on PATH for its hook.
 `opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
 The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini) says when to use them.
 Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCode's system prompt or tools.
-`gemini/agy.ts` removes `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
-A turn also fails after 10 minutes without an update from the agent.
-`usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before a Gemini launch.
+`gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
+A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt is open.
+`usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
 
 The agent's settings live in `${XDG_STATE_HOME:-~/.local/state}/opencode/gemini/`, passed as `--gemini-dir`; the user's own `~/.gemini` is left alone.
-On every start, the plugin rewrites `antigravity-cli/settings.json` to `{"toolPermission":"strict"}` and `config/hooks.json` to one `PreToolUse` hook on every tool that runs `gemini/hook.ts`.
+On every start, the plugin rewrites `antigravity-cli/settings.json` to `{"toolPermission":"strict"}` so every tool call reaches the plugin as an ACP `session/request_permission`, and rewrites `config/hooks.json` to one `PreToolUse` hook on every tool that runs `gemini/hook.ts`.
 Copies of the plugin loaded from different checkouts share this folder and overwrite each other's hook path.
-It refuses to start when the session folder, or a parent up to the repository root, holds `.agents/hooks.json`, `mcp_config.json`, `plugins.json`, or `plugins/`, because those can run code outside the policy.
+It refuses to start when the session folder, or a parent up to the repository root, holds `hooks.json`, `mcp_config.json`, `plugins.json`, or `plugins/` under `.agents`, `.agent`, `_agents`, or `_agent`, because those can run code outside OpenCode's permission checks.
 
-`gemini/policy.ts` judges each call in the hook and again in the ACP permission request.
-A lane may use `read_file` and, in the session folder, the plain-word commands `pwd`, `ls` without recursion, and `git log`, `show`, `diff`, and `blame` with listed read-only flags.
-Paths on [guard's](#guard) secret list stay hidden, and `ls` or `git` also refuses a folder that contains one.
-Everything else is refused with a reason the model sees, including writes, sub-agents, and shell syntax beyond words and quotes.
-OpenCode shows a refused call as a tool error with empty output.
+A `model.request` hook in `gemini/server.ts` passes the lane's agent in `x-opencode-agent`, and `gemini/session.ts` passes owner metadata to the hook in `OPENCODE_GEMINI_OWNER`.
+`gemini/calls.ts` translates `read_file`, `write_file`, `edit_file`, `run_command`, and `command_status` into OpenCode tool inputs and the permission checks native tools make.
+It refuses sub-agents, interaction requests, `search_web`, `send_command_input`, unknown tools, and any `BypassSandbox` set by the model.
+`gemini/gate.ts` first runs [guard's](#guard) shared `guard/review.ts`, then builds checks from the input guard approved, including rewritten working directories and resolved symlink targets.
+Each check goes through `ctx.permission.assert`, applying the lane agent's rules, session overrides, saved "always" rules, and `permission.evaluate` hooks (including guard's and Gemini's git-push ask holds); `ask` rules show a native prompt.
 
-The policy has known gaps:
+Refused calls are answered `reject_once`, and after `agy` ends its turn, `gemini/model.ts` sends the refusal reasons back as a follow-up prompt.
+At most two follow-ups run per turn, with usage summed across them; after that, the turn ends with the last reasons shown.
+A plain user decline ends the stream as declined without a follow-up.
+For read-only agents, `agy`'s own sandbox blocks the system calls [cage](../../../cmds/cmd/cage/README.md) needs, so `gemini/hook.ts` rewrites `run_command` into guard's caged form with `BypassSandbox: true` and writes a marker under `cages/<toolCallId>` in the profile directory.
+`gemini/gate.ts` refuses a caged call without a matching marker, and a hook crash or 10-second timeout blocks the tool.
 
-- A repository's own `.git/config` can name programs, such as `diff.external` or `core.fsmonitor`, that an allowed `git` command starts.
-- `git show` can print tracked files under a hidden path, such as `git show HEAD:<path>`.
-- `ls` shows file names, and `ls -l` shows symlink targets even when they point into hidden paths.
+Known gaps:
+
+- Shell permission text comes from guard's parser and drops quoting.
+  - That is equal or stricter on current rules, though a rule written against a quoted form may not match.
+- A symlink retargeted between approval and file open is not caught.
+- Gemini edits appear as Gemini tool rows without a diff, and OpenCode's formatter does not run on them.
+- `ls` inside cage shows hidden file names, the same as native read-only agents.
 
 ## Guard
 
 `guard/server.ts` denies recognized shell Grok launches and OpenCode API calls.
+The shared tool checks live in `guard/review.ts`, called from `tool.execute.before` and by the [Gemini](#gemini) plugin.
 For agents outside the read-only set, the credential gate covers recognized Claude `.credentials.json` and OpenCode `auth.json`, `service[-…].json`, and `opencode.db[-wal|-shm]` paths in shell arguments, native `read`, and `grep` pointed directly at a file.
 Native checks expand `~`, resolve relative paths against the session directory, and check realpaths.
 Shell checks also resolve literal operands and redirect targets against the command's cwd and every literal `cd`/`chdir`/`pushd` destination, checking realpaths only for credential-like basenames; variables, globs, substitutions, and runtime-built paths are not resolved.
