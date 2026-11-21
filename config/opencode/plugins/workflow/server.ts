@@ -152,7 +152,7 @@ export default Plugin.define({
       if (step !== undefined && check === undefined) throw new Error("`step` only selects where `check` ticks items.");
       if (!writes && check === undefined) {
         const flow = await load(top);
-        if (!flow) throw new Error(NONE);
+        if (!flow) return "No workflow is stored.";
         const own = child ? flow.links[sessionID] : undefined;
         return [await show(flow), headroom(flow, await measure(top)), own === undefined ? "" : `Your step: ${own}`]
           .filter(Boolean)
