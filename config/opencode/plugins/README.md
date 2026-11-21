@@ -222,7 +222,8 @@ Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCo
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
 A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
 `usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
-`agy` sums usage over every model call in a turn, so `gemini/model.ts` reports prompt tokens from its last `usage_update` context size, which is what OpenCode compares with the context window.
+`agy` sums usage over every model call in a turn, so `gemini/model.ts` splits its last `usage_update` context size across prompt and output tokens, which OpenCode sums against the context window.
+Output keeps the turn's summed count, capped one token below that size because OpenCode ignores zero-prompt readings.
 
 The agent's settings live in `${XDG_STATE_HOME:-~/.local/state}/opencode/gemini/`, passed as `--gemini-dir`; the user's own `~/.gemini` is left alone.
 On every start, the plugin rewrites `antigravity-cli/settings.json` to `{"toolPermission":"strict"}` so every tool call reaches the plugin as an ACP `session/request_permission`, and rewrites `config/hooks.json` to one `PreToolUse` hook on every tool that runs `gemini/hook.ts`.
@@ -236,7 +237,7 @@ For native tools, `gemini/gate.ts` first runs [guard's](#guard) shared `guard/re
 Each check goes through `ctx.permission.assert`, applying the lane agent's rules, session overrides, saved "always" rules, and `permission.evaluate` hooks (including guard's and Gemini's git-push ask holds); `ask` rules show a native prompt.
 
 Refused calls are answered `reject_once`, and after `agy` ends its turn, `gemini/model.ts` sends the refusal reasons back as a follow-up prompt.
-At most two follow-ups run per turn, with usage summed across them; after that, the turn ends with the last reasons shown.
+At most two follow-ups run per turn, and their output adds to the turn's total; after that, the turn ends with the last reasons shown.
 A plain user decline ends the stream as declined without a follow-up.
 For read-only agents, `agy`'s own sandbox blocks the system calls [cage](../../../cmds/cmd/cage/README.md) needs, so `gemini/hook.ts` rewrites `run_command` into guard's caged form with `BypassSandbox: true` and writes a marker under `cages/<toolCallId>` in the profile directory.
 `gemini/gate.ts` refuses a caged call without a matching marker, and a hook crash or 10-second timeout blocks the tool.

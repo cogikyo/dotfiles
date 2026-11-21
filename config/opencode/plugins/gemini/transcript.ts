@@ -25,7 +25,8 @@ export class Transcript {
           : undefined;
     if (kind) return this.chunk(kind, update.content);
     if (update.sessionUpdate === "usage_update") {
-      this.used = update.used;
+      const used = update.used;
+      this.used = typeof used === "number" && Number.isInteger(used) && used > 0 ? used : undefined;
       return;
     }
     if (update.sessionUpdate !== "tool_call" && update.sessionUpdate !== "tool_call_update") return;

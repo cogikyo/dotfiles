@@ -17,7 +17,7 @@ export type Update = {
   rawInput?: unknown;
   rawOutput?: unknown;
   content?: unknown;
-  used?: number;
+  used?: unknown;
 };
 
 export type Usage = {

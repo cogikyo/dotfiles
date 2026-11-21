@@ -163,15 +163,17 @@ async function follow(session: Session, gate: Gate, transcript: Transcript, firs
 export function usage(counts: Usage | undefined, used: number | undefined): LanguageModelV3Usage {
   if (!counts)
     return {
-      inputTokens: { total: undefined, noCache: undefined, cacheRead: undefined, cacheWrite: undefined },
+      inputTokens: { total: used, noCache: used, cacheRead: undefined, cacheWrite: undefined },
       outputTokens: { total: undefined, text: undefined, reasoning: undefined },
     };
-  const thought = counts.thoughtTokens ?? 0;
-  const input =
-    used === undefined ? counts.inputTokens + (counts.cachedReadTokens ?? 0) : Math.max(0, used - counts.outputTokens);
-  const cached = Math.min(counts.cachedReadTokens ?? 0, input);
+  const read = counts.cachedReadTokens ?? 0;
+  // The host sums input + output for context and skips zero input.
+  const output = used === undefined ? counts.outputTokens : Math.min(counts.outputTokens, used - 1);
+  const text = Math.min(counts.outputTokens - (counts.thoughtTokens ?? 0), output);
+  const input = used === undefined ? counts.inputTokens + read : used - output;
+  const cached = Math.min(read, input);
   return {
     inputTokens: { total: input, noCache: input - cached, cacheRead: cached, cacheWrite: 0 },
-    outputTokens: { total: counts.outputTokens, text: counts.outputTokens - thought, reasoning: thought },
+    outputTokens: { total: output, text, reasoning: output - text },
   };
 }
