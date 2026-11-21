@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { check, fetchPublic, type Request } from "./fetch.ts";
-import { scratch, temp } from "./paths.ts";
+import { scratch, screen, temp } from "./paths.ts";
 import { readOnly } from "./policy.ts";
 import { review, text } from "./review.ts";
 
@@ -13,6 +13,7 @@ const ttl = 24 * 60 * 60 * 1000;
 const pushes = new Map<string, { reason: string; time: number }>();
 const fetches = new Set<string>();
 const runs = path.join(scratch, "runs.jsonl");
+const searchLimit = 100;
 
 type Assert = (
   input: Pick<Permission.Request, "sessionID" | "action" | "resources" | "save" | "metadata" | "source"> & {
@@ -49,6 +50,67 @@ function describe(event: { agent: string; tools: Record<string, { description: s
     }
     shell.description = `${shell.description} Commands run offline in a sandbox; write only under \`$OPENCODE_SCRATCH\`, where \`tmp/\` and \`cache/\` are mutable and files at the root cannot be deleted.`;
   });
+}
+
+type Search<T> = {
+  count: string;
+  file: (item: T) => string;
+  render: (items: T[], directory: string) => string[];
+};
+
+const grep: Search<{ entry: { path: string }; line: number; text: string }> = {
+  count: "matches",
+  file: (match) => match.entry.path,
+  render: (matches, directory) => {
+    if (matches.length === 0) return ["No matches found"];
+    const lines = [`Found ${matches.length} matches`];
+    let current = "";
+    for (const match of matches) {
+      const file = path.resolve(directory, match.entry.path);
+      if (file !== current) {
+        if (current) lines.push("");
+        current = file;
+        lines.push(`${file}:`);
+      }
+      lines.push(`  Line ${match.line}: ${match.text}`);
+    }
+    return lines;
+  },
+};
+
+const glob: Search<{ path: string }> = {
+  count: "count",
+  file: (entry) => entry.path,
+  render: (entries, directory) =>
+    entries.length === 0 ? ["No files found"] : entries.map((entry) => path.resolve(directory, entry.path)),
+};
+
+function screened<T>(execute: Tool.Info["execute"], search: Search<T>, directory: string): Tool.Info["execute"] {
+  return (input, context) =>
+    Effect.gen(function* () {
+      const want: number = input.limit ?? searchLimit;
+      const hidden = screen();
+      const visible = (item: T) => !hidden(path.resolve(directory, search.file(item)));
+      for (let limit = want + 1; ; limit *= 2) {
+        const result = yield* execute({ ...input, limit }, context);
+        const kept = (result.output as T[]).filter(visible);
+        if (kept.length <= want && result.metadata?.truncated) continue;
+        const items = kept.slice(0, want);
+        const truncated = kept.length > want;
+        const lines = search.render(items, directory);
+        if (truncated) {
+          lines.push(
+            "",
+            `(Results are truncated: showing first ${items.length} results. Consider using a more specific path or pattern.)`,
+          );
+        }
+        return {
+          output: items,
+          content: lines.join("\n"),
+          metadata: { ...result.metadata, [search.count]: items.length, truncated },
+        };
+      }
+    });
 }
 
 export default Plugin.define({
@@ -97,6 +159,12 @@ export default Plugin.define({
             readOnly(context.agent)
               ? fetch({ ...(input as Request), format: (input as Partial<Request>).format ?? "markdown" }, context)
               : execute(input, context);
+        });
+        editor.update("grep", (tool) => {
+          tool.execute = screened(tool.execute, grep, ctx.location.directory);
+        });
+        editor.update("glob", (tool) => {
+          tool.execute = screened(tool.execute, glob, ctx.location.directory);
         });
       });
 

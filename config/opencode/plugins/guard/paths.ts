@@ -66,7 +66,6 @@ const fixed = [
 const system = ["/proc", "/sys", "/dev"];
 const churned = new Set(["tmp", "cache"]);
 const maxLinks = 40;
-const shown = 5;
 
 function entries(dir: string) {
   try {
@@ -133,6 +132,19 @@ function fence(): Fence {
   return { hidden, roots: real && real !== scratch ? [scratch, real] : [scratch] };
 }
 
+export function screen() {
+  const { hidden } = fence();
+  return (target: string) => {
+    let real: string;
+    try {
+      real = located(target);
+    } catch {
+      return true;
+    }
+    return [target, real].some((form) => hidden.some((secret) => within(form, secret)));
+  };
+}
+
 function refusal(target: string, rules: Fence) {
   if (system.some((dir) => within(target, dir))) return `${target} is under /proc, /sys, or /dev`;
   if (churn(target, rules.roots)) {
@@ -144,14 +156,6 @@ function refusal(target: string, rules: Fence) {
 
 function sweep(target: string, rules: Fence) {
   if (target === home) return `${target} is the home directory`;
-  const blocked = [
-    ...new Set(rules.hidden.filter((secret) => within(secret, target)).map((secret) => path.relative(target, secret))),
-  ].toSorted();
-  if (blocked.length > 0) {
-    const named = blocked.slice(0, shown).map((secret) => `\`${secret}\``);
-    const more = blocked.length > shown ? ` and ${blocked.length - shown} more` : "";
-    return `${target} contains paths hidden from read-only agents (${named.join(", ")}${more}); search a narrower path that leaves them out`;
-  }
   if (rules.roots.some((root) => within(root, target) || path.dirname(target) === root)) {
     return `${target} contains session scratch tmp/ or cache/ directories`;
   }

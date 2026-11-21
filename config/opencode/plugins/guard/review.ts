@@ -3,7 +3,7 @@ import { realpath } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
-import { confine, expand, home, scratch, secrets } from "./paths.ts";
+import { confine, expand, home, scratch, screen, secrets, within } from "./paths.ts";
 import { credential, inspect, readOnly } from "./policy.ts";
 import { enter } from "./shell.ts";
 
@@ -55,9 +55,9 @@ function caged(command: string, dir: string) {
   return [quote(cage), ...hides, quote(dir), "--", "bash", "-c", quote(command)].join(" ");
 }
 
-function broad(root: string) {
-  const prefix = root.endsWith("/") ? root : `${root}/`;
-  return root === home || secrets().some((secret) => secret === root || secret.startsWith(prefix));
+function given(call: Call, key: string) {
+  const value = text(call.input, key);
+  return call.tool === "glob" && (value === "undefined" || value === "null") ? undefined : value;
 }
 
 function resolve(directory: string, target: string | undefined) {
@@ -67,11 +67,8 @@ function resolve(directory: string, target: string | undefined) {
 
 async function confined(call: Call): Promise<Review> {
   const file = files[call.tool];
-  const input = call.input as Record<string, unknown>;
-  if (typeof input !== "object" || input === null) return {};
-  const raw = input[file.key];
-  const sentinel = call.tool === "glob" && (raw === "undefined" || raw === "null");
-  const target = typeof raw === "string" && !sentinel ? raw : undefined;
+  if (typeof call.input !== "object" || call.input === null) return {};
+  const target = given(call, file.key);
   if (target === undefined && file.required) return {};
   try {
     return { input: { [file.key]: await confine(target ?? ".", call.directory, file.recursive) } };
@@ -106,11 +103,12 @@ export async function review(call: Call): Promise<Review> {
     }
   }
   if (call.tool === "grep" || call.tool === "glob") {
-    const root = resolve(call.directory, text(call.input, "path"));
-    if (!broad(root)) return {};
-    return {
-      problem: `${call.tool} from ${root} would search the home directory or a secret store; use a narrower path`,
-    };
+    const root = path.resolve(resolve(call.directory, given(call, "path")));
+    const real = await realpath(root).catch(() => root);
+    if ([root, real].some((form) => within(home, form)))
+      return { problem: `${call.tool} from ${root} would search the home directory; use a narrower path` };
+    if (screen()(root)) return { problem: `${call.tool} cannot search ${root}: it is hidden from agents` };
+    return {};
   }
   if (call.tool !== "shell") return {};
   const requested = text(call.input, "command");
