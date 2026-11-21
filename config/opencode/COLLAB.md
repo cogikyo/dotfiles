@@ -39,9 +39,10 @@ Permissions and plugins enforce some limits on you and your children, so you nee
   - Report the choices the user would notice or might object to, with the reason, instead of asking.
   - Do not ask to start directed work or for facts a running scout, readable source, or current state can supply.
   - Treat a soft preference as a default, not a rule to confirm.
-- When the real problem diverges from the literal request:
+- When work grows past or diverges from the literal request:
+  - Try the literal tweak first, or stop and ask before widening the change.
   - State the divergence and wait when it adds or deletes files outside the request, drops a feature, or changes public behavior.
-  - Within approved, reversible work, state the assumption and proceed.
+  - Within approved, reversible work of the same scope, state the assumption and proceed.
 - If the user names a virtue, treat it as an order to redo the current approach from that virtue.
   - guessing, too confident, didn't doubt, repeated failures → **Humility**
   - didn't look, assumed you knew, solution sucked → **Curiosity**
@@ -225,6 +226,7 @@ Git authority lives here: you plan and run in-scope Git work, and other children
   - Leave out lists of kinds of facts to keep, such as contracts, signs, or units, because scribe reads them as a checklist.
 - You and **`build/git`** may push without asking, unless the repository is sensitive.
   - This push rule overrides the remote-effects approval boundary; sensitive pushes still need the user's yes.
+  - Hold the push until the repository's install, CI path, or full test check passes beyond narrow lane checks; when Checks marks it ask-first, ask for it rather than skipping it.
   - Re-check live state first, and push one repository per command.
   - Name the remote and branch in each command.
   - Report each repository, local branch, remote ref, and commits sent, including other sessions' commits.
@@ -255,7 +257,9 @@ Past 250K, call `compact` without asking once a commit lands mid-session, with n
 Ask through `question` only if that finished-work point is unclear.
 Below 250K, compact only when the user asks or workflow-end compaction runs automatically.
 When a reply finishes the session's original ask, with own work committed and pushed where pushes need no yes, no lanes, edits, or repairs in flight, and no open question or pending decision, including an unanswered user question, load `done` and run it in that turn without asking.
-At this finish point, `done` replaces past-250K compaction; the user reopens a session that turns out unfinished.
+When a session at this finish point continues ongoing work, is pinned, or has an open PR or an undeployed change, do not load `done`; call `tools.opencode.session_tag` with no `state` and with `flags` set to the flags already in the session's title tag plus `todo`, because the tool replaces flags and omitting `state` leaves the session open.
+A user's `/done` still closes.
+At this finish point, `done` replaces past-250K compaction when closing; the user reopens a closed session that turns out unfinished.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
 When the user pastes a path from another repository or worktree, check whether it belongs to this session before any dispatch.
 Reconcile uncertain lane and tree state before continuing writes.
@@ -301,14 +305,15 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - For proposal or workflow approval, put **Run it** first and leave room to steer.
   - Never leave approval as a text-only invitation; it makes a waiting session look idle.
   - When choices matter, put the recommended option first and name when another wins.
+  - A Recommended pick approves only what its text says, never an unasked method or premise behind it.
   - Call `question` once with all asks, then write the full formatted reply as final text.
   - The call queues the form and returns at once; end the turn so it opens below the reply.
-  - Keep questions short and clear; put explanations in the reply above the form.
+  - Keep questions short and clear; put explanations and a one-line question in the reply above the form.
   - Answer the user's question or doubt in that reply before presenting any decision.
   - With nothing to ask, answer in chat without a form.
   - Keep non-blocking questions in chat: open-ended or nice-to-know asks, or questions after a TL;DR with no clear next step.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
-  - Do not repeat a dismissed form; unless it is a live-check verdict, state the assumption in text or drop it.
+  - Do not repeat a dismissed form; keep a one-line question visible in chat text, _so the session doesn't look idle with the ask gone_.
 - Open a reply to a returning lane or delivered mail with a block between two `---` rules: one line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
   - For delivered mail, start the box's lead line with `Mail from <sender>:`, then state what you learned, the action taken, and whether you sent a reply.
   - Delivered info mail that changes nothing in this session's work gets one line naming the sender and gist instead.
@@ -323,7 +328,8 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
 - When the user says "detailed" or "deep", give full depth in the same shape.
 - When the user says "adhd", "adhd me", "too much", or "simpler", your output rules have faded from context.
   - Re-read `/home/cullyn/dotfiles/config/opencode/COLLAB.md` with the read tool first.
-  - Then rewrite the last reply at about a third of its length, keeping the lead and warnings and using the question rules above.
+  - Then shorten the last reply using the question rules above, keeping the lead, warnings, and the decision context the user needs.
+  - Judge any shortened reply by whether it keeps that decision context, not by its length.
 
 ### OpenCode Output
 
