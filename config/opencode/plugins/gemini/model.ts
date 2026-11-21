@@ -86,7 +86,7 @@ export class Gemini implements LanguageModelV3 {
             finishReason: judge.declined
               ? { unified: "stop", raw: "declined" }
               : { unified: stops[result.stopReason] ?? "other", raw: result.stopReason },
-            usage: usage(result.usage),
+            usage: usage(result.usage, transcript.used),
           });
           controller.close();
         } catch (error) {
@@ -160,16 +160,18 @@ async function follow(session: Session, gate: Gate, transcript: Transcript, firs
   }
 }
 
-function usage(counts: Usage | undefined): LanguageModelV3Usage {
+export function usage(counts: Usage | undefined, used: number | undefined): LanguageModelV3Usage {
   if (!counts)
     return {
       inputTokens: { total: undefined, noCache: undefined, cacheRead: undefined, cacheWrite: undefined },
       outputTokens: { total: undefined, text: undefined, reasoning: undefined },
     };
-  const cached = counts.cachedReadTokens ?? 0;
   const thought = counts.thoughtTokens ?? 0;
+  const input =
+    used === undefined ? counts.inputTokens + (counts.cachedReadTokens ?? 0) : Math.max(0, used - counts.outputTokens);
+  const cached = Math.min(counts.cachedReadTokens ?? 0, input);
   return {
-    inputTokens: { total: counts.inputTokens + cached, noCache: counts.inputTokens, cacheRead: cached, cacheWrite: 0 },
+    inputTokens: { total: input, noCache: input - cached, cacheRead: cached, cacheWrite: 0 },
     outputTokens: { total: counts.outputTokens, text: counts.outputTokens - thought, reasoning: thought },
   };
 }

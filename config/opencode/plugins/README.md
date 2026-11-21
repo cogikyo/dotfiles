@@ -222,6 +222,7 @@ Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCo
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
 A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
 `usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
+`agy` sums usage over every model call in a turn, so `gemini/model.ts` reports prompt tokens from its last `usage_update` context size, which is what OpenCode compares with the context window.
 
 The agent's settings live in `${XDG_STATE_HOME:-~/.local/state}/opencode/gemini/`, passed as `--gemini-dir`; the user's own `~/.gemini` is left alone.
 On every start, the plugin rewrites `antigravity-cli/settings.json` to `{"toolPermission":"strict"}` so every tool call reaches the plugin as an ACP `session/request_permission`, and rewrites `config/hooks.json` to one `PreToolUse` hook on every tool that runs `gemini/hook.ts`.

@@ -425,6 +425,7 @@
       "models": {
         "gemini-4-neon": {
           "name": "Gemini 4 Neon",
+          "limit": { "context": 1048576 },
           "variants": [
             { "id": "low", "settings": { "effort": "low" } },
             { "id": "medium", "settings": { "effort": "medium" } },
@@ -434,6 +435,7 @@
         },
         "gemini-4-carbon": {
           "name": "Gemini 4 Carbon",
+          "limit": { "context": 1048576 },
           "variants": [
             { "id": "low", "settings": { "effort": "low" } },
             { "id": "medium", "settings": { "effort": "medium" } },
@@ -442,6 +444,7 @@
         },
         "gemini-4-hydrogen": {
           "name": "Gemini 4 Hydrogen",
+          "limit": { "context": 1048576 },
           "variants": [
             { "id": "low", "settings": { "effort": "low" } },
             { "id": "medium", "settings": { "effort": "medium" } },

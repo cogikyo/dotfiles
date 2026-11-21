@@ -8,6 +8,7 @@ export class Transcript {
   meta: Meta | undefined;
   text = "";
   calls = 0;
+  used: number | undefined;
   readonly notices: string[] = [];
   private open: Block | undefined;
   private blocks = 0;
@@ -23,6 +24,10 @@ export class Transcript {
           ? "reasoning"
           : undefined;
     if (kind) return this.chunk(kind, update.content);
+    if (update.sessionUpdate === "usage_update") {
+      this.used = update.used;
+      return;
+    }
     if (update.sessionUpdate !== "tool_call" && update.sessionUpdate !== "tool_call_update") return;
     if (!update.toolCallId) return;
     this.call(update);
