@@ -3,7 +3,7 @@ import { Model } from "@opencode/schema/model";
 import { Option, Schema } from "effect";
 import { fileURLToPath } from "node:url";
 import { located } from "../mail/store.ts";
-import { flags, retag, states, tag, title } from "./tags.ts";
+import { flags, retag, revise, states, tag, title } from "./tags.ts";
 
 const cap = 1000;
 const timeout = 30_000;
@@ -105,7 +105,14 @@ const TagInput = Schema.Struct({
     Schema.Literals(states).annotate({ description: "Why the session is finished; omit to keep its current state." }),
   ),
   flags: Schema.optional(
-    Schema.Array(Schema.Literals(flags)).annotate({ description: "Follow-up markers for search and ranking." }),
+    Schema.Array(Schema.Literals(flags)).annotate({
+      description: "Replace current flags; `refusals` stays even with `[]`.",
+    }),
+  ),
+  add: Schema.optional(
+    Schema.Array(Schema.Literals(flags)).annotate({
+      description: "Add flags to current ones, or after `flags` if both are passed.",
+    }),
   ),
 });
 
@@ -113,7 +120,8 @@ const TagOutput = Schema.Struct({ sessionID: Schema.String, title: Schema.String
 
 const tagDescription = [
   "Tag a top-level session by replacing its title tag with an optional state and flags, keeping the rest of the title.",
-  "A state marks the session closed; omit it to set flags and keep the current state, so a live session stays open. Repeating a call changes nothing.",
+  "A state marks the session closed; omit it to keep the current state, so a live session stays open.",
+  "`flags` replaces flags (`refusals` stays even with `[]`); `add` adds to them, after `flags` if both are passed; omit both to keep them. Repeating a call changes nothing.",
   "Only top-level sessions can call it.",
 ].join(" ");
 
@@ -165,15 +173,10 @@ export default Plugin.define({
           const session = sessionID === caller.id ? caller : await ctx.session.get({ sessionID });
           if (session.parentID)
             throw new Error(`session_tag: ${sessionID} is a child session; only top-level sessions take tags`);
-          // This tool cannot clear REFUSALS; the TUI toggle can.
           const current = tag(session.title);
-          const sticky = current?.flags.filter((name) => name === "refusals") ?? [];
-          if (sticky.length && session.id !== caller.id)
+          if (current?.flags.includes("refusals") && session.id !== caller.id)
             throw new Error(`session_tag: ${sessionID} is hidden from agents by the refusals flag`);
-          const next = retag(title(session), {
-            state: input.state ?? current?.state,
-            flags: [...(input.flags ?? []), ...sticky],
-          });
+          const next = retag(title(session), revise(current, input));
           const changed = next !== session.title;
           if (changed) await ctx.session.update({ sessionID, title: next });
           return {

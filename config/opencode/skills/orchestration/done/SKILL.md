@@ -61,7 +61,7 @@ Choose the state and flags below, then call `tools.opencode.session_tag` through
 ## Tags
 
 Choose one state and any flags without asking; pass the names below in lowercase as `state` and `flags`.
-Pass all applicable flags, including existing ones that still apply, because the tool replaces them except for `REFUSALS`.
+Pass all applicable flags in `flags`, or `[]` when none apply; `flags` replaces current flags except `REFUSALS`, and omitting it keeps existing ones.
 
 Pick the state by outcome:
 

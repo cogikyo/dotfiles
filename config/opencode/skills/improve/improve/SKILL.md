@@ -72,10 +72,10 @@ End Find with a confirmed problem list.
 Invoking `/improve` approves only the tag writes below; other writes need separate approval.
 Read the Tags section in `../../orchestration/done/SKILL.md` before choosing states or flags.
 Tag each untagged sampled session last updated more than a day ago.
-For sessions with a state, keep that state and existing flags, adding flags the evidence supports.
-Leave flags-only tags unchanged, because they mark open sessions; omitting `state` in `session_tag` keeps the current state, while passing `state` would close them.
+For sessions with a state, pass only `add` with the flags the evidence supports.
+Leave flags-only tags unchanged, because they mark open sessions.
 Leave a session untagged when the evidence cannot pick its state.
-Call `tools.opencode.session_tag` through `execute` with `sessionID`, lowercase `state`, and the full `flags` list; report every tag written.
+Call `tools.opencode.session_tag` through `execute` with `sessionID` and lowercase names (`state` and `flags` for untagged sessions); report every tag written.
 
 ## Solve
 

@@ -22,6 +22,19 @@ function read(title?: string) {
 
 export const tag = (title?: string): Tag | undefined => read(title)?.tag;
 
+export type Change = { readonly state?: State; readonly flags?: readonly Flag[]; readonly add?: readonly Flag[] };
+
+export function revise(current: Tag | undefined, change: Change): Tag {
+  if (!change.state && !change.flags && !change.add) throw new Error("session_tag: pass state, flags, or add");
+  // Only the TUI toggle can clear REFUSALS.
+  const sticky = current?.flags.filter((name) => name === "refusals") ?? [];
+  const base = change.flags ?? current?.flags.filter((name) => name !== "refusals") ?? [];
+  return {
+    state: change.state ?? current?.state,
+    flags: [...new Set([...base, ...(change.add ?? []), ...sticky])],
+  };
+}
+
 export function retag(title: string, next: Tag) {
   const plain = read(title)?.plain ?? title;
   const names = [...(next.state ? [next.state] : []), ...flags.filter((flag) => next.flags.includes(flag))];

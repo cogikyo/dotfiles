@@ -452,9 +452,10 @@ Direct session and part lookups refuse hidden targets.
 Visible text results and query errors replace exact hidden-title copies with `[hidden by refusals]` before clipping or paging.
 Plain-title copies are included only with at least two words and 10 characters, excluding default titles; matching is case-sensitive and covers up to two JSON-escape layers.
 
-`sessions/server.ts` exposes `tools.opencode.session_tag` in Code Mode with an optional lowercase `state` and optional `flags`.
-It replaces the tag, preserves an existing `refusals` flag and the rest of the title, and skips an unchanged title.
-An omitted `state` keeps the current one, so a flags-only call leaves a live session open.
+`sessions/server.ts` exposes `tools.opencode.session_tag` in Code Mode with optional lowercase `state`, `flags`, and `add` (at least one required).
+It rewrites the title tag, keeps any `refusals` flag and the rest of the title, and skips unchanged titles.
+Omitting `state` keeps the current one, leaving a live session open.
+`flags` replaces flags, `add` adds (after `flags` if both are passed), and omitting both keeps them.
 It refuses another session flagged `REFUSALS` without echoing its title.
 Only top-level sessions can call it or be tagged; `sessionID` defaults to the caller, and a missing title becomes `New session - <ISO time>`.
 
