@@ -67,7 +67,11 @@ export class Gemini implements LanguageModelV3 {
             {
               update: (update) => transcript.update(update),
               permission: (call) => judge.judge(call),
-              tools: { list: () => judge.list(), call: (name, input) => judge.call(name, input) },
+              tools: {
+                list: () => judge.list(),
+                call: (name, input) => judge.call(name, input),
+                write: (id, input, live) => judge.write(id, input, live),
+              },
             },
           );
           transcript.meta = conversation.meta(session.id);

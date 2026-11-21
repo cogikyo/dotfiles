@@ -231,7 +231,7 @@ Copies of the plugin loaded from different checkouts share this folder and overw
 It refuses to start when the session folder, or a parent up to the repository root, holds `hooks.json`, `mcp_config.json`, `plugins.json`, or `plugins/` under `.agents`, `.agent`, `_agents`, or `_agent`, because those can run code outside OpenCode's permission checks.
 
 A `model.request` hook in `gemini/server.ts` passes the lane's agent in `x-opencode-agent`, and `gemini/session.ts` passes owner metadata to the hook in `OPENCODE_GEMINI_OWNER`.
-`gemini/calls.ts` translates `read_file`, `write_file`, `edit_file`, `run_command`, and `command_status` into OpenCode tool inputs and the permission checks native tools make.
+`gemini/calls.ts` translates `read_file`, `write_file`, `edit_file`, `run_command`, and `command_status` into OpenCode tool inputs and the permission checks native tools make; for read-only agents, `gemini/hook.ts` refuses `edit_file` and forwards `write_file` to `gemini/gate.ts`.
 Both `gemini/hook.ts` and `gemini/calls.ts` admit only those five tools and bridged `mcp_opencode_*` names; sub-agents, interaction requests, `search_web`, `send_command_input`, other MCP servers, unknown tools, and any `BypassSandbox` set by the model are refused.
 For native tools, `gemini/gate.ts` first runs [guard's](#guard) shared `guard/review.ts`, then builds checks from the input guard approved, including rewritten working directories and resolved symlink targets.
 Each check goes through `ctx.permission.assert`, applying the lane agent's rules, session overrides, saved "always" rules, and `permission.evaluate` hooks (including guard's and Gemini's git-push ask holds); `ask` rules show a native prompt.
@@ -241,9 +241,15 @@ At most two follow-ups run per turn, and their output adds to the turn's total; 
 A plain user decline ends the stream as declined without a follow-up.
 For read-only agents, `agy`'s own sandbox blocks the system calls [cage](../../../cmds/cmd/cage/README.md) needs, so `gemini/hook.ts` rewrites `run_command` into guard's caged form with `BypassSandbox: true` and writes a marker under `cages/<toolCallId>` in the profile directory.
 `gemini/gate.ts` refuses a caged call without a matching marker, and a hook crash or 10-second timeout blocks the tool.
+For read-only `write_file`, `gemini/hook.ts` forwards the call over the bridge (`opencode/write`) and denies `agy`'s native call with the text `gemini/gate.ts` returns, because the host write tool runs outside the sandbox and would follow a symlink the shell planted in scratch.
+`gemini/gate.ts` refuses declined or stopped turns, validates the target, asserts the lane's `shell` permission like `run_command`, runs the write inside guard's sandbox, and records the outcome in the transcript.
+Writes must target paths under the session's scratch directory; `Overwrite: true` replaces existing files only under `tmp/` or `cache/`, and `Append: true` appends but cannot be combined with `Overwrite: true`.
+If the bridge is missing, fails, or does not answer within 8 seconds, `gemini/hook.ts` denies the call, states that nothing was written, and points to `run_command`.
+The hook refuses read-only `edit_file` and points to `write_file`.
 
 Each turn passes one stdio MCP server, `opencode`, in ACP `session/new` and `session/resume`.
-`gemini/bridge.ts` listens on a per-turn Unix socket under `bridge/` in the profile directory and requires a random token on the first line; `gemini/shim.ts` relays stdio to it.
+`gemini/bridge.ts` listens on a per-turn Unix socket under `bridge/` in the profile directory and requires a random token on the first line; `gemini/session.ts` opens it before spawning `agy` so `gemini/hook.ts` gets the socket and token through `agy`'s environment.
+`gemini/shim.ts` relays MCP stdio to it, and `gemini/hook.ts` calls `opencode/write` over it.
 The socket closes when `agy` exits, and the next turn removes sockets whose owning process is dead.
 `gemini/tools.ts` lists registered tools that the lane's agent and session rules do not wholly deny, exposed to the model as `mcp_opencode_<tool>` and marked to load directly.
 It leaves out tools `agy` already has natively (`shell`, `read`, `write`, `edit`, `patch`), interactive and delegation tools (`question`, `subagent`, `terminal`, `mail`, `lanes`, `lanes_compact`, `lanes_close`, `opencode_session_create`, `drive_off`, `compact`), and `x`.
@@ -267,6 +273,7 @@ Known gaps:
 - `ls` inside cage shows hidden file names, the same as native read-only agents.
 - `agy`'s profile stores each turn's MCP config, including its token, and bridged results.
   - That profile is not in guard's hide list.
+- Builder shell commands inherit the bridge socket and token from `agy`'s environment; read-only shells do too, but the sandbox blocks their socket connections.
 - Bridged approval matching falls back to the first queued call of the same name.
 - Bridged images are not resized.
 - MCP cancel notifications are ignored.

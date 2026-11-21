@@ -84,9 +84,11 @@ export class Session {
   private constructor(
     private readonly start: Start,
     private readonly sink: Sink,
+    private readonly bridge: Bridge,
   ) {
     const env = {
       ...environment(),
+      ...Object.fromEntries(bridge.spec.env.map(({ name, value }) => [name, value])),
       GIT_OPTIONAL_LOCKS: "0",
       GIT_PAGER: "cat",
       PAGER: "cat",
@@ -105,6 +107,7 @@ export class Session {
         throw new Error(`${method} is not supported by this client`);
       },
     });
+    void this.agent.exited.then(() => bridge.close());
   }
 
   static async open(start: Start, sink: Sink) {
@@ -120,9 +123,21 @@ export class Session {
     };
     await enforce(settings, strict);
     await enforce(hooks, `${JSON.stringify({ opencode: { PreToolUse: [{ matcher: "*", hooks: [hook] }] } })}\n`);
-    const session = new Session(start, sink);
+    let session: Session | undefined;
+    const hold = <T>(work: () => Promise<T>) => (session ? session.hold(work) : work());
+    const bridge = await Bridge.open(bun, {
+      list: () => sink.tools.list(),
+      call: (name, input) => hold(() => sink.tools.call(name, input)),
+      write: (id, input, live) => hold(() => sink.tools.write(id, input, live)),
+    });
     try {
-      await session.handshake(bun);
+      session = new Session(start, sink, bridge);
+    } catch (error) {
+      await bridge.close();
+      throw error;
+    }
+    try {
+      await session.handshake();
     } catch (error) {
       session.agent.kill();
       throw error;
@@ -164,18 +179,13 @@ export class Session {
     this.agent.kill();
   }
 
-  private async handshake(bun: string) {
+  private async handshake() {
     await this.agent.request("initialize", {
       protocolVersion: 1,
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
       clientInfo: { name: "opencode", version: "0" },
     });
-    const bridge = await Bridge.open(bun, {
-      list: () => this.sink.tools.list(),
-      call: (name, input) => this.hold(() => this.sink.tools.call(name, input)),
-    });
-    void this.agent.exited.then(() => bridge.close());
-    const base = { cwd: this.start.owner.directory, mcpServers: [bridge.spec] };
+    const base = { cwd: this.start.owner.directory, mcpServers: [this.bridge.spec] };
     let opened: Opened | undefined;
     if (this.start.resume) {
       opened = await this.agent

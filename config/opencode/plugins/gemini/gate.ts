@@ -3,7 +3,8 @@ import { Session } from "@opencode/schema/session";
 import type { SessionMessage } from "@opencode/schema/session-message";
 import { CallID } from "@opencode/schema/tool";
 import type { Called } from "./bridge.ts";
-import { bridged, check, needs, plan, wrapped, type Call } from "./calls.ts";
+import { readOnly } from "../guard/policy.ts";
+import { bridged, check, fill, jot, needs, plan, wrapped, type Call } from "./calls.ts";
 import type { Update } from "./session.ts";
 import { called, decode, failed, listed, type Tool } from "./tools.ts";
 import type { Transcript } from "./transcript.ts";
@@ -13,6 +14,8 @@ export type Owner = { session: string | undefined; agent: string | undefined; di
 type Permission = Plugin.Context["permission"];
 
 export const holds = new Map<string, string>();
+
+type Source = { type: "tool"; messageID: string; id: string };
 
 const declined = "The user declined this tool call";
 
@@ -55,33 +58,27 @@ export class Gate {
     const source = { type: "tool" as const, messageID: this.message, id: call.toolCallId };
     const key = `${session} ${source.messageID} ${source.id}`;
     if (checked.push) holds.set(key, checked.push);
-    this.pending.add(call.toolCallId);
     try {
-      await needs(steps.tool, checked.input, this.owner.directory).reduce(
-        (chain, need) =>
-          chain.then(() =>
-            this.permission.assert({
-              sessionID: session,
-              agent: this.owner.agent,
-              action: need.action,
-              resources: need.resources,
-              save: need.save,
-              source,
-            }),
-          ),
-        Promise.resolve(),
-      );
+      await this.grant(session, source, needs(steps.tool, checked.input, this.owner.directory));
     } catch (error) {
       if (declines(error)) {
         this.declined = true;
         return this.decline(call);
       }
-      return this.refuse(call, error instanceof Error && error.message ? error.message : String(error));
+      return this.refuse(call, explain(error));
     } finally {
-      this.pending.delete(call.toolCallId);
       holds.delete(key);
     }
     return true;
+  }
+
+  async write(id: string, input: Record<string, unknown>, live: () => boolean) {
+    this.transcript.call({ sessionUpdate: "tool_call", toolCallId: id, name: "write_file", rawInput: input });
+    const { error, text } = await this.perform(id, input, live).catch((thrown: unknown) =>
+      unwritten(`write_file failed: ${explain(thrown)}`),
+    );
+    this.transcript.settle(id, text, error);
+    return text;
   }
 
   async list() {
@@ -114,7 +111,7 @@ export class Gate {
       this.transcript.settle(call.id, shown.join("\n"), false);
       return result;
     } catch (error) {
-      if (!declines(error)) return this.fail(call.id, error instanceof Error ? error.message : String(error));
+      if (!declines(error)) return this.fail(call.id, explain(error));
       this.declined = true;
       return this.fail(call.id, declined);
     } finally {
@@ -139,6 +136,57 @@ export class Gate {
         .filter((request) => request.source && this.pending.has(request.source.id))
         .map((request) => this.permission.reply({ sessionID: session, requestID: request.id, decision: "reject" })),
     );
+  }
+
+  private async perform(id: string, input: Record<string, unknown>, live: () => boolean) {
+    if (this.declined || this.stopped) return unwritten(declined);
+    const session = this.owner.session;
+    if (!session || !readOnly(this.owner.agent))
+      return unwritten("write_file failed: OpenCode writes through the sandbox only for read-only agents");
+    const owner = { ...this.owner, session };
+    const job = jot(input, owner);
+    if ("refuse" in job) return unwritten(job.refuse);
+    const steps = plan({ toolCallId: id, name: "run_command", rawInput: { CommandLine: job.script } }, owner.directory);
+    if ("refuse" in steps) return unwritten(`write_file failed: ${steps.refuse}`);
+    const checked = await check(steps, owner);
+    if ("refuse" in checked) return unwritten(`write_file failed: ${checked.refuse}`);
+    if (!checked.cage) return unwritten("write_file failed: the guard did not sandbox this write");
+    try {
+      const source = { type: "tool" as const, messageID: this.message, id };
+      await this.grant(session, source, needs(steps.tool, checked.input, owner.directory));
+    } catch (error) {
+      if (!declines(error)) return unwritten(`write_file failed: ${explain(error)}`);
+      this.declined = true;
+      return unwritten(declined);
+    }
+    if (this.declined || this.stopped) return unwritten(declined);
+    if (!live())
+      return unwritten(
+        "write_file failed: the tool hook stopped waiting before OpenCode approved the write, so nothing was written",
+      );
+    return fill(checked.cage.CommandLine, checked.cage.Cwd, job.content, job.target);
+  }
+
+  private async grant(session: string, source: Source, list: ReturnType<typeof needs>) {
+    this.pending.add(source.id);
+    try {
+      await list.reduce(
+        (chain, need) =>
+          chain.then(() =>
+            this.permission.assert({
+              sessionID: session,
+              agent: this.owner.agent,
+              action: need.action,
+              resources: need.resources,
+              save: need.save,
+              source,
+            }),
+          ),
+        Promise.resolve(),
+      );
+    } finally {
+      this.pending.delete(source.id);
+    }
   }
 
   private refuse(call: Call & Update, reason: string) {
@@ -176,4 +224,12 @@ export class Gate {
 function declines(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   return Reflect.get(error, "_tag") === "Permission.DeclinedError" || declines(Reflect.get(error, "error"));
+}
+
+function explain(error: unknown) {
+  return error instanceof Error && error.message ? error.message : String(error);
+}
+
+function unwritten(text: string) {
+  return { error: true, text };
 }

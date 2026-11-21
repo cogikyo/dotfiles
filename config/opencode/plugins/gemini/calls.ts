@@ -1,7 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { within } from "../guard/paths.ts";
+import { scratch, within } from "../guard/paths.ts";
 import { review } from "../guard/review.ts";
 import { launches, literalPath, opaque, redirection, streamed, unseen, type Launch } from "../guard/shell.ts";
 import { cages } from "./agy.ts";
@@ -79,6 +79,48 @@ export async function check(
   if (!result.cage) return { input: { ...steps.input, ...result.input }, push: result.push };
   const { command, workdir } = result.cage;
   return { input: { command, workdir }, cage: sandbox(String(result.input?.command), workdir) };
+}
+
+export type Jot = { refuse: string } | { target: string; content: Buffer; script: string };
+
+export function rewrite(session: string) {
+  return `read-only agents cannot edit files; write the whole changed file with \`write_file\` under ${path.join(scratch, session)}, to a new name, with \`Append: true\`, or with \`Overwrite: true\` under its tmp/ or cache/`;
+}
+
+export function jot(input: Record<string, unknown>, owner: Owner & { session: string }): Jot {
+  const dir = path.join(scratch, owner.session);
+  if (typeof input.Path !== "string" || !input.Path) return { refuse: "write_file failed: the request names no Path" };
+  if (input.Path.includes("\0")) return { refuse: "write_file failed: Path contains a NUL byte" };
+  if (typeof input.Content !== "string") return { refuse: "write_file failed: the request has no Content" };
+  if (input.Append === true && input.Overwrite === true)
+    return { refuse: "write_file failed: pass `Append: true` or `Overwrite: true`, not both" };
+  const target = path.resolve(owner.directory, input.Path);
+  if (target === dir || !within(target, dir))
+    return {
+      refuse: `write_file failed: read-only agents can write only under their scratch directory ${dir}, not ${target}`,
+    };
+  const redirect = input.Append === true ? ">>" : ">";
+  const script = [
+    ...(input.Overwrite === true || input.Append === true ? [] : ["set -C"]),
+    `mkdir -p -- ${quote(path.dirname(target))}`,
+    `cat ${redirect} ${quote(target)}`,
+  ].join("\n");
+  return { target, content: Buffer.from(input.Content), script };
+}
+
+export async function fill(command: string, cwd: string, content: Buffer, target: string) {
+  const proc = Bun.spawn(["bash", "-c", command], { cwd, stdin: content, stdout: "ignore", stderr: "pipe" });
+  const [code, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
+  if (code === 0)
+    return {
+      error: false,
+      text: `write_file succeeded: guard wrote ${content.length} bytes to ${target} inside the read-only sandbox instead of the host tool; the file is in place, so do not retry`,
+    };
+  const error = stderr.trim().replace(/^bash: line \d+: /gmu, "") || `exit ${code}`;
+  const hint = /cannot overwrite existing file|Permission denied|Read-only file system/u.test(error)
+    ? "; the sandbox replaces files only under scratch tmp/ or cache/ with `Overwrite: true`, never writes through a symlink out of scratch, and otherwise needs a new file name or `Append: true`"
+    : "";
+  return { error: true, text: `write_file failed inside the read-only sandbox: ${error}${hint}` };
 }
 
 export async function mark(id: string, cage: Record<string, unknown>) {
@@ -167,6 +209,10 @@ function project(directory: string) {
     if ([".git", ".hg"].some((marker) => existsSync(path.join(current, marker)))) return current;
     if (path.dirname(current) === current) return undefined;
   }
+}
+
+function quote(word: string) {
+  return `'${word.replaceAll("'", `'\\''`)}'`;
 }
 
 function object(value: unknown): value is Record<string, unknown> {

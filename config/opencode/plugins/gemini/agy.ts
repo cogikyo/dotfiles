@@ -8,6 +8,7 @@ export const cages = join(profile, "cages");
 export const bridges = join(profile, "bridge");
 export const socketEnv = "OPENCODE_BRIDGE_SOCKET";
 export const tokenEnv = "OPENCODE_BRIDGE_TOKEN";
+export const writeMethod = "opencode/write";
 
 const billing = /^(GOOGLE_|GEMINI_|GCLOUD_|CLOUDSDK_|AGY_)/;
 
