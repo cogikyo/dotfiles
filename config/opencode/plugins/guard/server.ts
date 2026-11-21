@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { check, fetchPublic, type Request } from "./fetch.ts";
-import { scratch } from "./paths.ts";
+import { scratch, temp } from "./paths.ts";
 import { readOnly } from "./policy.ts";
 import { review, text } from "./review.ts";
 
@@ -44,7 +44,7 @@ function describe(event: { agent: string; tools: Record<string, { description: s
     if (!shell) return;
     shell.description = `${shell.description} Calls in one message run in parallel, so read a command's output file in a later message.`;
     if (!restricted) {
-      shell.description = `${shell.description} The shell is zsh: an unquoted \`$var\` expands to one word, so pass lists as arrays.`;
+      shell.description = `${shell.description} The shell is zsh: an unquoted \`$var\` expands to one word, so pass lists as arrays. Delete files with \`trash -- <path>\`; \`rm\` works only on paths inside \`${temp}/\`.`;
       return;
     }
     shell.description = `${shell.description} Commands run offline in a sandbox; write only under \`$OPENCODE_SCRATCH\`, where \`tmp/\` and \`cache/\` are mutable and files at the root cannot be deleted.`;
