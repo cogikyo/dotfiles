@@ -97,7 +97,19 @@ const globals = new Set([
 ]);
 const runners = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 const rewrites = ["--force", "--force-with-lease", "--force-if-includes", "--delete", "--mirror", "--prune"];
-const remotes = ["--exec", "--receive-pack"];
+type Program = { long: string[]; short?: string; valued?: string };
+const programs: Record<string, Program> = {
+  "ls-remote": { long: ["--upload-pack", "--exec"] },
+  fetch: { long: ["--upload-pack"] },
+  "fetch-pack": { long: ["--upload-pack", "--exec"] },
+  pull: { long: ["--upload-pack"] },
+  clone: { long: ["--upload-pack"], short: "u", valued: "jobc" },
+  push: { long: ["--receive-pack", "--exec"] },
+  "send-pack": { long: ["--receive-pack", "--exec"] },
+  archive: { long: ["--exec"] },
+  rebase: { long: ["--exec"], short: "x", valued: "CsX" },
+  grep: { long: ["--open-files-in-pager"], short: "O", valued: "CBAfem" },
+};
 const copiers = new Set(["tee", "cp", "mv", "ln", "install"]);
 const nonliteral = /[$`*?[{]|^~/u;
 const expansion = /[$`]/u;
@@ -215,10 +227,7 @@ const reads: Record<string, Read> = {
   "diff-index": true,
   "ls-files": true,
   "ls-tree": true,
-  "ls-remote": (args) =>
-    !parts(args, ["--upload-pack", "--exec", "-o", "--server-option", "--sort"]).switches.some((flag) =>
-      abbreviates(flag, ["--upload-pack", "--exec"]),
-    ),
+  "ls-remote": true,
   "rev-parse": true,
   "rev-list": true,
   "merge-base": true,
@@ -244,24 +253,12 @@ const reads: Record<string, Read> = {
   "format-patch": true,
   archive: true,
   clone: (args) =>
-    guarded(
-      args,
-      ["--upload-pack", "--template", "--config", "--recurse-submodules", "--recursive", "--separate-git-dir"],
-      "uc",
-    ),
+    guarded(args, ["--template", "--config", "--recurse-submodules", "--recursive", "--separate-git-dir"], "c"),
   version: true,
   help: true,
   var: true,
   fetch: (args) => {
-    const risky = [
-      "--upload-pack",
-      "--refmap",
-      "--recurse-submodules",
-      "--update-head-ok",
-      "--prune",
-      "--prune-tags",
-      "--force",
-    ];
+    const risky = ["--refmap", "--recurse-submodules", "--update-head-ok", "--prune", "--prune-tags", "--force"];
     if (!guarded(args, risky, "uPpf")) return false;
     return parts(args, fetchValued)
       .operands.slice(1)
@@ -576,12 +573,39 @@ function tampers({ command: [name, ...args] }: Launch) {
   return !harmless.test(key ?? "");
 }
 
+function option(args: string[], { long, short = "", valued = "" }: Program) {
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg.startsWith("--")) {
+      const [flag] = arg.split("=");
+      if (abbreviates(flag, long)) return flag;
+      continue;
+    }
+    if (!arg.startsWith("-")) continue;
+    for (let at = 1; at < arg.length; at++) {
+      if (short.includes(arg[at])) return `-${arg[at]}`;
+      if (!valued.includes(arg[at])) continue;
+      if (at === arg.length - 1) index++;
+      break;
+    }
+  }
+  return undefined;
+}
+
+function program({ args }: Invocation) {
+  const { at } = locate(args, undefined);
+  if (args.slice(0, at).some((arg) => arg.startsWith("--exec-path=")))
+    return "`git --exec-path=` makes Git run its helper programs from a chosen directory; agents may not pass it";
+  const sub = args[at];
+  if (sub === undefined || !Object.hasOwn(programs, sub)) return undefined;
+  const flag = option(args.slice(at + 1), programs[sub]);
+  return flag && `\`git ${sub}\` with \`${flag}\` makes Git run a chosen program; agents may not pass it`;
+}
+
 function rewrite(args: string[]) {
   const { switches, operands } = parts(args, ["-o", "--push-option", "--receive-pack", "--exec", "--repo"]);
   const flag = switches.find((name) => abbreviates(name, rewrites) || name === "-f" || name === "-d");
   if (flag) return `\`git push\` with \`${flag}\` rewrites or deletes remote history`;
-  const program = switches.find((name) => abbreviates(name, remotes));
-  if (program) return `\`git push\` with \`${program}\` runs a chosen program on the remote`;
   const spec = operands.find((operand) => operand.startsWith("+") || operand.startsWith(":"));
   return spec && `\`git push\` with the refspec \`${spec}\` rewrites or deletes remote history`;
 }
@@ -671,6 +695,7 @@ export function inspect(
   if (args.some((arg) => profile.test(arg))) found.add(profileReason);
   if (!readOnly(agent))
     for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
+  for (const problem of calls.map(program)) if (problem) found.add(problem);
   if (!owners.has(agent ?? "")) {
     for (const problem of calls.map(git)) if (problem) found.add(problem);
   }

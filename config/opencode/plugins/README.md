@@ -289,7 +289,8 @@ The parser inspects nested arithmetic, including command substitutions and base 
 It also inspects literal script bodies passed through `flock`, `watch`, `uv run … bash -c`, and `unshare sh -c`.
 Unrecoverable script handoffs, active `trap` bodies, and `parallel` remain rejected outside the read-only set, except for `collab` and `build/git`.
 For agents outside the read-only set, the guard rejects pushes whose repo paths (`-C`, `--git-dir`, or `--work-tree`) or arguments expand at run time; write them literally or through variables assigned earlier in the command.
-For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo is otherwise undeterminable, with `-c` or `--config-env`, or for forced, destructive, or remote-program forms; other pushes pass this guard.
+For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo is otherwise undeterminable, with `-c` or `--config-env`, or for forced or destructive forms; other pushes pass this guard.
+For all agents, including `collab` and `build/git`, it denies Git options that run a program, such as `--upload-pack`, `--receive-pack`, `--exec`, or `rebase -x`, and their abbreviations.
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 It also denies `systemd-run` unit names starting with `cogikyo-` (`-u`/`--unit`), protecting the voice-loop bus rights granted to `cogikyo-voice.scope`, which Cullyn's key creates.
 For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.

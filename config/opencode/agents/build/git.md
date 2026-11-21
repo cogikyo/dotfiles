@@ -201,7 +201,6 @@ permissions:
       "resource": "*git rebase *--empty=drop*",
       "effect": "deny",
     }
-  - { "action": "shell", "resource": "*git rebase * -x*", "effect": "deny" }
   - {
       "action": "shell",
       "resource": "*git worktree add * -f*",
