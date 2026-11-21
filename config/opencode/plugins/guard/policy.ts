@@ -215,7 +215,10 @@ const reads: Record<string, Read> = {
   "diff-index": true,
   "ls-files": true,
   "ls-tree": true,
-  "ls-remote": true,
+  "ls-remote": (args) =>
+    !parts(args, ["--upload-pack", "--exec", "-o", "--server-option", "--sort"]).switches.some((flag) =>
+      abbreviates(flag, ["--upload-pack", "--exec"]),
+    ),
   "rev-parse": true,
   "rev-list": true,
   "merge-base": true,
@@ -336,6 +339,11 @@ const reads: Record<string, Read> = {
       switches.some((flag) => ["--check", "--stat", "--numstat", "--summary"].includes(flag))
     );
   },
+  "symbolic-ref": (args) => {
+    const { switches, operands } = parts(args, ["-m"]);
+    return operands.length === 1 && !switches.some((flag) => flag === "-d" || abbreviates(flag, ["--delete"]));
+  },
+  "hash-object": (args) => !parts(args, ["-t", "--path"]).switches.includes("-w"),
   stash: first(["list", "show"]),
   remote: first([undefined, "show", "get-url"]),
   worktree: first(["list"]),

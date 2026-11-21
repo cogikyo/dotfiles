@@ -45,6 +45,31 @@ permissions:
       "resource": "git branch -vv --list*",
       "effect": "allow",
     }
+  - { "action": "shell", "resource": "git branch -r", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git branch -r --list*",
+      "effect": "allow",
+    }
+  - {
+      "action": "shell",
+      "resource": "git branch -r --contains*",
+      "effect": "allow",
+    }
+  - { "action": "shell", "resource": "git branch --remotes", "effect": "allow" }
+  - {
+      "action": "shell",
+      "resource": "git branch --remotes --list*",
+      "effect": "allow",
+    }
+  - {
+      "action": "shell",
+      "resource": "git branch --remotes --contains*",
+      "effect": "allow",
+    }
+  - { "action": "shell", "resource": "git stash list *", "effect": "allow" }
+  - { "action": "shell", "resource": "git ls-remote *", "effect": "allow" }
+  - { "action": "shell", "resource": "git hash-object *", "effect": "allow" }
   - { "action": "shell", "resource": "git worktree list*", "effect": "allow" }
   - { "action": "shell", "resource": "git config --get*", "effect": "allow" }
   - { "action": "shell", "resource": "git add -- *", "effect": "allow" }
@@ -125,7 +150,8 @@ permissions:
   - { "action": "shell", "resource": "*--ext-diff*", "effect": "deny" }
   - { "action": "shell", "resource": "*--textconv*", "effect": "deny" }
   - { "action": "shell", "resource": "*git apply *--index*", "effect": "deny" }
-  - { "action": "shell", "resource": "git stash list", "effect": "allow" }
+  - { "action": "shell", "resource": "*--upload-pack*", "effect": "deny" }
+  - { "action": "shell", "resource": "*git hash-object* -w*", "effect": "deny" }
   - { "action": "shell", "resource": "*git add -- .", "effect": "deny" }
   - { "action": "shell", "resource": "*git add -- . *", "effect": "deny" }
   - { "action": "shell", "resource": '*git add -- "."*', "effect": "deny" }
