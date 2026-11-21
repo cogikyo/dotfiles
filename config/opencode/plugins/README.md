@@ -217,7 +217,7 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 `gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP under the lane's assigned OpenCode agent rules.
 It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Google AI subscription, and `bun` on PATH for its hook and bridge shim.
 `opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
-The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini) says when to use them.
+The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini-4-neon) says when to use them.
 Each turn starts `agy acp --sandbox` in the lane's session folder without OpenCode's system prompt, bridging allowed OpenCode tools over MCP.
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
 A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
