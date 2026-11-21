@@ -101,7 +101,9 @@ const TagInput = Schema.Struct({
   sessionID: Schema.optional(
     Schema.String.annotate({ description: "Top-level session to tag; omit for this session." }),
   ),
-  state: Schema.Literals(states).annotate({ description: "Why the session is finished." }),
+  state: Schema.optional(
+    Schema.Literals(states).annotate({ description: "Why the session is finished; omit to keep its current state." }),
+  ),
   flags: Schema.optional(
     Schema.Array(Schema.Literals(flags)).annotate({ description: "Follow-up markers for search and ranking." }),
   ),
@@ -110,8 +112,8 @@ const TagInput = Schema.Struct({
 const TagOutput = Schema.Struct({ sessionID: Schema.String, title: Schema.String });
 
 const tagDescription = [
-  "Mark a finished top-level session by replacing its title tag with one state and optional flags, keeping the rest of the title.",
-  "The state marks the session closed. Repeating a call changes nothing.",
+  "Tag a top-level session by replacing its title tag with an optional state and flags, keeping the rest of the title.",
+  "A state marks the session closed; omit it to set flags and keep the current state, so a live session stays open. Repeating a call changes nothing.",
   "Only top-level sessions can call it.",
 ].join(" ");
 
@@ -164,10 +166,14 @@ export default Plugin.define({
           if (session.parentID)
             throw new Error(`session_tag: ${sessionID} is a child session; only top-level sessions take tags`);
           // This tool cannot clear REFUSALS; the TUI toggle can.
-          const sticky = tag(session.title)?.flags.filter((name) => name === "refusals") ?? [];
+          const current = tag(session.title);
+          const sticky = current?.flags.filter((name) => name === "refusals") ?? [];
           if (sticky.length && session.id !== caller.id)
             throw new Error(`session_tag: ${sessionID} is hidden from agents by the refusals flag`);
-          const next = retag(title(session), { state: input.state, flags: [...(input.flags ?? []), ...sticky] });
+          const next = retag(title(session), {
+            state: input.state ?? current?.state,
+            flags: [...(input.flags ?? []), ...sticky],
+          });
           const changed = next !== session.title;
           if (changed) await ctx.session.update({ sessionID, title: next });
           return {
