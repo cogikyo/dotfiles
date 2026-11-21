@@ -25,6 +25,7 @@ Explicit models use `provider/model#variant`; frontmatter routes keep `provider/
 The `claude` pool picks an Anthropic account from usage caches, keeps an open account on resume, and reports stale-cache or fallback notes in results.
 When every account is capped for Opus or Sonnet, `lanes/pick.ts` follows the fallback chain through the same model on Cursor's O pool, then `opencode-go/grok-4.7`.
 Cursor picks skip a route whose fresh pool window reads 100% and has not reset; missing, stale, or unusable usage counts as open and adds a note.
+Gemini and xAI routes, including explicit models, follow the same rule over their usage windows: Gemini's 5-hour and weekly windows, and xAI's credit window `W` and monthly window `M`.
 Background children return immediately and send completion, cancellation, or error to the parent's inbox.
 
 The `lanes` tool lists children, including closed ones; `subagent` reuses a lane name to steer or resume one.

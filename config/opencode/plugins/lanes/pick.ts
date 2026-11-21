@@ -6,7 +6,7 @@ import { format, type Ref } from "./routing.ts";
 
 export const pool = "claude";
 
-export const guarded = new Set<string>([pool, usageProviders.gemini.id]);
+export const guarded = new Set<string>([pool, usageProviders.gemini.id, usageProviders.xai.id]);
 
 type Step = { ref: Ref; spent?: string; notes: string[] };
 
@@ -53,13 +53,14 @@ async function cursor(route: Ref): Promise<Step> {
   return { ref: route, spent: `the Cursor ${window} pool is spent for ${route.id}`, notes: [] };
 }
 
-async function gemini(route: Ref): Promise<Step> {
-  const windows = await reading(usageProviders.gemini);
-  const open = (why: string) => ({ ref: route, notes: [`lanes: Gemini usage ${why}; treating it as open.`] });
+async function windowed(spec: UsageProviderSpec, route: Ref, required: string[]): Promise<Step> {
+  const windows = await reading(spec);
+  const open = (why: string) => ({ ref: route, notes: [`lanes: ${spec.label} usage ${why}; treating it as open.`] });
   if (typeof windows === "string") return open(windows);
   const spent = windows.find((item) => !item.postReset && item.usedPercent !== undefined && item.usedPercent >= 100);
-  if (spent) return { ref: route, spent: `the Gemini ${spent.label} window is spent for ${route.id}`, notes: [] };
-  const missing = ["H", "W"].filter((tag) => windows.find((item) => item.label === tag)?.usedPercent === undefined);
+  if (spent)
+    return { ref: route, spent: `the ${spec.label} ${spent.label} window is spent for ${route.id}`, notes: [] };
+  const missing = required.filter((tag) => windows.find((item) => item.label === tag)?.usedPercent === undefined);
   return missing.length ? open(`has no ${missing.join("/")} window`) : { ref: route, notes: [] };
 }
 
@@ -70,7 +71,9 @@ function check(ref: Ref, current: Ref | undefined): Promise<Step> | Step {
     case usageProviders.cursor.id:
       return cursor(ref);
     case usageProviders.gemini.id:
-      return gemini(ref);
+      return windowed(usageProviders.gemini, ref, ["H", "W"]);
+    case usageProviders.xai.id:
+      return windowed(usageProviders.xai, ref, ["W"]);
     default:
       return { ref, notes: [] };
   }
