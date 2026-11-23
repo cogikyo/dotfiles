@@ -219,7 +219,7 @@ It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Googl
 `opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
 The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini-4-neon) says when to use them.
 Each turn starts `agy acp` in the lane's session folder, bridging allowed OpenCode tools over MCP.
-When `agy` advertises `systemPrompt.append`, `gemini/session.ts` sends a tool-map preface (`gemini/prompt.ts`) plus OpenCode's system prompt on `session/resume`; a new conversation calls `session/new` without them and then `session/resume` to attach them.
+When `agy` advertises `systemPrompt.append`, `gemini/session.ts` uses `session/resume` to send only a ~1 KB note (`gemini/prompt.ts`) that maps OpenCode tool names to `agy`'s and describes the sandbox, without forwarding OpenCode's system prompt; new conversations call `session/new` first.
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
 A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
 `usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
@@ -261,7 +261,7 @@ Code Mode `execute` is not bridged because a plugin cannot run a Code Mode progr
 Both `gemini/shim.ts` and `gemini/hook.ts` start Bun with `--config=/dev/null --no-env-file`, so a repository's `bunfig.toml` cannot preload code.
 
 The host caches each provider's SDK and language models for the server's lifetime, keyed on provider, package, and variant settings (`core/src/aisdk.ts`).
-Gemini plugin edits therefore reach only variants not yet used since the server started; already-used variants need an OpenCode restart.
+Gemini plugin edits reach only variants the running server has not used yet; to reload an already-used variant, restart the background server with `opencode service restart`.
 
 Known gaps:
 
