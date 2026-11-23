@@ -364,14 +364,13 @@ func (r ruleset) tree(hides []string) error {
 		if err != nil {
 			return err
 		}
-		real, err := filepath.EvalSymlinks(abs)
-		if errors.Is(err, fs.ErrNotExist) {
-			continue
-		}
+		hole, err := mask(abs)
 		if err != nil {
 			return err
 		}
-		holes[real] = true
+		if hole != "" {
+			holes[hole] = true
+		}
 	}
 	for hole := range holes {
 		for p := hole; p != "/"; {
@@ -410,6 +409,33 @@ func (r ruleset) tree(hides []string) error {
 		}
 	}
 	return nil
+}
+
+func mask(hide string) (string, error) {
+	real, err := filepath.EvalSymlinks(hide)
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, unix.ENOTDIR) {
+		return "", nil
+	}
+	if err != nil {
+		base := hide
+		dir, err := filepath.EvalSymlinks(filepath.Dir(base))
+		for err != nil {
+			base = filepath.Dir(base)
+			dir, err = filepath.EvalSymlinks(filepath.Dir(base))
+		}
+		real = filepath.Join(dir, filepath.Base(base))
+	}
+	hole := real
+	for dir := real; dir != "/"; {
+		dir = filepath.Dir(dir)
+		if _, err := os.ReadDir(dir); err != nil {
+			hole = dir
+		}
+	}
+	if hole == "/" {
+		return "", fmt.Errorf("cannot hide %s: / is unreadable", hide)
+	}
+	return hole, nil
 }
 
 func (r ruleset) path(path string, access uint64) error {

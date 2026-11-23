@@ -37,7 +37,8 @@ The [guard plugin](../../../config/opencode/plugins/README.md#guard) supplies `~
   If that lookup fails, cage warns and sets `GOPROXY=off`; sumdb settings are unchanged.
 - All cages share the Go build cache, so one caged command can plant entries a later caged build trusts; the host's own build cache is untouched.
 - Scratch-root files remain overwritable in place, so they are not immutable evidence; tools that truncate or atomically replace files must use `tmp/` or `cache/`.
-- Secret protection depends on the caller's hide inventory; unlisted secrets remain readable, and missing hide paths are skipped.
+- Secret protection depends on the caller's hide inventory; unlisted secrets remain readable, and missing or not-a-directory hide paths are skipped.
+  An unresolvable hide, or one beneath an unlistable directory, is masked at that highest unresolvable or unlistable path; only an unreadable `/` aborts hide resolution.
 - Hidden entry names can remain visible in ancestor directory listings; `/` itself is unlistable, and new entries in hidden paths' ancestors remain unreadable after the policy walk.
 - Unix-socket paths must fit `sun_path`'s 108 bytes; a guard session scratch path uses 73 of them under a 12-byte home such as `/home/cullyn`.
 - There is no syscall filter or disk quota.
