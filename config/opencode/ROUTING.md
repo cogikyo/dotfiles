@@ -12,6 +12,7 @@ routes:
   scout/web: xai/grok-4.7 high
   review/*: openai/gpt-6.2-sol high
   review/copy: gemini/gemini-4-neon high
+  review/debug: gemini/gemini-4-neon high
   review/security: gemini/gemini-4-neon medium
   review/simplify: gemini/gemini-4-neon high
   review/entropy: claude/claude-opus-5-5 xhigh
@@ -95,10 +96,10 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 
 ### Reviewers
 
-- Sol carries review volume; keep routine reviews on its routes.
+- Neon leads code review; Sol keeps the other `review/*` routes and sits beside Neon as a seat.
 - After implementation, pair **`review/debug`** (correctness) with **`review/simplify`** (idiom, dead code, cleanliness); keep `review/debug` alone for small fixes.
 - Add `review/security`, `review/profile`, `review/architect`, and `review/copy` as risks warrant; run `review/copy` before commit on frontend UI text changes.
-- `review/simplify` routes to Neon `high`; seat `openai/gpt-6.2-sol#high` beside it whenever OpenAI usage allows.
+- `review/debug` and `review/simplify` route to Neon `high`; seat `openai/gpt-6.2-sol#high` beside each whenever OpenAI usage allows, except on small fixes.
   - When Gemini is capped, pass `claude/claude-opus-5-5#high` yourself, and fall to Sol only when Claude is capped too, because Neon's automatic fallback is Sol.
 - `review/security` routes to Neon `medium` with an unconditional `openai/gpt-6.2-sol#high` seat beside it (not gated on Gemini quota); log one `LEDGER.md` row per run.
 - Keep `review/security` and adversarial briefs off Opus, because Anthropic's cyber filter blocks it there.
@@ -160,7 +161,7 @@ Listed in rough order of overall preference; pick effort from the ladder above.
 
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: route to `claude/claude-opus-5-5#high` yourself when OpenAI is capped; on a provider-policy refusal, relaunch once on `gemini/gemini-4-neon#high` instead of retrying Sol.
-- Fast and cheap with plenty of usage; keep its `review/*` and `verify/*` routes for routine work and use it alone for small checks.
+- Fast and cheap with plenty of usage; keep its `verify/*` and remaining `review/*` routes, seat it beside Neon reviews, and use it alone for small checks.
 - Best at browser QA and computer use, gathers wide context well, makes sound architecture calls, and serves as Neon's fallback when Gemini is capped.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
@@ -173,9 +174,9 @@ Listed in rough order of overall preference; pick effort from the ladder above.
 
 ### `gemini-4-neon`
 
-- Reasoning: `medium` for `review/security`, seats, and scouts, `high` for scribe, copy, simplify, and Sol-refusal reruns; `xhigh` is untested.
+- Reasoning: `medium` for `review/security`, seats, and scouts, `high` for scribe, copy, debug, simplify, and Sol-refusal reruns; `xhigh` is untested.
 - Fallback: Sol when either Gemini window is capped.
-- Routes `build/scribe`, `review/copy`, `review/simplify`, and `review/security` (the security route rests on one run).
+- Routes `build/scribe`, `review/copy`, `review/debug`, `review/simplify`, and `review/security` (the security route rests on one run).
 - Seat it at `medium` beside hard `scout/code` traces under the experimental phase, and log comparisons in `LEDGER.md`.
 - Gets only the brief, so name the role file and any skill files it needs.
 - Evidence: `high` beat Sol (+4 verified bugs) on one review and had scribe cohort medians of 9.3m (n=9) and 6.3m (n=4, 4/13 repaired); `medium` matched Opus's raw finding count (12 each, 7.5m vs 9.6m) on one council (see `LEDGER.md`).
