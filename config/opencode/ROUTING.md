@@ -90,7 +90,7 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - Send shell checks needing network, sockets, daemons, or credentials to `verify/test` or Collab's shell, not scouts, reviewers, or source/web verifiers.
 - Use `scout/web` for the option space and prior art; it routes to xAI Grok and calls `x` by default, and other scouts and source/web verifiers can also call `x`.
 - Run web research as a council by default, because web sources are noisy and seat diversity earns its cost.
-  - Seat `scout/web` on its xAI Grok route beside a DeepSeek seat, `opencode-go/deepseek-v4.1-flash#high`; `claude/claude-sonnet-5-5#high` is also an acceptable web seat.
+  - Seat `scout/web` on its route beside `opencode-go/deepseek-v4.1-flash#high` and `openai/gpt-6.2-sol#high`; `claude/claude-sonnet-5-5#high` is also an acceptable seat.
   - Add an Opus seat, `claude/claude-opus-5-5#high`, when the answer decides a design.
   - Check `usage_status` before seating the council and drop a known-capped seat before lanes substitutes a fallback; when the shared xAI pool is capped, skip `x` and seat Sonnet `high` or `opencode-go/grok-4.7#high` yourself.
 
@@ -102,6 +102,10 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - `review/debug` and `review/simplify` route to Neon `high`; seat `openai/gpt-6.2-sol#high` beside each whenever OpenAI usage allows, except on small fixes.
   - When Gemini is capped, pass `claude/claude-opus-5-5#high` yourself, and fall to Sol only when Claude is capped too, because Neon's automatic fallback is Sol.
 - `review/security` routes to Neon `medium` with an unconditional `openai/gpt-6.2-sol#high` seat beside it (not gated on Gemini quota); log one `LEDGER.md` row per run.
+- When Neon and Sol review the same change, base the synthesis on Neon's report.
+  - Verify Sol-only findings by reproduction or source check before they drive a repair.
+  - Check whether a Neon blocker predates the diff before it blocks, because Neon often rates older issues as blocking.
+  - Log one `LEDGER.md` row per debug or simplify run with both seats, giving held and dropped findings per seat, until about 10 runs.
 - Keep `review/security` and adversarial briefs off Opus, because Anthropic's cyber filter blocks it there.
   - Adversarial means bypass hunts, exploit paths, or attacks on keys, sandboxes, or guards; Opus can still take routine security passes (secrets, auth).
 - Run `review/entropy` on request, on package or app sweeps, or as a retro after a feature lands; on a small diff it produces rewrite noise.
@@ -161,7 +165,7 @@ Listed in rough order of overall preference; pick effort from the ladder above.
 
 - Reasoning: `high` by default; `xhigh` is available.
 - Fallback: route to `claude/claude-opus-5-5#high` yourself when OpenAI is capped; on a provider-policy refusal, relaunch once on `gemini/gemini-4-neon#high` instead of retrying Sol.
-- Fast and cheap with plenty of usage; keep its `verify/*` and remaining `review/*` routes, seat it beside Neon reviews, and use it alone for small checks.
+- Fast and cheap with ample headroom; keep its `verify/*` and remaining `review/*` routes, seat it beside Neon reviews and in web councils, and use it alone for small checks.
 - Best at browser QA and computer use, gathers wide context well, makes sound architecture calls, and serves as Neon's fallback when Gemini is capped.
 - Strength looks close to Opus but is untested; expect an occasional dumb miss.
 
