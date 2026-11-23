@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { readOnly } from "../guard/policy.ts";
 import { Agent } from "./acp.ts";
 import { environment, ownerEnv, profile } from "./agy.ts";
 import { Bridge, type Tools } from "./bridge.ts";
@@ -86,9 +87,10 @@ export class Session {
     private readonly sink: Sink,
     private readonly bridge: Bridge,
   ) {
+    const bridged = readOnly(start.owner.agent) ? bridge.spec.env : [];
     const env = {
       ...environment(),
-      ...Object.fromEntries(bridge.spec.env.map(({ name, value }) => [name, value])),
+      ...Object.fromEntries(bridged.map(({ name, value }) => [name, value])),
       GIT_OPTIONAL_LOCKS: "0",
       GIT_PAGER: "cat",
       PAGER: "cat",

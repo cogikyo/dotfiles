@@ -242,13 +242,15 @@ A plain user decline ends the stream as declined without a follow-up.
 For read-only agents, `agy`'s own sandbox blocks the system calls [cage](../../../cmds/cmd/cage/README.md) needs, so `gemini/hook.ts` rewrites `run_command` into guard's caged form with `BypassSandbox: true` and writes a marker under `cages/<toolCallId>` in the profile directory.
 `gemini/gate.ts` refuses a caged call without a matching marker, and a hook crash or 10-second timeout blocks the tool.
 For read-only `write_file`, `gemini/hook.ts` forwards the call over the bridge (`opencode/write`) and denies `agy`'s native call with the text `gemini/gate.ts` returns, because the host write tool runs outside the sandbox and would follow a symlink the shell planted in scratch.
-`gemini/gate.ts` refuses declined or stopped turns, validates the target, asserts the lane's `shell` permission like `run_command`, runs the write inside guard's sandbox, and records the outcome in the transcript.
+`gemini/gate.ts` refuses declined, stopped, and non-read-only writes before anything reaches the transcript.
+For writes it attempts, it validates the target, asserts the lane's `shell` permission like `run_command`, runs the write inside guard's sandbox, and records the outcome in the transcript.
 Writes must target paths under the session's scratch directory; `Overwrite: true` replaces existing files only under `tmp/` or `cache/`, and `Append: true` appends but cannot be combined with `Overwrite: true`.
 If the bridge is missing, fails, or does not answer within 8 seconds, `gemini/hook.ts` denies the call, states that nothing was written, and points to `run_command`.
 The hook refuses read-only `edit_file` and points to `write_file`.
 
 Each turn passes one stdio MCP server, `opencode`, in ACP `session/new` and `session/resume`.
-`gemini/bridge.ts` listens on a per-turn Unix socket under `bridge/` in the profile directory and requires a random token on the first line; `gemini/session.ts` opens it before spawning `agy` so `gemini/hook.ts` gets the socket and token through `agy`'s environment.
+`gemini/bridge.ts` listens on a per-turn Unix socket under `bridge/` in the profile directory and requires a random token on the first line, passed to `gemini/shim.ts` in the MCP server spec's environment.
+`gemini/session.ts` opens the bridge before spawning `agy` and puts the socket and token in `agy`'s environment only for read-only agents, where `gemini/hook.ts` gets them.
 `gemini/shim.ts` relays MCP stdio to it, and `gemini/hook.ts` calls `opencode/write` over it.
 The socket closes when `agy` exits, and the next turn removes sockets whose owning process is dead.
 `gemini/tools.ts` lists registered tools that the lane's agent and session rules do not wholly deny, exposed to the model as `mcp_opencode_<tool>` and marked to load directly.
@@ -256,7 +258,8 @@ It leaves out tools `agy` already has natively (`shell`, `read`, `write`, `edit`
 `x` stays out because guard records its runs in execute hooks, which a direct call skips.
 `gemini/schema.ts` reduces each tool's input schema to the subset Gemini's function declarations accept and drops any tool it cannot reduce, because one rejected declaration fails the whole turn.
 
-When `agy` calls a bridged tool, `gemini/gate.ts` matches the approved permission request, runs guard's review on the raw input, decodes it with the tool's schema, and runs the tool as the lane's session and agent.
+When `agy` calls a bridged tool, `gemini/gate.ts` matches the approved permission request on exact arguments (ignoring the `toolSummary` field `agy` adds) and refuses a mismatch.
+It then runs guard's review on the raw input, decodes it with the tool's schema, and runs the tool as the lane's session and agent.
 Text output is capped at 2,000 lines or 50 KiB, with a note to narrow the query.
 Code Mode `execute` is not bridged because a plugin cannot run a Code Mode program, so Gemini lanes call each tool directly.
 Both `gemini/shim.ts` and `gemini/hook.ts` start Bun with `--config=/dev/null --no-env-file`, so a repository's `bunfig.toml` cannot preload code.
@@ -273,8 +276,8 @@ Known gaps:
 - `ls` inside cage shows hidden file names, the same as native read-only agents.
 - `agy`'s profile stores each turn's MCP config, including its token, and bridged results.
   - That profile is not in guard's hide list.
-- Builder shell commands inherit the bridge socket and token from `agy`'s environment; read-only shells do too, but the sandbox blocks their socket connections.
-- Bridged approval matching falls back to the first queued call of the same name.
+- Read-only shells inherit the bridge socket and token from `agy`'s environment.
+  - The sandbox blocks their socket connections.
 - Bridged images are not resized.
 - MCP cancel notifications are ignored.
 

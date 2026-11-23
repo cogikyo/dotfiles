@@ -45,7 +45,8 @@ export class Gate {
     if ("refuse" in steps) return this.refuse(call, steps.refuse);
     const tool = bridged(call.name);
     if (tool) {
-      this.approved.push({ id: call.toolCallId, tool, input: steps.input });
+      const input = Object.fromEntries(Object.entries(steps.input).filter(([key]) => key !== "toolSummary"));
+      this.approved.push({ id: call.toolCallId, tool, input });
       return true;
     }
     const checked = await check(steps, { ...this.owner, session });
@@ -73,8 +74,13 @@ export class Gate {
   }
 
   async write(id: string, input: Record<string, unknown>, live: () => boolean) {
+    if (this.declined || this.stopped) return declined;
+    const session = this.owner.session;
+    if (!session || !readOnly(this.owner.agent))
+      return "write_file failed: OpenCode writes through the sandbox only for read-only agents";
     this.transcript.call({ sessionUpdate: "tool_call", toolCallId: id, name: "write_file", rawInput: input });
-    const { error, text } = await this.perform(id, input, live).catch((thrown: unknown) =>
+    const owner = { ...this.owner, session };
+    const { error, text } = await this.perform(id, input, owner, live).catch((thrown: unknown) =>
       unwritten(`write_file failed: ${explain(thrown)}`),
     );
     this.transcript.settle(id, text, error);
@@ -87,7 +93,12 @@ export class Gate {
 
   async call(name: string, input: Record<string, unknown>): Promise<Called> {
     const call = this.claim(name, input);
-    if (!call) return failed(`OpenCode approved no pending \`${name}\` call`);
+    if (!call)
+      return failed(
+        this.approved.some((approved) => approved.tool === name)
+          ? `the arguments did not match the approved \`${name}\` call, so OpenCode did not run it`
+          : `OpenCode approved no pending \`${name}\` call`,
+      );
     if (this.declined || this.stopped) return this.fail(call.id, declined);
     const tool = (await this.available()).get(name);
     const { session, agent } = this.owner;
@@ -138,12 +149,12 @@ export class Gate {
     );
   }
 
-  private async perform(id: string, input: Record<string, unknown>, live: () => boolean) {
-    if (this.declined || this.stopped) return unwritten(declined);
-    const session = this.owner.session;
-    if (!session || !readOnly(this.owner.agent))
-      return unwritten("write_file failed: OpenCode writes through the sandbox only for read-only agents");
-    const owner = { ...this.owner, session };
+  private async perform(
+    id: string,
+    input: Record<string, unknown>,
+    owner: Owner & { session: string },
+    live: () => boolean,
+  ) {
     const job = jot(input, owner);
     if ("refuse" in job) return unwritten(job.refuse);
     const steps = plan({ toolCallId: id, name: "run_command", rawInput: { CommandLine: job.script } }, owner.directory);
@@ -153,7 +164,7 @@ export class Gate {
     if (!checked.cage) return unwritten("write_file failed: the guard did not sandbox this write");
     try {
       const source = { type: "tool" as const, messageID: this.message, id };
-      await this.grant(session, source, needs(steps.tool, checked.input, owner.directory));
+      await this.grant(owner.session, source, needs(steps.tool, checked.input, owner.directory));
     } catch (error) {
       if (!declines(error)) return unwritten(`write_file failed: ${explain(error)}`);
       this.declined = true;
@@ -211,11 +222,9 @@ export class Gate {
   }
 
   private claim(tool: string, input: Record<string, unknown>) {
-    const same = this.approved.filter((call) => call.tool === tool);
-    const exact = same.find((call) =>
-      Object.entries(input).every(([key, value]) => JSON.stringify(value) === JSON.stringify(call.input[key])),
+    const call = this.approved.find(
+      (approved) => approved.tool === tool && Bun.deepEquals(approved.input, input, true),
     );
-    const call = exact ?? same[0];
     if (call) this.approved.splice(this.approved.indexOf(call), 1);
     return call;
   }
