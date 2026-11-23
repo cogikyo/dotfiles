@@ -52,7 +52,7 @@ Write each selected path literally, without trailing slashes; do not build a pat
 
 ## Close
 
-On a user's `/done` or request to finish and close, ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without tagging.
+On a user's `/done` or request to finish and close, ask once with the `question` tool only when closing looks like a mistake, such as own work left uncommitted, follow-up work this session still owns, an open lane or pending decision, or a retro finding the user has not addressed; on no, stop without tagging.
 The automatic finish point requires those blockers to be absent; deferred retro candidates become `ISSUES` instead.
 Load `clear-lanes` and close finished lanes under its judgment.
 Call `drive_off` even when drive looks off.
@@ -74,7 +74,6 @@ Add each flag that applies:
 - `FIX`: the work repaired a bug or regression.
 - `ISSUES`: the session hit friction the retro did not resolve.
 - `REVIEWME`: landed work deserves a later look, such as a risky or unreviewed change.
-- `TODO`: follow-up work remains.
 - `REFUSALS`: the session's content made a model stop or refuse; this excludes its history from agents' session-history queries.
 
 ## Report

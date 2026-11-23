@@ -257,7 +257,7 @@ Past 250K, call `compact` without asking once a commit lands mid-session, with n
 Ask through `question` only if that finished-work point is unclear.
 Below 250K, compact only when the user asks or workflow-end compaction runs automatically.
 When a reply finishes the session's original ask, with own work committed and pushed where pushes need no yes, no lanes, edits, or repairs in flight, and no open question or pending decision, including an unanswered user question, load `done` and run it in that turn without asking.
-When a session at this finish point continues ongoing work, is pinned, or has an open PR or an undeployed change, do not load `done`; call `tools.opencode.session_tag` with `add: ["todo"]` and no `state`.
+When a session at this finish point continues ongoing work, is pinned, or has an open PR or an undeployed change, do not load `done` or tag it; it stays open.
 A user's `/done` still closes.
 At this finish point, `done` replaces past-250K compaction when closing; the user reopens a closed session that turns out unfinished.
 When a new request would mix an unrelated story into this session, offer a new session before starting it; on yes, call `session_create` with a self-contained prompt.
