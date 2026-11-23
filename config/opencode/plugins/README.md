@@ -288,7 +288,7 @@ For agents outside the read-only set, it rejects `grep` and `glob` roots at or a
 For agents outside the read-only set, `rm`, `find -delete`, and `find -exec rm` require paths inside `/tmp/opencode/`, written literally or through variables assigned earlier in the command, absolute or relative to a known `workdir` or `cd <dir> &&` target.
 For `rm`, this includes quoted, unchanged variables from `mktemp -d` under `/tmp/opencode` earlier in the same command; templates must not contain whitespace.
 They reject `..`, trailing slashes, and top-level globs; `xargs rm` is denied, and other deletion goes through `trash -- <path>`.
-Every agent except `collab` and `build/git` may run recognized read-only Git commands or Git in self-contained scratch repos under `/tmp/opencode`, subject to path and config checks; mutations in real repos are denied.
+Outside the read-only set, every agent except `collab` and `build/git` may run recognized read-only Git commands or Git in self-contained scratch repos under `/tmp/opencode`, subject to path and config checks; mutations in real repos are denied.
 Git checks use parsed commands, so Git text in `echo` arguments or data heredocs does not count as a command.
 The parser inspects nested arithmetic, including command substitutions and base prefixes, within its eight-level nesting limit.
 It also inspects literal script bodies passed through `flock`, `watch`, `uv run … bash -c`, and `unshare sh -c`.
@@ -308,7 +308,8 @@ The global `subagent` deny keeps that last one from every read-only agent except
 Their Code Mode scripts may call only those tools, including `tools.opencode.sessions`; the guard denies script `fetch` (use `webfetch`).
 Their frontmatter hides `opencode_session_*` and `opencode_worktree_*` management tools from the catalog, and `verify/web` denies all shell calls.
 Each read-only shell runs through [cage](../../../cmds/cmd/cage/README.md) offline, with writes limited to `~/.local/state/opencode/scratch/<session-id>`.
-Caged agents skip opaque-handoff rejection, including for `trap`, except that `parallel` remains rejected.
+Caged calls skip the parser's dynamic-name, stdin, opaque-handoff, nesting, `rm`, and Git checks, because cage enforces those effects.
+Program-running Git options and credential checks still apply.
 `$OPENCODE_SCRATCH` names that child's directory; `tmp/` and `cache/` are fully mutable, while the root permits creation and in-place writes without deletion, rename, truncation, or symlink creation.
 The pattern checks are guardrails; cage supplies the kernel sandbox and trusts the scratch path the guard computes.
 

@@ -648,24 +648,25 @@ export function inspect(
   workdir: string,
   known: Record<string, string> = {},
 ) {
+  const caged = readOnly(agent);
   const launched = launches(source, workdir, known, !owners.has(agent ?? ""));
   const commands = launched.map(({ command }) => command);
   const calls = invocations(launched, !relocations.test(source) && !launched.some(tampers));
   const found = new Set<string>();
-  if (commands.includes(opaque)) found.add(unchecked);
+  if (!caged && commands.includes(opaque)) found.add(unchecked);
   const blind = commands.includes(unseen) || /\bTRAP[A-Z]+\s*\(\s*\)|\bfunction\s+TRAP[A-Z]/u.test(source);
-  if (blind && !owners.has(agent ?? "") && (!readOnly(agent) || commands.some(([name]) => name === "parallel"))) {
+  if (blind && !owners.has(agent ?? "") && !caged) {
     found.add(
       "the command hands another program or a deferred builtin a script whose body or execution context the guard cannot recover literally, or passes shell options the guard does not parse, so the guard cannot check its git or `rm` calls; pass a literal script body or run the commands directly",
     );
   }
-  if (commands.includes(streamed)) {
+  if (!caged && commands.includes(streamed)) {
     found.add(
       "a shell here reads its script from stdin, a pipe, or a device the guard cannot see; pass the script with `-c` or a heredoc instead",
     );
   }
   // Cage already confines read-only deletion to scratch tmp/ and cache/.
-  if (!readOnly(agent) && !launched.every(deletion)) {
+  if (!caged && !launched.every(deletion)) {
     found.add(
       `\`rm\`, \`find -delete\`, and \`find -exec rm\` take only paths inside ${temp}/, written literally or through a variable assigned earlier in the command, absolute or relative to a known directory (\`workdir\`, or \`cd <dir> &&\`), without \`..\`, a trailing slash, or a top-level glob, and \`xargs rm\` is not allowed (\`$OPENCODE_SCRATCH\` is unset outside the read-only cage); move anything else to trash with \`trash -- <path>\``,
     );
@@ -692,7 +693,7 @@ export function inspect(
     );
   }
   const dynamic = [...new Set(commands.filter(([name]) => unresolved(name)).map(([name]) => `\`${name}\``))];
-  if (dynamic.length > 0) {
+  if (!caged && dynamic.length > 0) {
     found.add(
       `the command name ${dynamic.join(", ")} is expanded at run time; write the command name literally so the guard can check it`,
     );
@@ -705,13 +706,13 @@ export function inspect(
   if (args.some((arg) => database.test(arg))) found.add(databaseReason);
   if (args.some((arg) => profile.test(arg))) found.add(profileReason);
   if (args.some(geminiArg)) found.add(geminiReason);
-  if (!readOnly(agent))
+  if (!caged)
     for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
   for (const problem of calls.map(program)) if (problem) found.add(problem);
-  if (!owners.has(agent ?? "")) {
+  if (!owners.has(agent ?? "") && !caged) {
     for (const problem of calls.map(git)) if (problem) found.add(problem);
   }
-  const expansions = readOnly(agent) ? [] : [...new Set(calls.flatMap(expanded))];
+  const expansions = caged ? [] : [...new Set(calls.flatMap(expanded))];
   if (expansions.length > 0) {
     found.add(
       `the \`git push\` repo path or argument ${expansions.map((word) => `\`${word}\``).join(", ")} is expanded at run time; write it literally, or through a variable assigned earlier in the command, so the guard can check the push`,
