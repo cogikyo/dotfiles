@@ -4,6 +4,7 @@ import { ownerEnv, socketEnv, tokenEnv, writeMethod } from "./agy.ts";
 import { check, mark, plan, refusal, rewrite } from "./calls.ts";
 import type { Owner } from "./gate.ts";
 
+// Stays under session.ts's 10s hook timeout so the hook can still deny cleanly.
 const deadline = 8_000;
 
 const input = JSON.parse(await Bun.stdin.text());
@@ -16,6 +17,7 @@ async function decide(call: { id?: unknown; name?: unknown; args?: unknown }) {
   const { session, agent, directory } = owner;
   if (!readOnly(agent) || !session || !directory) return { decision: "force_ask" };
   if (call.name === "edit_file") return { decision: "deny", reason: rewrite(session) };
+  // The Gate already did the caged write; deny keeps agy's host write_file from running.
   if (call.name === "write_file") return { decision: "deny", reason: await relay(String(call.id), call.args) };
   if (call.name !== "run_command") return { decision: "force_ask" };
   const id = String(call.id);
