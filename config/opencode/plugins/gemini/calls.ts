@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { lstat, mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import { scratch, within } from "../guard/paths.ts";
+import { churned, scratch, within } from "../guard/paths.ts";
 import { readOnly } from "../guard/policy.ts";
 import { review } from "../guard/review.ts";
 import { launches, literalPath, opaque, quote, redirection, streamed, unseen, type Launch } from "../guard/shell.ts";
@@ -46,8 +46,6 @@ const tools: Record<string, (input: Record<string, unknown>, owner: Lane) => Pla
 };
 
 const actions = new Set(["list", "status", "kill"]);
-
-const churned = new Set(["tmp", "cache"]);
 
 const prefix = "mcp_opencode_";
 

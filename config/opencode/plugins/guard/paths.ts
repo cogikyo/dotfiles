@@ -66,7 +66,7 @@ const fixed = [
   "downloads/Addrawtech CAPI Firing - Sheet1.csv",
 ].map((secret) => path.join(home, secret));
 const system = ["/proc", "/sys", "/dev"];
-const churned = new Set(["tmp", "cache"]);
+export const churned = new Set(["tmp", "cache"]);
 const maxLinks = 40;
 
 function absent(error: unknown) {
