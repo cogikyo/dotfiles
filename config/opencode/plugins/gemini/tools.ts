@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Plugin } from "@opencode/plugin";
 import { Schema } from "effect";
 import type { Called, Content, Listed } from "./bridge.ts";
@@ -25,8 +27,7 @@ const interactive = [
 ];
 const audited = ["x"];
 const skipped = new Set([...duplicates, ...interactive, ...audited]);
-const lines = 2_000;
-const bytes = 50 * 1024;
+const bytes = 8 * 1024;
 
 export async function catalog(ctx: Plugin.Context, owner: Owner): Promise<Map<string, Tool>> {
   const { session, agent } = owner;
@@ -59,29 +60,36 @@ export async function decode(tool: Tool, input: Record<string, unknown>) {
   );
 }
 
-export function called(result: Result): Called {
+export async function called(result: Result, file: string): Promise<Called> {
   const items =
     typeof result.content === "string"
       ? [{ type: "text" as const, text: result.content }]
       : (result.content ?? [{ type: "text" as const, text: text(result.output) }]);
-  return { content: cap(items.map(content)) };
+  return { content: await spill(items.map(content), file) };
 }
 
 export function failed(reason: string): Called {
   return { content: [{ type: "text", text: reason }], isError: true };
 }
 
-function cap(items: Content[]): Content[] {
+async function spill(items: Content[], file: string): Promise<Content[]> {
   const full = items.flatMap((item) => (item.type === "text" ? [item.text] : [])).join("\n");
-  const total = full.split("\n").length;
-  if (total <= lines && Buffer.byteLength(full) <= bytes) return items;
-  const shown = Buffer.from(full.split("\n").slice(0, lines).join("\n"))
+  const total = Buffer.byteLength(full);
+  if (total <= bytes) return items;
+  const cut = Buffer.from(full)
     .subarray(0, bytes)
     .toString()
     .replace(/\uFFFD$/, "");
-  const count = shown.split("\n").length;
-  const marker = `[showing lines 1-${count} of ${total}; output is capped at ${lines} lines or 50 KiB, so narrow the query with filters, a smaller limit, or an offset to see the rest]`;
-  return [{ type: "text", text: `${shown}\n${marker}` }, ...items.filter((item) => item.type !== "text")];
+  const end = cut.lastIndexOf("\n");
+  const head = end > 0 ? cut.slice(0, end) : cut;
+  const shown = `showing the first ${Buffer.byteLength(head)} of ${total} bytes`;
+  const marker = await mkdir(path.dirname(file), { recursive: true })
+    .then(() => writeFile(file, full))
+    .then(
+      () => `[${shown}; the full output is in ${file}, so read the rest from there]`,
+      (error: unknown) => `[${shown}; saving the full output to ${file} failed: ${String(error)}]`,
+    );
+  return [{ type: "text", text: `${head}\n${marker}` }, ...items.filter((item) => item.type !== "text")];
 }
 
 function content(item: NonNullable<Exclude<Result["content"], string>>[number]): Content {

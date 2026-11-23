@@ -1,12 +1,12 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { readOnly } from "../guard/policy.ts";
 import { Agent } from "./acp.ts";
 import { environment, ownerEnv, profile } from "./agy.ts";
 import { Bridge, type Tools } from "./bridge.ts";
 import type { Call } from "./calls.ts";
 import type { Owner } from "./gate.ts";
+import { preface } from "./prompt.ts";
 
 export type Update = {
   sessionUpdate: string;
@@ -49,16 +49,27 @@ export type Sink = {
 export type Start = {
   command: string;
   owner: Owner;
+  system: string;
   resume?: string;
 };
 
 type Option = { id: string; category?: string; currentValue?: string; options?: { value: string }[] };
+
+type Initialized = {
+  agentCapabilities?: { _meta?: { antigravity?: { systemPrompt?: { append?: boolean } } } };
+};
 
 type Opened = {
   sessionId: string;
   configOptions?: Option[];
   _meta?: { antigravity?: { tier?: { name?: string } } };
 };
+
+function instructions(initialized: Initialized, start: Start) {
+  if (initialized?.agentCapabilities?._meta?.antigravity?.systemPrompt?.append !== true) return {};
+  const append = [preface(start.owner), start.system].filter(Boolean).join("\n\n");
+  return { _meta: { antigravity: { systemPrompt: { append } } } };
+}
 
 export function failure(code: "invalid_request" | "insufficient_quota", message: string) {
   return Object.assign(new Error(message), { code });
@@ -87,16 +98,14 @@ export class Session {
     private readonly sink: Sink,
     private readonly bridge: Bridge,
   ) {
-    const bridged = readOnly(start.owner.agent) ? bridge.spec.env : [];
     const env = {
       ...environment(),
-      ...Object.fromEntries(bridged.map(({ name, value }) => [name, value])),
       GIT_OPTIONAL_LOCKS: "0",
       GIT_PAGER: "cat",
       PAGER: "cat",
       [ownerEnv]: JSON.stringify(start.owner),
     };
-    const command = [start.command, "acp", "--sandbox", "--gemini-dir", profile];
+    const command = [start.command, "acp", "--gemini-dir", profile];
     this.agent = new Agent(command, start.owner.directory, env, {
       notify: (method, params) => {
         if (method !== "session/update") return;
@@ -130,7 +139,6 @@ export class Session {
     const bridge = await Bridge.open(bun, {
       list: () => sink.tools.list(),
       call: (name, input) => hold(() => sink.tools.call(name, input)),
-      write: (id, input, live) => hold(() => sink.tools.write(id, input, live)),
     });
     try {
       session = new Session(start, sink, bridge);
@@ -182,22 +190,28 @@ export class Session {
   }
 
   private async handshake() {
-    await this.agent.request("initialize", {
+    const initialized: Initialized = await this.agent.request("initialize", {
       protocolVersion: 1,
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
       clientInfo: { name: "opencode", version: "0" },
     });
     const base = { cwd: this.start.owner.directory, mcpServers: [this.bridge.spec] };
+    const meta = instructions(initialized, this.start);
     let opened: Opened | undefined;
     if (this.start.resume) {
       opened = await this.agent
-        .request("session/resume", { ...base, sessionId: this.start.resume })
+        .request("session/resume", { ...base, sessionId: this.start.resume, ...meta })
         .catch(() => undefined);
       this.resumed = opened !== undefined;
     }
     if (!opened) {
+      // agy persists session/new appends across turns; session/resume scopes them to one process so prompt updates apply.
       const created: Opened = await this.agent.request("session/new", base);
-      opened = created;
+      const prompted: Opened =
+        "_meta" in meta
+          ? await this.agent.request("session/resume", { ...base, sessionId: created.sessionId, ...meta })
+          : created;
+      opened = prompted;
     }
     this.tier = opened._meta?.antigravity?.tier?.name ?? "";
     if (!paid.test(this.tier))

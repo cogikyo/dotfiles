@@ -4,6 +4,7 @@ export type Meta = { session: string; owner: string; users: number; digest: stri
 
 export type Plan = {
   known?: { session: string; users: number };
+  system: string;
   next: string;
   full: string;
   meta: (session: string) => Meta | undefined;
@@ -13,6 +14,10 @@ const excerpt = 2000;
 
 export function plan(prompt: LanguageModelV3Prompt, owner: string | undefined): Plan {
   const turns = prompt.filter((message) => message.role !== "system");
+  const system = prompt
+    .flatMap((message) => (message.role === "system" ? [message.content.trim()] : []))
+    .filter(Boolean)
+    .join("\n\n");
   const users = turns.flatMap((message) => (message.role === "user" ? [text(message)] : []));
   const last = turns.findLastIndex((message) => message.role === "assistant");
   const latest = turns
@@ -23,9 +28,9 @@ export function plan(prompt: LanguageModelV3Prompt, owner: string | undefined): 
   const meta = (session: string) =>
     owner === undefined ? undefined : { session, owner, users: users.length, digest: digest(users) };
   const known = owner === undefined ? undefined : find(turns, owner, users);
-  if (!known) return { next: full, full, meta };
+  if (!known) return { system, next: full, full, meta };
   const next = users.slice(known.users).join("\n\n") || users.at(-1) || "";
-  return { known, next, full, meta };
+  return { known, system, next, full, meta };
 }
 
 function find(turns: LanguageModelV3Message[], owner: string, users: string[]) {

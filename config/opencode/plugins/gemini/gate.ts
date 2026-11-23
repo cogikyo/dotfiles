@@ -1,10 +1,12 @@
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { Agent, type Plugin } from "@opencode/plugin";
 import { Session } from "@opencode/schema/session";
 import type { SessionMessage } from "@opencode/schema/session-message";
 import { CallID } from "@opencode/schema/tool";
 import type { Called } from "./bridge.ts";
-import { readOnly } from "../guard/policy.ts";
-import { bridged, check, fill, jot, needs, plan, wrapped, type Call } from "./calls.ts";
+import { scratch } from "../guard/paths.ts";
+import { bridged, check, needs, plan, wrapped, type Call } from "./calls.ts";
 import type { Update } from "./session.ts";
 import { called, decode, failed, listed, type Tool } from "./tools.ts";
 import type { Transcript } from "./transcript.ts";
@@ -41,7 +43,8 @@ export class Gate {
     if (this.declined || this.stopped) return this.decline(call);
     const session = this.owner.session;
     if (!session) return this.refuse(call, "this request has no OpenCode session to judge tool calls against");
-    const steps = plan(call, this.owner.directory);
+    const lane = { ...this.owner, session };
+    const steps = plan(call, lane);
     if ("refuse" in steps) return this.refuse(call, steps.refuse);
     const tool = bridged(call.name);
     if (tool) {
@@ -49,18 +52,15 @@ export class Gate {
       this.approved.push({ id: call.toolCallId, tool, input });
       return true;
     }
-    const checked = await check(steps, { ...this.owner, session });
+    const checked = await check(steps, lane);
     if ("refuse" in checked) return this.refuse(call, checked.refuse);
-    if (checked.cage && !(await wrapped(call.toolCallId, checked.cage)))
-      return this.refuse(
-        call,
-        "read-only agents run shell commands only inside guard's sandbox, and OpenCode's tool hook did not wrap this one",
-      );
+    if (checked.overwrite && !(await wrapped(call.toolCallId, checked.overwrite)))
+      return this.refuse(call, "OpenCode's tool hook did not apply guard's rewrite of this call, so it did not run");
     const source = { type: "tool" as const, messageID: this.message, id: call.toolCallId };
     const key = `${session} ${source.messageID} ${source.id}`;
     if (checked.push) holds.set(key, checked.push);
     try {
-      await this.grant(session, source, needs(steps.tool, checked.input, this.owner.directory));
+      await this.grant(session, source, needs(steps.tool, checked.input, this.owner));
     } catch (error) {
       if (declines(error)) {
         this.declined = true;
@@ -71,20 +71,6 @@ export class Gate {
       holds.delete(key);
     }
     return true;
-  }
-
-  async write(id: string, input: Record<string, unknown>, live: () => boolean) {
-    if (this.declined || this.stopped) return declined;
-    const session = this.owner.session;
-    if (!session || !readOnly(this.owner.agent))
-      return "write_file failed: OpenCode writes through the sandbox only for read-only agents";
-    this.transcript.call({ sessionUpdate: "tool_call", toolCallId: id, name: "write_file", rawInput: input });
-    const owner = { ...this.owner, session };
-    const { error, text } = await this.perform(id, input, owner, live).catch((thrown: unknown) =>
-      unwritten(`write_file failed: ${explain(thrown)}`),
-    );
-    this.transcript.settle(id, text, error);
-    return text;
   }
 
   async list() {
@@ -117,7 +103,8 @@ export class Gate {
         signal: this.abort.signal,
         progress: async () => {},
       };
-      const result = called(await tool.execute(decoded.value, context));
+      const output = path.join(scratch, session, "output", `${/^[\w-]+$/.test(call.id) ? call.id : randomUUID()}.txt`);
+      const result = await called(await tool.execute(decoded.value, context), output);
       const shown = result.content.map((item) => (item.type === "text" ? item.text : `[${item.mimeType} image]`));
       this.transcript.settle(call.id, shown.join("\n"), false);
       return result;
@@ -147,35 +134,6 @@ export class Gate {
         .filter((request) => request.source && this.pending.has(request.source.id))
         .map((request) => this.permission.reply({ sessionID: session, requestID: request.id, decision: "reject" })),
     );
-  }
-
-  private async perform(
-    id: string,
-    input: Record<string, unknown>,
-    owner: Owner & { session: string },
-    live: () => boolean,
-  ) {
-    const job = jot(input, owner);
-    if ("refuse" in job) return unwritten(job.refuse);
-    const steps = plan({ toolCallId: id, name: "run_command", rawInput: { CommandLine: job.script } }, owner.directory);
-    if ("refuse" in steps) return unwritten(`write_file failed: ${steps.refuse}`);
-    const checked = await check(steps, owner);
-    if ("refuse" in checked) return unwritten(`write_file failed: ${checked.refuse}`);
-    if (!checked.cage) return unwritten("write_file failed: the guard did not sandbox this write");
-    try {
-      const source = { type: "tool" as const, messageID: this.message, id };
-      await this.grant(owner.session, source, needs(steps.tool, checked.input, owner.directory));
-    } catch (error) {
-      if (!declines(error)) return unwritten(`write_file failed: ${explain(error)}`);
-      this.declined = true;
-      return unwritten(declined);
-    }
-    if (this.declined || this.stopped) return unwritten(declined);
-    if (!live())
-      return unwritten(
-        "write_file failed: the tool hook stopped waiting before OpenCode approved the write, so nothing was written",
-      );
-    return fill(checked.cage.CommandLine, checked.cage.Cwd, job.content, job.target);
   }
 
   private async grant(session: string, source: Source, list: ReturnType<typeof needs>) {
@@ -237,8 +195,4 @@ function declines(error: unknown): boolean {
 
 function explain(error: unknown) {
   return error instanceof Error && error.message ? error.message : String(error);
-}
-
-function unwritten(text: string) {
-  return { error: true, text };
 }
