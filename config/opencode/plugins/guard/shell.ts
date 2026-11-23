@@ -973,3 +973,7 @@ function tick(source: string, start: number) {
 function until(index: number, source: string) {
   return index < 0 ? source.length : index;
 }
+
+export function quote(word: string) {
+  return `'${word.replaceAll("'", `'\\''`)}'`;
+}

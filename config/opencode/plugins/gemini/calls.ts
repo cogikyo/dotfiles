@@ -3,7 +3,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { scratch, within } from "../guard/paths.ts";
 import { review } from "../guard/review.ts";
-import { launches, literalPath, opaque, redirection, streamed, unseen, type Launch } from "../guard/shell.ts";
+import { launches, literalPath, opaque, quote, redirection, streamed, unseen, type Launch } from "../guard/shell.ts";
 import { cages } from "./agy.ts";
 import type { Owner } from "./gate.ts";
 
@@ -209,10 +209,6 @@ function project(directory: string) {
     if ([".git", ".hg"].some((marker) => existsSync(path.join(current, marker)))) return current;
     if (path.dirname(current) === current) return undefined;
   }
-}
-
-function quote(word: string) {
-  return `'${word.replaceAll("'", `'\\''`)}'`;
 }
 
 function object(value: unknown): value is Record<string, unknown> {

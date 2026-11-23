@@ -5,7 +5,7 @@ import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
 import { confine, expand, home, scratch, screen, secrets, within } from "./paths.ts";
 import { credential, inspect, readOnly } from "./policy.ts";
-import { enter } from "./shell.ts";
+import { enter, quote } from "./shell.ts";
 
 const cage = path.join(home, ".local/bin/cage");
 const allowed = [
@@ -44,10 +44,6 @@ export function text(input: unknown, key: string) {
   if (typeof input !== "object" || input === null) return undefined;
   const value = (input as Record<string, unknown>)[key];
   return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-function quote(word: string) {
-  return `'${word.replaceAll("'", `'\\''`)}'`;
 }
 
 function caged(command: string, dir: string) {
