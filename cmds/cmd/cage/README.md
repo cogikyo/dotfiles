@@ -18,10 +18,12 @@ Invoke a shell explicitly when the command needs shell syntax.
 ## Policy layers
 
 - New user, mount, network, PID, and IPC namespaces isolate the command; all mounts are read-only except scratch and the Go build cache, with a fresh `/proc`.
+- The network namespace has only `lo` up, so TCP and UDP reach only the sandbox's own `127.0.0.1` and `::1`.
+  Host loopback services and outbound routes stay unreachable.
 - Landlock denies reads beneath `--hide` paths and limits `/dev` access to `null`, `zero`, `full`, `random`, and `urandom`.
 - Scratch permits file and directory creation and in-place writes, but denies deletion, rename, truncation, and symlink creation; `tmp/` and `cache/` permit those operations.
   The Go build cache permits reads, file and directory creation, writes, deletion, and truncation, but no symlink creation or cross-directory links or renames.
-- Landlock denies Unix-socket connects and scopes signals and abstract sockets to the sandbox.
+- Landlock limits pathname Unix-socket binds and connects to scratch, and scopes signals and abstract sockets to the sandbox.
 - The command has zero capabilities, `no_new_privs`, a zero core-size limit, and only inherited file descriptors 0–2.
 - A PID 1 supervisor reaps children; its exit kills remaining processes, including when the caller disappears.
 
@@ -37,5 +39,6 @@ The [guard plugin](../../../config/opencode/plugins/README.md#guard) supplies `~
 - Scratch-root files remain overwritable in place, so they are not immutable evidence; tools that truncate or atomically replace files must use `tmp/` or `cache/`.
 - Secret protection depends on the caller's hide inventory; unlisted secrets remain readable, and missing hide paths are skipped.
 - Hidden entry names can remain visible in ancestor directory listings; `/` itself is unlistable, and new entries in hidden paths' ancestors remain unreadable after the policy walk.
+- Unix-socket paths must fit `sun_path`'s 108 bytes; a guard session scratch path uses 73 of them under a 12-byte home such as `/home/cullyn`.
 - There is no syscall filter or disk quota.
 - Core dumps are disabled, but crash metadata can still reach the system journal.

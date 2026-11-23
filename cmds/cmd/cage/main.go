@@ -29,6 +29,7 @@ const (
 	cache   = write | unix.LANDLOCK_ACCESS_FS_REMOVE_FILE | unix.LANDLOCK_ACCESS_FS_REMOVE_DIR | unix.LANDLOCK_ACCESS_FS_TRUNCATE
 	churn   = cache | unix.LANDLOCK_ACCESS_FS_REFER | unix.LANDLOCK_ACCESS_FS_MAKE_SYM
 	device  = unix.LANDLOCK_ACCESS_FS_READ_FILE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE
+	socket  = unix.LANDLOCK_ACCESS_FS_MAKE_SOCK | resolveUnix
 	file    = unix.LANDLOCK_ACCESS_FS_EXECUTE | unix.LANDLOCK_ACCESS_FS_WRITE_FILE | unix.LANDLOCK_ACCESS_FS_READ_FILE |
 		unix.LANDLOCK_ACCESS_FS_TRUNCATE | unix.LANDLOCK_ACCESS_FS_IOCTL_DEV
 )
@@ -97,7 +98,7 @@ func spawn() error {
 		Cloneflags:  syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC,
 		UidMappings: []syscall.SysProcIDMap{{ContainerID: os.Getuid(), HostID: os.Getuid(), Size: 1}},
 		GidMappings: []syscall.SysProcIDMap{{ContainerID: os.Getgid(), HostID: os.Getgid(), Size: 1}},
-		AmbientCaps: []uintptr{unix.CAP_SYS_ADMIN},
+		AmbientCaps: []uintptr{unix.CAP_SYS_ADMIN, unix.CAP_NET_ADMIN},
 	}
 	if err := start(cmd); err != nil {
 		return err
@@ -151,6 +152,9 @@ func confine(hides []string, arg string, argv []string) error {
 	if gocache != "" {
 		writable[gocache] = cached
 	}
+	if err := loopback(); err != nil {
+		return err
+	}
 	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("make mounts private: %w", err)
 	}
@@ -180,9 +184,8 @@ func confine(hides []string, arg string, argv []string) error {
 	}
 
 	attr := unix.LandlockRulesetAttr{
-		Access_fs:  handled,
-		Access_net: unix.LANDLOCK_ACCESS_NET_BIND_TCP | unix.LANDLOCK_ACCESS_NET_CONNECT_TCP,
-		Scoped:     unix.LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | unix.LANDLOCK_SCOPE_SIGNAL,
+		Access_fs: handled,
+		Scoped:    unix.LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | unix.LANDLOCK_SCOPE_SIGNAL,
 	}
 	fd, _, errno := unix.Syscall(unix.SYS_LANDLOCK_CREATE_RULESET, uintptr(unsafe.Pointer(&attr)), unsafe.Sizeof(attr), 0)
 	if errno != 0 {
@@ -197,7 +200,7 @@ func confine(hides []string, arg string, argv []string) error {
 			return err
 		}
 	}
-	if err := r.path(scratch, read|write); err != nil {
+	if err := r.path(scratch, read|write|socket); err != nil {
 		return err
 	}
 	for _, dir := range churned {
@@ -251,6 +254,26 @@ func confine(hides []string, arg string, argv []string) error {
 	}
 }
 
+func loopback() error {
+	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM|unix.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return fmt.Errorf("loopback socket: %w", err)
+	}
+	defer unix.Close(fd)
+	ifr, err := unix.NewIfreq("lo")
+	if err != nil {
+		return err
+	}
+	if err := unix.IoctlIfreq(fd, unix.SIOCGIFFLAGS, ifr); err != nil {
+		return fmt.Errorf("read lo flags: %w", err)
+	}
+	ifr.SetUint16(ifr.Uint16() | unix.IFF_UP)
+	if err := unix.IoctlIfreq(fd, unix.SIOCSIFFLAGS, ifr); err != nil {
+		return fmt.Errorf("bring up lo: %w", err)
+	}
+	return nil
+}
+
 func buildCache() (string, int, error) {
 	if _, err := exec.LookPath("go"); err != nil {
 		return "", -1, nil
@@ -301,8 +324,7 @@ func modProxy() string {
 		err = fmt.Errorf("GOMODCACHE %q is not absolute", mods)
 	}
 	if err != nil {
-		var failed *exec.ExitError
-		if errors.As(err, &failed) {
+		if failed, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%w: %s", err, bytes.TrimSpace(failed.Stderr))
 		}
 		fmt.Fprintf(os.Stderr, "cage: go env GOMODCACHE: %v; setting GOPROXY=off\n", err)
