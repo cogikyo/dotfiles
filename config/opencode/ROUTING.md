@@ -104,7 +104,7 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - `review/security` routes to Neon `medium` with an unconditional `openai/gpt-6.2-sol#high` seat beside it (not gated on Gemini quota); log one `LEDGER.md` row per run.
 - When Neon and Sol review the same change, base the synthesis on Neon's report.
   - Verify Sol-only findings by reproduction or source check before they drive a repair.
-  - Check whether a Neon blocker predates the diff before it blocks, because Neon often rates older issues as blocking.
+  - Check every blocker from either seat before it blocks: Neon's often predate the diff, and Sol's often rest on source reads the code can't reach.
   - Log one `LEDGER.md` row per debug or simplify run with both seats, giving held and dropped findings per seat, until about 10 runs.
 - Keep `review/security` and adversarial briefs off Opus, because Anthropic's cyber filter blocks it there.
   - Adversarial means bypass hunts, exploit paths, or attacks on keys, sandboxes, or guards; Opus can still take routine security passes (secrets, auth).
