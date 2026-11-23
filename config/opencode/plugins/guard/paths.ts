@@ -44,7 +44,7 @@ const fixed = [
   ".docker/config.json",
   ".histfile",
   ".pki",
-  ".config/gh",
+  ".config/gh/hosts.yml",
   ".config/chromium",
   ".config/BraveSoftware",
   ".config/Slack",
