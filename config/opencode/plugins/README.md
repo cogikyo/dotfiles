@@ -306,7 +306,7 @@ For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when t
 For all agents, including `collab` and `build/git`, it denies Git options that run a program, such as `--upload-pack`, `--receive-pack`, `--exec`, or `rebase -x`, and their abbreviations.
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 It also denies `systemd-run` unit names starting with `cogikyo-` (`-u`/`--unit`), protecting the voice-loop bus rights granted to `cogikyo-voice.scope`, which Cullyn's key creates.
-For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references, and lists the configured dirs in the denial.
+For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references and `subagent` prompts, and lists the configured dirs in the denial.
 Use `x` for X search, `tools.opencode.sessions` inside `execute` for history, and `session_create` for new sessions.
 Prefer `workdir`; V2 resolves each remaining `cd` argument against it, so chained relative changes can cause false external-directory prompts.
 The `context`, `compaction`, and `generate` hooks describe parallel calls and the shell environment: zsh without unquoted `$var` word-splitting outside the read-only set, or offline `bash -c` in cage for read-only agents.

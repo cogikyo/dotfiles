@@ -18,6 +18,7 @@ const exempt: Record<string, readonly string[] | "all"> = {
   execute: "all",
   grep: ["pattern"],
   opencode_sessions: "all",
+  subagent: ["prompt"],
 };
 const prefix = ["~", "\\$HOME", "\\$\\{HOME\\}", RegExp.escape(home)].join("|");
 
@@ -66,7 +67,7 @@ function changed(line: string) {
   return !line.startsWith("-") && !line.startsWith(" ");
 }
 
-// Keep stale references searchable and removable.
+// Keep stale references searchable and removable, and let subagent briefs mention dirs without acting on them.
 function texts(tool: string, input: unknown) {
   const skip = exempt[tool] ?? [];
   if (skip === "all") return [];
