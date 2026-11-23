@@ -15,13 +15,14 @@ async function decide(call: { id?: unknown; name?: unknown; args?: unknown }) {
   const reason = refusal(call.name);
   if (reason) return { decision: "deny", reason };
   const { session, agent, directory } = owner;
-  if (!readOnly(agent) || !session || !directory) return { decision: "force_ask" };
-  if (call.name === "edit_file") return { decision: "deny", reason: rewrite(session) };
+  if (!session || !directory) return { decision: "force_ask" };
+  const restricted = readOnly(agent);
+  if (restricted && call.name === "edit_file") return { decision: "deny", reason: rewrite(session) };
   // The Gate already did the caged write; deny keeps agy's host write_file from running.
-  if (call.name === "write_file") return { decision: "deny", reason: await relay(String(call.id), call.args) };
-  if (call.name !== "run_command") return { decision: "force_ask" };
+  if (restricted && call.name === "write_file")
+    return { decision: "deny", reason: await relay(String(call.id), call.args) };
   const id = String(call.id);
-  const steps = plan({ toolCallId: id, name: call.name, rawInput: call.args }, directory);
+  const steps = plan({ toolCallId: id, name: String(call.name), rawInput: call.args }, directory);
   if ("refuse" in steps) return { decision: "deny", reason: steps.refuse };
   const checked = await check(steps, { session, agent, directory });
   if ("refuse" in checked) return { decision: "deny", reason: checked.refuse };
@@ -36,31 +37,30 @@ function relay(id: string, args: unknown) {
   if (!file || !token) return Promise.resolve(unavailable("this turn has no OpenCode bridge; restart OpenCode"));
   return new Promise<string>((resolve) => {
     const socket = connect(file);
+    let sent = false;
     const finish = (text: string) => {
       clearTimeout(timer);
       socket.destroy();
       resolve(text);
     };
-    const timer = setTimeout(
-      () => finish(unavailable(`OpenCode did not answer within ${deadline / 1000} seconds`)),
-      deadline,
-    );
+    const fail = (why: string) => finish(sent ? unknown(why) : unavailable(why));
+    const timer = setTimeout(() => fail(`OpenCode did not answer within ${deadline / 1000} seconds`), deadline);
     let buffer = "";
     socket.setEncoding("utf8");
     socket.on("connect", () => {
       const request = { jsonrpc: "2.0", id: 0, method: writeMethod, params: { id, args } };
       socket.write(`${token}\n${JSON.stringify(request)}\n`);
+      sent = true;
     });
-    socket.on("error", (error) => finish(unavailable(`the OpenCode bridge failed (${error.message})`)));
-    socket.on("close", () => finish(unavailable("the OpenCode bridge closed without answering")));
+    socket.on("error", (error) => fail(`the OpenCode bridge failed (${error.message})`));
+    socket.on("close", () => fail("the OpenCode bridge closed without answering"));
     socket.on("data", (chunk: string) => {
       buffer += chunk;
       const end = buffer.indexOf("\n");
       if (end === -1) return;
       const reply = parse(buffer.slice(0, end));
-      finish(
-        typeof reply?.result?.text === "string" ? reply.result.text : unavailable("the OpenCode bridge sent no result"),
-      );
+      if (typeof reply?.result?.text === "string") finish(reply.result.text);
+      else fail("the OpenCode bridge sent no result");
     });
   });
 }
@@ -75,4 +75,8 @@ function parse(line: string): { result?: { text?: unknown } } | undefined {
 
 function unavailable(why: string) {
   return `write_file did not run: ${why}. Nothing was written; create the file with \`run_command\` instead, such as a quoted heredoc into $OPENCODE_SCRATCH`;
+}
+
+function unknown(why: string) {
+  return `write_file outcome unknown: ${why}, and the write may still land. Check the target path with \`run_command\` before you retry`;
 }
