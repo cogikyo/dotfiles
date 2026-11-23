@@ -67,17 +67,21 @@ const system = ["/proc", "/sys", "/dev"];
 const churned = new Set(["tmp", "cache"]);
 const maxLinks = 40;
 
-function entries(dir: string) {
-  try {
-    return readdirSync(dir, { withFileTypes: true });
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR") return [];
-    throw error;
-  }
+function absent(error: unknown) {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "ENOTDIR";
 }
 
 export function secrets() {
+  const unlisted: string[] = [];
+  const entries = (dir: string) => {
+    try {
+      return readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      if (!absent(error)) unlisted.push(dir);
+      return [];
+    }
+  };
   const dirs = [path.join(home, ".config/opencode")];
   for (const store of stores) {
     for (const { name } of entries(store).filter((entry) => entry.name.startsWith("opencode"))) {
@@ -90,9 +94,9 @@ export function secrets() {
       .map((entry) => path.join(dir, entry.name)),
   );
   const claude = entries(home)
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith(".claude"))
+    .filter((entry) => (entry.isDirectory() || entry.isSymbolicLink()) && entry.name.startsWith(".claude"))
     .flatMap((entry) => claudeStores.map((store) => path.join(home, entry.name, store)));
-  return [...fixed, ...firefox, ...claude, ...files];
+  return [...fixed, ...firefox, ...claude, ...files, ...unlisted];
 }
 
 function canonical(target: string) {
@@ -125,9 +129,22 @@ function churn(target: string, roots: string[]) {
 
 type Fence = { hidden: string[]; roots: string[] };
 
+function forms(secret: string) {
+  try {
+    return [realpathSync(secret)];
+  } catch (error) {
+    if (absent(error)) return [];
+  }
+  try {
+    return [path.join(located(path.dirname(secret)), path.basename(secret))];
+  } catch {
+    return [];
+  }
+}
+
 function fence(): Fence {
   const lexical = secrets();
-  const hidden = [...lexical, ...lexical.flatMap((secret) => canonical(secret) ?? [])];
+  const hidden = [...lexical, ...lexical.flatMap(forms)];
   const real = canonical(scratch);
   return { hidden, roots: real && real !== scratch ? [scratch, real] : [scratch] };
 }

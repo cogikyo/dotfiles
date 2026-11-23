@@ -317,6 +317,7 @@ Native checks walk symlinks hop by hop and refuse hidden paths, `/proc`, `/sys`,
 For every agent, including Gemini's bridged calls, `guard/server.ts` wraps `grep` and `glob` to drop results under this hide inventory by lexical path or realpath, so searches may start above hidden paths.
 When screening drops truncated results, reruns stop after 3 rounds or a 30-second budget and return the screened results marked truncated.
 Read scratch `tmp/` or `cache/` files through the shell, or copy them to new names at the scratch root for native reads; overwriting an existing root file fails.
+An inventory entry that cannot be resolved or listed is hidden as a whole subtree; a symlink beneath an unlistable or unresolvable hide is not followed.
 Unlisted secret stores remain readable, so the inventory needs maintenance.
 
 Read-only `webfetch` is replaced by `fetch.ts`: public HTTP(S) on ports 80/443, with connect-time DNS vetting, connected-peer checks, and checks on every redirect.
