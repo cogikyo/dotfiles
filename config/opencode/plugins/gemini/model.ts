@@ -63,7 +63,7 @@ export class Gemini implements LanguageModelV3 {
           const known = conversation.known;
           const resume = known && (this.setup.seen.get(known.session) ?? 0) <= known.users ? known.session : undefined;
           session = await Session.open(
-            { command: this.setup.command, owner: located, system: conversation.system, resume },
+            { command: this.setup.command, owner: located, resume },
             {
               update: (update) => transcript.update(update),
               permission: (call) => judge.judge(call),

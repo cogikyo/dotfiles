@@ -49,7 +49,6 @@ export type Sink = {
 export type Start = {
   command: string;
   owner: Owner;
-  system: string;
   resume?: string;
 };
 
@@ -67,8 +66,7 @@ type Opened = {
 
 function instructions(initialized: Initialized, start: Start) {
   if (initialized?.agentCapabilities?._meta?.antigravity?.systemPrompt?.append !== true) return {};
-  const append = [preface(start.owner), start.system].filter(Boolean).join("\n\n");
-  return { _meta: { antigravity: { systemPrompt: { append } } } };
+  return { _meta: { antigravity: { systemPrompt: { append: preface(start.owner) } } } };
 }
 
 export function failure(code: "invalid_request" | "insufficient_quota", message: string) {

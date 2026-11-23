@@ -16,12 +16,11 @@ const refused = [
 
 export function preface(owner: Owner) {
   const lines = [
-    "You run inside OpenCode through the Antigravity CLI. The OpenCode instructions below name OpenCode tools; call them like this:",
-    "- `shell` is `run_command`, `read` is `read_file`, `write` is `write_file`, and `edit` or `patch` is `edit_file`.",
-    "- Every other OpenCode tool is `mcp_opencode_<name>`, such as `mcp_opencode_grep`; a tool missing from your list is unavailable here.",
-    "- `execute` (Code Mode) is unavailable, so call each tool directly instead of scripting tool calls.",
+    "Tool names in your brief map to yours: `shell` is `run_command`, `read` is `read_file`, `write` is `write_file`, and `edit` or `patch` is `edit_file`.",
+    "- Other tools in a brief are `mcp_opencode_<name>`, such as `mcp_opencode_grep`; a tool missing from your list is unavailable.",
+    "- `execute` is unavailable, so call each tool directly instead of scripting tool calls.",
     "- `search_web` searches the web. `manage_task` can list, check, or kill background commands, but not send them input.",
-    `- OpenCode refuses ${refused.map((name) => `\`${name}\``).join(", ")}; ask questions in your reply instead.`,
+    `- ${refused.map((name) => `\`${name}\``).join(", ")} are refused; ask questions in your reply instead.`,
   ];
   if (!owner.session || !readOnly(owner.agent))
     return [
