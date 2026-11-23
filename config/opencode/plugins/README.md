@@ -315,6 +315,7 @@ The pattern checks are guardrails; cage supplies the kernel sandbox and trusts t
 For read-only agents, `paths.ts` supplies one hide inventory for cage and native `read`, `grep`, `glob`, and file-backed `diagram` checks; the uncaged credential gate uses the narrower set in `policy.ts`.
 Native checks walk symlinks hop by hop and refuse hidden paths, `/proc`, `/sys`, `/dev`, and every session's scratch `tmp/` or `cache/`; recursive searches also refuse home and roots containing scratch `tmp/` or `cache/`.
 For every agent, including Gemini's bridged calls, `guard/server.ts` wraps `grep` and `glob` to drop results under this hide inventory by lexical path or realpath, so searches may start above hidden paths.
+When screening drops truncated results, reruns stop after 3 rounds or a 30-second budget and return the screened results marked truncated.
 Read scratch `tmp/` or `cache/` files through the shell, or copy them to new names at the scratch root for native reads; overwriting an existing root file fails.
 Unlisted secret stores remain readable, so the inventory needs maintenance.
 

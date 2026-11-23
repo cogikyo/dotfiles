@@ -1,7 +1,7 @@
 import { Plugin } from "@opencode/plugin/effect";
 import type { Permission } from "@opencode/schema/permission";
 import { Tool } from "@opencode/schema/tool";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { check, fetchPublic, type Request } from "./fetch.ts";
@@ -14,6 +14,8 @@ const pushes = new Map<string, { reason: string; time: number }>();
 const fetches = new Set<string>();
 const runs = path.join(scratch, "runs.jsonl");
 const searchLimit = 100;
+const searchRounds = 3;
+const searchBudget = 30_000;
 
 type Assert = (
   input: Pick<Permission.Request, "sessionID" | "action" | "resources" | "save" | "metadata" | "source"> & {
@@ -54,12 +56,14 @@ function describe(event: { agent: string; tools: Record<string, { description: s
 
 type Search<T> = {
   count: string;
+  noun: string;
   file: (item: T) => string;
   render: (items: T[], directory: string) => string[];
 };
 
 const grep: Search<{ entry: { path: string }; line: number; text: string }> = {
   count: "matches",
+  noun: "matches",
   file: (match) => match.entry.path,
   render: (matches, directory) => {
     if (matches.length === 0) return ["No matches found"];
@@ -80,6 +84,7 @@ const grep: Search<{ entry: { path: string }; line: number; text: string }> = {
 
 const glob: Search<{ path: string }> = {
   count: "count",
+  noun: "files",
   file: (entry) => entry.path,
   render: (entries, directory) =>
     entries.length === 0 ? ["No files found"] : entries.map((entry) => path.resolve(directory, entry.path)),
@@ -91,25 +96,36 @@ function screened<T>(execute: Tool.Info["execute"], search: Search<T>, directory
       const want: number = input.limit ?? searchLimit;
       const hidden = screen();
       const visible = (item: T) => !hidden(path.resolve(directory, search.file(item)));
-      for (let limit = want + 1; ; limit *= 2) {
-        const result = yield* execute({ ...input, limit }, context);
-        const kept = (result.output as T[]).filter(visible);
-        if (kept.length <= want && result.metadata?.truncated) continue;
-        const items = kept.slice(0, want);
-        const truncated = kept.length > want;
-        const lines = search.render(items, directory);
-        if (truncated) {
-          lines.push(
-            "",
-            `(Results are truncated: showing first ${items.length} results. Consider using a more specific path or pattern.)`,
-          );
-        }
-        return {
-          output: items,
-          content: lines.join("\n"),
-          metadata: { ...result.metadata, [search.count]: items.length, truncated },
-        };
+      const deadline = Date.now() + searchBudget;
+      let limit = want + 1;
+      let result = yield* execute({ ...input, limit }, context);
+      let kept = (result.output as T[]).filter(visible);
+      for (let round = 2; round <= searchRounds && kept.length <= want && result.metadata?.truncated; round++) {
+        const left = deadline - Date.now();
+        if (left <= 0) break;
+        limit *= 2;
+        const next = yield* execute({ ...input, limit }, context).pipe(Effect.timeoutOption(left));
+        if (Option.isNone(next)) break;
+        result = next.value;
+        kept = (result.output as T[]).filter(visible);
       }
+      const items = kept.slice(0, want);
+      const truncated = kept.length > want || Boolean(result.metadata?.truncated);
+      const lines =
+        items.length === 0 && truncated
+          ? [`No visible ${search.noun} in the scanned results`]
+          : search.render(items, directory);
+      if (truncated) {
+        lines.push(
+          "",
+          `(Results are truncated: showing first ${items.length} results. Consider using a more specific path or pattern.)`,
+        );
+      }
+      return {
+        output: items,
+        content: lines.join("\n"),
+        metadata: { ...result.metadata, [search.count]: items.length, truncated },
+      };
     });
 }
 
