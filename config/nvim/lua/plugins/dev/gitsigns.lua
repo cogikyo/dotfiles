@@ -9,6 +9,9 @@ return {
 
 		local api = vim.api
 		local fn = vim.fn
+		local commit = require("config.gitsigns_commit")
+		local git = commit.git
+		local pending_jump = nil
 
 		-- ╭─────────────────────────────────────────────────────────────────────╮
 		-- │ navigation: hunks within and across changed files                   │
@@ -16,14 +19,13 @@ return {
 
 		local function git_root(path)
 			local dir = path ~= "" and fn.fnamemodify(path, ":p:h") or fn.getcwd()
-			local root = fn.systemlist("git -C " .. fn.shellescape(dir) .. " rev-parse --show-toplevel")[1]
-			if vim.v.shell_error ~= 0 then
-				return nil
-			end
-			return root
+			local out = git(dir, { "rev-parse", "--show-toplevel" })
+			return out and vim.trim(out) or nil
 		end
 
-		local function git_lines(root, args) return fn.systemlist("git -C " .. fn.shellescape(root) .. " " .. args) end
+		local function git_lines(root, args)
+			return vim.split(git(root, args) or "", "\n", { plain = true, trimempty = true })
+		end
 
 		local function hunk_edge(direction) return direction == "next" and "first" or "last" end
 
@@ -41,14 +43,9 @@ return {
 			gitsigns.nav_hunk(direction)
 		end
 
-		local function get_changed_files(path)
-			local root = git_root(path)
-			if not root then
-				return {}, {}
-			end
-
-			local modified = git_lines(root, "diff --name-only")
-			local untracked = git_lines(root, "ls-files --others --exclude-standard")
+		local function get_changed_files(root)
+			local modified = git_lines(root, { "diff", "--name-only" })
+			local untracked = git_lines(root, { "ls-files", "--others", "--exclude-standard" })
 			local untracked_set = {}
 			local files = {}
 			local seen = {}
@@ -71,40 +68,81 @@ return {
 			return files, untracked_set
 		end
 
+		local function cancel_jump()
+			if pending_jump then
+				pending_jump()
+			end
+		end
+
 		local function jump_to_hunk_on_attach(is_untracked, direction)
+			cancel_jump()
+			local win, buf = api.nvim_get_current_win(), api.nvim_get_current_buf()
+			local autocmd, finish
+
+			local function here()
+				return pending_jump == finish
+					and api.nvim_win_is_valid(win)
+					and api.nvim_get_current_win() == win
+					and api.nvim_win_get_buf(win) == buf
+			end
+
+			function finish()
+				if pending_jump == finish then
+					pending_jump = nil
+				end
+				if autocmd then
+					pcall(api.nvim_del_autocmd, autocmd)
+				end
+			end
+			pending_jump = finish
+
 			if is_untracked then
-				vim.schedule(function() api.nvim_win_set_cursor(0, { 1, 0 }) end)
+				vim.schedule(function()
+					if here() then
+						api.nvim_win_set_cursor(win, { 1, 0 })
+					end
+					finish()
+				end)
 				return
 			end
 
-			local augroup = api.nvim_create_augroup("GitsignsNavJump", { clear = true })
-			local jumped = false
+			local function jump()
+				if here() then
+					gitsigns.nav_hunk(hunk_edge(direction))
+				end
+				finish()
+			end
 
-			local function jump() gitsigns.nav_hunk(hunk_edge(direction)) end
-
-			api.nvim_create_autocmd("User", {
-				group = augroup,
-				pattern = "GitSignsUpdate",
-				once = true,
-				callback = function()
-					jumped = true
+			local function jump_if_ready()
+				if not here() then
+					finish()
+				elseif next(gitsigns.get_hunks(buf) or {}) then
 					jump()
+				end
+			end
+
+			autocmd = api.nvim_create_autocmd("User", {
+				pattern = "GitSignsUpdate",
+				callback = function(args)
+					if args.data and args.data.buffer == buf then
+						vim.schedule(jump_if_ready)
+					end
 				end,
 			})
 
-			vim.defer_fn(function()
-				if jumped then
-					return
-				end
-
-				pcall(api.nvim_del_augroup_by_id, augroup)
-				jump()
-			end, 500)
+			vim.schedule(jump_if_ready)
+			vim.defer_fn(jump, 500)
 		end
 
-		local function switch_to_changed_file(direction)
+		local function switch_to_changed_file(direction, files, untracked_set)
 			local current_file = fn.fnamemodify(api.nvim_buf_get_name(0), ":p")
-			local files, untracked_set = get_changed_files(current_file)
+			if not files then
+				local root = git_root(current_file)
+				if not root then
+					return
+				end
+				files, untracked_set = get_changed_files(root)
+			end
 			if #files == 0 then
 				return
 			end
@@ -128,21 +166,20 @@ return {
 			end
 
 			local target = files[next_index]
-			jump_to_hunk_on_attach(untracked_set[target] or false, direction)
 			vim.cmd("edit " .. fn.fnameescape(target))
+			jump_to_hunk_on_attach(untracked_set[target] or false, direction)
 		end
 
-		local function nav_hunk_all_files(direction)
+		local function nav_hunk_all_files(direction, files, untracked)
 			show_hunk_linehl()
 
 			local start_win = api.nvim_get_current_win()
 			local start_buf = api.nvim_get_current_buf()
 			local start_line = api.nvim_win_get_cursor(start_win)[1]
 			local current_file = fn.fnamemodify(api.nvim_buf_get_name(start_buf), ":p")
-			local _, untracked = get_changed_files(current_file)
 
 			if untracked[current_file] then
-				switch_to_changed_file(direction)
+				switch_to_changed_file(direction, files, untracked)
 				return
 			end
 
@@ -168,6 +205,24 @@ return {
 					switch_to_changed_file(direction)
 				end)
 			end)
+		end
+
+		local function walk(direction)
+			cancel_jump()
+			local root = git_root(fn.fnamemodify(api.nvim_buf_get_name(0), ":p"))
+			if not root then
+				api.nvim_echo({ { "Not in a git repository" } }, false, {})
+				return
+			end
+
+			local files, untracked = get_changed_files(root)
+			if #files == 0 then
+				commit.nav(direction, root)
+				return
+			end
+
+			commit.clear()
+			nav_hunk_all_files(direction, files, untracked)
 		end
 
 		local function selected_lines() return { fn.line("."), fn.line("v") } end
@@ -272,8 +327,8 @@ return {
 
 		local function diff_hunk(root, path, hunk, staged)
 			local relpath = path:sub(#root + 2)
-			local cached = staged and "--cached " or ""
-			local lines = git_lines(root, "diff " .. cached .. "--unified=3 -- " .. fn.shellescape(relpath))
+			local args = staged and { "diff", "--cached" } or { "diff" }
+			local lines = git_lines(root, vim.list_extend(args, { "--unified=3", "--", relpath }))
 
 			for index, line in ipairs(lines) do
 				if hunk_matches(hunk_header_parts(line), hunk) then
@@ -311,15 +366,18 @@ return {
 				return
 			end
 
-			local hunk = current_unstaged_hunk()
-			local staged = false
-			if not hunk then
-				hunk = current_staged_hunk()
-				staged = true
-			end
-			if not hunk then
-				vim.notify("No diagnostics or hunk under cursor", vim.log.levels.WARN)
-				return
+			local patch, short = commit.patch()
+			local hunk, staged = nil, false
+			if not patch then
+				hunk = current_unstaged_hunk()
+				if not hunk then
+					hunk = current_staged_hunk()
+					staged = true
+				end
+				if not hunk then
+					vim.notify("No diagnostics or hunk under cursor", vim.log.levels.WARN)
+					return
+				end
 			end
 
 			local set_register = _G.context_yank_api and _G.context_yank_api.set_register
@@ -329,6 +387,12 @@ return {
 			end
 
 			local path = fn.fnamemodify(api.nvim_buf_get_name(0), ":p")
+			if patch then
+				set_register(path, patch, "diff")
+				vim.notify("Yanked " .. short .. " hunk", vim.log.levels.INFO)
+				return
+			end
+
 			local root = git_root(path)
 			local content = root and diff_hunk(root, path, hunk, staged) or nil
 			set_register(path, content or patch_hunk(hunk), "diff")
@@ -336,6 +400,10 @@ return {
 		end
 
 		local function stage_hunk_then_next(fallback)
+			if commit.advance("next") then
+				return
+			end
+
 			local hunk = current_unstaged_hunk()
 			if not hunk then
 				fallback_keys("<C-y>", fallback)
@@ -368,8 +436,6 @@ return {
 			local ctrl_y_fallback = fn.maparg("<C-y>", "n", false, true)
 			local function next_hunk() nav_hunk("next") end
 			local function prev_hunk() nav_hunk("prev") end
-			local function next_hunk_all_files() nav_hunk_all_files("next") end
-			local function prev_hunk_all_files() nav_hunk_all_files("prev") end
 			local function stage_hunk_then_next_or_fallback() stage_hunk_then_next(ctrl_y_fallback) end
 			local function stage_selection() gitsigns.stage_hunk(selected_lines()) end
 			local function reset_selection() gitsigns.reset_hunk(selected_lines()) end
@@ -378,8 +444,8 @@ return {
 
 			map("n", "]h", next_hunk, "Next hunk (file)")
 			map("n", "[h", prev_hunk, "Previous hunk (file)")
-			map("n", "<C-n>", next_hunk_all_files, "Next hunk (all files)")
-			map("n", "<C-p>", prev_hunk_all_files, "Previous hunk (all files)")
+			map("n", "<C-n>", function() walk("next") end, "Next hunk (all files, or cursor line's commit)")
+			map("n", "<C-p>", function() walk("prev") end, "Previous hunk (all files, or cursor line's commit)")
 			map("n", "<C-y>", stage_hunk_then_next_or_fallback, "Stage hunk and next")
 			map("n", "<A-w>", yank_hunk_or_diagnostics, "Yank diagnostics or hunk")
 			map("n", "<leader>hs", gitsigns.stage_hunk, "Stage hunk")
