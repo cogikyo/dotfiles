@@ -1,5 +1,5 @@
 export const states = ["closed", "archived", "research"] as const;
-export const flags = ["fix", "issues", "reviewme", "refusals"] as const;
+export const flags = ["fix", "issues", "reviewme", "todo", "refusals"] as const;
 
 export type State = (typeof states)[number];
 export type Flag = (typeof flags)[number];
@@ -7,13 +7,10 @@ export type Tag = { readonly state?: State; readonly flags: readonly Flag[] };
 
 const pattern = /^\[([A-Z,]+)\] /u;
 
-// Agents can't retag REFUSALS sessions, so some may still carry the retired TODO flag.
-const retired = "TODO";
-
 function read(title?: string) {
   const match = pattern.exec(title ?? "");
   if (!match) return undefined;
-  const names = match[1].split(",").filter((name) => name !== retired);
+  const names = match[1].split(",");
   const state = states.find((name) => name.toUpperCase() === names[0]);
   const found = names.slice(state ? 1 : 0).map((name) => flags.find((flag) => flag.toUpperCase() === name));
   if (found.some((flag) => !flag)) return undefined;
@@ -32,10 +29,13 @@ export function revise(current: Tag | undefined, change: Change): Tag {
   // Only the TUI toggle can clear REFUSALS.
   const sticky = current?.flags.filter((name) => name === "refusals") ?? [];
   const base = change.flags ?? current?.flags.filter((name) => name !== "refusals") ?? [];
-  return {
+  const next = {
     state: change.state ?? current?.state,
     flags: [...new Set([...base, ...(change.add ?? []), ...sticky])],
   };
+  if (!next.state && next.flags.includes("todo"))
+    throw new Error("session_tag: todo needs a state; open sessions keep no todo flag");
+  return next;
 }
 
 export function retag(title: string, next: Tag) {

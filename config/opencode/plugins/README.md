@@ -449,9 +449,8 @@ Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_mess
 Message reads must use an indexed `session_id` bound.
 
 A title tag is an uppercase prefix such as `[CLOSED,FIX] ` or `[REFUSALS] `, defined in `sessions/tags.ts`.
-It holds an optional state (`CLOSED`, `ARCHIVED`, or `RESEARCH`) first, then flags (`FIX`, `ISSUES`, `REVIEWME`, or `REFUSALS`), with at least one name.
+It holds an optional state (`CLOSED`, `ARCHIVED`, or `RESEARCH`) first, then flags (`FIX`, `ISSUES`, `REVIEWME`, `TODO`, or `REFUSALS`), with at least one name.
 Only tags with a state count as closed; unknown names or misplaced states make a prefix unrecognized.
-The retired `TODO` flag is dropped on read, because agents can't retag `REFUSALS` sessions that still carry it.
 Writes deduplicate flags in the order above; see [done's tag criteria](../skills/orchestration/done/SKILL.md#tags) to choose them.
 
 `sessions/query.ts` filters session and message views to omit `REFUSALS` sessions and their descendants through child or fork links; the TUI still shows them.
@@ -464,6 +463,7 @@ Plain-title copies are included only with at least two words and 10 characters, 
 It rewrites the title tag, keeps any `refusals` flag and the rest of the title, and skips unchanged titles.
 Omitting `state` keeps the current one, leaving a live session open.
 `flags` replaces flags, `add` adds (after `flags` if both are passed), and omitting both keeps them.
+It refuses a `todo` flag on a session without a state, so open sessions never show `[TODO]`.
 It refuses another session flagged `REFUSALS` without echoing its title.
 Only top-level sessions can call it or be tagged; `sessionID` defaults to the caller, and a missing title becomes `New session - <ISO time>`.
 
