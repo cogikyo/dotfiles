@@ -140,6 +140,18 @@ const modelDescription = [
   "Only top-level sessions can call it.",
 ].join(" ");
 
+const queues = new Map<string, Promise<unknown>>();
+
+function serial<T>(sessionID: string, work: () => Promise<T>) {
+  const run = (queues.get(sessionID) ?? Promise.resolve()).then(work, work);
+  const tail = run.catch(() => undefined);
+  queues.set(sessionID, tail);
+  void tail.then(() => {
+    if (queues.get(sessionID) === tail) queues.delete(sessionID);
+  });
+  return run;
+}
+
 export default Plugin.define({
   id: "sessions",
   async setup(ctx) {
@@ -166,23 +178,25 @@ export default Plugin.define({
         input: TagInput,
         output: TagOutput,
         options: { namespace: "opencode", codemode: true, pinned: true },
-        execute: async (input, context) => {
-          const caller = await ctx.session.get({ sessionID: context.sessionID });
-          if (caller.parentID) throw new Error("session_tag: only top-level sessions can tag sessions");
+        execute: (input, context) => {
           const sessionID = input.sessionID ?? context.sessionID;
-          const session = sessionID === caller.id ? caller : await ctx.session.get({ sessionID });
-          if (session.parentID)
-            throw new Error(`session_tag: ${sessionID} is a child session; only top-level sessions take tags`);
-          const current = tag(session.title);
-          if (current?.flags.includes("refusals") && session.id !== caller.id)
-            throw new Error(`session_tag: ${sessionID} is hidden from agents by the refusals flag`);
-          const next = retag(title(session), revise(current, input));
-          const changed = next !== session.title;
-          if (changed) await ctx.session.update({ sessionID, title: next });
-          return {
-            output: { sessionID, title: next },
-            content: `${changed ? "Tagged" : "Already tagged"} session ${sessionID}: ${next}`,
-          };
+          return serial(sessionID, async () => {
+            const caller = await ctx.session.get({ sessionID: context.sessionID });
+            if (caller.parentID) throw new Error("session_tag: only top-level sessions can tag sessions");
+            const session = sessionID === caller.id ? caller : await ctx.session.get({ sessionID });
+            if (session.parentID)
+              throw new Error(`session_tag: ${sessionID} is a child session; only top-level sessions take tags`);
+            const current = tag(session.title);
+            if (current?.flags.includes("refusals") && session.id !== caller.id)
+              throw new Error(`session_tag: ${sessionID} is hidden from agents by the refusals flag`);
+            const next = retag(title(session), revise(current, input));
+            const changed = next !== session.title;
+            if (changed) await ctx.session.update({ sessionID, title: next });
+            return {
+              output: { sessionID, title: next },
+              content: `${changed ? "Tagged" : "Already tagged"} session ${sessionID}: ${next}`,
+            };
+          });
         },
       });
       editor.add({
