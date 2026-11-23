@@ -511,7 +511,7 @@ Inputs are `directory`, `title`, and optional `prompt` and `agent`; the director
 It creates a top-level session with session metadata `origin` set to the caller's session ID, then sends `prompt` as the first message to start a turn.
 Without `agent`, the session uses the configured default primary agent; a named agent must be a visible primary agent at that directory.
 Only top-level sessions can call it, and the new session is not a lane.
-V2 gives plugins no permission-ask path, so the user's request in chat is the approval; the guard's `opencode api` denial points here.
+The plugin does not ask for permission through `ctx.permission.assert`, so the user's request in chat is the approval; the guard's `opencode api` denial points here.
 If the prompt fails, the error names the created session, so the agent does not retry and create a duplicate.
 There is no persistent state, key, or TUI slot.
 
