@@ -13,6 +13,7 @@ routes:
   review/*: openai/gpt-6.2-sol high
   review/copy: gemini/gemini-4-neon high
   review/security: gemini/gemini-4-neon medium
+  review/simplify: gemini/gemini-4-neon high
   review/entropy: claude/claude-opus-5-5 xhigh
   verify/*: openai/gpt-6.2-sol high
   verify/decide: claude/claude-fable-5-2 high
@@ -97,6 +98,8 @@ Use the `subagent` agent descriptions and these guidelines to pick a child.
 - Sol carries review volume; keep routine reviews on its routes.
 - After implementation, pair **`review/debug`** (correctness) with **`review/simplify`** (idiom, dead code, cleanliness); keep `review/debug` alone for small fixes.
 - Add `review/security`, `review/profile`, `review/architect`, and `review/copy` as risks warrant; run `review/copy` before commit on frontend UI text changes.
+- `review/simplify` routes to Neon `high`; seat `openai/gpt-6.2-sol#high` beside it whenever OpenAI usage allows.
+  - When Gemini is capped, pass `claude/claude-opus-5-5#high` yourself, and fall to Sol only when Claude is capped too, because Neon's automatic fallback is Sol.
 - `review/security` routes to Neon `medium` with an unconditional `openai/gpt-6.2-sol#high` seat beside it (not gated on Gemini quota); log one `LEDGER.md` row per run.
 - Keep `review/security` and adversarial briefs off Opus, because Anthropic's cyber filter blocks it there.
   - Adversarial means bypass hunts, exploit paths, or attacks on keys, sandboxes, or guards; Opus can still take routine security passes (secrets, auth).
@@ -170,9 +173,9 @@ Listed in rough order of overall preference; pick effort from the ladder above.
 
 ### `gemini-4-neon`
 
-- Reasoning: `medium` for `review/security`, seats, and scouts, `high` for scribe, copy, and Sol-refusal reruns; `xhigh` is untested.
+- Reasoning: `medium` for `review/security`, seats, and scouts, `high` for scribe, copy, simplify, and Sol-refusal reruns; `xhigh` is untested.
 - Fallback: Sol when either Gemini window is capped.
-- Routes `build/scribe`, `review/copy`, and `review/security` (the security route rests on one run).
+- Routes `build/scribe`, `review/copy`, `review/simplify`, and `review/security` (the security route rests on one run).
 - Seat it at `medium` beside hard `scout/code` traces under the experimental phase, and log comparisons in `LEDGER.md`.
 - Gets only the brief, so name the role file and any skill files it needs.
 - Evidence: `high` beat Sol (+4 verified bugs) on one review and had scribe cohort medians of 9.3m (n=9) and 6.3m (n=4, 4/13 repaired); `medium` matched Opus's raw finding count (12 each, 7.5m vs 9.6m) on one council (see `LEDGER.md`).
