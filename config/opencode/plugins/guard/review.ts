@@ -3,7 +3,7 @@ import { realpath } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
-import { confine, expand, home, scratch, screen, secrets, within } from "./paths.ts";
+import { confine, expand, home, located, scratch, screen, secrets, within } from "./paths.ts";
 import { credential, inspect, readOnly } from "./policy.ts";
 import { enter, quote } from "./shell.ts";
 
@@ -89,12 +89,17 @@ export async function review(call: Call): Promise<Review> {
     };
   }
   if (restricted && call.tool in files) return confined(call);
-  if (!restricted && (call.tool === "read" || call.tool === "grep")) {
+  if (!restricted && ["read", "grep", "write", "edit"].includes(call.tool)) {
     const target = text(call.input, "path");
     if (target) {
       const lexical = resolve(call.directory, target);
-      const real = await realpath(lexical).catch(() => undefined);
-      const reason = credential(lexical) ?? (real === undefined ? undefined : credential(real));
+      let real: string;
+      try {
+        real = located(lexical);
+      } catch {
+        return { problem: `${call.tool} cannot use ${target}: the guard cannot resolve its real path` };
+      }
+      const reason = credential(lexical) ?? credential(real);
       if (reason) return { problem: `${call.tool} cannot use ${target}: ${reason}` };
     }
   }

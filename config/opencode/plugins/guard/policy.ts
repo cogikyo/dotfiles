@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
-import { expand, firefox, home, located, temp, within } from "./paths.ts";
+import { profile as gemini } from "../gemini/agy.ts";
+import { brain, expand, firefox, home, located, temp, tilde, within } from "./paths.ts";
 import {
   type Command,
   flags,
@@ -45,10 +46,20 @@ const databaseReason =
 const profile = /[\s/=@<>:'"(,`]\.(?:config\/)?mozilla(?:\/firefox(?![\w.-])|\/?(?![^\s'"),;`]))/u;
 const profileReason =
   "Firefox profile folders (`~/.config/mozilla/firefox`, `~/.mozilla/firefox`) hold the user's cookies, saved logins, and site storage; agents must not read, copy, or archive them; browser checks go through `verify/browser`";
+const geminiPath = /(?:\.local\/state|XDG_STATE_HOME)\}?\/opencode\/gemini(?![\w.-])([^\s'"`;|&<>)]*)/gu;
+const brainTail = `/${path.relative(gemini, brain)}`;
+const geminiReason = `agy's profile \`${tilde(gemini)}\` holds its bridge token, MCP config, hooks, and bridged results; agents must not read or write it`;
+
+function geminiArg(arg: string) {
+  return [...arg.matchAll(geminiPath)].some(
+    ([, tail = ""]) => !within(tail, brainTail) || /(?:^|\/)\.\.(?:\/|$)/u.test(tail),
+  );
+}
 
 export function credential(file: string) {
   const target = path.resolve(file);
   if (firefox.some((root) => within(target, root) || target === path.dirname(root))) return profileReason;
+  if (within(target, gemini) && !within(target, brain)) return geminiReason;
   if (!credentialFiles.some((pattern) => pattern.test(file))) return undefined;
   return database.test(file) ? databaseReason : `\`${file}\` is a credential file; agents must not read it`;
 }
@@ -693,6 +704,7 @@ export function inspect(
   }
   if (args.some((arg) => database.test(arg))) found.add(databaseReason);
   if (args.some((arg) => profile.test(arg))) found.add(profileReason);
+  if (args.some(geminiArg)) found.add(geminiReason);
   if (!readOnly(agent))
     for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
   for (const problem of calls.map(program)) if (problem) found.add(problem);

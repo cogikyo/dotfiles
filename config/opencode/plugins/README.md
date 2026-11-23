@@ -271,7 +271,7 @@ Known gaps:
 - Gemini edits appear as Gemini tool rows without a diff, and OpenCode's formatter does not run on them.
 - `ls` inside cage shows hidden file names, the same as native read-only agents.
 - `agy`'s profile stores each turn's MCP config, including its token, and bridged results.
-  - That profile is not in guard's hide list.
+  - Guard hides and denies that profile for every agent, except `antigravity-cli/brain`, where `agy` saves overflowed tool output that lanes read back.
 - Bridged images are not resized.
 - MCP cancel notifications are ignored.
 
@@ -279,7 +279,7 @@ Known gaps:
 
 `guard/server.ts` denies recognized shell Grok launches and OpenCode API calls.
 The shared tool checks live in `guard/review.ts`, called from `tool.execute.before` and by the [Gemini](#gemini) plugin.
-For agents outside the read-only set, the credential gate covers recognized Claude `.credentials.json` and OpenCode `auth.json`, `service[-…].json`, and `opencode.db[-wal|-shm]` paths in shell arguments, native `read`, and `grep` pointed directly at a file.
+For agents outside the read-only set, the credential gate covers recognized Claude `.credentials.json`, OpenCode `auth.json`, `service[-…].json`, and `opencode.db[-wal|-shm]`, and `agy`'s profile outside `antigravity-cli/brain` in shell arguments, native `read`, `write`, and `edit`, and `grep` pointed directly at a file.
 Native checks expand `~`, resolve relative paths against the session directory, and check realpaths.
 Shell checks also resolve literal operands and redirect targets against the command's cwd and every literal `cd`/`chdir`/`pushd` destination, checking realpaths only for credential-like basenames; variables, globs, substitutions, and runtime-built paths are not resolved.
 Credential basenames used as text can also reject when resolved against those candidate directories.

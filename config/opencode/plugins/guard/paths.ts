@@ -2,9 +2,11 @@ import { readdirSync, realpathSync } from "node:fs";
 import { lstat, readlink, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
+import { profile } from "../gemini/agy.ts";
 
 export const home = homedir();
 export const scratch = path.join(home, ".local/state/opencode/scratch");
+export const brain = path.join(profile, "antigravity-cli", "brain");
 export const temp = "/tmp/opencode";
 export const firefox = [".mozilla/firefox", ".config/mozilla/firefox"].map((root) => path.join(home, root));
 
@@ -96,7 +98,12 @@ export function secrets() {
   const claude = entries(home)
     .filter((entry) => (entry.isDirectory() || entry.isSymbolicLink()) && entry.name.startsWith(".claude"))
     .flatMap((entry) => claudeStores.map((store) => path.join(home, entry.name, store)));
-  return [...fixed, ...firefox, ...claude, ...files, ...unlisted];
+  const agy = [profile, path.dirname(brain)].flatMap((dir) =>
+    entries(dir)
+      .map((entry) => path.join(dir, entry.name))
+      .filter((entry) => entry !== path.dirname(brain) && entry !== brain),
+  );
+  return [...fixed, ...agy, ...firefox, ...claude, ...files, ...unlisted];
 }
 
 function canonical(target: string) {
