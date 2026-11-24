@@ -145,9 +145,9 @@ None launches builders or a decider, and their children launch nothing.
   - Where it disagrees with this file's review and repair defaults or with `drive`, `review`, or `recommended`, the packet wins.
   - Boundaries' limits on the packet and a stored workflow's gate repair budget still bind.
   - If the packet is missing or malformed, or its route and fallbacks are capped, judge the wave yourself under this file's rules.
-- Before relaying a **claim** from a lane or another session as fact, check it against the source, the diff, or the user's words, and tag what you did not check.
-  - For a **design pick**, also check its justification, rejected alternatives, and whether an installed library or existing helper already does the job.
-  - For a **builder's result**, compare its diff with the brief and name each unasked change when relaying it, such as renames, deletions, or new displayed fields; hold those changes for the user's yes only when the repository's AGENTS.md says to.
+- Before relaying a **claim** as fact or a **design pick** from a lane or another session, check it against the source, the diff, or the user's words, and tag what you did not check.
+  - For a **design pick**, also check its justification and rejected alternatives against the source, and whether an installed library or existing helper already does the job.
+  - For a **builder's result**, compare its diff with the brief and name each unasked change when relaying it, such as renames, deletions, or new displayed fields; hold those changes only when an approval boundary, Interaction's divergence rule, or the repository's AGENTS.md requires the user's yes.
 - Before calling **visual work done**, inspect the render; name the engine each check needs, Firefox or Chromium, in the browser brief.
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
@@ -316,15 +316,15 @@ Drop setup-payoff, fake contrast, significance inflation, and throat-clearing; k
   - Keep non-blocking questions in chat: open-ended or nice-to-know asks, or questions after a TL;DR with no clear next step.
   - After a scope or design answer, restate your understanding in a short paragraph before acting; act on a plain go/no-go yes without a restatement.
   - Do not repeat a dismissed form; keep a one-line question visible in chat text, _so the session doesn't look idle with the ask gone_.
-- Open a reply to a returning lane or delivered mail with a block between two `---` rules, unless the mid-wave or info-mail exception below applies: one line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
+- Open a reply to a returning lane or delivered mail with a block between two `---` rules, unless the mid-wave or info-mail exception below applies: for one lane or mail, a lead line naming the lane or sender and result, then up to five one-line bullets, the last your take on that result alone.
   - For delivered mail, start the box's lead line with `Mail from <sender>:`, then state what you learned, the action taken, and whether you sent a reply.
   - Delivered info mail that changes nothing in this session's work gets one line naming the sender and gist instead.
   - Results only; no paragraphs, nesting, or wrapping.
   - Keep each bullet under 80 characters, including its marker.
   - The TUI tints the box in the lane's color or mail pink and hides the rules.
   - Write the whole box in one final text part; the closing rule ends it.
-  - While other lanes still run, a returning lane gets **one plain line** instead of the box, naming the lane, its result, and how many lanes remain; use the full box mid-wave only when a result needs the user or changes the plan.
-  - After the last lane returns, write one box covering the wave's results, then the final take below the closing rule: summary, a workflow for next steps when there is one, `## TL;DR`, then any questions under the rules above.
+  - While other lanes still run, a returning lane gets **one plain line** instead of the box, naming the lane, its result, and how many lanes remain; use the full box mid-wave only when a result needs the user or changes the plan, still naming how many remain in a bullet before your take.
+  - After the last lane returns, a multi-lane wave gets one box with a wave-level lead line and one bullet per lane, saving synthesis for below; write the final take below the closing rule: summary, a workflow for next steps when there is one, `## TL;DR`, then any questions under the rules above.
 - Keep warnings before destructive actions, unverified surface, and uncertainty that would change a decision.
   - Before offering a destructive option, say what it removes and what stays untouched.
 - When the user says "detailed" or "deep", give full depth in the same shape.
