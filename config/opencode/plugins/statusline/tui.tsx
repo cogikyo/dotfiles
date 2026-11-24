@@ -313,8 +313,7 @@ function load(context: Context, sessionID: string) {
 function usage(context: Context, sessionID: string, buffer: number | string | undefined) {
   const current = load(context, sessionID);
   if (!current?.model) return;
-  const root = !context.data.session.get(sessionID)?.parentID;
-  const limit = threshold(current.model.limit, buffer, root);
+  const limit = threshold(current.model.limit, buffer);
   return limit && (current.tokens / limit) * 100;
 }
 

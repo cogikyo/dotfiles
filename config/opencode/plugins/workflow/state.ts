@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ceiling } from "../compact/limits.ts";
+import { finish } from "../compact/limits.ts";
 import { ancestors, items, parse, topic, type Owner, type Step } from "./parse.ts";
 import { occupant, phases, symbols, type Child } from "./progress.ts";
 
@@ -172,10 +172,10 @@ export function headroom(flow: Flow, tokens: number | undefined) {
   const cost = open * perStep;
   const estimate = `${open} unfinished step${open === 1 ? "" : "s"} × ~${thousands(perStep)} ≈ ${thousands(cost)} estimated growth`;
   if (tokens === undefined)
-    return `Headroom: root context not measured since the last compaction; forced compaction at ${thousands(ceiling)}; ${estimate}.`;
-  const room = Math.max(ceiling - tokens, 0);
+    return `Headroom: root context not measured since the last compaction; finish-up nudge at ${thousands(finish)}; ${estimate}.`;
+  const room = Math.max(finish - tokens, 0);
   return [
-    `Headroom: root context ${thousands(tokens)}; ${thousands(room)} until forced compaction at ${thousands(ceiling)}; ${estimate}.`,
+    `Headroom: root context ${thousands(tokens)}; ${thousands(room)} until the finish-up nudge at ${thousands(finish)}; ${estimate}.`,
     cost > room &&
       "Warning: estimated growth exceeds headroom; assess the actual work and end the workflow at an earlier boundary if needed.",
   ]

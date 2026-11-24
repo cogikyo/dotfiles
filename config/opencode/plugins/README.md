@@ -118,22 +118,21 @@ After host updates, recheck wrapped forms publishing a location so the popup app
 ## Compact
 
 `compact/server.ts` exposes `compact` with no input, queuing compaction after the current turn.
-After a successful root `workflow end` at or above 250K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
+After a successful root `workflow end` at or above 300K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
 The tool result tells the agent to end the turn without starting new work.
-Root sessions receive soft nudges at 250K and 300K tokens and a strong "finish up now" nudge at 325K.
+Root sessions receive soft nudges at 300K and 350K tokens and a strong "finish up now" nudge at 400K.
 Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
-With a running workflow, soft nudges say to keep going if the remaining steps fit before 350K.
+With a running workflow, soft nudges say to keep going if the remaining steps fit before the 400K finish-up nudge.
 At a natural break with no lanes in flight, repair pending, or open user question, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
-Without a running workflow, soft nudges say to compact without asking past 250K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
+Without a running workflow, soft nudges say to compact without asking past 300K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
 Ask through `question` only if that point is unclear.
 The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, repair pending, or open user question, and commit finished work.
 Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
 In a driven run, commit finished work and queue compaction without asking.
-At 350K tokens, the plugin forces root-session compaction at a step boundary, even mid-task.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
 Every root compaction stores a script-built checkpoint with no model call or kept tail.
-This applies to `compact`, workflow end, the user's `/compact`, and the ceiling.
+This applies to `compact`, workflow end, the user's `/compact`, and native auto-compaction.
 Its first line names the session ID and directs Collab to the [`recommended` skill](../skills/orchestration/recommended/SKILL.md), which owns recovery.
 Child sessions keep model summaries and delegate-scope instructions.
 
@@ -209,7 +208,7 @@ Compaction, title, and generate requests receive no clearing policy.
 Results from `mcp_Question`, `mcp_Subagent`, and `mcp_Skill` are excluded when those names appear in the request's tools or tool-use history.
 These wire names must track the prefix rewrite in `anthropic/claude-auth/transforms.js`; a mismatch silently removes their protection.
 Clearing invalidates cached prompt prefixes, so the 50K minimum batches cache rebuilds.
-Anthropic reports usage after clearing (probed live 2026-10-15), so native compaction and the compact plugin's ceilings measure the cleared size.
+Anthropic reports usage after clearing (probed live 2026-10-15), so native compaction and the compact plugin's thresholds measure the cleared size.
 The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, and `inputTokens` because V2 discards `applied_edits`.
 
 ## Gemini
@@ -583,7 +582,7 @@ That id and width are upstream internals in `session-frame.tsx` and `ui/layout.t
 `<leader>a` replaces `agent.list`, which is unbound in `cli.json`; `/agents` and `shift+tab` still reach agents.
 
 `statusline/tui.tsx` always replaces `prompt.footer.status` with directory and Git status, so the native spinner and `esc interrupt` hint never show.
-It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer, capped at 350K for root sessions.
+It appends a context-pressure bar to `prompt.footer`, measured against the model input or context limit minus the compaction buffer.
 The gauge starts with ㊌ (water) while idle and ㊋ (fire) while the session runs.
 While running, the fire glyph fades between the gauge color and up to 35% red over a two-second cycle; a wave sweeps only the dots, and a newly filled dot flashes.
 V2 has no slot on the prompt's model row, so the bar is absolutely positioned two rows up into the prompt box; a prompt layout change upstream can misplace it.
@@ -675,7 +674,7 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
-Start and status show root context, headroom to forced compaction at 350K, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
+Start and status show root context, headroom to the 400K finish-up nudge, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
 A gate's result carries only when the steps it judges, through its `after` dependencies and repair loop, are unchanged.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.

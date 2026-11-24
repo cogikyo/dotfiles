@@ -93,7 +93,7 @@ export function usage(context: Context, session: Session): Usage {
 }
 
 export function strain({ limit, tokens }: Usage, buffer: number | string | undefined) {
-  const stop = limit ? threshold(limit, buffer, false) : undefined;
+  const stop = limit ? threshold(limit, buffer) : undefined;
   return stop ? pressure((tokens / stop) * 100) : undefined;
 }
 

@@ -8,10 +8,8 @@ import { located } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { Ends, recovery, render } from "./checkpoint.ts";
 import { history } from "./history.ts";
-import { ceiling, due, type Level, levels } from "./limits.ts";
+import { due, finish, floor, type Level } from "./limits.ts";
 import * as live from "./live.ts";
-
-const floor = 250_000;
 
 const SUMMARY = [
   "Summary rules for this session:",
@@ -31,8 +29,11 @@ const WAKE = "Compaction finished while the session was idle; follow the recover
 const STOP =
   "Compaction is queued and runs when this turn ends; end the turn now without starting new work. After compaction, `recommended` proposes what comes next.";
 
-const description =
-  "Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past 250K, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.";
+function label(tokens: number) {
+  return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1_000)}K`;
+}
+
+const description = `Queue compaction of this session. Compaction runs after the current turn ends, and a follow-up message then resumes the session. Call it when the user asks or, past ${label(floor)}, without asking at a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear.`;
 
 // A stored id marks a pending delivery; delivered records omit it.
 const Nudged = Schema.Struct({
@@ -45,13 +46,9 @@ function nudged(sessionID = "") {
   return `nudged/${sessionID}`;
 }
 
-function label(tokens: number) {
-  return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1_000)}K`;
-}
-
 const BOUNDARY = [
   `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)}.`,
-  "For other compaction, past 250K, call compact without asking once a commit lands or the task is done.",
+  `For other compaction, past ${label(floor)}, call compact without asking once a commit lands or the task is done.`,
   "The point must be clear: no edits, lanes, or repairs in flight and no open question, including an unanswered user question; do not compact mid-task while delivering findings, a proposal, or open choices.",
   "Ask through the question tool only if that point is unclear, and call compact after approval.",
   "In a driven run, commit finished work and queue compact without asking.",
@@ -60,7 +57,7 @@ const BOUNDARY = [
 
 const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
   soft: {
-    running: `Soft warning: keep the workflow going if its remaining steps fit before ${label(ceiling)}. If this is a natural break with no lanes in flight, no repair pending, and no open question, including an unanswered user question, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps.`,
+    running: `Soft warning: keep the workflow going if its remaining steps fit before the ${label(finish)} finish-up nudge. If this is a natural break with no lanes in flight, no repair pending, and no open question, including an unanswered user question, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps.`,
     idle: `Soft warning. ${BOUNDARY}`,
   },
   strong: {
@@ -71,7 +68,7 @@ const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
 
 function nudge(level: Level, running?: boolean) {
   const advice = ADVICE[level.kind];
-  return `Context reached ${label(level.tokens)} tokens; forced compaction runs mid-turn at ${label(ceiling)}. ${running ? advice.running : advice.idle}`;
+  return `Context reached ${label(level.tokens)} tokens. ${running ? advice.running : advice.idle}`;
 }
 
 function remember<T>(cache: Map<string, Promise<T>>, sessionID: string, load: () => Promise<T>) {
@@ -230,23 +227,15 @@ export default Plugin.define({
       };
     });
 
-    const cap = (sessionID: string, total: number) => {
-      if (total < ceiling || compacting.has(sessionID)) return;
-      compacting.add(sessionID);
-      void guard(
-        "compact at ceiling",
-        primary(sessionID).then((root) => (root ? ctx.session.compact({ sessionID, delivery: "steer" }) : undefined)),
-      );
-    };
-
     const notify = async (sessionID: string, total: number) => {
-      if (total < levels[0].tokens || requests.has(sessionID) || !(await primary(sessionID))) return;
+      if (total < floor || requests.has(sessionID) || !(await primary(sessionID))) return;
       const [current, record] = await Promise.all([epoch(sessionID), ctx.storage.get(nudged(sessionID))]);
       const sent = Schema.is(Nudged)(record) && record.epoch === current ? record : undefined;
-      const level = due(total, sent);
-      if (!level) return;
-      const id = sent?.id ?? SessionMessage.ID.create();
-      if (sent?.id === undefined) await ctx.storage.set(nudged(sessionID), { epoch: current, level: level.tokens, id });
+      const next = due(total, sent);
+      if (!next) return;
+      const { level } = next;
+      const id = next.id ?? SessionMessage.ID.create();
+      if (next.id === undefined) await ctx.storage.set(nudged(sessionID), { epoch: current, level: level.tokens, id });
       const running = await guard(
         "workflow status",
         ctx
@@ -298,7 +287,6 @@ export default Plugin.define({
         const { sessionID } = event.data;
         const total = TokenUsage.total(event.data.tokens);
         tokens.set(sessionID, total);
-        cap(sessionID, total);
         await guard("nudge", notify(sessionID, total));
       }
       if (event.type === "session.compaction.started") {

@@ -220,15 +220,15 @@
       "models": {
         "claude-opus-5-5": {
           "name": "Opus 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-sonnet-5-5": {
           "name": "Sonnet 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-fable-5-2": {
           "name": "Fable 5.2",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         }
       }
     },
@@ -241,11 +241,11 @@
       "models": {
         "claude-opus-5-5": {
           "name": "Opus 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-sonnet-5-5": {
           "name": "Sonnet 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-fable-5-2": {
           "name": "Fable 5.2",
@@ -256,7 +256,7 @@
             },
             "effort": "medium"
           },
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         }
       }
     },
@@ -269,11 +269,11 @@
       "models": {
         "claude-opus-5-5": {
           "name": "Opus 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-sonnet-5-5": {
           "name": "Sonnet 5.5",
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         },
         "claude-fable-5-2": {
           "name": "Fable 5.2",
@@ -284,7 +284,7 @@
             },
             "effort": "medium"
           },
-          "limit": { "input": 425000 }
+          "limit": { "input": 625000 }
         }
       }
     },
