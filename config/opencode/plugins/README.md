@@ -286,16 +286,20 @@ Credential basenames used as text can also reject when resolved against those ca
 `cd` is allowed; the guard folds one leading `cd <literal path>` into `workdir` after checking that the directory exists.
 For agents outside the read-only set, it rejects `grep` and `glob` roots at or above home or inside a hidden path, and checks commit-message shape.
 For agents outside the read-only set, `rm`, `find -delete`, and `find -exec rm` require paths inside `/tmp/opencode/`, written literally or through variables assigned earlier in the command, absolute or relative to a known `workdir` or `cd <dir> &&` target.
+`rm` is checked behind any command (`noglob`, `busybox`, and others) except subcommand-style `rm` under `docker`, `podman`, `nerdctl`, `kubectl`, `npm`, `pnpm`, `yarn`, `bun`, `cargo`, and `brew`; any `rm` inside a `find -exec` segment is handled by the `find` check (allowing `{}`).
 For `rm`, this includes quoted, unchanged variables from `mktemp -d` under `/tmp/opencode` earlier in the same command; templates must not contain whitespace.
 They reject `..`, trailing slashes, and top-level globs; `xargs rm` is denied, and other deletion goes through `trash -- <path>`.
 Outside the read-only set, every agent except `collab` and `build/git` may run recognized read-only Git commands or Git in self-contained scratch repos under `/tmp/opencode`, subject to path and config checks; mutations in real repos are denied.
-Git checks use parsed commands, so Git text in `echo` arguments or data heredocs does not count as a command.
+Denial checks evaluate every plausible reading of a command without wrapper option tables, scanning options across `--` without value-arity assumptions and matching abbreviated long options by prefix (such as `env --chd=`).
+Because words behind any command are scanned, `echo git push --force` asks or denies and `echo rm …` denies; data heredocs still do not count as commands.
+When a runtime-expanded word might be a command name only because a preceding wrapper flag's value arity is ambiguous, the denial names that flag and how to disambiguate it (`--` before the command, `--option=value`, or dropping the flag).
 The parser inspects nested arithmetic, including command substitutions and base prefixes, within its eight-level nesting limit.
-It also inspects literal script bodies passed through `flock`, `watch`, `uv run … bash -c`, and `unshare sh -c`.
-Unrecoverable script handoffs, active `trap` bodies, and `parallel` remain rejected outside the read-only set, except for `collab` and `build/git`.
-For agents outside the read-only set, the guard rejects pushes whose repo paths (`-C`, `--git-dir`, or `--work-tree`) or arguments expand at run time; write them literally or through variables assigned earlier in the command.
-For `collab` and `build/git`, pushes ask for approval under `~/LeadPier`, when the repo is otherwise undeterminable, with `-c` or `--config-env`, or for forced or destructive forms; other pushes pass this guard.
+It also walks literal script bodies passed through `flock`, `watch` (even with a later `-x`), and `strace`/`ltrace -o '|cmd'`, and always unwraps `unshare` and `uv run`, denying unknown or chroot starts it cannot see.
+Unrecoverable script handoffs (including `xargs -I` with a shell body and `find -exec sh -c '…{}…'`), active `trap` bodies, and `parallel` remain rejected outside the read-only set, except for `collab` and `build/git`.
+For agents outside the read-only set, the guard rejects `git push` and `git send-pack` calls whose repo paths (`-C`, `--git-dir`, or `--work-tree`) or arguments expand at run time; write them literally or through variables assigned earlier in the command.
+For `collab` and `build/git`, pushes and `send-pack` ask for approval under `~/LeadPier`, when the repo is otherwise undeterminable, when hidden behind redirects (including named fds like `{x}>`) or a `git-core` helper path, with `-c` or `--config-env`, or for forced or destructive forms; other pushes pass this guard.
 For all agents, including `collab` and `build/git`, it denies Git options that run a program, such as `--upload-pack`, `--receive-pack`, `--exec`, or `rebase -x`, and their abbreviations.
+For every agent outside the read-only set, including `collab` and `build/git`, it also denies dangerous `git -c`, `--config`, and `--config-env` settings (including short clusters like `-4c` and abbreviations like `--conf=`).
 For all agents, `systemd-run` requires `--collect` (`-G`) or a `CollectMode=` property; use `-p CollectMode=inactive` to retain failed units deliberately, accepting hyprd health alerts.
 It also denies `systemd-run` unit names starting with `cogikyo-` (`-u`/`--unit`), protecting the voice-loop bus rights granted to `cogikyo-voice.scope`, which Cullyn's key creates.
 For every agent and tool, it rejects inputs naming nonexistent default XDG user dirs relocated by `user-dirs.dirs`, except fields used to find or fix stale references and `subagent` prompts, and lists the configured dirs in the denial.

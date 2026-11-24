@@ -6,9 +6,27 @@ import { mkdir, open, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import { expand, temp, tilde } from "../guard/paths.ts";
-import { flags, launches } from "../guard/shell.ts";
+import { launches, options, type Spec } from "../guard/shell.ts";
 
 const root = path.join(temp, "terminal");
+const sudo: Spec = {
+  short: "aCcDghpRrTtUu",
+  long: [
+    "auth-type",
+    "close-from",
+    "login-class",
+    "chdir",
+    "group",
+    "host",
+    "prompt",
+    "chroot",
+    "role",
+    "command-timeout",
+    "type",
+    "other-user",
+    "user",
+  ],
+};
 const runner = path.join(import.meta.dirname, "run.sh");
 const limit = 6000;
 const chunk = 64 * 1024;
@@ -97,10 +115,10 @@ function shell() {
   return usable ? own : (Bun.which("bash") ?? "/bin/sh");
 }
 
-function prompts(command: string) {
+export function prompts(command: string) {
   return launches(command).some(
-    ({ command: launch }) =>
-      launch[0] === "sudo" && !flags(launch).some(({ flag }) => flag === "n" || flag === "non-interactive"),
+    ({ command: [name, ...args] }) =>
+      name === "sudo" && !options(args, 0, sudo).found.some(({ flag }) => flag === "n" || flag === "non-interactive"),
   );
 }
 

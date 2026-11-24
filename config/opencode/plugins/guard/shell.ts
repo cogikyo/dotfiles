@@ -2,7 +2,9 @@ import path from "node:path";
 import { expand, home, temp, within } from "./paths.ts";
 
 export type Command = readonly [name: string, ...args: string[]];
-export type Launch = { command: Command; dir: string | undefined; dirs?: ReadonlySet<string> };
+export type Launch = { command: Command; dir: string | undefined; dirs?: ReadonlySet<string>; guess?: Guess };
+type Guess = { wrapper: string; flag: string };
+type Start = { at: number; guess?: Guess };
 
 type Context = {
   depth: number;
@@ -19,8 +21,8 @@ type Scope = Context & {
   literal?: boolean;
 };
 
-type Spec = { short: string; long: string[]; positional?: number };
-type Option = { flag: string; value?: string; at: number };
+export type Spec = { short: string; long: string[] };
+type Option = { flag: string; value?: string; at: number; long?: true };
 
 export const maxDepth = 8;
 export const opaque: Command = [""];
@@ -28,8 +30,7 @@ export const streamed: Command = [""];
 export const redirection = ">";
 export const unseen: Command = [""];
 const assignment = /^[A-Za-z_]\w*=/u;
-const redirect = /^\d*(?:[<>]|&>)/u;
-const bareRedirect = /^\d*(?:>>?|<<?|&>>?|>&|<&)$/u;
+const redirect = /^(?:\d+|\{[A-Za-z_]\w*\})?(?:[<>]|&>)/u;
 const heredoc =
   /(<<-?\s*)(['"]?)((?<=')[^'\n]+|(?<=")[^"\n]+|(?<!['"])[^\s;&|()<>'"\\]+)\2([^\n]*)\n([\s\S]*?)\n\s*\3[ \t]*(?=\n|$)/gu;
 const marker = /^0?<<-?\uE000(\d+)$/u;
@@ -76,67 +77,31 @@ const resets = new Set([...navigators, "eval", "source", "."]);
 const breaks = new Set([";", "\n", "&", "||", "(", ")"]);
 const shells = new Set(["bash", "dash", "ksh", "sh", "zsh"]);
 const devices = /^(?:-|\/(?:dev|proc)\/.*)$/u;
-const outputs = /^\d*(?:>&|&>>?|>>?\|?)/u;
-const plain: Spec = { short: "", long: [] };
-const env: Spec = { short: "uCS", long: ["unset", "chdir", "split-string"] };
-const ssh: Spec = { short: "BbcDEeFIiJLlmOoPpQRSWw", long: [] };
+const outputs = /^(?:\d+|\{[A-Za-z_]\w*\})?(?:>&|&>>?|>>?\|?)/u;
+const tracers = new Set(["strace", "ltrace"]);
+const glued = /(?<=[^\s<>&|;()])(?<!(?:^|[\s<>&|;()])(?:\d+|\{[A-Za-z_]\w*\}))(?=&>|[<>])/gu;
+const operator = /^(?:\d+|\{[A-Za-z_]\w*\})?(?:&>>?|>>?\|?|<<<|<<-?|<>|>&|<&|<)$/u;
+const takes = /^--[^=]+$|^-[^-]*[A-Za-z]$/u;
 const chdirs: Record<string, string[]> = {
   env: ["C", "chdir"],
   sudo: ["D", "chdir"],
   "systemd-run": ["working-directory"],
 };
 
-const wrappers: Record<string, Spec> = {
-  builtin: plain,
-  nohup: plain,
-  setsid: plain,
-  cage: { short: "", long: ["hide"], positional: 2 },
-  exec: { short: "a", long: [] },
-  nice: { short: "n", long: ["adjustment"] },
-  stdbuf: { short: "ioe", long: ["input", "output", "error"] },
-  time: { short: "fo", long: ["format", "output"] },
-  timeout: { short: "sk", long: ["signal", "kill-after"], positional: 1 },
-  sudo: {
-    short: "ugCDhprtUR",
-    long: ["user", "group", "close-from", "chdir", "host", "prompt", "role", "type", "other-user", "chroot"],
-  },
-  "systemd-run": {
-    short: "HMCupE",
-    long: [
-      "host",
-      "machine",
-      "capsule",
-      "unit",
-      "property",
-      "description",
-      "slice",
-      "expand-environment",
-      "service-type",
-      "uid",
-      "gid",
-      "nice",
-      "working-directory",
-      "root-directory",
-      "setenv",
-      "output",
-      "json",
-      "job-mode",
-      "background",
-      "path-property",
-      "socket-property",
-      "on-active",
-      "on-boot",
-      "on-startup",
-      "on-unit-active",
-      "on-unit-inactive",
-      "on-calendar",
-      "timer-property",
-    ],
-  },
-  xargs: {
-    short: "adEILnPs",
-    long: ["arg-file", "delimiter", "max-args", "max-procs", "max-chars", "process-slot-var"],
-  },
+const wrappers: Record<string, number> = {
+  builtin: 0,
+  nohup: 0,
+  setsid: 0,
+  cage: 2,
+  exec: 0,
+  nice: 0,
+  stdbuf: 0,
+  time: 0,
+  timeout: 1,
+  sudo: 0,
+  "systemd-run": 0,
+  xargs: 0,
+  env: 0,
 };
 
 export function launches(source: string, dir?: string, known: Record<string, string> = {}, handoffs = true): Launch[] {
@@ -166,7 +131,7 @@ export function literalPath(word: string, dir: string | undefined) {
 function literalDestination(words: readonly string[], base: string | undefined) {
   const [name, ...rest] = words;
   if (name !== "cd" && name !== "chdir" && name !== "pushd") return undefined;
-  const args = operands(rest, 0);
+  const args = argv(rest);
   if (args[0] === "--") args.shift();
   if (args.length > 1 || args[0] === "-") return undefined;
   const target = args[0] ?? (name === "cd" || name === "chdir" ? home : undefined);
@@ -274,19 +239,92 @@ function destination([name, ...args]: string[], base: string | undefined) {
 }
 
 export function flags([name, ...args]: Command) {
-  const spec = name === "env" ? env : wrappers[name];
-  return spec ? options(args, 0, spec).found : [];
+  if (!Object.hasOwn(wrappers, name)) return [];
+  return scan(args, 0, reach(args, 0, wrappers[name]).end);
 }
 
 export function wrapped([name, ...args]: Command) {
-  const spec = wrappers[name];
-  return spec ? args[options(args, 0, spec).next + (spec.positional ?? 0)] : undefined;
+  if (!Object.hasOwn(wrappers, name)) return [];
+  return reach(args, 0, wrappers[name]).heads.map((at) => args[at]);
 }
 
 export function remote([name, ...args]: Command) {
-  if (name !== "ssh") return undefined;
-  const { next } = options(args, 0, ssh);
-  return args.slice(next + 1).join(" ") || undefined;
+  if (name !== "ssh") return [];
+  return reach(args, 0, 1).heads.map((at) => args.slice(at).join(" "));
+}
+
+export function respaced(source: string, dir?: string, known: Record<string, string> = {}, handoffs = true) {
+  const spaced = source.replace(glued, " ");
+  return spaced === source ? [] : launches(spaced, dir, known, handoffs);
+}
+
+export function argv(words: readonly string[]) {
+  const kept: string[] = [];
+  for (let at = 0; at < words.length; at++) {
+    if (operator.test(words[at])) at++;
+    else if (!redirect.test(words[at])) kept.push(words[at]);
+  }
+  return kept;
+}
+
+function reach(words: readonly string[], start: number, positional = 0) {
+  const heads = new Set<number>();
+  const seen = new Set<number>();
+  const queue = [start];
+  let end = start;
+  for (const at of queue) {
+    if (seen.has(at) || at >= words.length) continue;
+    seen.add(at);
+    end = Math.max(end, at + 1);
+    const word = words[at];
+    if (!word.startsWith("-")) {
+      heads.add(at + positional);
+      continue;
+    }
+    if (word === "--") heads.add(at + 1 + positional);
+    queue.push(at + 1);
+    if (takes.test(word)) queue.push(at + 2);
+  }
+  return { heads: [...heads].filter((at) => at < words.length), end };
+}
+
+function starts(wrapper: string, words: readonly string[], start: number, heads: number[]): Start[] {
+  if (heads.length < 2) return heads.map((at) => ({ at }));
+  return heads.map((at) => ({ at, guess: { wrapper, flag: culprit(words, start, at) } }));
+}
+
+function culprit(words: readonly string[], start: number, head: number) {
+  for (let at = head - 2; at >= start; at--)
+    if (words[at].startsWith("-") && !words[at + 1].startsWith("-")) return words[at];
+  return words[head - 1];
+}
+
+function scan(words: readonly string[], start: number, end = words.length): Option[] {
+  return words.slice(start, end).flatMap((word, offset): Option[] => {
+    const at = start + offset;
+    if (!/^-[^-]|^--./u.test(word)) return [];
+    if (word.startsWith("--")) {
+      const [flag, ...rest] = word.slice(2).split("=");
+      return [
+        rest.length
+          ? { flag, value: rest.join("="), at, long: true }
+          : { flag, value: words[at + 1], at: at + 1, long: true },
+      ];
+    }
+    const found: Option[] = [];
+    for (let letter = 1; letter < word.length; letter++) {
+      const attached = word.slice(letter + 1);
+      found.push({
+        flag: word[letter],
+        ...(attached ? { value: attached, at } : { value: words[at + 1], at: at + 1 }),
+      });
+    }
+    return found;
+  });
+}
+
+export function named({ flag, long }: Option, names: readonly string[]) {
+  return long ? flag !== "" && names.some((name) => name.length > 1 && name.startsWith(flag)) : names.includes(flag);
 }
 
 function unheredoc(source: string, bodies: string[], unquoted: string[]) {
@@ -298,27 +336,24 @@ function unheredoc(source: string, bodies: string[], unquoted: string[]) {
   });
 }
 
-function peel(words: string[], scope: Scope, start = 0) {
+function peel(words: string[], scope: Scope, from: Start[] = [{ at: 0 }]) {
   const launched: Launch[] = [];
+  const leaves: { index: number; dir: string | undefined }[] = [];
+  const queue = from.map(({ at, guess }) => ({ index: skip(words, at), dir: scope.dir, guess }));
+  const covered = new Set(queue.map(({ index }) => index));
+  const seen = new Set(queue.map(({ index }) => `${index}:${scope.dir}`));
   let moved = false;
   let dir = scope.dir;
-  let index = start;
-  while (index < words.length) {
-    const word = words[index];
-    if (assignment.test(word) || keywords.has(word)) {
-      index++;
-      continue;
-    }
-    if (redirect.test(word)) {
-      index += bareRedirect.test(word) ? 2 : 1;
-      continue;
-    }
-    const name = path.basename(word);
+  for (const head of queue) {
+    const { index, guess } = head;
+    dir = head.dir;
+    if (index >= words.length) continue;
+    const name = path.basename(words[index]);
     const command: Command = [
       name,
       ...words.slice(index + 1).map((arg, at) => (name === "rm" ? (scope.temporary.get(index + at + 1) ?? arg) : arg)),
     ];
-    launched.push({ command, dir, ...(scope.paths ? { dirs: scope.paths.dirs } : {}) });
+    launched.push({ command, dir, ...(scope.paths ? { dirs: scope.paths.dirs } : {}), ...(guess ? { guess } : {}) });
     if (scope.paths) {
       const next = literalDestination(command, dir);
       const base = literalDestination(command, scope.paths.base);
@@ -327,16 +362,33 @@ function peel(words: string[], scope: Scope, start = 0) {
       if (next !== undefined) dir = next;
     }
     moved ||= resets.has(name) || (name === "emulate" && emulation(words, index + 1).script);
-    if (flags(command).some(({ flag }) => chdirs[name]?.includes(flag))) dir = undefined;
-    const next = unwrap(name, words, index + 1, { ...scope, dir }, launched);
+    if (flags(command).some((option) => named(option, chdirs[name] ?? []))) dir = undefined;
+    const next = unwrap(words, index, { ...scope, dir }, launched);
     if (next === undefined) {
-      launched.push(...nested(name, words, index + 1, { ...scope, dir }));
-      break;
+      leaves.push({ index, dir });
+      continue;
     }
-    index = next;
+    for (const start of next) {
+      const at = skip(words, start.at);
+      if (seen.has(`${at}:${dir}`)) continue;
+      seen.add(`${at}:${dir}`);
+      covered.add(at);
+      queue.push({ index: at, dir, guess: start.guess });
+    }
   }
-  if (!scope.paths) launched.push(...writes(words.slice(start), dir));
+  for (const leaf of leaves) launched.push(...nested(words, leaf.index, { ...scope, dir: leaf.dir }, covered));
+  if (!scope.paths) launched.push(...writes(words.slice(Math.min(...from.map(({ at }) => at))), dir));
   return { launched, moved, dir };
+}
+
+function skip(words: readonly string[], index: number) {
+  while (index < words.length) {
+    const word = words[index];
+    if (redirect.test(word)) index += operator.test(word) ? 2 : 1;
+    else if (assignment.test(word) || keywords.has(word)) index++;
+    else break;
+  }
+  return index;
 }
 
 function writes(words: string[], dir: string | undefined): Launch[] {
@@ -349,18 +401,20 @@ function writes(words: string[], dir: string | undefined): Launch[] {
   });
 }
 
-function nested(name: string, words: string[], start: number, scope: Scope): Launch[] {
+function nested(words: string[], index: number, scope: Scope, covered = new Set<number>()): Launch[] {
+  const name = path.basename(words[index]);
+  const start = index + 1;
   const args = words.slice(start);
-  if (["watch", "flock"].includes(name)) {
+  if (name === "watch" || name === "flock") {
     if (!scope.handoffs) return [{ command: unseen, dir: scope.dir }];
-    return handoff(name, words, start, scope);
+    return name === "watch" ? watch(words, start, scope) : flock(words, start, scope);
   }
   if (strings.has(name) || evaluates(name, args)) return [{ command: unseen, dir: scope.dir }];
-  if (shells.has(name) || name === "eval" || name === "emulate" || name === "source" || name === ".") return [];
   if (name !== "find") {
-    if (!invokes(args)) return [];
-    if (!scope.handoffs) return [{ command: unseen, dir: scope.dir }];
-    return runner(name, words, start, scope);
+    const shell = invokes(words, start, words.length, covered);
+    const known = name === "unshare" || (name === "uv" && words[start] === "run");
+    if (!scope.handoffs || !known) return shell ? [{ command: unseen, dir: scope.dir }] : [];
+    return runner(words, index, scope, shell);
   }
   return args.flatMap((arg, at) => {
     if (!runners.has(arg)) return [];
@@ -368,98 +422,67 @@ function nested(name: string, words: string[], start: number, scope: Scope): Lau
     const inner = args[at + 1];
     const dir = arg === "-exec" || arg === "-ok" ? scope.dir : undefined;
     if (!shells.has(path.basename(inner ?? "")))
-      return invokes(args.slice(at + 1, end < 0 ? undefined : end)) ? [{ command: unseen, dir }] : [];
+      return invokes(words, start + at + 1, end < 0 ? words.length : start + end) ? [{ command: unseen, dir }] : [];
+    const { next, script } = interpreter(words, start + at + 2);
+    if (script && args[end] === ";" && words[next]?.includes("{}")) return [{ command: unseen, dir }];
     const launched: Launch[] = [];
-    unwrap(
-      path.basename(inner),
-      words.slice(0, end < 0 ? undefined : start + end),
-      start + at + 2,
-      { ...scope, dir },
-      launched,
-    );
+    unwrap(words.slice(0, end < 0 ? undefined : start + end), start + at + 1, { ...scope, dir }, launched);
     return launched;
   });
 }
 
-function runner(name: string, words: string[], start: number, scope: Scope): Launch[] {
-  const blind = [{ command: unseen, dir: scope.dir }];
-  if (name !== "unshare" && (name !== "uv" || words[start] !== "run")) return blind;
-  const spec =
-    name === "unshare"
-      ? {
-          short: "RwSGl",
-          long: [
-            "root",
-            "wd",
-            "setuid",
-            "setgid",
-            "map-user",
-            "map-group",
-            "map-users",
-            "map-groups",
-            "owner",
-            "setgroups",
-            "monotonic",
-            "boottime",
-            "load-interp",
-            "propagation",
-          ],
-        }
-      : {
-          short: "pw",
-          long: [
-            "with",
-            "with-editable",
-            "with-requirements",
-            "project",
-            "directory",
-            "python",
-            "package",
-            "env-file",
-            "index",
-            "index-url",
-            "extra-index-url",
-            "config-file",
-          ],
-        };
-  const { next, found } = options(words, name === "uv" ? start + 1 : start, spec);
-  if (name === "unshare" && found.some(({ flag }) => flag === "R" || flag === "root")) return blind;
-  if (name === "uv" && found.some(({ flag }) => ["m", "module", "s", "script", "gui-script"].includes(flag)))
-    return blind;
-  if (!shells.has(path.basename(words[next] ?? ""))) return blind;
-  const moved = found.some(({ flag }) => flag === "wd" || flag === "directory" || (name === "unshare" && flag === "w"));
-  return peel(words, { ...scope, dir: moved ? undefined : scope.dir, literal: true }, next).launched;
+function runner(words: string[], index: number, scope: Scope, shell: boolean): Launch[] {
+  const uv = path.basename(words[index]) === "uv";
+  const from = index + (uv ? 2 : 1);
+  const { heads, end } = reach(words, from);
+  const found = scan(words, from, end);
+  const has = (names: string[]) => found.some((option) => named(option, names));
+  if (uv ? has(["m", "module", "s", "script", "gui-script"]) : has(["R", "root"]))
+    return shell || !uv ? [{ command: unseen, dir: scope.dir }] : [];
+  const moved = has(uv ? ["directory"] : ["w", "wd"]);
+  const kept = starts(uv ? "uv run" : "unshare", words, from, heads);
+  return peel(words, { ...scope, dir: moved ? undefined : scope.dir, literal: true }, kept).launched;
 }
 
-function handoff(name: string, words: string[], start: number, scope: Scope): Launch[] {
+function watch(words: string[], start: number, scope: Scope): Launch[] {
   const blind = [{ command: unseen, dir: scope.dir }];
-  if (name === "watch") {
-    const { next, found } = options(words, start, { short: "n", long: ["interval"] });
-    if (found.some(({ flag }) => flag === "x" || flag === "exec"))
-      return peel(words, { ...scope, literal: true }, next).launched;
-    if (next >= words.length || [...scope.dynamic].some((index) => index >= next)) return blind;
-    return walk(words.slice(next).join(" "), scope.dir, scope);
+  const { heads, end } = reach(words, start);
+  if (heads.length === 0) return blind;
+  const execs = words
+    .slice(start, end)
+    .flatMap((word, offset) =>
+      scan([word], 0).some((option) => named(option, ["x", "exec"])) ? [start + offset] : [],
+    );
+  const launched: Launch[] = [];
+  const kept = starts("watch", words, start, heads);
+  for (const head of kept) {
+    if (execs.some((at) => at < head.at)) launched.push(...peel(words, { ...scope, literal: true }, [head]).launched);
+    if ([...scope.dynamic].some((index) => index >= head.at)) {
+      launched.push(...blind);
+      continue;
+    }
+    const body = walk(words.slice(head.at).join(" "), scope.dir, scope);
+    const name = path.basename(words[head.at]);
+    for (const launch of body) if (head.guess && launch.command[0] === name) launch.guess = head.guess;
+    launched.push(...body);
   }
-  return flock(words, start, scope);
+  return launched;
 }
 
 function flock(words: string[], start: number, scope: Scope): Launch[] {
   const blind = [{ command: unseen, dir: scope.dir }];
-  const spec = {
-    short: "wEc",
-    long: ["wait", "timeout", "conflict-exit-code", "command"],
-  };
-  const front = options(words, start, spec);
-  const trailing = options(words, front.next + 1, spec);
-  const end = words.indexOf("--", start);
-  if ([...scope.dynamic].some((index) => index >= start && (end < 0 || index < end))) return blind;
-  const script = [...front.found, ...trailing.found].find(({ flag }) => flag === "c" || flag === "command");
-  if (script) {
-    if (script.value === undefined || scope.dynamic.has(script.at)) return blind;
-    return walk(script.value, scope.dir, scope);
-  }
-  const command = trailing.next;
-  return command >= words.length ? [] : peel(words, { ...scope, literal: true }, command).launched;
+  const stop = words.indexOf("--", start);
+  if ([...scope.dynamic].some((index) => index >= start && (stop < 0 || index < stop))) return blind;
+  const locks = reach(words, start, 1);
+  const chains = locks.heads.map((lock) => reach(words, lock));
+  const end = Math.max(locks.end, ...chains.map((chain) => chain.end));
+  const scripts = scan(words, start, end).filter((option) => named(option, ["c", "command"]));
+  if (scripts.some(({ value, at }) => value === undefined || scope.dynamic.has(at))) return blind;
+  const heads = [...new Set(chains.flatMap((chain) => chain.heads))];
+  return [
+    ...scripts.flatMap(({ value = "" }) => walk(value, scope.dir, scope)),
+    ...(heads.length ? peel(words, { ...scope, literal: true }, starts("flock", words, start, heads)).launched : []),
+  ];
 }
 
 function evaluates(name: string, args: string[]) {
@@ -500,8 +523,10 @@ function interpreter(words: string[], start: number) {
   return state;
 }
 
-function invokes(args: string[]) {
-  return args.some((arg, at) => shells.has(path.basename(arg)) && /^-[A-Za-z]*c/u.test(args[at + 1] ?? ""));
+function invokes(words: string[], start: number, end: number, covered = new Set<number>()) {
+  for (let at = start; at < end && !covered.has(at); at++)
+    if (shells.has(path.basename(words[at])) && /^-[A-Za-z]*c/u.test(words[at + 1] ?? "")) return true;
+  return false;
 }
 
 function emulation(words: string[], start: number) {
@@ -509,29 +534,31 @@ function emulation(words: string[], start: number) {
   return front.script ? front : interpreter(words, front.next + 1);
 }
 
-function unwrap(name: string, words: string[], start: number, scope: Scope, launched: Launch[]) {
+function unwrap(words: string[], index: number, scope: Scope, launched: Launch[]): Start[] | undefined {
+  const name = path.basename(words[index]);
+  const start = index + 1;
   if (name === "eval") {
     launched.push(...walk(words.slice(start).join(" "), scope.dir, scope));
-    return undefined;
+    return [];
   }
   if (name === "emulate") {
     if ([...scope.dynamic].some((at) => at >= start)) {
       launched.push({ command: unseen, dir: scope.dir });
-      return undefined;
+      return [];
     }
     const { next, script } = emulation(words, start);
-    if (!script) return undefined;
+    if (!script) return [];
     const body = words[next];
     launched.push(...(body === undefined ? [{ command: unseen, dir: scope.dir }] : walk(body, scope.dir, scope)));
-    return undefined;
+    return [];
   }
   if (shells.has(name)) {
     const { next, script, stdin: reads, noexec, unknown } = interpreter(words, start);
     if (unknown) {
       launched.push({ command: unseen, dir: scope.dir });
-      return undefined;
+      return [];
     }
-    if (noexec) return undefined;
+    if (noexec) return [];
     if (script) {
       const body = words[next];
       launched.push(
@@ -539,47 +566,49 @@ function unwrap(name: string, words: string[], start: number, scope: Scope, laun
           ? [{ command: unseen, dir: scope.dir }]
           : walk(body, scope.dir, scope)),
       );
-      return undefined;
+      return [];
     }
-    const file = operands(words, next)[0];
+    const file = argv(words.slice(next))[0];
     if (file === undefined || devices.test(file) || reads) {
       stdin(words, start, scope, launched);
     }
-    return undefined;
+    return [];
   }
   if (name === "source" || name === ".") {
-    if (devices.test(operands(words, start)[0] ?? "")) stdin(words, start, scope, launched);
-    return undefined;
+    if (devices.test(argv(words.slice(start))[0] ?? "")) stdin(words, start, scope, launched);
+    return [];
   }
   if (name === "command") {
-    const { next, found } = options(words, start, plain);
-    return found.some((option) => option.flag === "v" || option.flag === "V") ? undefined : next;
+    const { next, found } = options(words, start, { short: "", long: [] });
+    return found.some((option) => option.flag === "v" || option.flag === "V") ? undefined : [{ at: next }];
   }
-  if (name === "env") {
-    const { next, found } = options(words, start, env);
-    const split = found.find((option) => option.flag === "S" || option.flag === "split-string");
-    if (split?.value !== undefined) launched.push(...walk(split.value, scope.dir, scope));
-    return next;
+  if (tracers.has(name)) {
+    launched.push(
+      ...values(scan(words, start), ["o", "output"], /^[|!]/u).flatMap((pipe) => walk(pipe.slice(1), scope.dir, scope)),
+    );
+    return undefined;
   }
-  const spec = wrappers[name];
-  if (!spec) return undefined;
-  return options(words, start, spec).next + (spec.positional ?? 0);
+  if (!Object.hasOwn(wrappers, name)) return undefined;
+  const { heads, end } = reach(words, start, wrappers[name]);
+  const found = scan(words, start, end);
+  if (name === "env")
+    launched.push(...values(found, ["S", "split-string"]).flatMap((split) => walk(split, scope.dir, scope)));
+  if (name === "xargs" && substitutes(words, start, found)) launched.push({ command: unseen, dir: scope.dir });
+  return starts(name, words, start, heads);
 }
 
-function operands(words: string[], start: number) {
-  const found: string[] = [];
-  for (let at = start; at < words.length; at++) {
-    if (marker.test(words[at]) || words[at].startsWith("<<<")) {
-      if (words[at] === "<<<") at++;
-      continue;
-    }
-    if (redirect.test(words[at])) {
-      if (bareRedirect.test(words[at])) at++;
-      continue;
-    }
-    found.push(words[at]);
-  }
-  return found;
+function substitutes(words: string[], start: number, found: Option[]) {
+  const swaps = found
+    .filter((option) => named(option, ["I", "i", "J", "replace"]))
+    .flatMap(({ value }) => (value ? [value, "{}"] : ["{}"]));
+  const shell = words.findIndex((word, at) => at >= start && shells.has(path.basename(word)));
+  return shell >= 0 && words.slice(shell + 1).some((word) => swaps.some((swap) => word.includes(swap)));
+}
+
+function values(found: Option[], names: string[], shape = /^/u) {
+  return found.flatMap((option) =>
+    named(option, names) && option.value !== undefined && shape.test(option.value) ? [option.value] : [],
+  );
 }
 
 function stdin(words: string[], start: number, scope: Scope, launched: Launch[]) {
@@ -602,27 +631,24 @@ function stdin(words: string[], start: number, scope: Scope, launched: Launch[])
   launched.push({ command: streamed, dir: scope.dir });
 }
 
-function options(words: string[], start: number, spec: Spec) {
-  const found: Option[] = [];
+export function options(words: readonly string[], start: number, spec: Spec) {
+  const found: { flag: string; value?: string }[] = [];
   let index = start;
   while (index < words.length && words[index].startsWith("-")) {
-    const position = index;
     const word = words[index++];
     if (word === "--") break;
     if (word.startsWith("--")) {
       const [flag, ...rest] = word.slice(2).split("=");
-      const value = rest.length ? rest.join("=") : spec.long.includes(flag) ? words[index++] : undefined;
-      found.push({ flag, value, at: index > position + 1 ? index - 1 : position });
+      found.push({ flag, value: rest.length ? rest.join("=") : spec.long.includes(flag) ? words[index++] : undefined });
       continue;
     }
     for (let at = 1; at < word.length; at++) {
       const flag = word[at];
       if (!spec.short.includes(flag)) {
-        found.push({ flag, at: position });
+        found.push({ flag });
         continue;
       }
-      const value = word.slice(at + 1) || words[index++];
-      found.push({ flag, value, at: index > position + 1 ? index - 1 : position });
+      found.push({ flag, value: word.slice(at + 1) || words[index++] });
       break;
     }
   }

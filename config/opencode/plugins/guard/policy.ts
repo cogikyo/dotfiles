@@ -3,6 +3,7 @@ import path from "node:path";
 import { profile as gemini } from "../gemini/agy.ts";
 import { brain, expand, firefox, home, located, temp, tilde, within } from "./paths.ts";
 import {
+  argv,
   type Command,
   flags,
   type Launch,
@@ -10,9 +11,13 @@ import {
   literalLaunches,
   literalPath,
   maxDepth,
+  named,
   opaque,
+  options,
   redirection,
   remote,
+  respaced,
+  type Spec,
   streamed,
   unseen,
   wrapped,
@@ -32,7 +37,7 @@ export function readOnly(agent: string | undefined) {
   );
 }
 
-const owners = new Set(["collab", "build/git"]);
+export const owners = new Set(["collab", "build/git"]);
 const credentials = [
   /(?:^|[\s/=@<>:])\.claude(?:-[\w-]+)?\/\.credentials\.json(?![\w.-])/u,
   /(?:^|[\s/=@<>:])opencode[\w-]*\/(?:opencode\/)?auth\.json(?![\w.-])/u,
@@ -108,18 +113,54 @@ const globals = new Set([
 ]);
 const runners = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 const rewrites = ["--force", "--force-with-lease", "--force-if-includes", "--delete", "--mirror", "--prune"];
-type Program = { long: string[]; short?: string; valued?: string };
+const pushes = new Set(["push", "send-pack"]);
+type Program = { long: string[]; short?: string };
 const programs: Record<string, Program> = {
   "ls-remote": { long: ["--upload-pack", "--exec"] },
   fetch: { long: ["--upload-pack"] },
   "fetch-pack": { long: ["--upload-pack", "--exec"] },
   pull: { long: ["--upload-pack"] },
-  clone: { long: ["--upload-pack"], short: "u", valued: "jobc" },
+  clone: { long: ["--upload-pack"], short: "u" },
   push: { long: ["--receive-pack", "--exec"] },
   "send-pack": { long: ["--receive-pack", "--exec"] },
   archive: { long: ["--exec"] },
-  rebase: { long: ["--exec"], short: "x", valued: "CsX" },
-  grep: { long: ["--open-files-in-pager"], short: "O", valued: "CBAfem" },
+  rebase: { long: ["--exec"], short: "x" },
+  grep: { long: ["--open-files-in-pager"], short: "O" },
+};
+const tools = new Set(["docker", "podman", "nerdctl", "kubectl", "npm", "pnpm", "yarn", "bun", "cargo", "brew"]);
+const verbs = new Set(["exec", "run", "x", "dlx"]);
+const systemd: Spec = {
+  short: "HMCupE",
+  long: [
+    "host",
+    "machine",
+    "capsule",
+    "unit",
+    "property",
+    "description",
+    "slice",
+    "expand-environment",
+    "service-type",
+    "uid",
+    "gid",
+    "nice",
+    "working-directory",
+    "root-directory",
+    "setenv",
+    "output",
+    "json",
+    "job-mode",
+    "background",
+    "path-property",
+    "socket-property",
+    "on-active",
+    "on-boot",
+    "on-startup",
+    "on-unit-active",
+    "on-unit-inactive",
+    "on-calendar",
+    "timer-property",
+  ],
 };
 const copiers = new Set(["tee", "cp", "mv", "ln", "install"]);
 const nonliteral = /[$`*?[{]|^~/u;
@@ -392,21 +433,32 @@ function deletion({ command, dir }: Launch) {
     const files = targets(args);
     return files.length > 0 && files.every((file) => removable(file, dir));
   }
-  if (name === "xargs") return path.basename(wrapped(command) ?? "") !== "rm";
+  if (name === "xargs") return !wrapped(command).some((word) => path.basename(word) === "rm");
   return name !== "find" || sweep(args, dir);
 }
 
-function sweep(args: string[], dir: string | undefined) {
-  let removes = args.includes("-delete");
-  for (const [at, arg] of args.entries()) {
-    if (!runners.has(arg) || path.basename(args[at + 1] ?? "") !== "rm") continue;
-    removes = true;
+function segments(args: string[], dir: string | undefined) {
+  return args.flatMap((arg, at) => {
+    if (!runners.has(arg)) return [];
     const end = args.findIndex((word, after) => after > at && (word === ";" || word === "+"));
-    const files = targets(args.slice(at + 2, end < 0 ? undefined : end)).filter((file) => file !== "{}");
     const base = arg === "-exec" || arg === "-ok" ? dir : undefined;
-    if (!files.every((file) => removable(file, base))) return false;
-  }
-  if (!removes) return true;
+    return [{ words: args.slice(at + 1, end < 0 ? undefined : end), base }];
+  });
+}
+
+function confined({ words, base }: { words: string[]; base: string | undefined }): boolean {
+  return words.every((word, at) => {
+    const name = path.basename(word);
+    if (name === "find") return sweep(words.slice(at + 1), base);
+    return name !== "rm" || targets(words.slice(at + 1)).every((file) => file === "{}" || removable(file, base));
+  });
+}
+
+function sweep(args: string[], dir: string | undefined): boolean {
+  const execs = segments(args, dir);
+  if (!execs.every(confined)) return false;
+  const removes = execs.some(({ words }) => words.some((word) => path.basename(word) === "rm"));
+  if (!removes && !args.includes("-delete")) return true;
   let at = 0;
   while (at < args.length && /^-[HLPO]/u.test(args[at])) at++;
   if (args[at] === "-D") at += 2;
@@ -415,8 +467,8 @@ function sweep(args: string[], dir: string | undefined) {
   return (roots.length > 0 ? roots : ["."]).every((root) => removable(root, dir));
 }
 
-function collected(command: Command) {
-  return flags(command).some(
+function collected([, ...args]: Command) {
+  return options(args, 0, systemd).found.some(
     ({ flag, value }) =>
       flag === "G" ||
       flag === "collect" ||
@@ -425,8 +477,8 @@ function collected(command: Command) {
 }
 
 function units(command: Command) {
-  return flags(command).flatMap(({ flag, value }) =>
-    (flag === "u" || flag === "unit") && value !== undefined ? [value] : [],
+  return flags(command).flatMap((found) =>
+    named(found, ["u", "unit"]) && found.value !== undefined ? [found.value] : [],
   );
 }
 
@@ -543,32 +595,10 @@ function git({ args, cwd, local }: Invocation) {
     configs.every((key) => harmless.test(key)) &&
     all.every((place) => place !== undefined && scratch(place));
   if (trusted) return undefined;
-  const risky = configs.find((key) => dangerous.test(key));
-  if (risky)
-    return `children may not run \`git -c ${risky}\` in a real repo, since that setting can run commands; return the step to Collab`;
   const read: Read | undefined = Object.hasOwn(reads, sub) ? reads[sub] : undefined;
   if (read === true || read?.(rest)) return undefined;
   const label = read ? [sub, ...rest.slice(0, 1)].join(" ") : sub;
   return `children may not run \`git ${label}\` in a real repo; return the step to Collab`;
-}
-
-function invocations(launched: Launch[], local: boolean): Invocation[] {
-  return launched.flatMap(({ command, dir }) => {
-    const script = remote(command);
-    if (script !== undefined) return invocations(launches(script, undefined, {}, false), false);
-    const [name, ...args] = command;
-    if (name === "find") {
-      return args.flatMap((arg, at) => {
-        if (!runners.has(arg)) return [];
-        const end = args.findIndex((word, after) => after > at && (word === ";" || word === "+"));
-        const [head, ...tail] = args.slice(at + 1, end < 0 ? undefined : end);
-        if (head === undefined) return [];
-        const base = arg === "-exec" || arg === "-ok" ? dir : undefined;
-        return invocations([{ command: [path.basename(head), ...tail], dir: base }], local);
-      });
-    }
-    return name === "git" ? [{ args, cwd: dir, local }] : [];
-  });
 }
 
 function tampers({ command: [name, ...args] }: Launch) {
@@ -584,26 +614,20 @@ function tampers({ command: [name, ...args] }: Launch) {
   return !harmless.test(key ?? "");
 }
 
-function option(args: string[], { long, short = "", valued = "" }: Program) {
-  for (let index = 0; index < args.length; index++) {
-    const arg = args[index];
+function option(args: string[], { long, short = "" }: Program) {
+  for (const arg of args) {
     if (arg.startsWith("--")) {
       const [flag] = arg.split("=");
       if (abbreviates(flag, long)) return flag;
       continue;
     }
     if (!arg.startsWith("-")) continue;
-    for (let at = 1; at < arg.length; at++) {
-      if (short.includes(arg[at])) return `-${arg[at]}`;
-      if (!valued.includes(arg[at])) continue;
-      if (at === arg.length - 1) index++;
-      break;
-    }
+    for (const char of arg.slice(1)) if (short.includes(char)) return `-${char}`;
   }
   return undefined;
 }
 
-function program({ args }: Invocation) {
+function program({ args }: { args: string[] }) {
   const { at } = locate(args, undefined);
   if (args.slice(0, at).some((arg) => arg.startsWith("--exec-path=")))
     return "`git --exec-path=` makes Git run its helper programs from a chosen directory; agents may not pass it";
@@ -613,33 +637,108 @@ function program({ args }: Invocation) {
   return flag && `\`git ${sub}\` with \`${flag}\` makes Git run a chosen program; agents may not pass it`;
 }
 
-function rewrite(args: string[]) {
-  const { switches, operands } = parts(args, ["-o", "--push-option", "--receive-pack", "--exec", "--repo"]);
-  const flag = switches.find((name) => abbreviates(name, rewrites) || name === "-f" || name === "-d");
-  if (flag) return `\`git push\` with \`${flag}\` rewrites or deletes remote history`;
-  const spec = operands.find((operand) => operand.startsWith("+") || operand.startsWith(":"));
-  return spec && `\`git push\` with the refspec \`${spec}\` rewrites or deletes remote history`;
+function dangers({ args }: { args: string[] }) {
+  return args.flatMap((arg, at) => {
+    const [flag, attached] = arg.split(/=(.*)/su);
+    const short = /^-[A-Za-z0-9]*?c(.*)$/su.exec(arg)?.[1];
+    const value = abbreviates(flag, ["--config", "--config-env"])
+      ? (attached ?? args[at + 1])
+      : short === undefined
+        ? undefined
+        : short || args[at + 1];
+    const key = value?.split("=")[0];
+    return key && dangerous.test(key)
+      ? [`\`git -c ${key}\` sets a Git option that can run commands; agents may not pass it`]
+      : [];
+  });
 }
 
-function push({ args, cwd, local }: Invocation) {
+function rewrite(sub: string, args: string[]) {
+  for (const arg of args) {
+    const flag = arg.startsWith("--") ? arg.split("=")[0] : /^-[^-]*?([fd])/u.exec(arg)?.[1];
+    if (flag && (!flag.startsWith("--") || abbreviates(flag, rewrites)))
+      return `\`git ${sub}\` with \`${flag.startsWith("--") ? flag : `-${flag}`}\` rewrites or deletes remote history`;
+  }
+  const spec = args.find((arg) => arg.startsWith("+") || arg.startsWith(":"));
+  return spec && `\`git ${sub}\` with the refspec \`${spec}\` rewrites or deletes remote history`;
+}
+
+function push({ args, cwd, local, head, hidden }: Reading) {
   const { at, places, configs } = locate(args, cwd);
-  if (args[at] !== "push") return undefined;
-  const rest = args.slice(at + 1);
-  const forced = rewrite(rest);
-  if (forced) return forced;
-  if (configs.length > 0) return "`git push` with `-c` or `--config-env` can change what it pushes";
+  const sub = args[at];
+  if (sub === undefined || !pushes.has(sub)) return undefined;
+  const forced = rewrite(sub, args.slice(at + 1));
+  if (forced || !head) return forced;
+  if (hidden)
+    return `\`git ${sub}\` sits behind a wrapper, redirect, or helper path the guard does not parse; run it as plain \`git ${sub}\``;
+  if (configs.length > 0) return `\`git ${sub}\` with \`-c\` or \`--config-env\` can change what it pushes`;
   if (!local || places.some((place) => place === undefined)) {
-    return "`git push` runs in a repo the guard cannot determine";
+    return `\`git ${sub}\` runs in a repo the guard cannot determine`;
   }
   const place = places.find((dir) => dir !== undefined && within(located(dir), located(attended)));
-  if (place) return `\`git push\` from ${place} needs approval for repos under ${attended}`;
+  if (place) return `\`git ${sub}\` from ${place} needs approval for repos under ${attended}`;
   return undefined;
 }
 
-function expanded({ args }: Invocation) {
+function expanded({ args, head }: Reading) {
   const { at, written } = locate(args, undefined);
-  if (args[at] !== "push") return [];
+  const sub = args[at];
+  if (!head || sub === undefined || !pushes.has(sub)) return [];
   return [...written, ...args.slice(at + 1)].filter((word) => expansion.test(word));
+}
+
+type Reading = Invocation & { head: boolean; hidden: boolean };
+
+function readings(launched: Launch[], local: boolean) {
+  const calls: Reading[] = [];
+  const removals: Launch[] = [];
+  for (const { command, dir } of launched) {
+    const scripts = remote(command);
+    if (scripts.length > 0) {
+      for (const script of scripts) calls.push(...readings(launches(script, undefined, {}, false), false).calls);
+      continue;
+    }
+    const [name, ...args] = command;
+    if (name === "find") {
+      for (const {
+        words: [head, ...tail],
+        base,
+      } of segments(args, dir))
+        if (head !== undefined)
+          calls.push(...readings([{ command: [path.basename(head), ...tail], dir: base }], local).calls);
+      continue;
+    }
+    const words = argv(command);
+    const subs = new Set<number>();
+    words.forEach((word, at) => {
+      const base = path.basename(word);
+      const helper = /^git-([\w-]+)$/u.exec(base)?.[1];
+      if (base === "git" || helper) {
+        const rest = helper ? [helper, ...words.slice(at + 1)] : words.slice(at + 1);
+        const sub = locate(rest, undefined).at;
+        if (!helper) subs.add(at + 1 + sub);
+        const seen = at === 0 && name === "git" ? args[locate(args, undefined).at] : undefined;
+        calls.push({ args: rest, cwd: dir, local, head: at === 0, hidden: at === 0 && rest[sub] !== seen });
+      } else if (base === "find") {
+        removals.push({ command: ["find", ...words.slice(at + 1)], dir });
+      } else if (base === "rm" && !subs.has(at) && !swept(words, at) && !exempt(words, at))
+        removals.push({ command: ["rm", ...words.slice(at + 1)], dir });
+    });
+  }
+  return { calls, removals };
+}
+
+function swept(words: string[], at: number) {
+  for (let index = at - 1; index >= 0 && words[index] !== ";" && words[index] !== "+"; index--)
+    if (runners.has(words[index])) return words.slice(0, index).some((word) => path.basename(word) === "find");
+  return false;
+}
+
+function exempt(words: string[], at: number) {
+  return (
+    tools.has(path.basename(words[0])) &&
+    words.slice(1, at).every((word) => /^[a-z][a-z-]*$/u.test(word) && !verbs.has(word))
+  );
 }
 
 export function inspect(
@@ -649,28 +748,14 @@ export function inspect(
   known: Record<string, string> = {},
 ) {
   const caged = readOnly(agent);
-  const launched = launches(source, workdir, known, !owners.has(agent ?? ""));
+  const owner = owners.has(agent ?? "");
+  const launched = launches(source, workdir, known, !owner);
   const commands = launched.map(({ command }) => command);
-  const calls = invocations(launched, !relocations.test(source) && !launched.some(tampers));
+  const { calls, removals } = readings(
+    [...launched, ...respaced(source, workdir, known, !owner)],
+    !relocations.test(source) && !launched.some(tampers),
+  );
   const found = new Set<string>();
-  if (!caged && commands.includes(opaque)) found.add(unchecked);
-  const blind = commands.includes(unseen) || /\bTRAP[A-Z]+\s*\(\s*\)|\bfunction\s+TRAP[A-Z]/u.test(source);
-  if (blind && !owners.has(agent ?? "") && !caged) {
-    found.add(
-      "the command hands another program or a deferred builtin a script whose body or execution context the guard cannot recover literally, or passes shell options the guard does not parse, so the guard cannot check its git or `rm` calls; pass a literal script body or run the commands directly",
-    );
-  }
-  if (!caged && commands.includes(streamed)) {
-    found.add(
-      "a shell here reads its script from stdin, a pipe, or a device the guard cannot see; pass the script with `-c` or a heredoc instead",
-    );
-  }
-  // Cage already confines read-only deletion to scratch tmp/ and cache/.
-  if (!caged && !launched.every(deletion)) {
-    found.add(
-      `\`rm\`, \`find -delete\`, and \`find -exec rm\` take only paths inside ${temp}/, written literally or through a variable assigned earlier in the command, absolute or relative to a known directory (\`workdir\`, or \`cd <dir> &&\`), without \`..\`, a trailing slash, or a top-level glob, and \`xargs rm\` is not allowed (\`$OPENCODE_SCRATCH\` is unset outside the read-only cage); move anything else to trash with \`trash -- <path>\``,
-    );
-  }
   if (commands.some((command) => command[0] === "systemd-run" && !collected(command))) {
     found.add(
       "systemd-run must pass `--collect` (`-G`), since a failed unit otherwise stays loaded and hyprd health reports it; when a test needs the failed unit to stay, pass `-p CollectMode=inactive` instead",
@@ -692,12 +777,6 @@ export function inspect(
       "agents must not call the OpenCode server API; `opencode api` is disabled in the shell; to create a session the user asked for, call `tools.opencode.session_create` through `execute`",
     );
   }
-  const dynamic = [...new Set(commands.filter(([name]) => unresolved(name)).map(([name]) => `\`${name}\``))];
-  if (!caged && dynamic.length > 0) {
-    found.add(
-      `the command name ${dynamic.join(", ")} is expanded at run time; write the command name literally so the guard can check it`,
-    );
-  }
   // cage's --hide operands name denied files, not attempted reads.
   const args = commands.filter(([name]) => name !== "cage").flatMap(([, ...rest]) => rest);
   for (const secret of args.flatMap((arg) => credentials.map((file) => file.exec(arg)?.[0])).filter(Boolean)) {
@@ -706,21 +785,55 @@ export function inspect(
   if (args.some((arg) => database.test(arg))) found.add(databaseReason);
   if (args.some((arg) => profile.test(arg))) found.add(profileReason);
   if (args.some(geminiArg)) found.add(geminiReason);
-  if (!caged)
-    for (const reason of pathCredentials(literalLaunches(source, workdir, !owners.has(agent ?? "")))) found.add(reason);
   for (const problem of calls.map(program)) if (problem) found.add(problem);
-  if (!owners.has(agent ?? "") && !caged) {
-    for (const problem of calls.map(git)) if (problem) found.add(problem);
-  }
-  const expansions = caged ? [] : [...new Set(calls.flatMap(expanded))];
-  if (expansions.length > 0) {
-    found.add(
-      `the \`git push\` repo path or argument ${expansions.map((word) => `\`${word}\``).join(", ")} is expanded at run time; write it literally, or through a variable assigned earlier in the command, so the guard can check the push`,
-    );
+  if (!caged) {
+    if (commands.includes(opaque)) found.add(unchecked);
+    const blind = commands.includes(unseen) || /\bTRAP[A-Z]+\s*\(\s*\)|\bfunction\s+TRAP[A-Z]/u.test(source);
+    if (blind && !owner) {
+      found.add(
+        "the command hands another program or a deferred builtin a script whose body or execution context the guard cannot recover literally, or passes shell options the guard does not parse, so the guard cannot check its git or `rm` calls; pass a literal script body or run the commands directly",
+      );
+    }
+    if (commands.includes(streamed)) {
+      found.add(
+        "a shell here reads its script from stdin, a pipe, or a device the guard cannot see; pass the script with `-c` or a heredoc instead",
+      );
+    }
+    // Cage already confines read-only deletion to scratch tmp/ and cache/.
+    if (![...launched, ...removals].every(deletion)) {
+      found.add(
+        `\`rm\`, \`find -delete\`, and \`find -exec rm\` take only paths inside ${temp}/, written literally or through a variable assigned earlier in the command, absolute or relative to a known directory (\`workdir\`, or \`cd <dir> &&\`), without \`..\`, a trailing slash, or a top-level glob, and \`xargs rm\` is not allowed (\`$OPENCODE_SCRATCH\` is unset outside the read-only cage); move anything else to trash with \`trash -- <path>\``,
+      );
+    }
+    const dynamic = launched.filter(({ command: [name] }) => unresolved(name));
+    const names = [...new Set(dynamic.filter(({ guess }) => !guess).map(({ command: [name] }) => `\`${name}\``))];
+    if (names.length > 0) {
+      found.add(
+        `the command name ${names.join(", ")} is expanded at run time; write the command name literally so the guard can check it`,
+      );
+    }
+    for (const { command, guess } of dynamic) {
+      if (!guess) continue;
+      found.add(
+        `\`${command[0]}\` may be the command name, expanded at run time, because the guard cannot tell whether \`${guess.flag}\` in \`${guess.wrapper} ${guess.flag}\` takes a value; end the wrapper options with \`--\` before the command, write a value as \`--option=value\`, or drop \`${guess.flag}\`, so the guard can find the command`,
+      );
+    }
+    for (const reason of pathCredentials(literalLaunches(source, workdir, !owner))) found.add(reason);
+    for (const problem of calls.flatMap(dangers)) found.add(problem);
+    if (!owner)
+      for (const problem of calls.map((call) => (call.head ? git(call) : push(call)))) if (problem) found.add(problem);
+    const expansions = [...new Set(calls.flatMap(expanded))];
+    if (expansions.length > 0) {
+      found.add(
+        `the \`git push\` repo path or argument ${expansions.map((word) => `\`${word}\``).join(", ")} is expanded at run time; write it literally, or through a variable assigned earlier in the command, so the guard can check the push`,
+      );
+    }
   }
   return {
     problems: [...found],
     push: calls.map(push).find(Boolean),
-    commits: calls.filter(({ args: words }) => words[locate(words, undefined).at] === "commit").map(({ cwd }) => cwd),
+    commits: calls
+      .filter(({ head, args: words }) => head && words[locate(words, undefined).at] === "commit")
+      .map(({ cwd }) => cwd),
   };
 }

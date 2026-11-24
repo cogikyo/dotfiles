@@ -202,12 +202,13 @@ function access(tool: "read" | "write" | "edit", absolute: string, place: Place)
 function commands(line: string, workdir: string, place: Place): Need[] {
   const runs = launches(line, workdir);
   const hidden = runs.some((run) => run.command === opaque || run.command === streamed || run.command === unseen);
+  const ambiguous = runs.some((run) => run.guess !== undefined);
   const shown = runs
     .filter((run) => run.command !== opaque && run.command !== streamed && run.command !== unseen)
     .filter((run) => run.command[0] !== redirection)
     .map((run) => run.command.join(" ").trim())
     .filter(Boolean);
-  const resources = [...new Set(hidden || shown.length === 0 ? [...shown, line] : shown)];
+  const resources = [...new Set(hidden || ambiguous || shown.length === 0 ? [...shown, line] : shown)];
   const dirs = new Set([workdir, ...runs.flatMap((run) => [run.dir, destination(run)].filter(defined))]);
   const list = [...dirs].filter((dir) => !internal(dir, place)).map((dir) => external(dir, "directory"));
   list.push({ action: "shell", resources, save: resources });
