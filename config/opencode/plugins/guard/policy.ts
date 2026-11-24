@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { constants } from "node:os";
 import path from "node:path";
 import { profile as gemini } from "../gemini/agy.ts";
 import { brain, expand, firefox, home, located, temp, tilde, within } from "./paths.ts";
@@ -637,6 +638,59 @@ function program({ args }: { args: string[] }) {
   return flag && `\`git ${sub}\` with \`${flag}\` makes Git run a chosen program; agents may not pass it`;
 }
 
+const matchers = new Set(["pgrep", "pkill"]);
+const matcherValued = [
+  "-d",
+  "-g",
+  "-G",
+  "-O",
+  "-p",
+  "-P",
+  "-s",
+  "-t",
+  "-u",
+  "-U",
+  "-F",
+  "-r",
+  "-q",
+  "--delimiter",
+  "--pgroup",
+  "--group",
+  "--older",
+  "--parent",
+  "--session",
+  "--terminal",
+  "--euid",
+  "--uid",
+  "--pidfile",
+  "--runstates",
+  "--queue",
+  "--signal",
+  "--ns",
+  "--nslist",
+  "--cgroup",
+  "--env",
+];
+
+function signal(word: string | undefined) {
+  const name = word
+    ?.match(/^-(.+)$/u)?.[1]
+    .toUpperCase()
+    .replace(/^SIG/u, "");
+  if (name === undefined) return false;
+  return /^\d+$|^RTM(?:IN|AX)(?:[+-]\d+)?$/u.test(name) || Object.hasOwn(constants.signals, `SIG${name}`);
+}
+
+function selfMatches([name, ...args]: Command) {
+  if (!matchers.has(name)) return false;
+  const words = argv(args);
+  if (name === "pkill" && signal(words[0])) words.shift();
+  const { switches, operands } = parts(words, matcherValued);
+  if (!switches.some((flag) => flag === "-f" || abbreviates(flag, ["--full"]))) return false;
+  const [pattern = ""] = operands;
+  return !/^\[\w\]\w/u.test(pattern) || pattern.includes("|");
+}
+
 function dangers({ args }: { args: string[] }) {
   return args.flatMap((arg, at) => {
     const [flag, attached] = arg.split(/=(.*)/su);
@@ -751,10 +805,8 @@ export function inspect(
   const owner = owners.has(agent ?? "");
   const launched = launches(source, workdir, known, !owner);
   const commands = launched.map(({ command }) => command);
-  const { calls, removals } = readings(
-    [...launched, ...respaced(source, workdir, known, !owner)],
-    !relocations.test(source) && !launched.some(tampers),
-  );
+  const spaced = respaced(source, workdir, known, !owner);
+  const { calls, removals } = readings([...launched, ...spaced], !relocations.test(source) && !launched.some(tampers));
   const found = new Set<string>();
   if (commands.some((command) => command[0] === "systemd-run" && !collected(command))) {
     found.add(
@@ -772,6 +824,11 @@ export function inspect(
   }
   if (commands.some(([name]) => name === "grok"))
     found.add("grok is disabled in the shell; use the `x` tool for X search");
+  if ([...launched, ...spaced].some(({ command }) => selfMatches(command))) {
+    found.add(
+      "`pgrep -f` and `pkill -f` also match the shell tool's own `zsh -c` wrapper, so wait loops never end and `pkill -f` kills its own shell; bracket the first letter (`pgrep -f '[s]tream.sh'`), wait on a saved PID with `kill -0 $pid` or `tail --pid=$pid -f /dev/null`, or start the job as a background shell call that notifies on exit",
+    );
+  }
   if (commands.some(([name, ...args]) => (name === "opencode" || name === "opencode-v2") && args.includes("api"))) {
     found.add(
       "agents must not call the OpenCode server API; `opencode api` is disabled in the shell; to create a session the user asked for, call `tools.opencode.session_create` through `execute`",

@@ -89,6 +89,16 @@ export const bypass: [agent: string, command: string, dir?: string][] = [
   ["build/general", 'watch -t 1 "-; git -c alias.x=!id x" true'],
   ["build/general", 'watch -t 1 "-; git --exec-path=/tmp/evil status" true'],
   ["build/general", 'watch -t 1 "-; git commit -m x" true'],
+  ["build/general", "pgrep -f x"],
+  ["build/general", "pgrep -fa x"],
+  ["build/general", "pkill -f x"],
+  ["build/general", "while pgrep -f x; do sleep 1; done"],
+  ["build/general", "pgrep -f x >/tmp/a[1]"],
+  ["build/general", "pgrep -d '[x]' -f foo"],
+  ["build/general", "pgrep -f 'foo|[b]ar'"],
+  ["build/general", "pgrep -f 'foo[0-9]*'"],
+  ["build/general", "pgrep>/dev/null -f x"],
+  ["build/general", "pgrep&>/dev/null -f x"],
 ];
 
 export const prompted = [
@@ -125,6 +135,15 @@ export const benign: [agent: string, command: string][] = [
   ["build/general", "uv run --with a --with b bash -c 'echo hi'"],
   ["build/general", "uv run -m pytest"],
   ["build/general", "watch -x git status"],
+  ["build/general", "pgrep x"],
+  ["build/general", "pkill x"],
+  ["build/general", "pgrep -f '[s]tream.sh'"],
+  ["build/general", "pgrep -- -fish"],
+  ["build/general", "pgrep -x -- --full"],
+  ["build/general", "pgrep -F/tmp/foo.pid"],
+  ["build/general", "pgrep -ufred nginx"],
+  ["build/general", "pgrep -d -f nginx"],
+  ["build/general", "pkill -prof foo"],
 ];
 
 export const holes: [agent: string, command: string][] = [
