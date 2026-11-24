@@ -18,10 +18,12 @@ export const pooled = (providerID: string) => (accounts.has(providerID) ? pool :
 
 const key = (ref: Ref) => `${pooled(ref.providerID)}/${ref.id}`;
 
+const trendHourly = 90;
+
 const minutes = (ms: number) => `${Math.round(ms / 60_000)}m old`;
 
 async function claude(route: Ref, current: Ref | undefined): Promise<Step> {
-  const list = await survey(route.id);
+  const list = await survey(route.id, Date.now(), { [claudeAccounts.trend.id]: trendHourly });
   const open = ranked(list, current?.providerID);
   const stale = list
     .filter((account) => account.age !== undefined && account.age > staleAfter)

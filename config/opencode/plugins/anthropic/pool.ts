@@ -15,7 +15,7 @@ export type Availability = {
 
 const ids = Object.values(claudeAccounts).map(({ id }) => id);
 
-async function availability(id: string, modelID: string, now = Date.now()): Promise<Availability> {
+async function availability(id: string, modelID: string, now = Date.now(), hourly = 100): Promise<Availability> {
   const { ageMS: age, windows: all, issue } = await inspectProviderCache(id, staleAfter, now);
   const scoped = modelID
     .split("-")
@@ -34,13 +34,15 @@ async function availability(id: string, modelID: string, now = Date.now()): Prom
     id,
     age,
     known: !issue && windows.length > 0 && known.length === windows.length,
-    capped: known.filter((window) => window.used! >= 100).map((window) => window.reset),
+    capped: known
+      .filter((window) => window.used! >= (window.label === "H" ? hourly : 100))
+      .map((window) => window.reset),
     weekly: weekly?.reset ?? Infinity,
   };
 }
 
-export function survey(modelID: string, now = Date.now()) {
-  return Promise.all(ids.map((id) => availability(id, modelID, now)));
+export function survey(modelID: string, now = Date.now(), hourly: Record<string, number> = {}) {
+  return Promise.all(ids.map((id) => availability(id, modelID, now, hourly[id])));
 }
 
 export const reopens = (account: Availability) => Math.max(...account.capped);
