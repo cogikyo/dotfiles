@@ -37,6 +37,7 @@ qbittorrent
 qemu-img
 qemu-system-x86
 qemu-ui-gtk
+rclone
 rootlesskit
 rustup
 satty
