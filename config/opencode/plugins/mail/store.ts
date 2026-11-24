@@ -84,6 +84,7 @@ const blocking = `
   SELECT session.parent_id AS parentID, session.title
   FROM session_inbox inbox JOIN session_v2 session ON session.id = inbox.session_id
   WHERE inbox.session_id = ?1 AND inbox.type = 'synthetic' AND json_extract(inbox.payload, '$.metadata.source') = ?2
+    AND (json_extract(inbox.payload, '$.metadata.urgent') OR json_extract(inbox.payload, '$.metadata.kind') = 'ask')
     AND inbox.time_created <= iif(json_extract(inbox.payload, '$.metadata.urgent'), ?3, ?4)
   LIMIT 1`;
 

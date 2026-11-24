@@ -39,7 +39,7 @@ function span(ms: number) {
 const description = [
   "Send a message to the agent in another top-level session.",
   "Running targets read mail at their next step without interrupting tools; idle wakes are attempted immediately through safety guards.",
-  `Question popups are withdrawn after mail waits ${span(store.patience.normal)}, or ${span(store.patience.urgent)} if urgent. Permission prompts are set aside, never approved.`,
+  `Question popups are withdrawn after ask mail waits ${span(store.patience.normal)}, or after urgent mail waits ${span(store.patience.urgent)}; info mail waits for the popup to close. Permission prompts are set aside the same way, never approved.`,
   "Use kind info to share something and ask when you need a reply; answer an ask with replyTo set to its mail ID.",
   "Only top-level sessions can send, and only to open top-level sessions.",
   "Subjects are one line of at most 80 characters; bodies are at most 4000 characters.",
