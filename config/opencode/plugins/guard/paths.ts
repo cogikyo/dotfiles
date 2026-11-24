@@ -7,6 +7,7 @@ import { profile } from "../gemini/agy.ts";
 export const home = homedir();
 export const scratch = path.join(home, ".local/state/opencode/scratch");
 export const brain = path.join(profile, "antigravity-cli", "brain");
+export const kept = [brain];
 export const temp = "/tmp/opencode";
 export const firefox = [".mozilla/firefox", ".config/mozilla/firefox"].map((root) => path.join(home, root));
 
@@ -98,12 +99,7 @@ export function secrets() {
   const claude = entries(home)
     .filter((entry) => (entry.isDirectory() || entry.isSymbolicLink()) && entry.name.startsWith(".claude"))
     .flatMap((entry) => claudeStores.map((store) => path.join(home, entry.name, store)));
-  const agy = [profile, path.dirname(brain)].flatMap((dir) =>
-    entries(dir)
-      .map((entry) => path.join(dir, entry.name))
-      .filter((entry) => entry !== path.dirname(brain) && entry !== brain),
-  );
-  return [...fixed, ...agy, ...firefox, ...claude, ...files, ...unlisted];
+  return [...fixed, profile, ...firefox, ...claude, ...files, ...unlisted];
 }
 
 function canonical(target: string) {
@@ -134,7 +130,9 @@ function churn(target: string, roots: string[]) {
   });
 }
 
-type Fence = { hidden: string[]; roots: string[] };
+type Secret = { path: string; kept: string[] };
+
+type Fence = { hidden: Secret[]; roots: string[] };
 
 function forms(secret: string) {
   try {
@@ -150,14 +148,26 @@ function forms(secret: string) {
 }
 
 function fence(): Fence {
-  const lexical = secrets();
-  const hidden = [...lexical, ...lexical.flatMap(forms)];
+  const hidden = secrets().flatMap((secret) => {
+    const inner = kept.filter((keep) => keep !== secret && within(keep, secret));
+    return [secret, ...forms(secret)].map((form) => ({
+      path: form,
+      kept: inner.map((keep) => path.join(form, path.relative(secret, keep))),
+    }));
+  });
   const real = canonical(scratch);
   return { hidden, roots: real && real !== scratch ? [scratch, real] : [scratch] };
 }
 
+function hides(rules: Fence, target: string) {
+  return rules.hidden.some(
+    (secret) =>
+      within(target, secret.path) && !secret.kept.some((keep) => within(target, keep) || within(keep, target)),
+  );
+}
+
 export function screen() {
-  const { hidden } = fence();
+  const rules = fence();
   return (target: string) => {
     let real: string;
     try {
@@ -165,7 +175,7 @@ export function screen() {
     } catch {
       return true;
     }
-    return [target, real].some((form) => hidden.some((secret) => within(form, secret)));
+    return [target, real].some((form) => hides(rules, form));
   };
 }
 
@@ -174,7 +184,7 @@ function refusal(target: string, rules: Fence) {
   if (churn(target, rules.roots)) {
     return `${target} is under a session scratch tmp/ or cache/ directory, whose entries can be swapped while a host tool reads them; read it through the shell with cat or sed -n, or copy it to a new name at the scratch root and read that (overwriting an existing root file fails)`;
   }
-  if (rules.hidden.some((secret) => within(target, secret))) return `${target} is hidden from read-only agents`;
+  if (hides(rules, target)) return `${target} is hidden from read-only agents`;
   return undefined;
 }
 

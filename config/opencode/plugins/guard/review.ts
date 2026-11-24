@@ -3,7 +3,7 @@ import { realpath } from "node:fs/promises";
 import path from "node:path";
 import { commitRejection } from "./commit.ts";
 import { relocated } from "./dirs.ts";
-import { confine, expand, home, located, scratch, screen, secrets, within } from "./paths.ts";
+import { confine, expand, home, kept, located, scratch, screen, secrets, within } from "./paths.ts";
 import { credential, inspect, readOnly } from "./policy.ts";
 import { enter, quote } from "./shell.ts";
 
@@ -48,7 +48,8 @@ export function text(input: unknown, key: string) {
 
 function caged(command: string, dir: string) {
   const hides = secrets().flatMap((secret) => ["--hide", quote(secret)]);
-  return [quote(cage), ...hides, quote(dir), "--", "bash", "-c", quote(command)].join(" ");
+  const keeps = kept.flatMap((keep) => ["--keep", quote(keep)]);
+  return [quote(cage), ...hides, ...keeps, quote(dir), "--", "bash", "-c", quote(command)].join(" ");
 }
 
 function given(call: Call, key: string) {

@@ -777,7 +777,7 @@ export function inspect(
       "agents must not call the OpenCode server API; `opencode api` is disabled in the shell; to create a session the user asked for, call `tools.opencode.session_create` through `execute`",
     );
   }
-  // cage's --hide operands name denied files, not attempted reads.
+  // cage's --hide and --keep operands set sandbox policy, not attempted reads.
   const args = commands.filter(([name]) => name !== "cage").flatMap(([, ...rest]) => rest);
   for (const secret of args.flatMap((arg) => credentials.map((file) => file.exec(arg)?.[0])).filter(Boolean)) {
     found.add(`\`${secret?.replace(/^[\s/=@<>:]/u, "")}\` is a credential file; agents must not read it`);
