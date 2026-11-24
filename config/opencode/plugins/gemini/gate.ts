@@ -21,6 +21,11 @@ type Source = { type: "tool"; messageID: string; id: string };
 
 const declined = "The user declined this tool call";
 
+const unapplied = {
+  missing: "OpenCode's tool hook left no record of rewriting this call for guard, so it did not run",
+  differs: "OpenCode's tool hook rewrote this call differently than guard requires now, so it did not run",
+};
+
 export class Gate {
   declined = false;
   stopped = false;
@@ -54,8 +59,8 @@ export class Gate {
     }
     const checked = await check(steps, lane);
     if ("refuse" in checked) return this.refuse(call, checked.refuse);
-    if (checked.overwrite && !(await wrapped(call.toolCallId, checked.overwrite)))
-      return this.refuse(call, "OpenCode's tool hook did not apply guard's rewrite of this call, so it did not run");
+    const marker = checked.overwrite && (await wrapped(call.toolCallId, checked.overwrite));
+    if (marker && marker !== "applied") return this.refuse(call, unapplied[marker]);
     const source = { type: "tool" as const, messageID: this.message, id: call.toolCallId };
     const key = `${session} ${source.messageID} ${source.id}`;
     if (checked.push) holds.set(key, checked.push);

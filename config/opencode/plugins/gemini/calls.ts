@@ -115,11 +115,12 @@ export function mark(id: string, overwrite: Record<string, unknown>) {
 }
 
 export async function wrapped(id: string, overwrite: Record<string, unknown>) {
-  if (!/^[\w-]+$/.test(id)) return false;
+  if (!/^[\w-]+$/.test(id)) return "missing";
   const marker = path.join(cages, id);
   const marked = await readFile(marker, "utf8").catch(() => undefined);
   await rm(marker, { force: true });
-  return marked === JSON.stringify(overwrite);
+  if (marked === undefined) return "missing";
+  return marked === JSON.stringify(overwrite) ? "applied" : "differs";
 }
 
 function rewritten(

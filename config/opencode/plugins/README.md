@@ -250,7 +250,7 @@ Calls refused at approval (such as permission-rule denials or approval-time chan
 At most two follow-ups run per turn, and their output adds to the turn's total; after that, the turn ends with the last reasons shown.
 A plain user decline ends the stream as declined without a follow-up.
 When guard rewrites a call (caging read-only `run_command` through [cage](../../../cmds/cmd/cage/README.md), folding a leading `cd`, or resolving a read-only `read_file` `Path` to its realpath), `gemini/hook.ts` returns that `overwrite` and writes a marker under `cages/<toolCallId>` in the profile directory.
-`gemini/gate.ts` refuses any call needing a rewrite without a matching marker; after 8 seconds, `gemini/hook.ts` falls back to `force_ask` so `gemini/gate.ts` still judges it.
+`gemini/gate.ts` refuses any call needing a rewrite with separate messages when the marker is missing or when its recorded rewrite differs from what guard requires; after 8 seconds, `gemini/hook.ts` falls back to `force_ask` so `gemini/gate.ts` still judges it.
 For read-only agents, `write_file` runs natively through `agy` under the lane's `shell` permission, limited by `gemini/calls.ts` to regular files directly in `~/.local/state/opencode/scratch/<session-id>`.
 It refuses `..` in `Path`, subdirectories, `tmp` and `cache`, symlinks, non-regular files, and hard links; `edit_file` is refused and points to `write_file`.
 
