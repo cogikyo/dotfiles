@@ -20,8 +20,12 @@ Their four leader binds use separate base-mode inline layers, so they do not fir
 ## Lanes
 
 `lanes/server.ts` extends native `subagent` with a reusable `lane` name and applies `ROUTING.md` routes.
-Inputs are `agent`, `description`, `prompt`, and optional `model`, `sessionID`, `background`, and `lane`.
+Inputs are `agent`, `description`, `prompt`, and optional `model`, `sessionID`, `background`, `lane`, and `step`.
 Explicit models use `provider/model#variant`; frontmatter routes keep `provider/model [variant]`.
+At launch, the plugin stores the lane's intended model: the explicit `model`, else the workflow card's `model#variant` when launched with `step`, else the `ROUTING.md` route.
+If a `step` launch omits `model` and the card's model is unavailable, the launch fails with an error naming the step and the card's token.
+Resuming without `model` or a `step` card model returns to that stored model while still failing over along `fallbacks` when an account or pool is capped.
+If a stored model was removed from config, resume falls back to the `ROUTING.md` route with a note; older lanes without a stored model still take the route.
 The `claude` pool picks an Anthropic account from usage caches, keeps an open account on resume, and reports stale-cache or fallback notes in results.
 When every account is capped for Opus or Sonnet, `lanes/pick.ts` follows the fallback chain through the same model on Cursor's O pool, then `opencode-go/grok-4.7`.
 Cursor picks skip a route whose fresh pool window reads 100% and has not reset; missing, stale, or unusable usage counts as open and adds a note.
@@ -44,7 +48,7 @@ Compaction wakes the child and would run queued input, so resume pending-input l
 Continue sends `Continue.` directly without a parent completion notice.
 Click a non-running child's status icon or use `/lanes-close` to close every non-running child in the sidebar through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
 The sidebar hides closed children.
-Lane names live in child session metadata, and plugin KV entries `child/<parent>/<child>` track children.
+Lane names live in child session metadata; plugin KV entries `child/<parent>/<child>` track children, and `anchor/<child>` stores each lane's intended model.
 Collab delegates; among its children, `verify/decide`, `build/owner`, and `review/entropy` may launch read-only one-shots in the foreground, within their frontmatter permissions.
 `experimental.subagent_depth` is 2 in `opencode.json`, so their children cannot launch anything.
 `lanes` lists only the caller's direct children, so Collab's list omits these helpers.
@@ -69,8 +73,9 @@ A dismissed question or permission prompt can leave a stale execution claim; the
 A staged revert blocks the wake, as does a failed last turn that ended after the mail parked.
 An in-memory `waking` set prevents duplicate wakes in the service process; cross-process races are accepted because one service process hosts the sessions.
 
-Parked mail withdraws a `question` popup after 5 minutes, or 5 seconds for urgent mail, checked every 2 seconds, unless the session's last typing report is less than 5 minutes old, even for urgent mail.
-The same mail-age timing sets permission prompts aside by rejecting them with feedback, never approving them.
+Parked `ask` mail withdraws a `question` popup after 5 minutes, and urgent mail withdraws it after 5 seconds, checked every 2 seconds, unless the session's last typing report is less than 5 minutes old, even for urgent mail.
+Non-urgent `info` mail waits until the form or prompt closes, then arrives as usual.
+The same `ask`/urgent and mail-age rules set permission prompts aside by rejecting them with feedback, never approving them.
 The host rejects the session's whole pending permission batch, including `terminal` requests.
 Terminal popups and permission prompts have no other exemption; open Kitty windows and child sessions' prompts and popups are untouched.
 `patience` and `poll` in `mail/store.ts` own these timings.
@@ -508,9 +513,10 @@ Review the selection and navigation assumptions after an OpenCode update.
 ## Launch
 
 `launch/server.ts` adds `session_create` to the `opencode` Code Mode namespace, so agents call `tools.opencode.session_create` through `execute`.
-Inputs are `directory`, `title`, and optional `prompt` and `agent`; the directory must be absolute or start with `~` and must exist.
-It creates a top-level session with session metadata `origin` set to the caller's session ID, then sends `prompt` as the first message to start a turn.
+Inputs are `directory`, `title`, and optional `prompt`, `agent`, and `model` (`provider/model#variant`); the directory must be absolute or start with `~` and must exist.
+It creates a top-level session with session metadata `origin` set to the caller's session ID and its model set at creation before the first turn, then sends `prompt` as the first message to start a turn.
 Without `agent`, the session uses the configured default primary agent; a named agent must be a visible primary agent at that directory.
+Without `model`, the session uses the calling session's model; an explicit `model` is validated against available models via `sessions/model.ts` and sets `pinned: true` in session metadata so Anthropic first-turn ranking skips that session.
 Only top-level sessions can call it, and the new session is not a lane.
 The plugin does not ask for permission through `ctx.permission.assert`, so the user's request in chat is the approval; the guard's `opencode api` denial points here.
 If the prompt fails, the error names the created session, so the agent does not retry and create a duplicate.

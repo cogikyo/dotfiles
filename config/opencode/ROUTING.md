@@ -42,9 +42,10 @@ Each `fallbacks` entry names the next model to try when the source model's pool 
 
 Main sessions belong to the user and are not routed here.
 `ctrl+m` and main-session failover pick only Cogikyo or Cullyn.
-On the first turn, main sessions matching the agent or config default on either account take the `ctrl+m` pick; later manual picks are untouched.
+On the first turn, main sessions matching the agent or config default on either account take the `ctrl+m` pick unless pinned by an explicit `session_create` model; later manual picks are untouched.
 
-Omit `model` on `subagent` to take the route; an explicit `provider/model#variant` never inherits the route's variant, and omitting `#<variant>` uses the model's default.
+Omitting `model` on `subagent` takes the workflow card's model when `step` sets one, the lane's stored launch model on resume, or otherwise the route.
+An explicit `provider/model#variant` never inherits the route's variant, and omitting `#<variant>` uses the model's default.
 Use `claude/<model>#<variant>` (such as `claude/claude-opus-5-5#xhigh`) to keep Anthropic account selection.
 
 ## Effort ladder
