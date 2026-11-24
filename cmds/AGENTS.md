@@ -47,4 +47,4 @@ Apply `converge` before changing state-mutating commands or setup stages.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.
 - `internal/ui` sets `DOTFILES_TREE=open` to continue a parent's tree or `closed` to start separate sections after a blank line; `dctl setup` passes it through sudo.
 - `dctl update cmd` parses raw `hyprd rebuild` output, so hyprd socket verbs stay plain text; only `hyprd vpn` and `hyprd opencode now|recycle` render trees.
-- Keep cage's CLI aligned with the call in `../config/opencode/plugins/guard/server.ts` and the `cage` wrapper spec in `../config/opencode/plugins/guard/shell.ts`.
+- Keep cage's CLI aligned with the call in `../config/opencode/plugins/guard/review.ts` and the `cage` wrapper spec in `../config/opencode/plugins/guard/shell.ts`.

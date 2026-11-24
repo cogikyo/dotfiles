@@ -2,15 +2,18 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -48,14 +51,18 @@ var (
 type ruleset int
 
 func main() {
-	var hides []string
+	var hides, keeps []string
 	flags := flag.NewFlagSet("cage", flag.ContinueOnError)
 	flags.Func("hide", "deny reads beneath `path`", func(p string) error {
 		hides = append(hides, p)
 		return nil
 	})
+	flags.Func("keep", "keep `path` beneath a hidden path readable", func(p string) error {
+		keeps = append(keeps, p)
+		return nil
+	})
 	flags.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: cage [--hide path]... <scratch-dir> -- <command> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: cage [--hide path]... [--keep path]... <scratch-dir> -- <command> [args...]")
 	}
 	if err := unix.CloseRange(3, ^uint(0), unix.CLOSE_RANGE_CLOEXEC); err != nil {
 		fmt.Fprintf(os.Stderr, "cage: close inherited files: %v\n", err)
@@ -71,7 +78,7 @@ func main() {
 	}
 	var err error
 	if os.Args[0] == inner {
-		err = confine(hides, args[0], args[2:])
+		err = confine(hides, keeps, args[0], args[2:])
 	} else {
 		err = spawn()
 	}
@@ -110,7 +117,7 @@ func spawn() error {
 	return nil
 }
 
-func confine(hides []string, arg string, argv []string) error {
+func confine(hides, keeps []string, arg string, argv []string) error {
 	if os.Getpid() != 1 {
 		return errors.New(inner + " must run as PID 1")
 	}
@@ -192,7 +199,7 @@ func confine(hides []string, arg string, argv []string) error {
 		return fmt.Errorf("create ruleset: %w", errno)
 	}
 	r := ruleset(fd)
-	if err := r.tree(append(hides, "/dev")); err != nil {
+	if err := r.tree(append(hides, "/dev"), keeps); err != nil {
 		return err
 	}
 	for dev, access := range devices {
@@ -356,9 +363,11 @@ func exit(status syscall.WaitStatus) {
 }
 
 // tree grants reads beside hidden branches because Landlock rules can only add access.
-// The root stays unlistable; hidden entry names remain visible in listed ancestors, and new ancestor entries stay unreadable.
-func (r ruleset) tree(hides []string) error {
+// Directories from a hide to a keep's parent get list access; inside them, only keeps get reads.
+// Root stays unlistable, hidden dirs inherit ancestor listing, and new entries in listed dirs stay unreadable.
+func (r ruleset) tree(hides, keeps []string) error {
 	holes := map[string]bool{}
+	roots := map[string]string{}
 	for _, hide := range hides {
 		abs, err := filepath.Abs(hide)
 		if err != nil {
@@ -368,9 +377,14 @@ func (r ruleset) tree(hides []string) error {
 		if err != nil {
 			return err
 		}
+		roots[abs] = hole
 		if hole != "" {
 			holes[hole] = true
 		}
+	}
+	opened, kept, err := expose(holes, roots, keeps)
+	if err != nil {
+		return err
 	}
 	for hole := range holes {
 		for p := hole; p != "/"; {
@@ -381,11 +395,13 @@ func (r ruleset) tree(hides []string) error {
 			}
 		}
 	}
-	parents := map[string]bool{}
-	for hole := range holes {
-		for p := hole; p != "/"; {
-			p = filepath.Dir(p)
-			parents[p] = true
+	parents := maps.Clone(opened)
+	for _, marks := range []map[string]bool{holes, opened} {
+		for p := range marks {
+			for p != "/" {
+				p = filepath.Dir(p)
+				parents[p] = true
+			}
 		}
 	}
 	for parent := range parents {
@@ -400,7 +416,7 @@ func (r ruleset) tree(hides []string) error {
 		}
 		for _, entry := range entries {
 			child := filepath.Join(parent, entry.Name())
-			if holes[child] || parents[child] || entry.Type()&fs.ModeSymlink != 0 {
+			if holes[child] || parents[child] || entry.Type()&fs.ModeSymlink != 0 || opened[parent] && !kept[child] {
 				continue
 			}
 			if err := r.path(child, read); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -409,6 +425,101 @@ func (r ruleset) tree(hides []string) error {
 		}
 	}
 	return nil
+}
+
+func expose(holes map[string]bool, roots map[string]string, keeps []string) (opened, kept map[string]bool, err error) {
+	kept = map[string]bool{}
+	for _, keep := range keeps {
+		abs, err := filepath.Abs(keep)
+		if err != nil {
+			return nil, nil, err
+		}
+		var under []string
+		for hide, hole := range roots {
+			if beneath(abs, hide) {
+				under = append(under, hole)
+			}
+		}
+		if len(under) == 0 {
+			return nil, nil, fmt.Errorf("keep %s is not beneath a --hide path", keep)
+		}
+		if !slices.ContainsFunc(under, func(hole string) bool { return hole != "" }) {
+			continue
+		}
+		real, err := resolve(abs)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !slices.ContainsFunc(under, func(hole string) bool { return hole != "" && beneath(real, hole) }) {
+			return nil, nil, fmt.Errorf("keep %s resolves to %s, outside its hide", keep, real)
+		}
+		kept[real] = true
+	}
+	for keep := range kept {
+		for p := keep; p != "/"; {
+			p = filepath.Dir(p)
+			if kept[p] {
+				delete(kept, keep)
+				break
+			}
+		}
+	}
+	opened = map[string]bool{}
+	var shut []string
+	for keep := range kept {
+		var over []string
+		for hole := range holes {
+			if beneath(keep, hole) {
+				over = append(over, hole)
+			}
+		}
+		top := slices.MinFunc(over, func(a, b string) int { return cmp.Compare(len(a), len(b)) })
+		rel, err := filepath.Rel(top, keep)
+		if err != nil {
+			return nil, nil, err
+		}
+		dir := top
+		for name := range strings.SplitSeq(rel, string(filepath.Separator)) {
+			if info, err := os.Lstat(dir); err != nil || !info.IsDir() {
+				break
+			}
+			opened[dir] = true
+			dir = filepath.Join(dir, name)
+		}
+		if opened[top] {
+			shut = append(shut, over...)
+		}
+	}
+	for _, hole := range shut {
+		delete(holes, hole)
+	}
+	for dir := range opened {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, entry := range entries {
+			child := filepath.Join(dir, entry.Name())
+			if !opened[child] && !kept[child] {
+				holes[child] = true
+			}
+		}
+	}
+	return opened, kept, nil
+}
+
+func resolve(path string) (string, error) {
+	real, err := filepath.EvalSymlinks(path)
+	if err == nil || path == "/" || !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, unix.ENOTDIR) {
+		return real, err
+	}
+	dir, err := resolve(filepath.Dir(path))
+	return filepath.Join(dir, filepath.Base(path)), err
+}
+
+func beneath(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != "." && filepath.IsLocal(rel)
 }
 
 func mask(hide string) (string, error) {

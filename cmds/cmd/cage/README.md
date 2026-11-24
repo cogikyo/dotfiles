@@ -6,7 +6,7 @@ Requires unprivileged user namespaces and Landlock ABI 9 or newer; missing suppo
 ## Usage
 
 ```sh
-cage [--hide <path>]... <scratch-dir> -- <command> [args...]
+cage [--hide <path>]... [--keep <path>]... <scratch-dir> -- <command> [args...]
 ```
 
 The scratch path must be clean and absolute, and must not resolve to `/`.
@@ -20,7 +20,9 @@ Invoke a shell explicitly when the command needs shell syntax.
 - New user, mount, network, PID, and IPC namespaces isolate the command; all mounts are read-only except scratch and the Go build cache, with a fresh `/proc`.
 - The network namespace has only `lo` up, so TCP and UDP reach only the sandbox's own `127.0.0.1` and `::1`.
   Host loopback services and outbound routes stay unreachable.
-- Landlock denies reads beneath `--hide` paths and limits `/dev` access to `null`, `zero`, `full`, `random`, and `urandom`.
+- Landlock denies reads beneath `--hide` paths except `--keep` paths beneath them, and limits `/dev` access to `null`, `zero`, `full`, `random`, and `urandom`.
+  Directories from a hide to a keep's parent open for listing, granting reads only to kept paths.
+  A keep outside a hide or resolving outside it fails; one under a missing hide is skipped.
 - Scratch permits file and directory creation and in-place writes, but denies deletion, rename, truncation, and symlink creation; `tmp/` and `cache/` permit those operations.
   The Go build cache permits reads, file and directory creation, writes, deletion, and truncation, but no symlink creation or cross-directory links or renames.
 - Landlock limits pathname Unix-socket binds and connects to scratch, and scopes signals and abstract sockets to the sandbox.
@@ -30,7 +32,7 @@ Invoke a shell explicitly when the command needs shell syntax.
 ## Caller trust and limits
 
 Cage trusts the caller's scratch path; it does not assign sessions or enforce ownership of that path.
-The [guard plugin](../../../config/opencode/plugins/README.md#guard) supplies `~/.local/state/opencode/scratch/<session-id>` and the hide list from `guard/paths.ts`.
+The [guard plugin](../../../config/opencode/plugins/README.md#guard) supplies `~/.local/state/opencode/scratch/<session-id>`, the hide list from `guard/paths.ts`, and `--keep` for `agy`'s `brain` directory.
 
 - Shells are offline: cold `uv` or `pip` downloads and authenticated `gh` or `pier` calls do not work.
   With `go` on `PATH`, cage sets `GOPROXY=file://<GOMODCACHE>/cache/download` from the host's `go env GOMODCACHE`, so modules resolve from its read-only download cache.
@@ -39,7 +41,8 @@ The [guard plugin](../../../config/opencode/plugins/README.md#guard) supplies `~
 - Scratch-root files remain overwritable in place, so they are not immutable evidence; tools that truncate or atomically replace files must use `tmp/` or `cache/`.
 - Secret protection depends on the caller's hide inventory; unlisted secrets remain readable, and missing or not-a-directory hide paths are skipped.
   An unresolvable hide, or one beneath an unlistable directory, is masked at that highest unresolvable or unlistable path; only an unreadable `/` aborts hide resolution.
-- Hidden entry names can remain visible in ancestor directory listings; `/` itself is unlistable, and new entries in hidden paths' ancestors remain unreadable after the policy walk.
+- Hidden entry names and names inside hidden directories remain listable beneath any listed ancestor because Landlock list access inherits to descendants; only contents are denied.
+  `/` itself is unlistable, and new entries in listed ancestors or opened hide-to-keep directories remain unreadable after the policy walk.
 - Unix-socket paths must fit `sun_path`'s 108 bytes; a guard session scratch path uses 73 of them under a 12-byte home such as `/home/cullyn`.
 - There is no syscall filter or disk quota.
 - Core dumps are disabled, but crash metadata can still reach the system journal.
