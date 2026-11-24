@@ -238,7 +238,7 @@ export default Plugin.define({
 
     const start = async (sessionID: Session.ID) => {
       const session = await ctx.session.get({ sessionID });
-      if (session.parentID) return;
+      if (session.parentID || session.metadata?.pinned === true) return;
       const { input, output, cache } = session.tokens;
       if (input + output + cache.read + cache.write > 0) return;
       const [agent, fallback] = await Promise.all([

@@ -1,8 +1,8 @@
 import { Plugin } from "@opencode/plugin";
-import { Model } from "@opencode/schema/model";
 import { Option, Schema } from "effect";
 import { fileURLToPath } from "node:url";
 import { located } from "../mail/store.ts";
+import { available } from "./model.ts";
 import { flags, retag, revise, states, tag, title } from "./tags.ts";
 
 const cap = 1000;
@@ -214,14 +214,7 @@ export default Plugin.define({
           if (session.id !== caller.id && tag(session.title)?.flags.includes("refusals"))
             throw new Error(`session_model: ${input.sessionID} is hidden from agents by the refusals flag`);
           const model = input.model.trim();
-          const ref = Model.Ref.parse(model);
-          const { data } = await ctx.model.list();
-          const found = data.find((info) => info.providerID === ref.providerID && info.id === ref.id);
-          if (!found) throw new Error(`session_model: ${ref.providerID}/${ref.id} is not an available model`);
-          if (ref.variant && !found.variants.some((option) => option.id === ref.variant))
-            throw new Error(
-              `session_model: ${ref.providerID}/${ref.id} has no ${ref.variant} variant; it has ${found.variants.map((option) => option.id).join(", ")}`,
-            );
+          const ref = await available(ctx, "session_model", model);
           await ctx.session.switchModel({ sessionID: session.id, model: ref });
           return {
             output: { sessionID: session.id, model },

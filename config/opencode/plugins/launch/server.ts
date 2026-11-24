@@ -3,6 +3,7 @@ import { Schema } from "effect";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
+import { available } from "../sessions/model.ts";
 
 const Input = Schema.Struct({
   directory: Schema.Trim.check(Schema.isNonEmpty()).annotate({
@@ -20,6 +21,11 @@ const Input = Schema.Struct({
       description: "Primary agent ID. Omit to use the configured default primary agent.",
     }),
   ),
+  model: Schema.optional(
+    Schema.Trim.check(Schema.isNonEmpty()).annotate({
+      description: "`provider/model#variant`; omit `#variant` for the default. Omit to use this session's model.",
+    }),
+  ),
 });
 
 const Output = Schema.Struct({
@@ -30,7 +36,7 @@ const Output = Schema.Struct({
 });
 
 const description = [
-  "Create a new top-level session in a directory, and optionally send its first message to start a turn.",
+  "Create a new top-level session in a directory, on this session's model unless model is given, and optionally send its first message to start a turn.",
   "Call it only when the user asks in this conversation for a new session; that request is the approval, because this tool cannot ask for permission.",
   "The new session is independent of this one: it is not a lane and it runs unattended until the user opens it.",
   "Only primary sessions can call it.",
@@ -70,11 +76,13 @@ export default Plugin.define({
             if (agent.mode === "subagent" || agent.hidden)
               throw new Error(`session_create: ${input.agent} is not a selectable primary agent`);
           }
+          const model = input.model ? await available(ctx, "session_create", input.model) : caller.model;
           const session = await ctx.session.create({
             title: input.title,
             agent: input.agent,
+            model,
             location: { directory },
-            metadata: { origin: context.sessionID },
+            metadata: { origin: context.sessionID, ...(input.model ? { pinned: true } : {}) },
           });
           if (input.prompt)
             await ctx.session.prompt({ sessionID: session.id, text: input.prompt }).catch((error: unknown) => {
