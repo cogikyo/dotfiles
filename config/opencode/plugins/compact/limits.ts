@@ -8,9 +8,10 @@ const share = 0.15;
 const buffers = new Map<string, Promise<number | string | undefined>>();
 
 const levels = [
-  { tokens: 300_000, kind: "soft" },
-  { tokens: 350_000, kind: "soft" },
-  { tokens: 400_000, kind: "strong" },
+  { tokens: 300_000, kind: "spot" },
+  { tokens: 400_000, kind: "plan" },
+  { tokens: 475_000, kind: "warn" },
+  { tokens: 500_000, kind: "urge" },
 ] as const;
 
 export const floor = levels[0].tokens;

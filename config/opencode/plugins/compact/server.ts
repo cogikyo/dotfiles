@@ -46,23 +46,32 @@ function nudged(sessionID = "") {
   return `nudged/${sessionID}`;
 }
 
-const BOUNDARY = [
-  `At workflow end, the plugin compacts after this turn if context is still at least ${label(floor)}.`,
-  `For other compaction, past ${label(floor)}, call compact without asking once a commit lands or the task is done.`,
-  "The point must be clear: no edits, lanes, or repairs in flight and no open question, including an unanswered user question; do not compact mid-task while delivering findings, a proposal, or open choices.",
-  "Ask through the question tool only if that point is unclear, and call compact after approval.",
-  "In a driven run, commit finished work and queue compact without asking.",
-  "If the user already declined compaction at this nudge, do not ask again.",
-].join(" ");
+const POINT =
+  "a clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question";
+
+const BREAK =
+  "a step boundary with no lanes in flight, no repair pending, and no open question, including an unanswered user question";
+
+const RESUME = `the plugin compacts after the turn that ends the workflow if context is still at least ${label(floor)}, and \`recommended\` resumes the unfinished steps`;
+
+const DECLINED = `If the user declined compaction since the last one, do not raise it again before the ${label(finish)} nudge.`;
 
 const ADVICE: Record<Level["kind"], { running: string; idle: string }> = {
-  soft: {
-    running: `Soft warning: keep the workflow going if its remaining steps fit before the ${label(finish)} finish-up nudge. If this is a natural break with no lanes in flight, no repair pending, and no open question, including an unanswered user question, consider ending it here, re-scoping the rest into a new workflow, and compacting first; after compaction, \`recommended\` resumes the unfinished steps.`,
-    idle: `Soft warning. ${BOUNDARY}`,
+  spot: {
+    running: `Compact at a good spot: keep the workflow going, and at a natural break, ${BREAK}, consider ending it there and re-scoping the rest into a new workflow; ${RESUME}. ${DECLINED}`,
+    idle: `Compact at a good spot: call compact without asking at ${POINT}. Do not compact mid-task or while delivering findings, a proposal, or open choices. Ask through the question tool only if that point is unclear. In a driven run, commit finished work and queue compact without asking. ${DECLINED}`,
   },
-  strong: {
-    running: `Finish up now: start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, no repair pending, and no open question, including an unanswered user question, and commit finished work; if context is still at least ${label(floor)}, the plugin compacts after the turn that ends the workflow, and \`recommended\` resumes the unfinished steps.`,
-    idle: "Finish up now: start no new work, commit finished work, and queue compact without asking at the next clear finished-work point: a commit landed or the task is done, no lanes, edits, or repairs are in flight, and no question is open, including an unanswered user question. Ask through the question tool only if that point is unclear. In a driven run, queue compact without asking. If the user already declined compaction at this nudge, do not ask again.",
+  plan: {
+    running: `Plan a compaction point: pick ${BREAK} where the workflow can end, re-scope the remaining steps into a new workflow, and end it there; ${RESUME}. Name that point in one line of your next reply. ${DECLINED}`,
+    idle: `Plan a compaction point: name where the current work reaches ${POINT}, such as after the next commit, and compact there without asking; if new work arrives first, compact before starting it. Name that point in one line of your next reply. ${DECLINED}`,
+  },
+  warn: {
+    running: `Warning: end the workflow at the next ${BREAK} and launch no new lanes before then; ${RESUME}. Native auto-compaction runs mid-turn if context keeps growing. ${DECLINED}`,
+    idle: `Warning: compact at the next ${POINT}, and start no new task before then. Native auto-compaction runs mid-turn if context keeps growing. ${DECLINED}`,
+  },
+  urge: {
+    running: `Compact now: end the workflow at the first ${BREAK} and commit finished work; ${RESUME}. Only a critical stretch, such as a deploy, migration, push, or a wave whose lanes must land together, may finish first.`,
+    idle: `Compact now: commit finished work and call compact without asking at the first ${POINT}, starting no new work first. Only a critical operation in flight, such as a deploy, migration, or push, may finish first. If the user declined compaction, ask once more through the question tool instead.`,
   },
 };
 

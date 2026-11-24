@@ -125,14 +125,18 @@ After host updates, recheck wrapped forms publishing a location so the popup app
 `compact/server.ts` exposes `compact` with no input, queuing compaction after the current turn.
 After a successful root `workflow end` at or above 300K tokens, the tool's `execute.after` hook immediately queues compaction without asking; it runs when the turn ends.
 The tool result tells the agent to end the turn without starting new work.
-Root sessions receive soft nudges at 300K and 350K tokens and a strong "finish up now" nudge at 400K.
-Each level is sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
-With a running workflow, soft nudges say to keep going if the remaining steps fit before the 400K finish-up nudge.
-At a natural break with no lanes in flight, repair pending, or open user question, consider ending the workflow, re-scoping the rest into a new workflow, and compacting first.
-Without a running workflow, soft nudges say to compact without asking past 300K once a commit lands or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
-Ask through `question` only if that point is unclear.
-The strong nudge says to start no new steps or lanes, let in-flight lanes land, end the workflow at the first point with no lanes in flight, repair pending, or open user question, and commit finished work.
-Without a running workflow, it says to start no new work, commit finished work, and compact under the same finished-work rules.
+Root sessions receive four escalating nudges, each sent at most once per compaction cycle; a step that crosses several levels gets only the highest.
+A good spot means a commit landed or the task is done, with no lanes, edits, or repairs in flight and no open question, including an unanswered user question.
+With a running workflow, the matching spot is a step boundary where the workflow can end and re-scope the rest; the plugin compacts after the turn that ends it.
+
+| Level | Nudge                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------- |
+| 300K  | Compact at a good spot, never mid-task; ask through `question` only if the spot is unclear.          |
+| 400K  | Plan the compaction point, name it in one line of the next reply, and compact before any new work.   |
+| 475K  | Warn that native auto-compaction runs mid-turn; compact at the next good spot and start nothing new. |
+| 500K  | Compact now at the first good spot; only a critical deploy, migration, push, or wave finishes first. |
+
+A user's decline holds until the 500K nudge, which asks once more instead of compacting.
 In a driven run, commit finished work and queue compaction without asking.
 Thresholds use the last step's `input + output + reasoning + cache.read + cache.write`.
 
@@ -680,7 +684,7 @@ Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tr
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
 The `workflow` tool reads status with `{}` and adopts a fence with `start`; see the [workflow skill](../skills/prose/diagrams/workflow/SKILL.md) for fence rules.
-Start and status show root context, headroom to the 400K finish-up nudge, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
+Start and status show root context, headroom to the 500K compact nudge, and unfinished steps × 18K as a rough cost; an estimate above headroom warns without imposing a step cap.
 A new revision matches steps by owner and headline, carries unchanged results, and reports added, renumbered, changed, and dropped steps.
 A gate's result carries only when the steps it judges, through its `after` dependencies and repair loop, are unchanged.
 Changed checklists reset ticks and unlink the child; `end: true` deletes the workflow, so the next start begins at revision 1.

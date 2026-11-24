@@ -172,10 +172,10 @@ export function headroom(flow: Flow, tokens: number | undefined) {
   const cost = open * perStep;
   const estimate = `${open} unfinished step${open === 1 ? "" : "s"} × ~${thousands(perStep)} ≈ ${thousands(cost)} estimated growth`;
   if (tokens === undefined)
-    return `Headroom: root context not measured since the last compaction; finish-up nudge at ${thousands(finish)}; ${estimate}.`;
+    return `Headroom: root context not measured since the last compaction; compact nudge at ${thousands(finish)}; ${estimate}.`;
   const room = Math.max(finish - tokens, 0);
   return [
-    `Headroom: root context ${thousands(tokens)}; ${thousands(room)} until the finish-up nudge at ${thousands(finish)}; ${estimate}.`,
+    `Headroom: root context ${thousands(tokens)}; ${thousands(room)} until the compact nudge at ${thousands(finish)}; ${estimate}.`,
     cost > room &&
       "Warning: estimated growth exceeds headroom; assess the actual work and end the workflow at an earlier boundary if needed.",
   ]
