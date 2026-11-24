@@ -14,7 +14,9 @@ const own = /^(?:composer|grok)-|^(?:auto|default)$/u;
 
 const accounts = new Set<string>(Object.values(claudeAccounts).map(({ id }) => id));
 
-const key = (ref: Ref) => `${accounts.has(ref.providerID) ? pool : ref.providerID}/${ref.id}`;
+export const pooled = (providerID: string) => (accounts.has(providerID) ? pool : providerID);
+
+const key = (ref: Ref) => `${pooled(ref.providerID)}/${ref.id}`;
 
 const minutes = (ms: number) => `${Math.round(ms / 60_000)}m old`;
 

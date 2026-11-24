@@ -7,10 +7,11 @@ import { readFile } from "node:fs/promises";
 import { held, located, opened } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { count, measured } from "./label.ts";
-import { guarded, pick, resume } from "./pick.ts";
+import { missing } from "../sessions/model.ts";
+import { guarded, pick, pool, pooled, resume } from "./pick.ts";
 import { format, parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
 import { api, type Outcome } from "./rpc.ts";
-import { admit, checklist } from "./step.ts";
+import { admit, type Card, cardOf, checklist } from "./step.ts";
 
 type Status = "running" | "idle" | "error" | "interrupted";
 type Input = {
@@ -23,6 +24,8 @@ type Input = {
   lane?: string;
   step?: number;
 };
+
+type Resolved = { model?: string; note?: string; anchor?: Ref };
 
 const inbox = "SELECT EXISTS (SELECT 1 FROM session_inbox WHERE session_id = ?1) AS pending";
 
@@ -74,6 +77,13 @@ const compactable = (messages: readonly SessionMessage.Info[]) =>
   });
 
 const skip = (key: string, why: string) => Effect.succeed(`skipped ${key}: ${why}`);
+
+const modelOf = ({ model }: Session.Info): Ref | undefined =>
+  model && {
+    providerID: model.providerID,
+    id: model.id,
+    variant: model.variant === "default" ? undefined : model.variant,
+  };
 
 const same = (a: Ref | undefined, b: Ref) =>
   a?.providerID === b.providerID && a.id === b.id && (a.variant ?? "default") === (b.variant ?? "default");
@@ -299,16 +309,70 @@ export default Plugin.define({
         })
         .pipe(Effect.orDie);
 
-      const resolve = Effect.fn("lanes.resolve")(function* (input: Input, existing: Session.Info | undefined) {
-        const explicit = input.model ? parseRef(input.model) : undefined;
-        if (explicit && !guarded.has(explicit.providerID)) return { model: input.model, note: undefined };
+      const listed = Effect.fn("lanes.listed")(function* () {
+        const { data } = yield* ctx.model
+          .list()
+          .pipe(
+            Effect.mapError(() => new Tool.Error({ message: "lanes: listing models failed; pass model explicitly." })),
+          );
+        const view = data.map((info) => ({
+          providerID: pooled(info.providerID),
+          id: info.id,
+          variants: info.variants,
+        }));
+        return (ref: Ref) => missing(ref.providerID === pool ? view : data, ref);
+      });
+
+      const anchored = (childID: string) =>
+        ctx.storage
+          .get(`anchor/${childID}`)
+          .pipe(Effect.map((value) => (typeof value === "string" ? parseRef(value) : undefined)));
+
+      const resumed = Effect.fn("lanes.resumed")(function* (
+        childID: string,
+        current: Ref,
+        route: Ref | undefined,
+        fallbacks: Record<string, Ref>,
+      ): Effect.fn.Return<Resolved, Tool.Error> {
+        const stored = yield* anchored(childID);
+        const absent = yield* listed();
+        const lost = stored && absent(stored);
+        const gone = absent(current);
+        const dead = lost ? { ref: stored, why: lost } : gone ? { ref: current, why: gone } : undefined;
+        const target = lost ? route : (stored ?? route);
+        if (!target)
+          return { note: dead && `lanes: ${format(dead.ref)} is gone (${dead.why}), and this agent has no route.` };
+        const { ref, note } = yield* Effect.promise(() => (gone ? pick : resume)(target, current, fallbacks));
+        const notes = [note, dead && `lanes: ${format(dead.ref)} is gone (${dead.why}); using ${format(ref)}.`];
+        return {
+          model: !gone && same(current, ref) ? undefined : format(ref),
+          note: notes.filter(Boolean).join("\n") || undefined,
+          anchor: lost ? route : undefined,
+        };
+      });
+
+      const resolve = Effect.fn("lanes.resolve")(function* (
+        input: Input,
+        existing: Session.Info | undefined,
+        card: Card | undefined,
+      ): Effect.fn.Return<Resolved, Tool.Error> {
+        if (!input.model && card) {
+          const why = (yield* listed())(parseRef(card.token));
+          if (why)
+            return yield* new Tool.Error({
+              message: `Step ${card.step}'s card model \`${card.token}\` is unusable: ${why}. Pass model, or fix the card.`,
+            });
+        }
+        const asked = input.model ?? card?.token;
+        const explicit = asked ? parseRef(asked) : undefined;
+        if (explicit && !guarded.has(explicit.providerID)) return { model: asked, anchor: explicit };
         const routing = yield* readRouting;
         const route = explicit ?? routeFor(routing.routes, input.agent);
-        if (!route) return { model: undefined, note: undefined };
-        const choose = explicit ? pick : resume;
-        const { ref, note } = yield* Effect.promise(() => choose(route, existing?.model, routing.fallbacks));
-        if (!explicit && same(existing?.model, ref)) return { model: undefined, note };
-        return { model: format(ref), note };
+        const now = existing && modelOf(existing);
+        if (!explicit && existing && now) return yield* resumed(existing.id, now, route, routing.fallbacks);
+        if (!route) return {};
+        const { ref, note } = yield* Effect.promise(() => pick(route, now, routing.fallbacks));
+        return { model: format(ref), note, anchor: route };
       });
 
       const flowOf = (sessionID: string) =>
@@ -339,15 +403,17 @@ export default Plugin.define({
         const build = agent.startsWith("build/");
         if (n === undefined && !build && !existing) return {};
         const state = yield* flowOf(parentID);
-        const linked = existing ? state?.flow?.links[existing.id] : undefined;
+        const flow = state?.flow;
+        const linked = existing ? flow?.links[existing.id] : undefined;
         const step = n ?? linked;
         if (step === undefined)
-          return build && state?.flow?.status === "active"
+          return build && flow?.status === "active"
             ? { nudge: "lanes: a workflow is active; does this work belong on a `step`, or in a new revision?" }
             : {};
         const verdict = admit(state, step, linked === step);
         if ("error" in verdict) return yield* new Tool.Error({ message: verdict.error });
-        return linked === step ? {} : { brief: checklist(verdict.step), target: step };
+        const card = n === undefined ? undefined : cardOf(verdict.step);
+        return linked === step ? { card } : { brief: checklist(verdict.step), target: step, card };
       });
 
       const run = Effect.fn("lanes.subagent")(function* (
@@ -378,8 +444,8 @@ export default Plugin.define({
             return yield* new Tool.Error({
               message: `Session ${existing.id} is ${closed.lane ? `closed lane "${closed.lane}"` : "closed"} and cannot resume; start a fresh lane by name instead.`,
             });
-          const { brief, target, nudge } = yield* gate(context.sessionID, input.agent, n, existing);
-          const { model, note: routed } = yield* resolve(input, existing);
+          const { brief, target, nudge, card } = yield* gate(context.sessionID, input.agent, n, existing);
+          const { model, note: routed, anchor } = yield* resolve(input, existing, card);
           const note = [routed, nudge].filter(Boolean).join("\n") || undefined;
           const { model: _, ...rest } = input;
           const call = {
@@ -395,6 +461,7 @@ export default Plugin.define({
               if (!tagged && typeof update.sessionID === "string") {
                 tagged = true;
                 yield* tag(context.sessionID, update.sessionID, lane);
+                if (anchor) yield* ctx.storage.set(`anchor/${update.sessionID}`, format(anchor));
                 if (target !== undefined) yield* bind(update.sessionID, target);
                 if (lane && creating.has(key)) prompting.set(update.sessionID, key);
               }

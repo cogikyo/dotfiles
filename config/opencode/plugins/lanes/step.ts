@@ -41,6 +41,13 @@ export function admit(state: { flow?: Flow } | undefined, n: number, linked: boo
   return { step };
 }
 
+export type Card = { step: number; token: string };
+
+export function cardOf({ n, owner }: Step): Card | undefined {
+  if (owner.kind !== "lane" || !owner.model) return undefined;
+  return { step: n, token: owner.variant ? `${owner.model}#${owner.variant}` : owner.model };
+}
+
 export function checklist(step: Step) {
   const list = items(step);
   const done = step.details.find(({ kind }) => kind === "done");
