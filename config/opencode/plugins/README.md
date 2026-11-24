@@ -335,6 +335,9 @@ Return records contain tool status, not process exit codes; the index is not pro
 System tmpfiles (`system/etc/tmpfiles.d/opencode-tmp.conf`) remove unused entries in `/tmp/opencode` and caged scratch as root after 3 days; the index is exempt.
 There is no tool, key, or TUI slot for the index.
 
+`guard/harness/` compares the guard against a baseline rev with `bun`: `probe.ts` checks curated cases (`cases.ts`) and terminal `prompts()`, `fuzz.ts` checks generated mutations, and `replay.ts <history.json…>` replays recorded shell calls.
+Set `BASE` (default `cd7d96c1`), `OUT` (default `${OPENCODE_SCRATCH:-/tmp/opencode}/guard-harness`), or `AGENTS` for `fuzz.ts` (default `collab,build/general,review/debug`) to adjust a run.
+
 ## Cogikyo
 
 `cogikyo/server.ts` registers only for plugin locations resolving under `~/cogikyo`.
