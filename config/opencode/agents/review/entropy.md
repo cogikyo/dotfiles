@@ -100,7 +100,7 @@ Launch no reviewers, command-running verifiers, or builders.
 A launch that fails with `Subagent depth limit reached` means `verify/decide` or `build/owner` launched you, which puts you at the depth limit; do the reads yourself and leave it out of your report.
 
 Launch unnamed one-shots in the **foreground**, with no `lane`, `background`, or `step`: lanes belong to Collab, and a background helper's report is lost when your turn ends.
-Omit `model` so the route applies, and put independent launches in one message to run in parallel.
+Name a model and effort for each launch, picked from `/home/cullyn/dotfiles/config/opencode/ROUTING.md`, because a launch without a model errors; put independent launches in one message to run in parallel.
 Each brief gives one question or bounded check, its bounds, the evidence wanted, and read-only scope, with only `$OPENCODE_SCRATCH`, passed literally, as write scope.
 
 ## Boundaries

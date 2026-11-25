@@ -19,17 +19,25 @@ Their four leader binds use separate base-mode inline layers, so they do not fir
 
 ## Lanes
 
-`lanes/server.ts` extends native `subagent` with a reusable `lane` name and applies `ROUTING.md` routes.
+`lanes/server.ts` extends native `subagent` with a reusable `lane` name, and `lanes/pick.ts` resolves each launch's model.
 Inputs are `agent`, `description`, `prompt`, and optional `model`, `sessionID`, `background`, `lane`, and `step`.
-Explicit models use `provider/model#variant`; frontmatter routes keep `provider/model [variant]`.
-At launch, the plugin stores the lane's intended model: the explicit `model`, else the workflow card's `model#variant` when launched with `step`, else the `ROUTING.md` route.
-If a `step` launch omits `model` and the card's model is unavailable, the launch fails with an error naming the step and the card's token.
-Resuming without `model` or a `step` card model returns to that stored model while still failing over along `fallbacks` when an account or pool is capped.
-If a stored model was removed from config, resume falls back to the `ROUTING.md` route with a note; older lanes without a stored model still take the route.
-The `claude` pool picks an Anthropic account from usage caches, keeps an open account on resume, and reports stale-cache or fallback notes in results.
-When every account is capped for Opus or Sonnet, `lanes/pick.ts` follows the fallback chain through the same model on Cursor's O pool, then `opencode-go/grok-4.7`.
-Cursor picks skip a route whose fresh pool window reads 100% and has not reset; missing, stale, or unusable usage counts as open and adds a note.
-Gemini and xAI routes, including explicit models, follow the same rule over their usage windows: Gemini's 5-hour and weekly windows, and xAI's credit window `W` and monthly window `M`.
+Models use `provider/model#variant`; without `#variant`, the model's default applies.
+A launch uses the explicit `model`, else the `step` card's model, and fails if the model or variant is not listed.
+A new launch with neither fails and points to `ROUTING.md`, which guides the choice; the plugin does not read it.
+A resume with neither keeps the stored launch model, or fails asking for `model` if config dropped it.
+
+Before a launch, `lanes/pick.ts` checks the usage cache of a `claude`, Cursor, Gemini, xAI, OpenAI, or OpenCode Go pool; other providers, including direct `anthropic*` accounts, launch unchecked.
+A pool is capped when a fresh window reads 100% and has not reset; missing, stale, or unusable usage counts as open and adds a note.
+Cursor's `composer-*`, `grok-*`, `auto`, and `default` use its `C` window, and other models use `O`.
+Gemini checks its 5-hour and weekly windows, and xAI checks its credit window `W` and monthly window `M`.
+The launch note shows the tightest window's headroom and reset time.
+
+The `claude` pool picks an Anthropic account from usage caches and keeps a lane's account while it is open.
+It treats Trend's 5-hour window as full at 90%, so headroom notes count to 90%; request failover keeps 100%.
+When every account is capped, the launch moves to the same model on Cursor if Cursor lists it, keeping the variant if Cursor has it, and adds a note.
+A lane resumed there stays while Cursor's pool is open.
+When no backup is open, the launch fails and lists the newest non-deprecated model of each family whose pool is open, with its headroom or why usage is unknown.
+
 Background children return immediately and send completion, cancellation, or error to the parent's inbox.
 
 The `lanes` tool lists children, including closed ones; `subagent` reuses a lane name to steer or resume one.
@@ -48,10 +56,11 @@ Compaction wakes the child and would run queued input, so resume pending-input l
 Continue sends `Continue.` directly without a parent completion notice.
 Click a non-running child's status icon or use `/lanes-close` to close every non-running child in the sidebar through the `lanes` RPC in `lanes/rpc.ts`, so the TUI and `lanes_close` share the server implementation.
 The sidebar hides closed children.
-Lane names live in child session metadata; plugin KV entries `child/<parent>/<child>` track children, and `anchor/<child>` stores each lane's intended model.
+Lane names live in child session metadata; plugin KV entries `child/<parent>/<child>` track children, and `anchor/<child>` stores each lane's launch model.
 Collab delegates; among its children, `verify/decide`, `build/owner`, and `review/entropy` may launch read-only one-shots in the foreground, within their frontmatter permissions.
 `experimental.subagent_depth` is 2 in `opencode.json`, so their children cannot launch anything.
 `lanes` lists only the caller's direct children, so Collab's list omits these helpers.
+Their one-shots also need `model`.
 
 ## Mail
 
@@ -209,6 +218,7 @@ See [account state and login](anthropic/README.md) before changing auth code.
 When both accounts are capped, it picks the one that reopens first and shows a warning toast.
 The TUI plugin API has no model setter, so it steps `model.cycle_favorite`; each step enters the recent-models list.
 The chosen account's target model must be a favorite, or an error toast names it.
+On a main session's first turn, if its model is the agent or config default on Cogikyo or Cullyn and `session_create` did not pin it, `anthropic/index.ts` moves it to the ranked Cogikyo or Cullyn pick.
 
 `anthropic/claude-auth/transforms.js` moves non-core system text to the first user message and keeps its cache breakpoint when fewer than four other breakpoints remain.
 
@@ -225,12 +235,12 @@ The plugin logs `anthropic: tool results cleared` with `sessionID`, `toolUses`, 
 `gemini/server.ts` adds the `gemini` provider, which runs Google's `agy` agent over ACP under the lane's assigned OpenCode agent rules.
 It needs `agy` from the AUR package `antigravity-cli`, signed in on a paid Google AI subscription, and `bun` on PATH for its hook and bridge shim.
 `opencode.json` must allow `gemini` in its `provider.use` policies, which deny every provider they don't name.
-The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#gemini-4-neon) says when to use them.
+The plugin lists no models; config declares each model with its `effort` variants, and [ROUTING.md](../ROUTING.md#models) says when to use them.
 Each turn starts `agy acp` in the lane's session folder, bridging allowed OpenCode tools over MCP.
 When `agy` advertises `systemPrompt.append`, `gemini/session.ts` uses `session/resume` to send only a ~1 KB note (`gemini/prompt.ts`) that maps OpenCode tool names to `agy`'s and describes the sandbox, without forwarding OpenCode's system prompt; new conversations call `session/new` first.
 `gemini/agy.ts` strips `GOOGLE_`, `GEMINI_`, `GCLOUD_`, `CLOUDSDK_`, and `AGY_` variables, and a turn fails unless the agent reports a paid Google AI plan: Plus, Pro, or Ultra.
 A turn also fails after 10 minutes without an update from the agent, paused while a permission prompt or bridged tool call runs.
-`usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and lanes check them before launch, taking the route's `fallbacks` entry when either window is capped.
+`usage/gemini.ts` reads the shared 5-hour and weekly windows from `agy --print /usage`, and a lane launch fails and lists open pools when either window is capped.
 `agy` sums usage over every model call in a turn, so `gemini/model.ts` splits its last `usage_update` context size across prompt and output tokens, which OpenCode sums against the context window.
 Output keeps the turn's summed count, capped one token below that size because OpenCode ignores zero-prompt readings.
 
@@ -537,6 +547,7 @@ There is no persistent state, key, or TUI slot.
 ## X search
 
 `x/server.ts` exposes `x` with a self-contained `brief` and runs Grok CLI native X search with a ten-minute deadline.
+`x` runs on Grok CLI auth, so its calls spend the xAI usage that `xai/*` lane launches check.
 Each call starts in an empty temporary directory under `~/.local/state/opencode/x/`, removed when the call finishes.
 Fixed flags disallow local tools and add explicit denials, disable web search and child agents, and use permission mode `default`; Grok's own sandbox is off, and this call does not run in cage.
 The brief is NFKC-normalized; control and format characters are rejected except newline and tab.
@@ -710,8 +721,7 @@ Graph nodes are numbers in the owner's color; lane steps are role-color pills, a
 Rows lead with the scope icon and scope name in the role color, then the number, a square lane pill for lane steps, and the headline.
 A headline's main idea, before any `: `, takes the owner's color, bold for lanes and italic for one-shots; the rest is regular text.
 Delegated rows show the model family flush right in the role color, bold for lanes and italic for one-shots.
-The renderer reads `ROUTING.md` and shows a brain glyph and the variant left of the model only for a variant departure; no brain appears when the file is missing.
-`plugins/lanes/routing.ts` holds route parsing shared by the lanes server and the card.
+Delegated rows whose model has a `#variant` show a brain glyph and the variant left of the model.
 Gate checklist items get a distinct watching-for glyph; `if:` steps show an `only if` row.
 Only the summary wraps; other rows clip, and bad specs show red error lines.
 From `config/opencode`, run `bun plugins/workflow/preview.ts [file] --width N` to print the card with ANSI color.

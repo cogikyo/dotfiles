@@ -76,7 +76,7 @@ _A `verify/decide` or `build/owner` session can launch reviews, so the review's 
 Read each lane's model from its session record.
 When those lanes ran more than one model, or the tree has no code lane, the sighting counts as seen and updates `untagged`.
 
-The current code model is the model on the `build/general` line of `ROUTING.md`.
+The current code model is the model most `build/general` lanes ran in the review trees Collect reads, taken from their session records.
 When it changes, entries keep their old tags and are judged under the new model by the same rule, so the list turns over with the model.
 
 ## Collect

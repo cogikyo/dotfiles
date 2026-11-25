@@ -1,8 +1,6 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { BoxRenderable, CodeRenderable, TextRenderable, type Renderable } from "@opentui/core";
-import { readFileSync } from "node:fs";
-import { parseRouting, routingPath } from "../lanes/routing.ts";
-import { card, type Routes } from "./card.ts";
+import { card } from "./card.ts";
 import { live } from "./live.ts";
 import { parse, type Workflow } from "./parse.ts";
 import { replan } from "./replan.ts";
@@ -22,7 +20,7 @@ export default Plugin.define({
     context.markdown.registerCodeBlockRenderer("workflow", (token, host) => {
       const fallback = host.defaultRender();
       try {
-        return frame(context, { flow: parse(token.text, streaming(token.raw, fallback)), routes: routing() }, room);
+        return frame(context, parse(token.text, streaming(token.raw, fallback)), room);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!failures.has(message)) {
@@ -38,7 +36,7 @@ export default Plugin.define({
       const route = context.ui.router.current();
       return route.type === "session" ? route.sessionID : undefined;
     };
-    const overlay = view(context, store, routing);
+    const overlay = view(context, store);
     const toggle = () => {
       const id = session();
       if (!id) return context.ui.toast.show({ variant: "warning", message: "Open a session to show its workflow" });
@@ -85,22 +83,14 @@ function streaming(raw: string, fallback: Renderable | null) {
   return !new RegExp(`\\n {0,3}${fence[0]}{${fence.length},}\\s*$`).test(raw);
 }
 
-function routing(): Routes | undefined {
-  try {
-    return parseRouting(readFileSync(routingPath, "utf8")).routes;
-  } catch {
-    return undefined;
-  }
-}
-
-function frame(context: Plugin.Context, { flow, routes }: { flow: Workflow; routes?: Routes }, room: Room) {
+function frame(context: Plugin.Context, flow: Workflow, room: Room) {
   const tones = palette(context.theme, context.themeMode);
   const text = new TextRenderable(context.renderer, { width: "100%", wrapMode: "none" });
   let shown = 0;
   const show = (width: number) => {
     if (width === shown) return;
     shown = width;
-    text.content = styled(card(flow, width, routes), tones);
+    text.content = styled(card(flow, width), tones);
   };
   const box = new BoxRenderable(context.renderer, {
     width: "100%",

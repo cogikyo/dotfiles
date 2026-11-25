@@ -34,7 +34,7 @@ Do a single read or quick search yourself; a helper earns its cost when a concer
 Never launch builders or `verify/decide`.
 
 Launch unnamed one-shots in the **foreground**, with no `lane`, `background`, or `step`: lanes belong to Collab, and a background helper's report is lost when your turn ends.
-Omit `model` so the route applies, and put independent launches in one message to run in parallel.
+Name a model and effort for each launch, picked from `/home/cullyn/dotfiles/config/opencode/ROUTING.md`, because a launch without a model errors; put independent launches in one message to run in parallel.
 Each brief gives one question or bounded check, its bounds, the evidence wanted, and read-only scope.
 Give caged helpers (`review/*`, `scout/*`, `verify/source`, `verify/web`) only `$OPENCODE_SCRATCH`, passed literally, as write scope; give other helpers only a literal `/tmp/opencode/<task>/` path.
 

@@ -3,13 +3,11 @@ import type { Session } from "@opencode/schema/session";
 import type { SessionMessage } from "@opencode/schema/session-message";
 import { Tool } from "@opencode/schema/tool";
 import { DateTime, Effect, Option, Schema, Stream } from "effect";
-import { readFile } from "node:fs/promises";
 import { held, located, opened } from "../mail/store.ts";
 import { api as workflow } from "../workflow/rpc.ts";
 import { count, measured } from "./label.ts";
-import { missing } from "../sessions/model.ts";
-import { guarded, pick, pool, pooled, resume } from "./pick.ts";
-import { format, parseRouting, routeFor, routingPath, type Ref } from "./routing.ts";
+import { Model } from "@opencode/schema/model";
+import { format, pick, routing, type Ref, type Resolved } from "./pick.ts";
 import { api, type Outcome } from "./rpc.ts";
 import { admit, type Card, cardOf, checklist } from "./step.ts";
 
@@ -25,23 +23,20 @@ type Input = {
   step?: number;
 };
 
-type Resolved = { model?: string; note?: string; anchor?: Ref };
+const fields = {
+  model: Schema.optionalKey(Schema.String).annotate({
+    description: `Chat model as "providerID/modelID#variant". A new subagent needs one unless its workflow step card names one; a resume without it keeps the lane's launch model. Pick the model, effort, and seat count from ${routing}.`,
+  }),
+  lane: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Stable name for this subagent conversation. Reusing a lane name continues the same child session; naming a running child steers it.",
+  }),
+  step: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))).annotate({
+    description: "The workflow step this child carries out; links the child to that step.",
+  }),
+};
 
 const inbox = "SELECT EXISTS (SELECT 1 FROM session_inbox WHERE session_id = ?1) AS pending";
-
-function parseRef(value: string): Ref {
-  const [model, variant] = value.split("#");
-  const slash = model.indexOf("/");
-  return { providerID: model.slice(0, slash), id: model.slice(slash + 1), variant: variant || undefined };
-}
-
-const readRouting = Effect.tryPromise({
-  try: async () => parseRouting(await readFile(routingPath, "utf8")),
-  catch: (error) =>
-    new Tool.Error({
-      message: `ROUTING.md at ${routingPath} is unusable (${error instanceof Error ? error.message : String(error)}); pass model explicitly.`,
-    }),
-});
 
 const Closed = Schema.Struct({
   lane: Schema.optionalKey(Schema.String),
@@ -84,9 +79,6 @@ const modelOf = ({ model }: Session.Info): Ref | undefined =>
     id: model.id,
     variant: model.variant === "default" ? undefined : model.variant,
   };
-
-const same = (a: Ref | undefined, b: Ref) =>
-  a?.providerID === b.providerID && a.id === b.id && (a.variant ?? "default") === (b.variant ?? "default");
 
 function ago(time: DateTime.Utc) {
   const minutes = Math.round((Date.now() - DateTime.toEpochMillis(time)) / 60_000);
@@ -309,70 +301,23 @@ export default Plugin.define({
         })
         .pipe(Effect.orDie);
 
-      const listed = Effect.fn("lanes.listed")(function* () {
-        const { data } = yield* ctx.model
-          .list()
-          .pipe(
-            Effect.mapError(() => new Tool.Error({ message: "lanes: listing models failed; pass model explicitly." })),
-          );
-        const view = data.map((info) => ({
-          providerID: pooled(info.providerID),
-          id: info.id,
-          variants: info.variants,
-        }));
-        return (ref: Ref) => missing(ref.providerID === pool ? view : data, ref);
-      });
-
       const anchored = (childID: string) =>
         ctx.storage
           .get(`anchor/${childID}`)
-          .pipe(Effect.map((value) => (typeof value === "string" ? parseRef(value) : undefined)));
-
-      const resumed = Effect.fn("lanes.resumed")(function* (
-        childID: string,
-        current: Ref,
-        route: Ref | undefined,
-        fallbacks: Record<string, Ref>,
-      ): Effect.fn.Return<Resolved, Tool.Error> {
-        const stored = yield* anchored(childID);
-        const absent = yield* listed();
-        const lost = stored && absent(stored);
-        const gone = absent(current);
-        const dead = lost ? { ref: stored, why: lost } : gone ? { ref: current, why: gone } : undefined;
-        const target = lost ? route : (stored ?? route);
-        if (!target)
-          return { note: dead && `lanes: ${format(dead.ref)} is gone (${dead.why}), and this agent has no route.` };
-        const { ref, note } = yield* Effect.promise(() => (gone ? pick : resume)(target, current, fallbacks));
-        const notes = [note, dead && `lanes: ${format(dead.ref)} is gone (${dead.why}); using ${format(ref)}.`];
-        return {
-          model: !gone && same(current, ref) ? undefined : format(ref),
-          note: notes.filter(Boolean).join("\n") || undefined,
-          anchor: lost ? route : undefined,
-        };
-      });
+          .pipe(Effect.map((value) => (typeof value === "string" ? Model.Ref.parse(value) : undefined)));
 
       const resolve = Effect.fn("lanes.resolve")(function* (
         input: Input,
         existing: Session.Info | undefined,
         card: Card | undefined,
       ): Effect.fn.Return<Resolved, Tool.Error> {
-        if (!input.model && card) {
-          const why = (yield* listed())(parseRef(card.token));
-          if (why)
-            return yield* new Tool.Error({
-              message: `Step ${card.step}'s card model \`${card.token}\` is unusable: ${why}. Pass model, or fix the card.`,
-            });
-        }
-        const asked = input.model ?? card?.token;
-        const explicit = asked ? parseRef(asked) : undefined;
-        if (explicit && !guarded.has(explicit.providerID)) return { model: asked, anchor: explicit };
-        const routing = yield* readRouting;
-        const route = explicit ?? routeFor(routing.routes, input.agent);
-        const now = existing && modelOf(existing);
-        if (!explicit && existing && now) return yield* resumed(existing.id, now, route, routing.fallbacks);
-        if (!route) return {};
-        const { ref, note } = yield* Effect.promise(() => pick(route, now, routing.fallbacks));
-        return { model: format(ref), note, anchor: route };
+        const { data } = yield* ctx.model
+          .list()
+          .pipe(Effect.mapError(() => new Tool.Error({ message: "lanes: listing models failed; retry the launch." })));
+        const resume = existing && { current: modelOf(existing), stored: yield* anchored(existing.id) };
+        const picked = yield* Effect.promise(() => pick({ model: input.model, card, resume }, data));
+        if ("error" in picked) return yield* new Tool.Error({ message: picked.error });
+        return picked;
       });
 
       const flowOf = (sessionID: string) =>
@@ -445,8 +390,8 @@ export default Plugin.define({
               message: `Session ${existing.id} is ${closed.lane ? `closed lane "${closed.lane}"` : "closed"} and cannot resume; start a fresh lane by name instead.`,
             });
           const { brief, target, nudge, card } = yield* gate(context.sessionID, input.agent, n, existing);
-          const { model, note: routed, anchor } = yield* resolve(input, existing, card);
-          const note = [routed, nudge].filter(Boolean).join("\n") || undefined;
+          const { model, note: picked, anchor } = yield* resolve(input, existing, card);
+          const note = [picked, nudge].filter(Boolean).join("\n") || undefined;
           const { model: _, ...rest } = input;
           const call = {
             ...rest,
@@ -506,13 +451,7 @@ export default Plugin.define({
           const input = tool.input as unknown as Schema.Struct<Schema.Struct.Fields>;
           tool.input = Schema.Struct({
             ...input.fields,
-            lane: Schema.optionalKey(Schema.String).annotate({
-              description:
-                "Stable name for this subagent conversation. Reusing a lane name continues the same child session; naming a running child steers it.",
-            }),
-            step: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))).annotate({
-              description: "The workflow step this child carries out; links the child to that step.",
-            }),
+            ...fields,
           });
           tool.execute = (raw, context) => run(execute, raw as Input, context);
         });

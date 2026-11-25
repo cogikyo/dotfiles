@@ -11,6 +11,7 @@ export type Availability = {
   known: boolean;
   capped: number[];
   weekly: number;
+  headroom?: { label: string; left: number; reset: number };
 };
 
 const ids = Object.values(claudeAccounts).map(({ id }) => id);
@@ -25,19 +26,22 @@ async function availability(id: string, modelID: string, now = Date.now(), hourl
     .filter(({ label }) => label === "H" || label === "W" || label === scoped)
     .map((window) => ({
       label: window.label,
-      used: window.postReset ? undefined : window.usedPercent,
+      left:
+        window.postReset || window.usedPercent === undefined
+          ? undefined
+          : (window.label === "H" ? hourly : 100) - window.usedPercent,
       reset: window.resetAt ? Date.parse(window.resetAt) : Infinity,
     }));
-  const known = windows.filter((window) => window.used !== undefined);
+  const known = windows.filter((window) => window.left !== undefined);
   const weekly = known.find((window) => window.label === "W");
+  const [tightest] = known.toSorted((a, b) => a.left! - b.left!);
   return {
     id,
     age,
     known: !issue && windows.length > 0 && known.length === windows.length,
-    capped: known
-      .filter((window) => window.used! >= (window.label === "H" ? hourly : 100))
-      .map((window) => window.reset),
+    capped: known.filter((window) => window.left! <= 0).map((window) => window.reset),
     weekly: weekly?.reset ?? Infinity,
+    headroom: tightest && { label: tightest.label, left: Math.max(0, tightest.left!), reset: tightest.reset },
   };
 }
 

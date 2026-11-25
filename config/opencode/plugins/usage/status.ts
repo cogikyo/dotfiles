@@ -44,7 +44,7 @@ function formatAge(ms: number | undefined) {
   return ms === undefined ? "?" : formatDuration(ms);
 }
 
-function formatProximity(ms: number) {
+export function formatProximity(ms: number) {
   if (ms === 0) return "now";
   return ms > 0 ? `in ${formatDuration(ms)}` : `${formatDuration(-ms)} ago`;
 }

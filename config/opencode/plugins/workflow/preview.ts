@@ -1,7 +1,6 @@
 import { parseArgs } from "node:util";
 import { migrateV1, resolveThemeDocument } from "@opencode/theme/tui";
 import type { RGBA } from "@opentui/core";
-import { parseRouting, routingPath } from "../lanes/routing.ts";
 import { card } from "./card.ts";
 import { fences, parse } from "./parse.ts";
 import { palette, type Row } from "./style.ts";
@@ -21,16 +20,10 @@ const document = await Bun.file(new URL("../../themes/vagari.json", import.meta.
 const theme = resolveThemeDocument(migrateV1(document), "dark");
 const tones = palette(theme, "dark");
 const ground = color(tones.card, 48);
-const routes = await Bun.file(routingPath)
-  .text()
-  .then((text) => parseRouting(text).routes)
-  .catch(() => undefined);
 const found = fences(source);
 const blocks = found.length ? found : [{ text: source, partial: false }];
 
-console.log(
-  blocks.map(({ text, partial }) => paint(card(parse(text, partial), width - 2 * inset, routes))).join("\n\n"),
-);
+console.log(blocks.map(({ text, partial }) => paint(card(parse(text, partial), width - 2 * inset))).join("\n\n"));
 
 function paint(rows: readonly Row[]) {
   const inner = width - 2 * inset;

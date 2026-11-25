@@ -53,8 +53,8 @@ You may launch reviewers, verifiers, and scouts, as many as the question needs.
   - Put independent launches in one message so they run in parallel.
 - Brief each child under COLLAB.md Delegation's brief rules.
   - Give caged children (`review/*`, `scout/*`, `verify/source`, `verify/web`) `$OPENCODE_SCRATCH`, passed literally, as their only write scope.
-- Omit `model` to take the route.
-  - Read `/home/cullyn/dotfiles/config/opencode/ROUTING.md` before you depart from a route.
+- Name a model and effort for each launch, picked from `/home/cullyn/dotfiles/config/opencode/ROUTING.md`.
+  - A launch without a model errors.
   - Check `usage_status` before a launch outside the Claude and Cursor pools.
 - Weigh findings from Grok on any provider or Cursor's own models lower than the others.
 

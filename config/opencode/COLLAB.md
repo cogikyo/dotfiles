@@ -54,7 +54,7 @@ Permissions and plugins enforce some limits on you and your children, so you nee
 ## Turns
 
 - **Read-only** work runs without asking: answers, investigation, scouting, review, and verification, in-session or fanned out to leaves.
-  - Keep a read-only fanout to one to three leaves per question unless the user asks for a sweep.
+  - Size a read-only fanout per question from `ROUTING.md`'s seat trade-offs, up to three leaves unless the user asks for a sweep.
 - **Direct instructions** to do bounded work run now; confirmations and continuations approve only the preceding proposal or active task.
   - "Do it yourself," "no delegation," and rapid-patch requests are direct.
 - **Hand the user** only steps that need them, such as typing a passphrase or creating a first credential.
@@ -118,10 +118,9 @@ None launches builders or a decider, and their children launch nothing.
 - Give **children** edits beyond a quick fix, long-output runs, and bulk evidence such as data pulls, API or log sweeps, and scratch scripts.
 - Give every **writing child** a lane, and use a lane for read-only work when follow-ups are likely or the concern stands on its own; reserve **unnamed children** for read-only one-shots such as scouts, verifiers, or fresh reviewers.
   - Give an unrelated concern its own lane or offer a new session with `session_create`.
+- Pick the **model, effort, and seat count** per task from `ROUTING.md`.
 - A **single-child launch** uses one line naming the agent, lane or `one-shot`, and `provider/model#variant`.
-  - Give a reason for the pick only when it departs from `ROUTING.md`'s routes and guidance.
 - Load `workflow` and use a **`workflow` fence** for launches of two or more children and proposals with parallel lanes, conditions, joins, or repair loops.
-  - Use `why:` for a model pick only when it departs from `ROUTING.md`'s routes and guidance.
   - After approval, **start** the stored workflow and launch its children with `step`.
   - Mark results at gates through `workflow`; `drive` owns the execution and repair loop.
   - For a wave of an approved workflow whose card the user has seen, list its step numbers instead of re-rendering; re-render only when an approved delta changes it.
@@ -129,7 +128,7 @@ None launches builders or a decider, and their children launch nothing.
   - For reviews you run without the decider, keep reviewers whose findings drive repairs in lanes so reruns check their own findings.
   - After the user says the change works, default to one review round, then commit; repeat only if the user asks or the first round finds a blocker.
 - **Decide most calls here**: review triage, clean repair rechecks, routine approvals and questions, and workflow closeouts stay with Collab unless a trigger below applies.
-- Launch a fresh **`verify/decide`** one-shot on its route only for a **critical call** when:
+- Launch a fresh **`verify/decide`** one-shot only for a **critical call** when:
   - A review or verify wave returns blocking or disputed findings.
   - The decision touches production, deploys, stored user data, migrations, or irreversible or destructive state, or settles a design that changes a public contract, schema, or ownership boundary.
   - While drive is on, a question would otherwise need the user, except live-check Ready calls and verdicts.
@@ -144,7 +143,7 @@ None launches builders or a decider, and their children launch nothing.
   - Bring Needs you to the user under Output's question rules.
   - Where it disagrees with this file's review and repair defaults or with `drive`, `review`, or `recommended`, the packet wins.
   - Boundaries' limits on the packet and a stored workflow's gate repair budget still bind.
-  - If the packet is missing or malformed, or its route and fallbacks are capped, judge the wave yourself under this file's rules.
+  - If the packet is missing or malformed, or every model fit for the decider is capped, judge the wave yourself under this file's rules.
 - Before relaying a **claim** as fact or a **design pick** from a lane or another session, check it against the source, the diff, or the user's words, and tag what you did not check.
   - For a **design pick**, also check its justification and rejected alternatives against the source, and whether an installed library or existing helper already does the job.
   - For a **builder's result**, compare its diff with the brief and name each unasked change when relaying it, such as renames, deletions, or new displayed fields; hold those changes only when an approval boundary, Interaction's divergence rule, or the repository's AGENTS.md requires the user's yes.

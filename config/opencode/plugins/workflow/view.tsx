@@ -4,7 +4,7 @@ import { createMemo, createRenderEffect, createSignal, onCleanup, Show } from "s
 import { createStore } from "solid-js/store";
 import { locate } from "../byline/scroll.ts";
 import { spinner } from "../context/section.tsx";
-import { card, type Routes } from "./card.ts";
+import { card } from "./card.ts";
 import type { Live } from "./live.ts";
 import { palette, styled } from "./style.ts";
 
@@ -14,13 +14,13 @@ export type View = ReturnType<typeof view>;
 
 const pane = "session-pane";
 
-export function view(context: Context, live: Live, routes: () => Routes | undefined) {
+export function view(context: Context, live: Live) {
   const [open, setOpen] = createStore<Record<string, boolean>>({});
   context.ui.slot({
     append: "session.composer.top",
     render: (input) => (
       <Show when={open[input.sessionID]}>
-        <Card context={context} live={live} sessionID={input.sessionID} routes={routes()} />
+        <Card context={context} live={live} sessionID={input.sessionID} />
       </Show>
     ),
   });
@@ -45,7 +45,7 @@ function hide(node: Renderable) {
   };
 }
 
-function Card(props: { context: Context; live: Live; sessionID: string; routes?: Routes }) {
+function Card(props: { context: Context; live: Live; sessionID: string }) {
   const [room, setRoom] = createSignal(0);
   const [height, setHeight] = createSignal(0);
   let restore: (() => void) | undefined;
@@ -56,7 +56,7 @@ function Card(props: { context: Context; live: Live; sessionID: string; routes?:
   const content = createMemo(() => {
     const current = shown();
     if (!current || room() <= 0) return;
-    const rows = card(current.workflow, room(), props.routes, { ...current.progress, frame: frame() });
+    const rows = card(current.workflow, room(), { ...current.progress, frame: frame() });
     return styled(rows, tones());
   });
 

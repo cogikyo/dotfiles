@@ -1,13 +1,10 @@
 import { clip } from "../byline/notice.ts";
 import { family } from "../lanes/label.ts";
-import { routeFor, type Ref } from "../lanes/routing.ts";
 import { draw, type Graph } from "./graph.ts";
 import { topic, type Detail, type Owner, type Step, type Workflow } from "./parse.ts";
 import { complete, symbols, type Progress } from "./progress.ts";
 import { entries, type Diff } from "./state.ts";
 import { icon, ink, pill, shades, type Row, type Segment } from "./style.ts";
-
-export type Routes = Record<string, Ref>;
 
 type Scene = {
   steps: readonly Step[];
@@ -27,13 +24,13 @@ const checked: Segment = { text: "☑ ", tone: "success" };
 const seen: Segment = { text: "◉ ", tone: "success" };
 const gap = 2;
 
-export function card(flow: Workflow, width: number, routes?: Routes, progress?: Progress): Row[] {
+export function card(flow: Workflow, width: number, progress?: Progress): Row[] {
   const head: Row[] = flow.errors.map(({ line, message }) => [{ text: `✗ line ${line}: ${message}`, tone: "error" }]);
   const title = headline(flow.title, { tone: "accent", bold: true });
   if (flow.title) head.push(progress ? heading(title, flow.steps, progress, width) : title);
   for (const text of wrap(flow.summary ?? "", width)) head.push([{ text, tone: "text" }]);
   if (progress?.diff) head.push(...(head.length ? [[]] : []), ...revision(progress.diff));
-  const body = plan(flow.steps, width, routes, progress);
+  const body = plan(flow.steps, width, progress);
   const rows = head.length && body.length ? [...head, [], ...body] : [...head, ...body];
   return rows.map((row) => fit(row, width));
 }
@@ -62,12 +59,12 @@ function revision(diff: Diff): Row[] {
   ];
 }
 
-function plan(list: readonly Step[], width: number, routes: Routes | undefined, progress?: Progress): Row[] {
+function plan(list: readonly Step[], width: number, progress?: Progress): Row[] {
   if (!list.length) return [];
   const graph = draw(list, width, progress);
   const thinking = new Map<number, string>();
   for (const { n, owner } of list) {
-    const word = effort(owner, routes);
+    const word = effort(owner);
     if (word) thinking.set(n, word);
   }
   const digits = Math.max(...list.map(({ n }) => String(n).length));
@@ -100,10 +97,8 @@ function model(owner: Owner) {
   return owner.kind === "lane" && owner.model ? family(owner.model) : "";
 }
 
-function effort(owner: Owner, routes: Routes | undefined) {
-  if (owner.kind !== "lane" || !owner.role || !owner.model || !routes) return;
-  const route = routeFor(routes, `${owner.role}/${owner.scope}`);
-  if (route && route.variant !== owner.variant) return owner.variant ?? "default";
+function effort(owner: Owner) {
+  if (owner.kind === "lane" && owner.model) return owner.variant;
 }
 
 function section(step: Step, index: number, scene: Scene): Section {
