@@ -60,8 +60,9 @@ export function pill(text: string, tone: Tone): Segment[] {
 
 export function palette(theme: Plugin.Context["theme"], mode: Plugin.Context["themeMode"]): Record<Tone, RGBA> {
   const role = (name: Role) => roles[name] ?? theme.text.muted;
+  const hues: Partial<Record<string, typeof theme.hue.accent>> = theme.hue;
   return {
-    accent: theme.hue.accent[mode === "light" ? 300 : 200],
+    accent: (hues.purple ?? theme.hue.accent)[mode === "light" ? 300 : 200],
     text: theme.text.base,
     muted: theme.text.muted,
     error: theme.text.feedback.error.base,

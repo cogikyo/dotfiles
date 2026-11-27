@@ -23,6 +23,10 @@ import { framed } from "../statusline/prompt.ts";
 type Names = () => ReadonlySet<string>;
 type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
+type Markdown = MarkdownRenderable & {
+  readonly blocks: readonly { kind: string; renderable: Renderable | undefined }[];
+  view(index: number): { raw: string };
+};
 
 const separator = " · ";
 // COLLAB.md prescribes this lead line for replies to delivered mail.
@@ -206,19 +210,20 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
     if (turned(only)) return { kind: "stop", row };
   }
   if (!marked(only)) return { kind: "content", row };
-  const states = only._blockStates;
-  const shown = states.filter((state) => state.renderable);
-  const blocks = states.flatMap((state, index) => {
-    if (!state.renderable) return [];
-    const hr = state.token.type === "hr";
-    const tail = (state.token.type === "paragraph" || state.token.type === "heading") && dashes.test(state.token.raw);
-    const lead = hr || tail ? states.slice(index + 1).find((next) => next.token.type !== "space") : undefined;
-    return [{ node: state.renderable, hr, tail, mail: sender.test(lead?.token.raw ?? "") }];
+  const raw = (index: number) => only.view(index).raw;
+  const shown = only.blocks.flatMap(({ kind: type, renderable }, index) =>
+    renderable?.parent === only ? [{ type, node: renderable, index }] : [],
+  );
+  const blocks = shown.map(({ type, node, index }, at) => {
+    const hr = type === "rule";
+    const tail = (type === "paragraph" || type === "heading") && dashes.test(raw(index));
+    const lead = hr || tail ? shown[at + 1] : undefined;
+    return { node, hr, tail, mail: lead !== undefined && sender.test(raw(lead.index)) };
   });
   // A footer can follow streaming Markdown, so row position cannot decide completion.
   const done = !only.streaming;
   const [first, ...rest] = shown;
-  const stub = !done && (!first || (rest.length === 0 && partial.test(first.token.raw.trim())));
+  const stub = !done && (!first || (rest.length === 0 && partial.test(raw(first.index).trim())));
   return { kind: "markdown", row, blocks, streaming: last && !done, done, stub };
 }
 
@@ -307,8 +312,14 @@ function read(node: Text) {
   return flatten(node.textNode);
 }
 
-function marked(node: Renderable | undefined): node is MarkdownRenderable {
-  return node !== undefined && "_blockStates" in node;
+function marked(node: Renderable | undefined): node is Markdown {
+  return (
+    node !== undefined &&
+    "blocks" in node &&
+    "committedBlockCount" in node &&
+    "view" in node &&
+    typeof node.view === "function"
+  );
 }
 
 function editable(node: Renderable) {

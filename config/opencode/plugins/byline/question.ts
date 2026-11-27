@@ -179,13 +179,14 @@ function inset(block: Renderable) {
 
 function palette(context: Context): Tones {
   const theme = context.theme;
+  const hues: Partial<Record<string, typeof theme.hue.accent>> = theme.hue;
   return {
-    accent: theme.hue.accent[context.themeMode === "light" ? 300 : 200],
+    accent: (hues.purple ?? theme.hue.accent)[context.themeMode === "light" ? 300 : 200],
     text: theme.text.base,
     muted: theme.text.muted,
     rule: theme.border.base,
     agreed: theme.text.feedback.success.base,
-    star: theme.hue.interactive[200],
+    star: theme.text.action.primary.selected,
   };
 }
 

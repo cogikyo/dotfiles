@@ -1,5 +1,5 @@
 import type { DialogSelectOption } from "@opencode/plugin/tui/context";
-import { TextAttributes, type RGBA } from "@opentui/core";
+import { RGBA, TextAttributes } from "@opentui/core";
 import path from "node:path";
 import { createEffect, createMemo, createSignal, Match, onCleanup, Switch, type JSX } from "solid-js";
 import { spinner } from "../context/section.tsx";
@@ -24,6 +24,7 @@ export type Option<Value> = Omit<DialogSelectOption<Value>, "footer"> & {
   readonly footer?: () => JSX.Element;
   readonly footerText?: string;
   readonly footerColor?: RGBA;
+  readonly fg?: RGBA;
   readonly searchText?: string;
   readonly titleView?: () => JSX.Element;
   readonly gutter?: (color: RGBA) => JSX.Element;
@@ -122,7 +123,7 @@ function Spin(props: { color: RGBA }) {
   return <text fg={props.color}>{frame()}</text>;
 }
 
-function Mark(props: { context: Context; sessionID: string; current: boolean; color: RGBA }) {
+function Mark(props: { context: Context; sessionID: string; current: boolean; active: boolean; color: RGBA }) {
   const theme = () => dialog(props.context);
   const state = () => attention(props.context, props.sessionID);
   const busy = () => !state() && running(props.context, props.sessionID);
@@ -130,12 +131,7 @@ function Mark(props: { context: Context; sessionID: string; current: boolean; co
     <Switch fallback={<text fg={props.color}>{props.current ? "●" : " "}</text>}>
       <Match when={state()}>
         {(kind) => (
-          <text
-            fg={
-              props.color.equals(theme().text.action.primary.focused) ? props.color : theme().text.feedback.warning.base
-            }
-            attributes={TextAttributes.BOLD}
-          >
+          <text fg={props.active ? props.color : theme().text.feedback.warning.base} attributes={TextAttributes.BOLD}>
             {kind() === "permission" ? "!" : "?"}
           </text>
         )}
@@ -151,10 +147,13 @@ export const rows = (mailed?: Mailed, near?: Near) =>
   function row(context: Context, session: Session, current: boolean, note: Footer): Option<string> {
     const theme = () => dialog(context);
     const text = title(session);
+    const { r, g, b, a } = theme().text.action.primary.focused;
+    const focused = RGBA.fromValues(r, g, b, a);
     const [plain, setPlain] = createSignal(true);
     const gutter = (color: RGBA) => {
-      setPlain(color.equals(theme().text.base));
-      return <Mark context={context} sessionID={session.id} current={current} color={color} />;
+      const active = color === focused;
+      setPlain(!active && !current);
+      return <Mark context={context} sessionID={session.id} current={current} active={active} color={color} />;
     };
     const state = tag(session.title)?.state;
     const mail = () => mailable(session) && !!mailed?.(session.id);
@@ -171,6 +170,7 @@ export const rows = (mailed?: Mailed, near?: Near) =>
       ...note,
       title: text,
       value: session.id,
+      fg: focused,
       gutter,
       footerText: note.footer,
       footer: () => <span style={style(note.footerColor ?? theme().text.muted)}>{note.footer}</span>,
@@ -204,6 +204,7 @@ const signature = (option: Option<unknown>) =>
     option.footerText ?? "",
     option.category ?? "",
     option.searchText ?? "",
+    option.fg?.toInts().join(",") ?? "",
   ].join("\u0000");
 
 export function stable<Value>(build: () => Option<Value>[]) {

@@ -736,13 +736,6 @@ Files under `workflow/` divide the work by role:
 - `sidebar.tsx` shows compact progress; `view.tsx` swaps the chat for the full card.
 - `card.ts`, `graph.ts`, and `style.ts` draw cards; `preview.ts` prints them for inspection.
 
-## Bullets
-
-`bullets/tui.ts` uses `•` for depth-0 unordered list markers and `◦` at deeper levels.
-Ordered lists keep their native markers.
-V2's Markdown plugin hook only replaces fenced code-block rendering, so list markers need a patch.
-An opentui upgrade can break this private `getListItemInputs` override; the plugin throws on load if the method disappears.
-
 ## Markdown context
 
 `context/tui.tsx` places Markdown Context after `sidebar.content`, with root and project instructions, the agent prompt, skills, and observed Markdown loads.
