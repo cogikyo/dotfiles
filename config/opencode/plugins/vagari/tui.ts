@@ -5,6 +5,7 @@ import { build, source } from "./build.ts";
 
 export function watchTheme(from: string, onError: (message: string) => void) {
   let last: string | undefined;
+  let failed = false;
   let disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let queue = Promise.resolve();
@@ -17,10 +18,12 @@ export function watchTheme(from: string, onError: (message: string) => void) {
     try {
       const { content, transcript, written } = await build(from);
       const state = JSON.stringify([content, transcript]);
-      const changed = written || (last !== undefined && state !== last);
+      const changed = written || failed || (last !== undefined && state !== last);
       last = state;
+      failed = false;
       if (!disposed && changed && process.listenerCount("SIGUSR2") > 0) process.kill(process.pid, "SIGUSR2");
     } catch (error) {
+      failed = true;
       fail(error);
     }
   };

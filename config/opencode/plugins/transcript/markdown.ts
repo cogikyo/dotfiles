@@ -1,4 +1,11 @@
-import { MarkdownRenderable, SyntaxStyle, type CliRenderer, type Renderable, type RGBA } from "@opentui/core";
+import {
+  MarkdownRenderable,
+  SyntaxStyle,
+  TextAttributes,
+  type CliRenderer,
+  type Renderable,
+  type RGBA,
+} from "@opentui/core";
 
 // The host runs OpenTUI 0.9.9; node_modules types are 0.8.0, which predate inline hooks.
 export type Span = {
@@ -18,11 +25,13 @@ export type Context = {
   readonly tableCell: boolean;
 };
 type Hook = (spans: Span[], context: Context) => Span[];
+type Rerun = { rerunInlineHook(select: (source: string) => boolean): void };
 type Filter = readonly string[];
 
 export type Look = {
   code(text: string, fg: RGBA | undefined): RGBA | undefined;
   heading(level: number, fg: RGBA | undefined): RGBA | undefined;
+  session(fg: RGBA | undefined): RGBA | undefined;
 };
 
 type Accessor<T> = PropertyDescriptor & {
@@ -63,26 +72,27 @@ function run(source: string, from: number) {
 
 export function closed(source: string) {
   let count = 0;
-  let at = source.indexOf("`");
-  while (at !== -1) {
-    let slashes = 0;
-    while (source[at - 1 - slashes] === "\\") slashes++;
-    if (slashes % 2 === 1) {
-      at = source.indexOf("`", at + 1);
-      continue;
-    }
-    const end = run(source, at);
-    let close = source.indexOf("`", end);
-    while (close !== -1 && run(source, close) - close !== end - at) close = source.indexOf("`", run(source, close));
-    if (close === -1) {
-      at = source.indexOf("`", end);
-      continue;
-    }
-    count++;
-    at = source.indexOf("`", close + end - at);
+  let at = 0;
+  while (at < source.length) {
+    const char = source[at];
+    if (char === "\\") at += 2;
+    else if (char === "]" && source[at + 1] === "(") {
+      const end = source.indexOf(")", at);
+      if (end === -1) return count;
+      at = end + 1;
+    } else if (char === "`") {
+      const end = run(source, at);
+      let close = source.indexOf("`", end);
+      while (close !== -1 && run(source, close) - close !== end - at) close = source.indexOf("`", run(source, close));
+      if (close === -1) return count;
+      count++;
+      at = close + end - at;
+    } else at++;
   }
   return count;
 }
+
+const idle = (renderer: CliRenderer) => renderer.idle().catch(() => undefined);
 
 class Styles {
   private readonly current = new Map<SyntaxStyle, SyntaxStyle>();
@@ -94,21 +104,22 @@ class Styles {
     private readonly used: () => Iterable<SyntaxStyle | undefined>,
   ) {}
 
-  derive(style: SyntaxStyle) {
-    const shared = this.origin.get(style) ?? style;
+  derive(value: SyntaxStyle) {
+    const shared = this.original(value) ?? value;
     let copy = this.current.get(shared);
-    if (!copy) {
-      copy = SyntaxStyle.fromStyles(shared.getAllStyles(), this.renderer.nativeScene);
-      for (const level of [1, 2, 3, 4, 5, 6]) {
-        const name = `markup.heading.${level}`;
-        const base = shared.getStyle(name);
-        const fg = this.heading(level, base?.fg);
-        if (base && fg) copy.registerStyle(name, { ...base, fg });
-      }
-      this.current.set(shared, copy);
-      this.origin.set(copy, shared);
-      void this.sweep();
-    }
+    if (copy) return copy;
+    const headings = [1, 2, 3, 4, 5, 6].flatMap((level) => {
+      const name = `markup.heading.${level}`;
+      const base = shared.getStyle(name);
+      const fg = this.heading(level, base?.fg);
+      return base && fg ? [{ name, style: { ...base, fg } }] : [];
+    });
+    if (headings.length === 0) return shared;
+    copy = SyntaxStyle.fromStyles(shared.getAllStyles(), this.renderer.nativeScene);
+    for (const { name, style } of headings) copy.registerStyle(name, style);
+    this.current.set(shared, copy);
+    this.origin.set(copy, shared);
+    void this.sweep();
     return copy;
   }
 
@@ -118,18 +129,19 @@ class Styles {
 
   refresh() {
     this.current.clear();
+    void this.sweep();
   }
 
   async destroy() {
     const copies = [...this.origin.keys()];
     this.current.clear();
     this.origin.clear();
-    await this.renderer.idle();
+    await idle(this.renderer);
     for (const copy of copies) copy.destroy();
   }
 
   private async sweep() {
-    await this.renderer.idle();
+    await idle(this.renderer);
     const keep = new Set(this.used());
     for (const [copy, shared] of this.origin) {
       if (keep.has(copy)) continue;
@@ -147,6 +159,7 @@ export function patch(renderer: CliRenderer, look: Look) {
   const styleAccess = accessor<SyntaxStyle>("syntaxStyle");
   const live = new Set<WeakRef<MarkdownRenderable>>();
   const seen = new WeakSet<MarkdownRenderable>();
+  const dead = new FinalizationRegistry<WeakRef<MarkdownRenderable>>((ref) => live.delete(ref));
 
   const recolor = (spans: Span[], context: Context) => {
     let settled = closed(context.source);
@@ -156,8 +169,14 @@ export function patch(renderer: CliRenderer, look: Look) {
       return fg ? { ...span, fg } : span;
     });
   };
-  const hooks = pair<Hook>((base) => (spans, context) => base(recolor(spans, context), context));
-  const filters = pair<Filter>((base) => (base.includes("`") ? base : [...base, "`"]));
+  const relink = (spans: Span[]) =>
+    spans.map((span) => {
+      if (span.link || !span.target?.startsWith("ses_")) return span;
+      const fg = look.session(span.fg);
+      return fg ? { ...span, fg, attributes: (span.attributes ?? 0) | TextAttributes.BOLD } : span;
+    });
+  const hooks = pair<Hook>((base) => (spans, context) => relink(base(recolor(spans, context), context)));
+  const filters = pair<Filter>((base) => (base.length === 0 || base.includes("`") ? base : [...base, "`"]));
 
   const instances = () =>
     [...live].flatMap((ref) => {
@@ -171,14 +190,19 @@ export function patch(renderer: CliRenderer, look: Look) {
     (level, fg) => look.heading(level, fg),
     () => instances().map((markdown) => styleAccess.get.call(markdown)),
   );
-  const style = (markdown: MarkdownRenderable, value: SyntaxStyle | undefined) =>
-    styleAccess.set.call(markdown, value && hooks.owns(hookAccess.get.call(markdown)) ? styles.derive(value) : value);
+  const style = (markdown: MarkdownRenderable, value: SyntaxStyle | undefined) => {
+    const shared = styles.original(value) ?? value;
+    const hooked = hooks.owns(hookAccess.get.call(markdown));
+    styleAccess.set.call(markdown, shared && hooked ? styles.derive(shared) : shared);
+  };
   const hook = (markdown: MarkdownRenderable, value: Hook | undefined) => {
     hookAccess.set.call(markdown, value && hooks.wrap(value));
-    if (!value) return;
-    if (!seen.has(markdown)) live.add(new WeakRef(markdown));
-    seen.add(markdown);
     style(markdown, styleAccess.get.call(markdown));
+    if (!value || seen.has(markdown)) return;
+    const ref = new WeakRef(markdown);
+    live.add(ref);
+    dead.register(markdown, ref);
+    seen.add(markdown);
   };
   const filter = (markdown: MarkdownRenderable, value: Filter | undefined) =>
     filterAccess.set.call(markdown, value && filters.wrap(value));
@@ -187,7 +211,7 @@ export function patch(renderer: CliRenderer, look: Look) {
     name: string,
     access: Accessor<T>,
     set: (markdown: MarkdownRenderable, value: T | undefined) => void,
-    get: (value: T | undefined) => T | undefined = (value) => value,
+    get: (value: T | undefined) => T | undefined,
   ) =>
     Object.defineProperty(proto, name, {
       ...access,
@@ -198,9 +222,20 @@ export function patch(renderer: CliRenderer, look: Look) {
         set(this, value);
       },
     });
-  define("inlineHook", hookAccess, hook, hooks.unwrap);
-  define("inlineHookFilter", filterAccess, filter, filters.unwrap);
-  define("syntaxStyle", styleAccess, style);
+
+  const restore = () => {
+    Object.defineProperty(proto, "inlineHook", hookAccess);
+    Object.defineProperty(proto, "inlineHookFilter", filterAccess);
+    Object.defineProperty(proto, "syntaxStyle", styleAccess);
+    for (const markdown of instances()) {
+      hookAccess.set.call(markdown, hooks.unwrap(hookAccess.get.call(markdown)));
+      filterAccess.set.call(markdown, filters.unwrap(filterAccess.get.call(markdown)));
+      const shared = styles.original(styleAccess.get.call(markdown));
+      if (shared) styleAccess.set.call(markdown, shared);
+    }
+    live.clear();
+    return styles.destroy();
+  };
 
   const visit = (node: Renderable) => {
     if (node instanceof MarkdownRenderable && hookAccess.get.call(node)) {
@@ -209,25 +244,26 @@ export function patch(renderer: CliRenderer, look: Look) {
     }
     for (const child of node.getChildren()) visit(child);
   };
-  visit(renderer.root);
+  try {
+    define("inlineHook", hookAccess, hook, hooks.unwrap);
+    define("inlineHookFilter", filterAccess, filter, filters.unwrap);
+    define("syntaxStyle", styleAccess, style, (value) => styles.original(value) ?? value);
+    visit(renderer.root);
+  } catch (error) {
+    void restore();
+    throw error;
+  }
 
   return {
     refresh() {
       styles.refresh();
-      for (const markdown of instances()) style(markdown, styleAccess.get.call(markdown));
-    },
-    restore() {
-      Object.defineProperty(proto, "inlineHook", hookAccess);
-      Object.defineProperty(proto, "inlineHookFilter", filterAccess);
-      Object.defineProperty(proto, "syntaxStyle", styleAccess);
       for (const markdown of instances()) {
-        hookAccess.set.call(markdown, hooks.unwrap(hookAccess.get.call(markdown)));
-        filterAccess.set.call(markdown, filters.unwrap(filterAccess.get.call(markdown)));
-        const shared = styles.original(styleAccess.get.call(markdown));
-        if (shared) styleAccess.set.call(markdown, shared);
+        const before = styleAccess.get.call(markdown);
+        style(markdown, before);
+        if (styleAccess.get.call(markdown) === before)
+          (markdown as MarkdownRenderable & Rerun).rerunInlineHook(() => true);
       }
-      live.clear();
-      void styles.destroy();
     },
+    restore,
   };
 }

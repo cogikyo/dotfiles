@@ -717,31 +717,38 @@ From `config/opencode`, `bun plugins/vagari/build.ts` builds by hand and prints 
 
 ## Transcript
 
-To recolor inline code and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
+To recolor inline code, session links, and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
 Each value is a Vagari name, and `transcript/tui.ts` picks a code color by what the span holds.
 
 | Key               | Colors                                                   |
 | ----------------- | -------------------------------------------------------- |
 | `code.path`       | Paths, file names, `file:line`, URLs                     |
 | `code.command`    | First word is a program on `PATH` or a builtin like `cd` |
+| `code.danger`     | Destructive or privileged commands, such as `rm -rf`     |
 | `code.identifier` | Names, keys, and flags                                   |
 | `code.number`     | Numbers, versions, hashes, `:line`, `true`, `null`       |
 | `code.other`      | Anything else                                            |
+| `session`         | Session links such as `@Reply styles`, drawn bold        |
 | `h1` to `h6`      | Headings at that level                                   |
 
-A span with spaces is `command` or `other`, and a span that holds a `#rrggbb` color draws in that color.
-A missing key keeps the theme's color, and headings keep their bold and level-1 underline.
+A span with spaces is `danger`, `command`, `number` for a timestamp, or `other`, and a span that holds a `#rrggbb` color draws in that color.
+`danger` covers privilege commands such as `sudo`, recursive or forced `rm`, disk writers such as `dd` and `mkfs`, history rewrites such as `git push --force` and `git reset --hard`, service stops, forced kills, power commands, and `dctl install` or `dctl iso usb|release`, anywhere in a `&&`, `;`, or `|` chain.
+Plain `rm file` and `trash` stay `command`, and the rule table is `DANGER` in `transcript/kind.ts`.
+A missing key keeps the theme's color, except that a missing `code.danger` uses `code.command`; headings keep their bold and level-1 underline, and session links keep their underline.
 Code inside a link and a span that is still streaming keep `markdown.code`.
-Only spans and headings drawn in Vagari's `markdown.code` and `markdown.heading` change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
+Only spans, links, and headings drawn in Vagari's `markdown.code`, `markdown.link`, and `markdown.heading` change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
 A bad name or key shows a `Vagari theme` error toast, and the last good colors stay.
 
 OpenCode has no plugin API for inline spans, so the plugin wraps the `inlineHook`, `inlineHookFilter`, and `syntaxStyle` setters on OpenTUI's `MarkdownRenderable` prototype.
 Setup fails with an error toast if OpenTUI drops one of those accessors.
 Only renderables that set an inline hook change: reply text, compaction summaries, and `/btw` answers.
-The wrapper colors code spans before OpenCode's session-link hook runs, and its getters return what callers set, so another plugin that wraps the same hook still finds its own wrapper.
-It adds a backtick to the hook filter, which moves every block with inline code from OpenTUI's native write path to its slower host path; the measured cost is a few microseconds per block.
-Headings use a per-theme copy of the syntax style, so diffs and file views of Markdown keep `markdown.heading`.
-A palette change swaps in a fresh copy, because OpenTUI does not repaint a style that changes in place.
+The wrapper colors code spans before OpenCode's session-link hook runs and recolors session links after it, finding them by the `ses_` click target that hook sets; path links from other plugins carry a `link` instead and keep their colors.
+Its getters return what callers set, so another plugin that wraps the same hook still finds its own wrapper.
+It adds a backtick to a non-empty hook filter, which moves every block with inline code from OpenTUI's native write path to its slower host path; the measured cost is a few microseconds per block.
+Headings use a per-theme copy of the syntax style, so diffs and file views of Markdown keep `markdown.heading`; without heading keys, renderables keep the shared style.
+A palette change swaps in a fresh copy, because OpenTUI does not repaint a style that changes in place, and reruns the hook where the style stays the same.
+Clearing a renderable's hook gives it back the shared style.
+The plugin lists `PATH` executables when the theme loads, so a program installed later counts as a command after the next theme save.
 Disposing restores the prototype and every hooked renderable.
 
 ## Paths
