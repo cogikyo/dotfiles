@@ -141,7 +141,7 @@
       "code": "$hue.grn.100",
       "blockQuote": "$hue.slt.100",
       "emphasis": "$hue.blue.100",
-      "strong": "$hue.blue.100",
+      "strong": "$hue.brt.100",
       "horizontalRule": "$hue.glc.400",
       "listItem": "$hue.glu.200",
       "listEnumeration": "$hue.glu.200",
