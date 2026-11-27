@@ -123,7 +123,7 @@
     "olv_2": "#505251",
     "olv_3": "#5f6361",
     "olv_4": "#6e7270",
-    "olv_5": "#818382",
+    "olv_5": "#818382"
   },
   "base": {
     "categorical": ["blue", "purple", "green", "orange", "red", "cyan"],
@@ -136,17 +136,17 @@
           "base": "$text.base",
           "$disabled": "slt_5",
           "$focused": "bg",
-          "$selected": "orn_4",
+          "$selected": "orn_4"
         },
         "secondary": {
           "base": "$text.muted",
           "$hovered": "$text.base",
-          "$focused": "bg",
+          "$focused": "bg"
         },
         "destructive": {
           "base": "bg",
-          "$disabled": "slt_5",
-        },
+          "$disabled": "slt_5"
+        }
       },
       "formfield": {
         "base": "fg",
@@ -154,91 +154,91 @@
         "$focused": "orn_4",
         "$pressed": "orn_4",
         "$disabled": "slt_5",
-        "$selected": "orn_4",
+        "$selected": "orn_4"
       },
       "feedback": {
         "error": {
-          "base": "rby_3",
+          "base": "rby_3"
         },
         "warning": {
-          "base": "blu_3",
+          "base": "blu_3"
         },
         "success": {
-          "base": "emr_3",
+          "base": "emr_3"
         },
         "info": {
-          "base": "cyn_3",
-        },
-      },
+          "base": "cyn_3"
+        }
+      }
     },
     "background": {
       "base": "bg",
       "raised": {
         "base": "drk_0",
         "high": "glc_1",
-        "max": "glc_2",
+        "max": "glc_2"
       },
       "action": {
         "primary": {
           "base": "transparent",
           "$hovered": "drk_0",
           "$focused": "orn_4",
-          "$selected": "transparent",
+          "$selected": "transparent"
         },
         "secondary": {
-          "base": "transparent",
+          "base": "transparent"
         },
         "destructive": {
-          "base": "rby_3",
-        },
+          "base": "rby_3"
+        }
       },
       "formfield": {
-        "base": "$background.base",
+        "base": "$background.base"
       },
       "feedback": {
         "error": {
-          "base": "$background.base",
+          "base": "$background.base"
         },
         "warning": {
-          "base": "$background.base",
+          "base": "$background.base"
         },
         "success": {
-          "base": "$background.base",
+          "base": "$background.base"
         },
         "info": {
-          "base": "$background.base",
-        },
-      },
+          "base": "$background.base"
+        }
+      }
     },
     "border": {
-      "base": "glc_2",
+      "base": "glc_2"
     },
     "scrollbar": {
-      "base": "orn_1",
+      "base": "orn_1"
     },
     "diff": {
       "text": {
         "added": "tyr_1",
         "removed": "his_1",
         "context": "slt_2",
-        "hunkHeader": "sky_2",
+        "hunkHeader": "sky_2"
       },
       "background": {
         "added": "olv_0",
         "removed": "plm_0",
-        "context": "glc_0",
+        "context": "glc_0"
       },
       "highlight": {
         "added": "emr_3",
-        "removed": "rby_3",
+        "removed": "rby_3"
       },
       "lineNumber": {
         "text": "slt_2",
         "background": {
           "added": "olv_0",
-          "removed": "plm_0",
-        },
-      },
+          "removed": "plm_0"
+        }
+      }
     },
     "syntax": {
       "comment": "slt_2",
@@ -249,7 +249,7 @@
       "number": "pnk_2",
       "type": "brt_1",
       "operator": "sky_4",
-      "punctuation": "glu_2",
+      "punctuation": "glu_2"
     },
     "markdown": {
       "text": "fg",
@@ -265,18 +265,18 @@
       "listEnumeration": "glu_2",
       "image": "sky_1",
       "imageText": "sky_1",
-      "codeBlock": "fg",
+      "codeBlock": "fg"
     },
     "@dialog": {
       "background": {
         "base": "$background.raised.base",
         "action": {
           "primary": {
-            "$hovered": "$background.raised.high",
-          },
-        },
-      },
-    },
+            "$hovered": "$background.raised.high"
+          }
+        }
+      }
+    }
   },
   "transcript": {
     "code": {
@@ -285,7 +285,7 @@
       "danger": "rby_1",
       "identifier": "cyn_3",
       "number": "pnk_3",
-      "other": "grn_4",
+      "other": "grn_4"
     },
     "session": "prp_3",
     "h1": "orn_3",
@@ -293,7 +293,7 @@
     "h3": "blu_4",
     "h4": "brt_3",
     "h5": "blu_3",
-    "h6": "blu_2",
+    "h6": "blu_2"
   },
   "dark": {
     "hue": {
@@ -306,7 +306,7 @@
         "600": "glc_1",
         "700": "drk_0",
         "800": "bg",
-        "900": "bg",
+        "900": "bg"
       },
       "accent": "$hue.purple",
       "interactive": "$hue.orange",
@@ -319,7 +319,7 @@
         "600": "rby_0",
         "700": "rby_0",
         "800": "rby_0",
-        "900": "rby_0",
+        "900": "rby_0"
       },
       "orange": {
         "100": "orn_4",
@@ -330,7 +330,7 @@
         "600": "orn_0",
         "700": "orn_0",
         "800": "orn_0",
-        "900": "orn_0",
+        "900": "orn_0"
       },
       "yellow": {
         "100": "sun_4",
@@ -341,7 +341,7 @@
         "600": "sun_0",
         "700": "sun_0",
         "800": "sun_0",
-        "900": "sun_0",
+        "900": "sun_0"
       },
       "green": {
         "100": "emr_4",
@@ -352,7 +352,7 @@
         "600": "emr_0",
         "700": "emr_0",
         "800": "emr_0",
-        "900": "emr_0",
+        "900": "emr_0"
       },
       "cyan": {
         "100": "cyn_4",
@@ -363,7 +363,7 @@
         "600": "cyn_0",
         "700": "cyn_0",
         "800": "cyn_0",
-        "900": "cyn_0",
+        "900": "cyn_0"
       },
       "blue": {
         "100": "blu_4",
@@ -374,7 +374,7 @@
         "600": "blu_0",
         "700": "blu_0",
         "800": "blu_0",
-        "900": "blu_0",
+        "900": "blu_0"
       },
       "purple": {
         "100": "prp_4",
@@ -385,7 +385,7 @@
         "600": "prp_0",
         "700": "prp_0",
         "800": "prp_0",
-        "900": "prp_0",
+        "900": "prp_0"
       },
       "grn": {
         "100": "grn_4",
@@ -396,7 +396,7 @@
         "600": "grn_0",
         "700": "grn_0",
         "800": "grn_0",
-        "900": "grn_0",
+        "900": "grn_0"
       },
       "sky": {
         "100": "sky_4",
@@ -407,7 +407,7 @@
         "600": "sky_0",
         "700": "sky_0",
         "800": "sky_0",
-        "900": "sky_0",
+        "900": "sky_0"
       },
       "pnk": {
         "100": "pnk_4",
@@ -418,7 +418,7 @@
         "600": "pnk_0",
         "700": "pnk_0",
         "800": "pnk_0",
-        "900": "pnk_0",
+        "900": "pnk_0"
       },
       "brt": {
         "100": "brt_3",
@@ -429,7 +429,7 @@
         "600": "brt_0",
         "700": "brt_0",
         "800": "brt_0",
-        "900": "brt_0",
+        "900": "brt_0"
       },
       "slt": {
         "100": "slt_5",
@@ -440,7 +440,7 @@
         "600": "slt_0",
         "700": "slt_0",
         "800": "slt_0",
-        "900": "slt_0",
+        "900": "slt_0"
       },
       "glc": {
         "100": "glc_5",
@@ -451,7 +451,7 @@
         "600": "glc_0",
         "700": "glc_0",
         "800": "glc_0",
-        "900": "glc_0",
+        "900": "glc_0"
       },
       "glu": {
         "100": "glu_3",
@@ -462,7 +462,7 @@
         "600": "glu_0",
         "700": "glu_0",
         "800": "glu_0",
-        "900": "glu_0",
+        "900": "glu_0"
       },
       "tyr": {
         "100": "tyr_3",
@@ -473,7 +473,7 @@
         "600": "tyr_0",
         "700": "tyr_0",
         "800": "tyr_0",
-        "900": "tyr_0",
+        "900": "tyr_0"
       },
       "his": {
         "100": "his_3",
@@ -484,7 +484,7 @@
         "600": "his_0",
         "700": "his_0",
         "800": "his_0",
-        "900": "his_0",
+        "900": "his_0"
       },
       "olv": {
         "100": "olv_5",
@@ -495,7 +495,7 @@
         "600": "olv_0",
         "700": "olv_0",
         "800": "olv_0",
-        "900": "olv_0",
+        "900": "olv_0"
       },
       "plm": {
         "100": "plm_5",
@@ -506,8 +506,8 @@
         "600": "plm_0",
         "700": "plm_0",
         "800": "plm_0",
-        "900": "plm_0",
-      },
-    },
-  },
+        "900": "plm_0"
+      }
+    }
+  }
 }

@@ -5,5 +5,13 @@
   "semi": true,
   "printWidth": 120,
   "trailingComma": "all",
-  "ignorePatterns": ["plugins/anthropic/claude-auth/**"]
+  "ignorePatterns": ["plugins/anthropic/claude-auth/**"],
+  "overrides": [
+    {
+      "files": ["*.jsonc"],
+      "options": {
+        "trailingComma": "none"
+      }
+    }
+  ]
 }
