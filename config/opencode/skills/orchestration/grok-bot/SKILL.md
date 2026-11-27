@@ -8,31 +8,41 @@ description: Use when the user asks to talk to Grok Bot or one of its bots by na
 Grok Bot is xAI/Cursor's desktop agent app (AUR `grok-bot-bin`).
 Its bots are persistent cloud agents with their own computer, browser-use tools, connectors, and routines that OpenCode lacks.
 There is no public API.
-`bot.ts` drives the running desktop app over the Chrome DevTools Protocol (CDP) on `127.0.0.1:9222`.
-Collab runs it from the current session.
+`bot.ts` drives the running desktop app over the Chrome DevTools Protocol (CDP).
+
+## Pools
+
+Two app instances run under different accounts, and `bot.ts` calls each one a pool:
+
+- **`trend`** on port 9222 is Cullyn's Trend Cursor team seat and his primary pool.
+- **`x`** on port 9223 is his personal X account.
+
+`pools` marks a closed port `down` and a silent one `unresponsive`, which usually means a frozen window.
+Each bot lives on one pool.
+`ask` without `--pool` picks among the live pools that have the bot: it drops any at or above 95% weekly usage or whose usage call failed, then takes the one whose usage resets soonest.
+Pools with no reset time sort last, and ties go to `trend`.
+The floor exists because both accounts bill on-demand past their allowance: Trend with no spend limit, X up to $50 a month.
+
+`read` and `file` use the one live pool that has the bot; pass `--pool` when both have it, and note that `ask` prints its choice to stderr.
+`--pool trend|x` before the command pins a pool, skips the floor, and fails if that pool is down or unresponsive.
 
 ## App
 
-The app must run with the debugging port enabled.
-The tracked desktop entry `share/applications/grok-bot.desktop` adds `--remote-debugging-port=9222` and `--force-device-scale-factor=1.25`.
-Starting `grok-bot` from a terminal skips these desktop entry flags.
-If the app runs without the port, ask the user before quitting it, because this requires a restart.
-
-If the app is not running, launch it with this **untested** command:
-
-```bash
-setsid -f gtk-launch grok-bot
-```
-
-The script waits up to 15 seconds for the port.
+Each instance must run with its debugging port enabled.
+The tracked entries `share/applications/grok-bot.desktop` and `grok-bot-x.desktop` pass `--remote-debugging-port`.
+Starting `grok-bot` from a terminal skips these flags.
+If an app runs without its port, ask the user before quitting it, because this requires a restart.
+To start a down pool, run the `setsid -f gtk-launch` command that `bot.ts` prints; this is **untested**.
 
 ## Commands
 
 ```bash
-bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts <command>
+bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts [--pool trend|x] <command>
 ```
 
-- `roster` lists bot names and titles.
+- `pools` prints each pool's port, state, weekly usage, and account, then the pool `ask` would pick.
+- `pools --json` prints per-pool usage and on-demand spend as JSON for the usage plugin; keep its field names stable.
+- `roster` lists bot names and titles from every live pool, tagged with the pool.
 - `read <bot> [count]` reads the recent transcript, with 20 entries by default.
 - `ask <bot> <prompt | -> [timeout-seconds]` sends a prompt, streams replies, and returns when the bot is idle.
 - `file <bot> <attachment-name>` writes raw attachment text to stdout; redirect it to a file.
@@ -40,11 +50,12 @@ bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts <command>
 For `ask`, `-` reads the prompt from stdin and supports multi-line prompts via a heredoc.
 The default timeout is 600 seconds.
 Exit code 2 means the bot is still working; check later with `read`.
+Exit code 3 means the prompt may have gone out; do not resend, and run the `read` command the script prints.
 
-Bot names match without regard to case, spaces, or punctuation, with a unique-prefix fallback.
-For example, `wanshi` finds "Wan Shi".
+Bot names match without regard to case, spaces, or punctuation; an exact name beats a prefix, and a prefix must name one bot across both pools.
 Run `roster` for the current list.
-Bob (Tech) owns the homelab docs; Wan Shi (Info) keeps the shared knowledge base.
+On `trend`, Bob (Tech) owns the homelab docs and Wan Shi (Info) keeps the shared knowledge base.
+On `x`, Tendril is the research bot, so asks to it always go to `x`.
 Do not hardcode other names.
 
 ## Brief and safety
@@ -53,17 +64,15 @@ Do not hardcode other names.
 - Ask for read-only work unless the user asked for changes.
 - Ask bots to return long output as an attachment and fetch it with `file`.
 - Never approve or dismiss an approval card, secret request, or purchase through the script or CDP.
+- Create bots and routines only on `x`, and only as needed.
+- Never create, edit, or delete a bot on `trend`; asking its existing bots is fine.
 
 Approvals stay with the user in the app.
 `ask` prints approval requests to stderr.
-Opening a bot switches the chat the user sees in the app.
+Opening a bot switches the chat the user sees in that app.
 `ask` refuses to overwrite an unsent draft in the prompt field.
 
 ## Judge
 
 Treat bot replies as claims to check against live evidence, like any other untrusted report.
-The script reads app internals: React state, the Tiptap editor, and `window.desktop.readAttachmentText`.
-An app update can break it; report the error instead of improvising another control path.
-
-Grok Bot usage appears as the weekly `G` bar under Cursor in the usage sidebar.
-It does not gate delegation.
+The script reads app internals, so an app update can break it; report the error instead of improvising another control path.

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Grok Bot (X)
+Exec=env SAND_USER_DATA_DIR=/home/cullyn/.config/grok-bot-x SAND_LOCAL_EXEC_ROOT=/home/cullyn/.local/state/grok-bot-x grok-bot --remote-debugging-port=9223
+Terminal=false
+Type=Application
+Icon=grok-bot
+StartupWMClass=grok-bot
+Comment=Grok Bot desktop agent on the personal X account
+Categories=Development;
