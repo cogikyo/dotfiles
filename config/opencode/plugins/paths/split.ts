@@ -22,9 +22,15 @@ const starts = {
 const trailer = /[\s.,;:!?)\]}>"'`*]/;
 const cut = /["'`<>|]/;
 const head = /^(?:~\/|\/)(?!\/)./;
+const hex = /^(?=[a-f]*\d)[0-9a-f]{7,40}$/;
 
-export function split<S extends Span>(spans: readonly S[], home: string, exists: (path: string) => boolean): S[] {
-  const resolve: Resolve = (raw) => {
+export function split<S extends Span>(
+  spans: readonly S[],
+  home: string,
+  exists: (path: string) => boolean,
+  commit: Resolve,
+): S[] {
+  const path: Resolve = (raw) => {
     if (raw.startsWith("file:")) {
       try {
         return exists(fileURLToPath(raw)) ? raw : undefined;
@@ -32,14 +38,14 @@ export function split<S extends Span>(spans: readonly S[], home: string, exists:
         return undefined;
       }
     }
-    const path = raw.startsWith("~/") ? home + raw.slice(1) : raw;
-    return exists(path) ? pathToFileURL(path).href : undefined;
+    const file = raw.startsWith("~/") ? home + raw.slice(1) : raw;
+    return exists(file) ? pathToFileURL(file).href : undefined;
   };
   return spans.flatMap((span, index) => {
     if (span.link || span.target !== undefined || span.math !== undefined) return [span];
     const found = span.code
-      ? whole(span.text, resolve)
-      : prose(span.text, spans[index - 1]?.text.at(-1), spans[index + 1]?.text[0], resolve);
+      ? whole(span.text, path, commit)
+      : prose(span.text, spans[index - 1]?.text.at(-1), spans[index + 1]?.text[0], path);
     return found.length === 0 ? [span] : pieces(span, found);
   });
 }
@@ -61,11 +67,11 @@ function pieces<S extends Span>(span: S, found: Found[]): S[] {
   return out;
 }
 
-function whole(text: string, resolve: Resolve): Found[] {
+function whole(text: string, path: Resolve, commit: Resolve): Found[] {
   const lead = /^`+\s?/.exec(text)?.[0].length ?? 0;
   const inner = text.slice(lead).replace(/\s?`+$/, "");
   if (/\s/.test(inner) || cut.test(inner)) return [];
-  const found = token(inner, true, resolve);
+  const found = token(inner, true, path) ?? sha(inner, commit);
   return found?.start === 0 ? [{ ...found, start: lead, end: lead + found.end }] : [];
 }
 
@@ -78,6 +84,11 @@ function prose(text: string, before: string | undefined, after: string | undefin
     const found = continued ? undefined : token(word, bounded, resolve);
     return found ? [{ ...found, start: start + found.start, end: start + found.end }] : [];
   });
+}
+
+function sha(text: string, commit: Resolve): Found | undefined {
+  const url = hex.test(text) ? commit(text) : undefined;
+  return url ? { start: 0, end: text.length, url } : undefined;
 }
 
 function token(word: string, bounded: boolean, resolve: Resolve): Found | undefined {

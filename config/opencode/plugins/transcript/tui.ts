@@ -3,6 +3,7 @@ import { RGBA } from "@opentui/core";
 import { existsSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { delimiter } from "node:path";
+import { scheme } from "../paths/commit.ts";
 import { Compiler, isTree, load, source, type Tree } from "../vagari/build.ts";
 import { glyph } from "./icons.ts";
 import { kind, kinds, type Probe } from "./kind.ts";
@@ -126,9 +127,10 @@ export default Plugin.define({
         session: (fg) => (palette && fg?.equals(palette.link) ? palette.session : undefined),
         link(url, fg) {
           if (!palette || !probe) return undefined;
-          const drawn = [palette.body, palette.link, palette.linkText, palette.kinds.path?.fg];
+          const { path, number } = palette.kinds;
+          const drawn = [palette.body, palette.link, palette.linkText, path?.fg, number?.fg];
           if (!drawn.some((color) => fg?.equals(color))) return undefined;
-          const chosen = url.startsWith("file:") ? palette.kinds.path : palette.web;
+          const chosen = url.startsWith("file:") ? path : url.startsWith(scheme) ? number : palette.web;
           return chosen && { paint: chosen, icon: palette.icons ? glyph(url, probe.directory) : undefined };
         },
       });

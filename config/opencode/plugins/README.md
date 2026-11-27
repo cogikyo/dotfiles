@@ -755,6 +755,7 @@ A single word is a `key` when it holds a dot path (`a.b`) or starts with `-` or 
 Plain `rm file` and `trash` stay `command`, and the rule table is `DANGER` in `transcript/kind.ts`.
 Links also draw in `code.path` when they target a `file:` URL, whether from a path in prose, a `file://` URL, or a Markdown `[label](file:///…)` link.
 With `icons`, a link gets a globe, and a file link gets a glyph for its extension, a folder glyph for a directory, or a plain file glyph.
+A [Paths](#paths) commit link instead draws in `code.number` with a commit glyph.
 The glyph is a separate span in the link color without underline or link target, so it joins the copied text and a click on it does nothing; table cells and session links get none.
 `transcript/icons.ts` holds the extension table, which uses nvim-web-devicons glyphs, and xplr's `node_types.lua` in `config/xplr/` supplied the folder glyph.
 A missing key keeps the theme's color, except that a missing `code.danger` uses `code.command` and a missing `code.key` uses `code.symbol`; headings keep their bold and level-1 underline, and session links keep their underline but are bold only when their value says `bold`.
@@ -776,9 +777,9 @@ Disposing restores the prototype and every hooked renderable.
 
 ## Paths
 
-`paths/tui.tsx` links file paths in transcript Markdown and runs `xdg-open` on a plain click.
-Stock OpenCode does not open `file://` links: its `openUrl` rejects anything but http(s) with an error toast, so the plugin handles the click on each transcript Markdown itself.
-It chains the host's `ses_` session-link hook, adds `/` to that hook's filter, and coexists with [Transcript](#transcript)'s prototype setter wrapping.
+`paths/tui.tsx` links file paths and git commit hashes in transcript Markdown; a plain click runs `xdg-open` on a file and opens lazygit on a commit.
+Stock OpenCode does not open these links: its `openUrl` rejects anything but http(s) with an error toast, so the plugin handles the click on each transcript Markdown itself.
+It chains the host's `ses_` session-link hook, adds `/` and a backtick to that hook's filter, and coexists with [Transcript](#transcript)'s prototype setter wrapping.
 
 `paths/split.ts` links only absolute and `~/` paths, and `file:///` URLs, that exist when the block renders; a trailing `:line` stays outside the link.
 A `file://` URL links to itself, other schemes such as `http://` are left to OpenTUI's own autolinks, and [Transcript](#transcript) draws every `file:` link in the path color.
@@ -788,6 +789,19 @@ A file created after its paragraph rendered stays plain until that block runs th
 
 Through `config/mimeapps.list`, text and source types open with `share/applications/hyprd-edit.desktop` (`hyprd edit %f`), in the workspace nvim.
 `file` sniffs the type from the file's contents, and a type missing from that list falls through to xdg-open's browser fallback.
+
+A commit hash is 7 to 40 lowercase hex characters with at least one digit, so a word such as `deadbeef` stays plain.
+It links only when it fills a whole code span and `git rev-parse` resolves it to a commit from the session's directory, so hashes in prose and from other repositories stay plain.
+`paths/commit.ts` caches each result per directory and hash, misses included, so redraws never rerun git; a hash drawn before its commit exists stays plain until the plugin reloads.
+The link is a `git-commit:<sha>?repo=<dir>` URL, which [Transcript](#transcript) styles.
+Model-written Markdown can use that scheme too, so a click acts only on a full hex sha whose `repo` is the session's own directory; any other `git-commit:` link falls through to the host's unsupported-link toast.
+
+A click runs `lazygit log` in the session's directory, in a `kitty --title terminalfloat` window that Hyprland floats.
+A shift-click goes to kitty instead, which xdg-opens the link; with no `git-commit` handler registered, that opens a browser.
+lazygit has no flag to start at a commit, so the plugin gives that kitty its own `/tmp/opencode/lazygit-<pid>-<ms>.sock` socket and, once `kitty @ get-text` shows a commit row, types `/<sha>` and Enter to select it through lazygit's search.
+kitty removes the socket when the window closes.
+The search selects only within the 300 newest commits; for an older one, it reports a match but the selection stays on the newest commit.
+A log that takes over 5 seconds to draw stays open without the jump, and a missing `kitty` or `lazygit` shows an `Open failed` toast.
 
 ## Workflow
 

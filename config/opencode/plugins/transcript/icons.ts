@@ -1,7 +1,9 @@
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { scheme } from "../paths/commit.ts";
 
 const WEB = "\u{f0ac}";
+const COMMIT = "\u{f0718}";
 const DIRECTORY = "\u{e613}";
 const FILE = "\u{ea7b}";
 
@@ -33,8 +35,9 @@ const EXTENSIONS = new Map([
   ["log", "\u{f0331}"],
 ]);
 
-/** Picks the Nerd Font glyph for a link: a globe for web URLs, otherwise a folder or the file's type. */
+/** Picks the Nerd Font glyph for a link URL. */
 export function glyph(url: string, isDirectory: (path: string) => boolean) {
+  if (url.startsWith(scheme)) return COMMIT;
   if (!url.startsWith("file:")) return WEB;
   let path: string;
   try {
