@@ -694,6 +694,23 @@ Sync needs `~/vagari/nvim`, the nvim-treesitter `main` checkout at `~/.local/sha
 From `config/opencode`, run `bun plugins/code-blocks/sync.ts` after changes to Vagari, nvim-treesitter queries, or the host parser catalog.
 Sync regenerates queries, manifests, and resolved Vagari styles; it replaces `tree-sitter/` but keeps every parser folder whose manifest sets no `filetype`, and fails if such a folder shares a name with a generated one.
 
+## Vagari theme
+
+To tune colors, edit `themes/vagari.jsonc` and save; every open TUI window rebuilds the generated `themes/vagari.json` and reloads within about a second.
+Write each color as a Vagari name such as `glc_0`, a `$` reference such as `$text.base`, or `transparent`; `categorical` lists hue names.
+A bad value shows an error toast with its token path, and `vagari.json` keeps the last good build.
+The `defs` block is a copy of the 124 colors in `~/vagari/vagari/colors.toml`, and nothing syncs the two.
+
+In each window, `vagari/tui.ts` watches the source and runs `vagari/build.ts`, which writes a name on a hue ramp as a `$hue.<ramp>.<step>` reference and any other name as raw hex.
+OpenCode lightens or darkens a referenced token by stepping along its ramp; a raw hex token does not move.
+A name takes the first ramp whose members all share its family (`glc` for `glc_0`), else the first ramp that holds it, at its first step next to a different color.
+A `base` token gets a reference only when every mode resolves it to the same one.
+The build writes through a temporary file and a rename, and only when the output changes, so windows can build at once.
+
+A window whose build output differs from its last sends `SIGUSR2` to its own process, which makes the TUI re-read custom themes.
+It sends the signal only while a handler listens, since an unhandled `SIGUSR2` ends the process.
+From `config/opencode`, `bun plugins/vagari/build.ts` builds by hand and prints errors, but it signals no window.
+
 ## Workflow
 
 `workflow/server.ts` stores one workflow per root session in plugin KV `flow/<root>`: fence source, revision, step marks, checklist ticks, repair rounds, child links, and the revision diff.
