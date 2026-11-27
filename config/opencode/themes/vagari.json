@@ -56,7 +56,7 @@
     "background": {
       "base": "$hue.neutral.800",
       "raised": {
-        "base": "$hue.glc.600",
+        "base": "$hue.neutral.700",
         "high": "$hue.glc.500",
         "max": "$hue.glc.400"
       },
@@ -151,7 +151,7 @@
     },
     "@dialog": {
       "background": {
-        "base": "$background.raised.base",
+        "base": "$hue.glc.600",
         "action": {
           "primary": {
             "$hovered": "$background.raised.high"

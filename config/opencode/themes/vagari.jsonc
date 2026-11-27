@@ -174,7 +174,7 @@
     "background": {
       "base": "bg",
       "raised": {
-        "base": "glc_0",
+        "base": "drk_0",
         "high": "glc_1",
         "max": "glc_2",
       },
@@ -269,7 +269,7 @@
     },
     "@dialog": {
       "background": {
-        "base": "$background.raised.base",
+        "base": "glc_0",
         "action": {
           "primary": {
             "$hovered": "$background.raised.high",
