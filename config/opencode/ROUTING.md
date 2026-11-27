@@ -109,6 +109,13 @@ A council gives models from different providers the same brief, blind to each ot
 - **Opus** filters Sol and Astra findings well, as a critic or a verdict seat.
   - Its verdicts add the most on harness, production, and design.
 - **Web:** DeepSeek, Sol, Opus, and Sonnet each found sources the others missed.
+- **Tendril** is a Grok Bot research seat on the `x` pool, not a `provider/model`.
+  - Collab drives it through the `grok-bot` skill, so `subagent` cannot launch it.
+  - In a 2026-11-27 bake-off, a blind judge (Sol) scored it 4.7 of 5 on average, best on 2 of 3 questions.
+    - A DeepSeek web scout with working search scored 3.7 and won the third; scouts without working search scored 3.0.
+    - That was one judge and three questions, and Opus never reran with working search.
+  - **Cost:** about 0.7% of the X weekly Grok Bot pool per question, roughly 140 a week from X Premium+, with no extra spend.
+  - A question takes 5–10 minutes, and one bot takes one question at a time.
 
 ## Refusals
 

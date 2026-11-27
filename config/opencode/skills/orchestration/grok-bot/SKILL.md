@@ -44,18 +44,17 @@ bun ~/.config/opencode/skills/orchestration/grok-bot/bot.ts [--pool trend|x] <co
 - `pools --json` prints per-pool usage and on-demand spend as JSON for the usage plugin; keep its field names stable.
 - `roster` lists bot names and titles from every live pool, tagged with the pool.
 - `read <bot> [count]` reads the recent transcript, with 20 entries by default.
-- `ask <bot> <prompt | -> [timeout-seconds]` sends a prompt, streams replies, and returns when the bot is idle.
+- `ask <bot> <prompt | -> [timeout-seconds]` sends a prompt and streams replies until the app reports no active run or background task and the transcript settles; start with an idle bot and send nothing else to it meanwhile.
 - `file <bot> <attachment-name>` writes raw attachment text to stdout; redirect it to a file.
 
 For `ask`, `-` reads the prompt from stdin and supports multi-line prompts via a heredoc.
-The default timeout is 600 seconds.
+The default timeout is 1200 seconds; timing out does not cancel the run.
 Exit code 2 means the bot is still working; check later with `read`.
 Exit code 3 means the prompt may have gone out; do not resend, and run the `read` command the script prints.
 
 Bot names match without regard to case, spaces, or punctuation; an exact name beats a prefix, and a prefix must name one bot across both pools.
 Run `roster` for the current list.
 On `trend`, Bob (Tech) owns the homelab docs and Wan Shi (Info) keeps the shared knowledge base.
-On `x`, Tendril is the research bot, so asks to it always go to `x`.
 Do not hardcode other names.
 
 ## Brief and safety
@@ -71,6 +70,19 @@ Approvals stay with the user in the app.
 `ask` prints approval requests to stderr.
 Opening a bot switches the chat the user sees in that app.
 `ask` refuses to overwrite an unsent draft in the prompt field, and before inserting anything it refuses while a dialog is open in the app, since that dialog can trap the app's own handlers; ask the user to close it.
+
+## Research
+
+Tendril is a regular research seat on `x`.
+Cullyn's direction is to use only xAI for now, so pin `--pool x` on every research ask.
+He plans to retire the Trend-side bots and keep the same bots on both accounts; until then, do not send research to `trend`.
+
+- **Ask:** run `--pool x ask tendril -` with the question on stdin and a brief that follows the rules above.
+  - Ask for a short summary message plus the full report as a markdown attachment.
+- **Fetch:** run `--pool x file tendril <attachment-name>` with the name from the reply, and redirect it to a file.
+- **One question per bot:** a run takes 5–10 minutes, and a bot works one question at a time.
+  - For parallel questions, create more research bots on `x`.
+- **Fanout:** send a web research question to Tendril and to a DeepSeek `scout/web` seat, then compare their sources.
 
 ## Judge
 

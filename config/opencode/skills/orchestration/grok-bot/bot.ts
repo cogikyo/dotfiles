@@ -11,6 +11,7 @@ const POLL_MS = 2_000;
 const SETTLE_POLLS = 3;
 const WORKING = 2;
 const UNTRACKED = 3;
+const ASK_S = 1_200;
 const DAY_S = 86_400;
 
 type Pool = keyof typeof POOLS;
@@ -40,6 +41,7 @@ type Entry = {
 };
 
 type Chat = { planeKey: string; loadState: string; busy: boolean; entries: Entry[] };
+type Run = { running: boolean; background: boolean };
 
 const PRELUDE = `
 const fiberRoot = () => {
@@ -59,6 +61,32 @@ const findProps = (test) => {
 const agents = () => (findProps((p) => Array.isArray(p.agents) && typeof p.agents[0]?.name === "string")?.agents ?? [])
   .map((a) => ({ id: a.id, name: a.name, title: a.title }));
 const editor = () => document.querySelector(".sand-prompt-field")?.editor;
+const watchRun = (key, id, leaseMs) => {
+  const client = findProps((p) => typeof p.client?.roster?.agentNow === "function")?.client;
+  if (!client) throw new Error("the Grok Bot run store is unavailable");
+  const tasks = client.asyncTasks.snapshotsFor(id);
+  const unsubscribe = tasks.subscribe(() => {});
+  const timer = setTimeout(() => globalThis[key]?.stop(), leaseMs);
+  globalThis[key] = {
+    read() {
+      const agent = client.roster.agentNow(id);
+      if (typeof agent?.isRunning !== "boolean") throw new Error("the bot run status is unavailable");
+      const snapshot = tasks.get();
+      if (snapshot.status === "loading") return;
+      if (snapshot.status !== "empty" && snapshot.status !== "ready")
+        throw new Error("the bot's background tasks are " + snapshot.status);
+      return {
+        running: agent.isRunning || agent.isRunningTurn === true,
+        background: snapshot.status === "ready" && snapshot.value.length > 0,
+      };
+    },
+    stop() {
+      clearTimeout(timer);
+      unsubscribe();
+      delete globalThis[key];
+    },
+  };
+};
 const chat = (since) => {
   const p = findProps((p) => Array.isArray(p.entries) && "isGenerating" in p);
   if (!p) return undefined;
@@ -417,23 +445,41 @@ async function read(probes: Probe[], name: string, count = "20") {
   for (const entry of chat.entries.slice(-Number(count))) console.log(render(entry, agent.name) + "\n");
 }
 
-function untracked({ pool, agent }: Target, what: string, error: unknown): never {
+function untracked({ pool, agent }: Target, what: string, error: unknown) {
   console.error(
     `${agent.name}: ${what} (${message(error)}); do not resend; check with: bot.ts --pool ${pool} read "${agent.name}"`,
   );
-  process.exit(UNTRACKED);
+  process.exitCode = UNTRACKED;
 }
 
-async function ask(probes: Probe[], name: string, prompt: string, timeoutS = "600") {
+async function ask(probes: Probe[], name: string, prompt: string, timeout = String(ASK_S)) {
   const text = prompt === "-" ? await Bun.stdin.text() : prompt;
   if (!text.trim()) throw new Error("empty prompt");
   const found = await holders(probes, name);
   const target = await choose(found);
   console.error(`pool: ${target.pool} (pin follow-ups with --pool ${target.pool})`);
-  const before = await open(target.page, target.agent);
-  const since = Math.max(0, ...before.entries.map((e) => e.seq));
-  await compose(target, text);
-  await submit(target, since, Number(timeoutS));
+  const { page, agent } = target;
+  const before = await open(page, agent);
+  const key = JSON.stringify(`grok-bot-ask:${crypto.randomUUID()}`);
+  const timeoutS = Number(timeout);
+  const run = `globalThis[${key}].read()`;
+  try {
+    await page.eval(`watchRun(${key}, ${JSON.stringify(agent.id)}, ${timeoutS * 1000 + 3 * CALL_MS});`);
+    const deadline = Date.now() + CONNECT_MS;
+    for (;;) {
+      const state = await page.eval<Run | undefined>(`return ${run};`);
+      if (state) {
+        if (state.running || state.background) throw new Error(`${agent.name} is already working; nothing was sent`);
+        break;
+      }
+      if (Date.now() >= deadline) throw new Error(`${agent.name}'s background tasks did not load; nothing was sent`);
+      await Bun.sleep(250);
+    }
+    await compose(target, text);
+    await submit(target, before, run, timeoutS);
+  } finally {
+    await page.eval(`globalThis[${key}]?.stop();`, PROBE_MS).catch(() => {});
+  }
 }
 
 async function compose({ pool, page, agent }: Target, text: string) {
@@ -449,18 +495,24 @@ async function compose({ pool, page, agent }: Target, text: string) {
     return "ok";
   `);
   if (draft?.startsWith("dialog:")) {
-    throw new Error(`pool ${pool} has a dialog open ("${draft.slice(7)}"); close it in the app first, nothing was sent`);
+    throw new Error(
+      `pool ${pool} has a dialog open ("${draft.slice(7)}"); close it in the app first, nothing was sent`,
+    );
   }
   if (draft === undefined) throw new Error("prompt field not found");
   if (draft === "draft") throw new Error(`${agent.name}'s prompt field holds an unsent draft; not overwriting it`);
 }
 
-async function submit(target: Target, since: number, timeoutS: number) {
+async function submit(target: Target, before: Chat, run: string, timeoutS: number) {
   const { pool, page, agent } = target;
+  const since = Math.max(0, ...before.entries.map((e) => e.seq));
   const deadline = Date.now() + timeoutS * 1000;
   let doubt: string | undefined;
   const submitted = await page
-    .eval<boolean>(`return editor()?.commands.keyboardShortcut("Enter") ?? false;`, Math.min(deadline - Date.now(), CALL_MS))
+    .eval<boolean>(
+      `return editor()?.commands.keyboardShortcut("Enter") ?? false;`,
+      Math.min(deadline - Date.now(), CALL_MS),
+    )
     .catch((error) => {
       doubt = `the submit call got no answer: ${message(error)}`;
       return undefined;
@@ -468,19 +520,31 @@ async function submit(target: Target, since: number, timeoutS: number) {
   if (submitted === false) throw new Error(`${agent.name}'s prompt field did not accept Enter; nothing was sent`);
   const printed = new Set<number>();
   const asks = new Map<number, string>();
-  let requestId: string | undefined;
+  let sent: Entry | undefined;
   let quiet = 0;
   try {
     for (let first = true; ; first = false) {
       if (!first) await Bun.sleep(Math.max(0, Math.min(POLL_MS, deadline - Date.now())));
       const left = deadline - Date.now();
       if (!first && left <= 0) break;
-      const chat = await page.eval<Chat>(
-        `return chat(${since});`,
+      const { current, state } = await page.eval<{ current?: Chat; state?: Run }>(
+        `return { current: chat(${since}), state: ${run} };`,
         Math.min(CALL_MS, first ? Math.max(left, PROBE_MS) : left),
       );
-      requestId ??= chat.entries.find((e) => e.kind === "message" && e.role === "user")?.requestId;
-      const replies = requestId ? chat.entries.filter((e) => e.kind !== "message" && e.requestId === requestId) : [];
+      if (current?.planeKey !== before.planeKey || current.loadState !== "ready")
+        throw new Error("the selected chat changed or stopped loading");
+      const prompts = current.entries.filter((e) => e.kind === "message" && e.role === "user");
+      sent ??= prompts.find((e) => e.requestId);
+      if (!state) throw new Error("the bot's run status is no longer available");
+      if (!sent) continue;
+      const { seq, requestId } = sent;
+      if (prompts.some((e) => e.seq > seq)) throw new Error("another prompt appeared in the chat");
+      const replies = current.entries.filter(
+        (e) =>
+          (e.requestId === requestId && e.kind !== "message") ||
+          (e.seq > seq && (e.kind === "send-message" || (e.kind === "message" && e.role === "assistant"))),
+      );
+      const count = printed.size;
       for (const entry of replies) {
         if (entry.ask) {
           const state = `${entry.ask.status}`;
@@ -495,17 +559,20 @@ async function submit(target: Target, since: number, timeoutS: number) {
         printed.add(entry.seq);
         console.log(render(entry, agent.name) + "\n");
       }
-      quiet = requestId && replies.length && !chat.busy ? quiet + 1 : 0;
+      quiet =
+        printed.size > 0 && count === printed.size && !state.running && !state.background && !current.busy
+          ? quiet + 1
+          : 0;
       if (quiet >= SETTLE_POLLS) return;
     }
   } catch (error) {
-    untracked(target, requestId ? "sent, tracking lost" : "send unconfirmed", error);
+    return untracked(target, sent ? "sent, tracking lost" : "send unconfirmed", error);
   }
-  if (!requestId) untracked(target, "send unconfirmed", doubt ?? `no sent message appeared within ${timeoutS}s`);
+  if (!sent) return untracked(target, "send unconfirmed", doubt ?? `no sent message appeared within ${timeoutS}s`);
   console.error(
     `${agent.name} is still working after ${timeoutS}s; check later with: bot.ts --pool ${pool} read "${agent.name}"`,
   );
-  process.exit(WORKING);
+  process.exitCode = WORKING;
 }
 
 async function file(probes: Probe[], name: string, fileName: string) {
@@ -561,7 +628,7 @@ const COMMANDS: Record<string, Command> = {
     max: 3,
     windowMs: CONNECT_MS,
     check: ([, , timeout]) => {
-      const seconds = Number(timeout ?? "600");
+      const seconds = timeout === undefined ? ASK_S : Number(timeout);
       return seconds > 0 && seconds <= DAY_S ? undefined : `timeout must be over 0 and at most ${DAY_S} seconds`;
     },
     run: ask,
