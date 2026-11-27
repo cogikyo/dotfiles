@@ -44,7 +44,7 @@ type Chat = { planeKey: string; loadState: string; busy: boolean; entries: Entry
 const PRELUDE = `
 const fiberRoot = () => {
   const el = document.getElementById("root");
-  return el[Object.keys(el).find((k) => k.startsWith("__reactContainer"))];
+  return el[Object.keys(el).find((k) => k.startsWith("__reactContainer"))].stateNode.current;
 };
 const findProps = (test) => {
   const stack = [fiberRoot()];
@@ -510,14 +510,20 @@ async function submit(target: Target, since: number, timeoutS: number) {
 
 async function file(probes: Probe[], name: string, fileName: string) {
   const { page, agent } = only(await holders(probes, name));
-  const chat = await open(page, agent);
-  const entry = chat.entries.findLast((e) => e.file === fileName && e.url);
-  if (!entry?.url) throw new Error(`no attachment named ${fileName} in ${agent.name}'s chat`);
-  const res = await page.eval<{ kind: string; text?: string }>(
-    `return await window.desktop.readAttachmentText(${JSON.stringify(entry.url)}, ${JSON.stringify(agent.id)});`,
-  );
-  if (res.kind !== "text" || res.text === undefined)
-    throw new Error(`${fileName} is not readable as text (${res.kind})`);
+  const { planeKey } = await open(page, agent);
+  const res = await page.eval<{ kind: string; text?: string } | null | undefined>(`
+    const current = chat(0);
+    if (current?.planeKey !== ${JSON.stringify(planeKey)} || current.loadState !== "ready")
+      throw new Error("the selected chat changed before the attachment read");
+    const entry = current.entries.findLast((e) => e.file === ${JSON.stringify(fileName)} && e.url);
+    if (!entry) return undefined;
+    const viewSlot = findProps((p) => typeof p.client?.desktop?.readAttachmentText === "function")?.client.accountSlot;
+    if (typeof viewSlot !== "string" || !viewSlot) throw new Error("the current Grok Bot account slot is unavailable");
+    return await window.desktop.main.readAttachmentText({ path: entry.url, agentId: ${JSON.stringify(agent.id)}, viewSlot });
+  `);
+  if (res === undefined) throw new Error(`no attachment named ${fileName} in ${agent.name}'s chat`);
+  if (res?.kind !== "text" || typeof res.text !== "string")
+    throw new Error(`${fileName} is not readable as text (${res?.kind ?? "unavailable"})`);
   process.stdout.write(res.text);
 }
 
