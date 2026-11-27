@@ -7,7 +7,7 @@ import { animate, clock, motion } from "./working.tsx";
 type Context = Plugin.Context;
 type Plane = OptimizedBuffer["buffers"]["fg"];
 
-export type Aim = { readonly hue: RGBA | undefined; readonly pacing: boolean };
+export type Aim = { readonly hue: RGBA | undefined; readonly motion: boolean; readonly pacing: boolean };
 export type Painter = {
   /** Paints one frame and returns true when nothing is moving, so the animation loop can stop. */
   readonly draw: (buffer: OptimizedBuffer, aim: Aim, elapsed: number) => boolean;
@@ -69,7 +69,7 @@ export function Pace(props: {
         const hue = props.hue;
         // The light sweeps only while the user is not typing: the window is blurred or the editor is empty.
         const pacing = motion() && hue !== undefined && (away() || prompt.editor.plainText === "");
-        setStill(painter.draw(buffer, { hue, pacing }, elapsed));
+        setStill(painter.draw(buffer, { hue, motion: motion(), pacing }, elapsed));
       } catch (error) {
         stop();
         const reason = error instanceof Error ? error.message : String(error);

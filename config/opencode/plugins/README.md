@@ -189,18 +189,19 @@ The line is never stored in history, so a flip takes effect at the next request.
 On Anthropic requests, `claude-auth/transforms.js` moves the line with the rest of the non-core system text into the first user message (see [Anthropic](#anthropic)).
 [COLLAB.md's Boundaries](../COLLAB.md#boundaries) own what the line authorizes; permissions are unchanged.
 
-`drive/tui.tsx` shows a bold `DRIVE` before `prompt.footer.status` while the shown session's root is on, and toasts `Drive on` or `Drive off` after each flip.
-The label takes the [work color](#usage) of the root's family while a session in it runs, and is bright blue otherwise.
-`drive/tui.tsx` mounts statusline's `Pace` in a slot appended to `prompt.footer`; while drive is on, `Pace` runs `drive/look.ts`.
+`drive/tui.tsx` toasts `Drive on` or `Drive off` after each flip.
+It mounts statusline's `Pace` in a slot appended to `prompt.footer`; while the shown session's root has drive on, `Pace` runs `drive/look.ts`.
 A draw error stops the look and reports `look off, <reason>` through the drive error toast.
 `drive/look.ts` draws the wheel and the chevrons, and hides statusline's work light while the chevrons have room.
 `drive/arrows.ts` draws `❯` chevrons on the prompt's model row, in its longest run of empty cells and 4 cells clear of the text or gauge at either end.
-While the tree waits, three dim bright-blue chevrons rest at the right end of that run.
-While the tree works, a group of about three chevrons in the work color travels from left to right at 16 cells per second, then starts again from the left.
-Typing while the tree works parks three chevrons in the work color at the right end, and so does `animations` off.
-The change between resting and traveling eases over 600 ms.
-When the run is shorter than 7 cells, `drive/arrows.ts` draws nothing and the work light shows instead.
-`drive/wheel.ts` puts a steering wheel in the label's color in the editor's top-right corner when text leaves room, and preserves the queue glyph.
+Each input row above it, from the editor's top padding down, runs its own group of about three chevrons, so the rows move out of step; groups draw only in empty cells 4 cells clear of text, the cursor, and the wheel.
+While a session in the root's family runs, the groups take that family's [work color](#usage) at full brightness and travel left to right at 16 cells per second; otherwise they are dim bright blue at 8 cells per second.
+A group that leaves its row re-enters from the left after a random wait.
+With `animations` off, nothing travels: three chevrons park at the right end of the model row in the same colors.
+With `animations` on, changes in color, brightness, and speed ease over 600 ms; with it off they snap.
+While the chevrons travel, `Pace` holds statusline's shared animation clock, so an idle session renders about 10 frames per second while the pane is shown.
+When the model row's run is shorter than 7 cells, `drive/arrows.ts` draws no chevrons in any row and the work light shows instead.
+`drive/wheel.ts` puts a steering wheel in the editor's top-right corner when text leaves room, in the work color while the family runs and bright blue otherwise, and preserves the queue glyph.
 `drive/rpc.ts` defines the `state` and `set` methods and the `changed` event the TUI follows.
 
 ## Usage

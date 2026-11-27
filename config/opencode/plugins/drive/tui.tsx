@@ -1,9 +1,9 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, createMemo, Show } from "solid-js";
+import { createEffect, createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Pace } from "../statusline/pace.tsx";
 import { lead, refresh } from "../statusline/working.tsx";
-import { look, mark } from "./look.ts";
+import { look } from "./look.ts";
 import { api } from "./rpc.ts";
 
 type Context = Plugin.Context;
@@ -16,27 +16,13 @@ export default Plugin.define({
     const root = (sessionID?: string) => (sessionID ? context.data.session.root(sessionID) : undefined);
 
     context.ui.slot({
-      before: "prompt.footer.status",
+      append: "prompt.footer",
       render: (input) => {
         const hue = createMemo(() => lead(context, input.sessionID));
         createEffect(() => {
           const id = root(input.sessionID);
           if (id) drive.sync(id).catch(drive.fail);
         });
-        return (
-          <Show when={drive.on[root(input.sessionID) ?? ""]}>
-            <text fg={mark(hue())} flexShrink={0}>
-              <b>DRIVE</b>
-            </text>
-          </Show>
-        );
-      },
-    });
-
-    context.ui.slot({
-      append: "prompt.footer",
-      render: (input) => {
-        const hue = createMemo(() => lead(context, input.sessionID));
         return (
           <Pace
             context={context}
