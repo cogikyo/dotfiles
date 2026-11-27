@@ -438,13 +438,15 @@ async function ask(probes: Probe[], name: string, prompt: string, timeoutS = "60
   console.error(`pool: ${target.pool} (pin follow-ups with --pool ${target.pool})`);
   const before = await open(target.page, target.agent);
   const since = Math.max(0, ...before.entries.map((e) => e.seq));
-  await compose(target.page, target.agent, text);
+  await compose(target, text);
   await submit(target, since, Number(timeoutS));
 }
 
-async function compose(page: Page, agent: Agent, text: string) {
+async function compose({ pool, page, agent }: Target, text: string) {
   const lines = JSON.stringify(text.trimEnd().split("\n"));
   const draft = await page.eval<string | undefined>(`
+    const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
+    if (dialog) return "dialog:" + (dialog.getAttribute("aria-label") || (dialog.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 40));
     const ed = editor();
     if (!ed) return undefined;
     if (ed.getText().trim()) return "draft";
@@ -452,6 +454,9 @@ async function compose(page: Page, agent: Agent, text: string) {
     ed.chain().focus().clearContent(true).insertContent(doc).run();
     return "ok";
   `);
+  if (draft?.startsWith("dialog:")) {
+    throw new Error(`pool ${pool} has a dialog open ("${draft.slice(7)}"); close it in the app first, nothing was sent`);
+  }
   if (draft === undefined) throw new Error("prompt field not found");
   if (draft === "draft") throw new Error(`${agent.name}'s prompt field holds an unsent draft; not overwriting it`);
 }
