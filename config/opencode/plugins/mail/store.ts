@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { homedir } from "node:os";
 import path from "node:path";
+import { content } from "../sessions/query.ts";
 import { type Ledger, type Letter, mailable, read, source } from "./mail.ts";
 
 const data = path.join(process.env.XDG_DATA_HOME || path.join(homedir(), ".local", "share"), "opencode");
@@ -38,9 +39,14 @@ const received = `
 const sent = `
   WITH calls AS (
     SELECT json_extract(part.value, '$.state.metadata') AS meta FROM session_message message, json_each(message.data, '$.content') part
-    WHERE message.session_id = ?1 AND message.type = 'assistant' AND instr(message.data, '"name":"mail"') > 0
+    WHERE message.session_id = ?1 AND message.type = 'assistant' AND instr(message.data, '"name":"' || ?2 || '"') > 0
+      AND json_type(message.data, '$.content') = 'array'
       AND json_extract(part.value, '$.type') = 'tool' AND json_extract(part.value, '$.name') = ?2
       AND json_extract(part.value, '$.state.status') = 'completed'
+    UNION ALL
+    SELECT json_extract(data, '$.state.metadata') FROM session_part
+    WHERE session_id = ?1 AND type = 'tool' AND instr(data, '"name":"' || ?2 || '"') > 0
+      AND json_extract(data, '$.name') = ?2 AND json_extract(data, '$.state.status') = 'completed'
   )
   SELECT meta, EXISTS (SELECT 1 FROM session_inbox WHERE id = json_extract(meta, '$.id')) AS parked FROM calls
   WHERE json_extract(meta, '$.from') = ?1
@@ -51,13 +57,6 @@ const parked = `
   SELECT DISTINCT session_id AS id FROM session_inbox
   WHERE type = 'synthetic' AND json_extract(payload, '$.metadata.source') = ?1`;
 
-/** Mirrors packages/core/src/session/history.ts withParts(); split parts replace legacy inline content. */
-export const parts = (message: string) => `
-  SELECT value AS data FROM json_each(${message}.data, '$.content')
-  WHERE NOT EXISTS (SELECT 1 FROM session_part WHERE message_id = ${message}.id)
-  UNION ALL
-  SELECT data FROM (SELECT data FROM session_part WHERE message_id = ${message}.id ORDER BY ordinal)`;
-
 // The host treats dismissal or decline as shutdown and keeps the claim; it must release these claims upstream.
 const dismissed = `
   EXISTS (SELECT 1 FROM session_message tail
@@ -65,9 +64,9 @@ const dismissed = `
       AND tail.seq = (SELECT max(seq) FROM session_message WHERE session_id = session.id)
       AND tail.type = 'assistant' AND json_extract(tail.data, '$.error.type') = 'aborted'
       AND session.time_busy <= json_extract(tail.data, '$.time.created')
-      AND EXISTS (SELECT 1 FROM (${parts("tail")}) part
-        WHERE json_extract(part.data, '$.state.error.type') = 'aborted'
-          AND json_extract(part.data, '$.state.error.message')
+      AND EXISTS (SELECT 1 FROM json_each(${content("tail")}) part
+        WHERE json_extract(part.value, '$.state.error.type') = 'aborted'
+          AND json_extract(part.value, '$.state.error.message')
             IN ('The user dismissed this question', 'The user declined this tool call')))`;
 
 const overdue = `

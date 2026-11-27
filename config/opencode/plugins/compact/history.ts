@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { opened, parts } from "../mail/store.ts";
+import { opened } from "../mail/store.ts";
+import { content } from "../sessions/query.ts";
 
 const Part = Schema.Union([
   Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
@@ -35,13 +36,13 @@ const rows = `
     json_extract(m.data, '$.outcome') AS outcome,
     CASE m.type WHEN 'assistant' THEN (
       SELECT json_group_array(json_object(
-        'type', json_extract(part.data, '$.type'),
-        'text', json_extract(part.data, '$.text'),
-        'status', json_extract(part.data, '$.state.status'),
-        'input', json(part.data -> '$.state.input')))
-      FROM (${parts("m")}) part
-      WHERE json_extract(part.data, '$.type') = 'text'
-        OR json_extract(part.data, '$.name') = 'workflow'
+        'type', json_extract(part.value, '$.type'),
+        'text', json_extract(part.value, '$.text'),
+        'status', json_extract(part.value, '$.state.status'),
+        'input', json(part.value -> '$.state.input')))
+      FROM json_each(${content("m")}) part
+      WHERE json_extract(part.value, '$.type') = 'text'
+        OR json_extract(part.value, '$.name') = 'workflow'
     ) END AS parts
   FROM session_message m
   WHERE m.session_id = ?1 AND (m.type IN ('user', 'assistant', 'idle') OR (m.type = 'synthetic'
@@ -54,8 +55,8 @@ function entry(row: Row): Entry {
   if (row.type === "user") return { ...base, kind: "user", text: row.text ?? "", files: row.files ?? 0 };
   if (row.type === "synthetic") return { ...base, kind: "answer", text: row.text ?? "" };
   if (row.type === "idle") return { ...base, kind: "idle", outcome: row.outcome ?? undefined };
-  const content = Schema.decodeUnknownSync(Parts)(row.parts ?? "[]").filter(Schema.is(Part));
-  return { ...base, kind: "assistant", finish: row.finish ?? undefined, parts: content };
+  const parts = Schema.decodeUnknownSync(Parts)(row.parts ?? "[]").filter(Schema.is(Part));
+  return { ...base, kind: "assistant", finish: row.finish ?? undefined, parts };
 }
 
 export function history(sessionID: string, file: string): readonly Entry[] {

@@ -69,8 +69,9 @@ const description = [
   "- text, reasoning: one session, oldest first. Rows: id, role, type, created, length (full text length), text.",
   "- tools: calls without outputs. Rows: id, created, tool, status, input (JSON text).",
   "- part: input/output/error and full output `length`; page output with `from`. Assistant addresses: `<message ID>#<index>`; bare IDs read non-assistant text.",
-  "- sql: one SELECT/WITH over session_v2, session_message (session_id, type, seq, data JSON), project, sqlite_schema; json_each/json_tree allowed. Bind values through `params`; `offset` skips rows.",
-  "  Filter session_message by session_id, as in `m.session_id = ?`; scans are rejected. Assistant data.content[] items use `type`; tool items use `name` (not `tool`) and `state.status/input/error`.",
+  "- sql: one SELECT/WITH over session_v2, session_message (session_id, type, seq, data JSON), session_part (session_id, message_id, ordinal, type, data JSON), project, sqlite_schema; json_each/json_tree allowed. Bind values through `params`; `offset` skips rows.",
+  "  Filter session_message and session_part by session_id (`m.session_id = ?`) or join parts on `p.message_id = m.id`; scans are rejected.",
+  "  Assistant content is session_part rows by ordinal, then any data.content[] items. Items use `type`; tool items use `name` (not `tool`) and `state.status/input/error`.",
 ].join("\n");
 
 async function query(input: Query, store: string, signal: AbortSignal) {

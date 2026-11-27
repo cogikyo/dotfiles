@@ -4,8 +4,15 @@ inputs AS (
   SELECT sm.session_id AS sid, CAST(json_extract(c.value, '$.state.input') AS TEXT) AS s
   FROM session_message sm, json_each(sm.data, '$.content') c
   WHERE sm.session_id IN (SELECT id FROM session_v2 WHERE time_updated >= ?2)
+    AND json_type(sm.data, '$.content') = 'array'
     AND json_extract(c.value, '$.type') = 'tool'
     AND CAST(json_extract(c.value, '$.state.input') AS TEXT) LIKE '%/tmp/opencode/%'
+  UNION ALL
+  SELECT sp.session_id, CAST(json_extract(sp.data, '$.state.input') AS TEXT)
+  FROM session_part sp
+  WHERE sp.session_id IN (SELECT id FROM session_v2 WHERE time_updated >= ?2)
+    AND sp.type = 'tool'
+    AND CAST(json_extract(sp.data, '$.state.input') AS TEXT) LIKE '%/tmp/opencode/%'
 ),
 occ(sid, rest) AS (
   SELECT sid, substr(s, instr(s, '/tmp/opencode/') + 14) FROM inputs

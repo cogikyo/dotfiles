@@ -5,17 +5,25 @@ import { retag, tag, title } from "./tags.ts";
 const excerpt = 800;
 const ceiling = 50_000;
 const sizes: Partial<Record<Query["query"], Record<string, number>>> = { tools: { input: 160 } };
-const tables = ["session_v2", "session_message", "project"];
+const tables = ["session_v2", "session_message", "session_part", "project"];
 const store = `s_${crypto.randomUUID().replaceAll("-", "")}`;
-const filters: Record<string, string> = { session_v2: "id", session_message: "session_id" };
-const huge = new Set(["session_message"]);
+const filters: Record<string, string> = { session_v2: "id", session_message: "session_id", session_part: "session_id" };
+const huge: Record<string, string> = { session_message: "m", session_part: "p" };
 const scans = new Set(["Last", "Count"]);
 const seeks = new Set(["SeekGE", "SeekGT", "SeekLE", "SeekLT"]);
 const bounds = new Set(["IdxGE", "IdxGT", "IdxLE", "IdxLT"]);
 const harness = ["synthetic", "system", "skill", "compaction"];
 const marker = "[hidden by refusals]";
-const HUGE =
-  "session_message is huge, so filter it by the indexed session_id, such as m.session_id = ? or m.session_id IN (SELECT id FROM session_v2 WHERE …)";
+const hint = (table: string) =>
+  `${table} is huge, so filter it by the indexed session_id, such as ${huge[table]}.session_id = ? or ${huge[table]}.session_id IN (SELECT id FROM session_v2 WHERE …)`;
+
+/** Mirrors withParts() in packages/core/src/session/history.ts. */
+export const content = (message: string) => `(
+  SELECT json_group_array(json(item.data) ORDER BY item.inline, item.position) FROM (
+    SELECT 0 AS inline, ordinal AS position, data FROM session_part WHERE message_id = ${message}.id
+    UNION ALL
+    SELECT 1, key, value FROM json_each(${message}.data, '$.content') WHERE json_type(${message}.data, '$.content') = 'array'
+  ) AS item)`;
 
 type Row = Record<string, unknown>;
 type Op = { opcode: string; p1: number; p2: number; p3: number; p4: unknown };
@@ -62,7 +70,7 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
                 json_extract(c.value, '$.name') AS tool,
                 json_extract(c.value, '$.state.status') AS status,
                 json_extract(c.value, '$.state.input') AS input
-         FROM session_message AS m, json_each(m.data, '$.content') AS c
+         FROM session_message AS m, json_each(${content("m")}) AS c
          WHERE m.session_id = ?1
            AND m.type = 'assistant'
            AND json_extract(c.value, '$.type') = 'tool'
@@ -77,14 +85,18 @@ const queries: Record<Query["query"], (db: Database, args: Query) => Row[]> = {
     if (index !== undefined && !/^\d+$/u.test(index))
       throw new Error("part must be a message ID, optionally followed by #<content index>");
     const row = db
-      .query<Row & { item: string | null }, SQLQueryBindings[]>(
-        `SELECT session_id AS session, type AS message, time_created AS created, json_extract(data, ?2) AS item
-         FROM session_message
-         WHERE id = ?1 AND (?3 IS NULL OR session_id = ?3)`,
+      .query<Row & { item: string | null; items: number | null }, SQLQueryBindings[]>(
+        `SELECT m.session_id AS session, m.type AS message, m.time_created AS created,
+                iif(?2 IS NULL, m.data, json_extract(${content("m")}, ?2)) AS item,
+                iif(?2 IS NULL AND m.type = 'assistant', json_array_length(${content("m")}), NULL) AS items
+         FROM session_message AS m
+         WHERE m.id = ?1 AND (?3 IS NULL OR m.session_id = ?3)`,
       )
-      .get(id ?? "", index === undefined ? "$" : `$.content[${index}]`, args.session ?? null);
+      .get(id ?? "", index === undefined ? null : `$[${index}]`, args.session ?? null);
     if (!row?.item) throw new Error(`no part ${address}${args.session ? ` in session ${args.session}` : ""}`);
-    const { item, ...head } = row;
+    const { item, items, ...head } = row;
+    if (items !== null)
+      throw new Error(`assistant messages hold ${items} content items; address one as <message ID>#<index>`);
     return [{ id: address, ...head, ...detail(JSON.parse(item), index === undefined, args.from ?? 0) }];
   },
   sql: (db, args) =>
@@ -97,7 +109,7 @@ function excerpts(db: Database, args: Query) {
       `WITH items AS (
          SELECT m.id || '#' || c.key AS id, m.seq, c.key AS position, 'assistant' AS role, m.type,
                 m.time_created AS created, json_extract(c.value, '$.text') AS text
-         FROM session_message AS m, json_each(m.data, '$.content') AS c
+         FROM session_message AS m, json_each(${content("m")}) AS c
          WHERE m.session_id = ?1 AND m.type = 'assistant' AND json_extract(c.value, '$.type') = ?2
          UNION ALL
          SELECT id, seq, -1, iif(type = 'compaction', 'assistant', 'user'), type,
@@ -131,15 +143,10 @@ type Item = {
   name?: string;
   text?: string;
   summary?: string;
-  content?: unknown[];
   state?: { status?: string; input?: unknown; content?: Content[]; error?: { message?: string } };
 };
 
 function detail(item: Item, whole: boolean, from: number) {
-  if (whole && item.content)
-    throw new Error(
-      `assistant messages hold ${item.content.length} content items; address one as <message ID>#<index>`,
-    );
   const output =
     item.type === "tool"
       ? (item.state?.content ?? [])
@@ -205,7 +212,7 @@ function inspect(db: Database, ops: Op[]) {
       throw new Error(
         `sql may read only ${[...tables, "sqlite_schema"].join(", ")}; it reads root page ${String(op.p2)}`,
       );
-    if (huge.has(cursor.table)) opened.set(op.p1, cursor);
+    if (cursor.table in huge) opened.set(op.p1, cursor);
   }
   return opened;
 }
@@ -228,7 +235,7 @@ function guardScans(ops: Op[], cursors: Map<number, Cursor>) {
   for (const [index, op] of ops.entries()) {
     const cursor = cursors.get(op.p1);
     if (!cursor) continue;
-    if (scans.has(op.opcode)) throw new Error(`sql scans ${cursor.table} (${op.opcode}); ${HUGE}`);
+    if (scans.has(op.opcode)) throw new Error(`sql scans ${cursor.table} (${op.opcode}); ${hint(cursor.table)}`);
     const codes = seen.get(op.p1) ?? new Set<string>();
     seen.set(op.p1, codes.add(op.opcode));
     if (op.opcode === "Column" && op.p2 === 0 && cursor.keyed && member(ops.slice(index + 1), op.p3, ephemeral))
@@ -236,7 +243,8 @@ function guardScans(ops: Op[], cursors: Map<number, Cursor>) {
   }
   for (const [cursor, codes] of seen) {
     const problem = unbounded(codes);
-    if (problem) throw new Error(`sql ${problem} ${cursors.get(cursor)?.table}; ${HUGE}`);
+    const table = cursors.get(cursor)?.table ?? "";
+    if (problem) throw new Error(`sql ${problem} ${table}; ${hint(table)}`);
   }
 }
 

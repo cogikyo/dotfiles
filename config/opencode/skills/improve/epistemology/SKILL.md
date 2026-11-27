@@ -49,8 +49,8 @@ Do not join `project` or build a project-resolution layer; many sessions use `pr
 Treat a parent plus its children as one occurrence unless they independently evidence the finding.
 Inspect `reasoning` only after narrowing to a session that still needs it.
 The tool skips empty reasoning; also skip encrypted or redacted text, and do not use reasoning alone as evidence.
-Use `sql` only when no operation answers the question, and bind `session_message.session_id` to one selected session.
-Assistant content items are in `session_message.data.content`; `json_each` can inspect them.
+Use `sql` only when no operation answers the question, and bind `session_id` to one selected session.
+Assistant content is `session_part` rows by `ordinal`, then any inline `session_message.data.content` items.
 
 ## Find
 

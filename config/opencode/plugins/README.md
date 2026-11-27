@@ -101,7 +101,7 @@ The sidebar refreshes on inbox enqueue, delivery, and cancellation, `session.del
 
 `mail/rpc.ts` exposes `ledger` and `parked`; `mail/store.ts` reads the OpenCode DB read-only because the TUI initially loads only the newest 20 messages per session.
 The question plugin reads this parked-mail store for its withdrawal check.
-The queries depend on host tables `session_v2`, `session_message`, and `session_inbox`, including their JSON message and metadata shapes; review these after host updates.
+The queries depend on host tables `session_v2`, `session_message`, `session_part`, and `session_inbox`, including their JSON message and metadata shapes; review these after host updates.
 Received history is filtered by `to` and sent history by `from`, so forks do not inherit a parent's mail.
 This plugin has no key or separate state file.
 See [Byline](#byline) for transcript boxes and [Hyprd](#hyprd) for desktop notices.
@@ -471,8 +471,9 @@ The direct tool keeps 800-character excerpts.
 Host-visible tool output stops at 2,000 lines or 50 KiB; return counts, IDs, and short excerpts rather than raw rows from scripts.
 Use `list`, `text`, `reasoning`, `tools`, or `part` before raw `sql`.
 Assistant item addresses are `<message ID>#<index>`; bare message IDs read non-assistant text.
-Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
-Message reads must use an indexed `session_id` bound.
+The index follows the host's order: `session_part` rows by `ordinal`, then any inline `data.content[]` items.
+Raw queries accept one bound `SELECT` or `WITH` over `session_v2`, `session_message`, `session_part`, `project`, and `sqlite_schema`, with `json_each` and `json_tree` allowed.
+Message and part reads must use a bounded index seek, such as on `session_id` or a part's `message_id`.
 
 A title tag is an uppercase prefix such as `[CLOSED,FIX] ` or `[REFUSALS] `, defined in `sessions/tags.ts`.
 It holds an optional state (`CLOSED`, `ARCHIVED`, or `RESEARCH`) first, then flags (`FIX`, `ISSUES`, `REVIEWME`, `TODO`, or `REFUSALS`), with at least one name.
