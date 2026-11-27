@@ -36,6 +36,9 @@ When a rule seems to need an example, rewrite the rule until it stands alone.
 Notation is the exception: a diagram, graph, or format whose shape words cannot carry may show one sample.
 This rule is a trial; `retro` proposes removing examples where they caused problems.
 
+Instruction files state the current rule as fact: `AGENTS.md`, `COLLAB.md`, `ROUTING.md`, agent prompts, and skills.
+Leave out dates, scores, test results, and how a rule was learned; the commit message holds those.
+
 ## Structure and emphasis
 
 Use _italics_ for a short reason only when it covers cases the rule doesn't name.
