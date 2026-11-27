@@ -64,7 +64,7 @@ export function arrows(renderer: CliRenderer, prompt: Prompt) {
   };
 }
 
-/** The editor's columns, the input's rows from the editor's top padding down to the model row, and the model row's longest blank stretch trimmed by `margin` where text borders it; undefined when that stretch is too short for the parked chevrons. */
+/** The editor's columns, the input rows above the model row, and the model row's longest blank run (trimmed by `margin` where text borders it); undefined when that run is too short for the parked chevrons. */
 function lane(buffer: OptimizedBuffer, prompt: Prompt) {
   const { width, height } = buffer;
   const y = prompt.cap.screenY - 1;
