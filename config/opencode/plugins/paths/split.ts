@@ -1,0 +1,92 @@
+import { TextAttributes } from "@opentui/core";
+import { pathToFileURL } from "node:url";
+
+export type Span = {
+  text: string;
+  attributes?: number;
+  link?: { url: string };
+  code: boolean;
+  math?: string;
+  target?: string;
+};
+
+type Found = { start: number; end: number; url: string };
+type Resolve = (token: string) => string | undefined;
+
+const openers = String.raw`[\s([{<"'=*]`;
+const opener = new RegExp(openers);
+const starts = { bounded: new RegExp(`(?:^|${openers})(~?/)`), inner: new RegExp(`${openers}(~?/)`) };
+const trailer = /[\s.,;:!?)\]}>"'`*]/;
+const cut = /["'`<>|]/;
+const head = /^(?:~\/|\/)(?!\/)./;
+
+export function split<S extends Span>(spans: readonly S[], home: string, exists: (path: string) => boolean): S[] {
+  const resolve: Resolve = (raw) => {
+    const path = raw.startsWith("~/") ? home + raw.slice(1) : raw;
+    return exists(path) ? pathToFileURL(path).href : undefined;
+  };
+  return spans.flatMap((span, index) => {
+    if (span.link || span.target !== undefined || span.math !== undefined) return [span];
+    const found = span.code
+      ? whole(span.text, resolve)
+      : prose(span.text, spans[index - 1]?.text.at(-1), spans[index + 1]?.text[0], resolve);
+    return found.length === 0 ? [span] : pieces(span, found);
+  });
+}
+
+function pieces<S extends Span>(span: S, found: Found[]): S[] {
+  const out: S[] = [];
+  let at = 0;
+  for (const { start, end, url } of found) {
+    if (start > at) out.push({ ...span, text: span.text.slice(at, start) });
+    out.push({
+      ...span,
+      text: span.text.slice(start, end),
+      link: { url },
+      attributes: (span.attributes ?? 0) | TextAttributes.UNDERLINE,
+    });
+    at = end;
+  }
+  if (at < span.text.length) out.push({ ...span, text: span.text.slice(at) });
+  return out;
+}
+
+function whole(text: string, resolve: Resolve): Found[] {
+  const lead = /^`+\s?/.exec(text)?.[0].length ?? 0;
+  const inner = text.slice(lead).replace(/\s?`+$/, "");
+  if (/\s/.test(inner) || cut.test(inner)) return [];
+  const found = token(inner, true, resolve);
+  return found?.start === 0 ? [{ ...found, start: lead, end: lead + found.end }] : [];
+}
+
+function prose(text: string, before: string | undefined, after: string | undefined, resolve: Resolve): Found[] {
+  return [...text.matchAll(/\S+/g)].flatMap((match) => {
+    const start = match.index;
+    const word = match[0];
+    const bounded = start > 0 || before === undefined || opener.test(before);
+    const continued = start + word.length === text.length && after !== undefined && !trailer.test(after);
+    const found = continued ? undefined : token(word, bounded, resolve);
+    return found ? [{ ...found, start: start + found.start, end: start + found.end }] : [];
+  });
+}
+
+function token(word: string, bounded: boolean, resolve: Resolve): Found | undefined {
+  if (word.includes("://")) return;
+  const match = (bounded ? starts.bounded : starts.inner).exec(word);
+  if (!match) return;
+  const start = match.index + match[0].length - match[1].length;
+  const rest = word.slice(start);
+  const stop = rest.search(cut);
+  const path = trim(stop === -1 ? rest : rest.slice(0, stop));
+  if (!head.test(path)) return;
+  const url = resolve(path);
+  return url ? { start, end: start + path.length, url } : undefined;
+}
+
+function trim(raw: string) {
+  return bare(bare(raw).replace(/:\d+(?::\d+)?$/, ""));
+}
+
+function bare(raw: string) {
+  return raw.replace(/[.,;:!?)\]}*]+$/, "");
+}
