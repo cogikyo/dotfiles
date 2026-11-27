@@ -200,12 +200,6 @@ class Page {
     return res.result.result.value as T;
   }
 
-  async enter(by: number) {
-    const key = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 };
-    await this.send("Input.dispatchKeyEvent", { type: "keyDown", text: "\r", ...key }, by - Date.now());
-    await this.send("Input.dispatchKeyEvent", { type: "keyUp", ...key }, by - Date.now());
-  }
-
   close() {
     this.ws.close();
   }
@@ -465,9 +459,13 @@ async function submit(target: Target, since: number, timeoutS: number) {
   const { pool, page, agent } = target;
   const deadline = Date.now() + timeoutS * 1000;
   let doubt: string | undefined;
-  await page.enter(Math.min(deadline, Date.now() + CALL_MS)).catch((error) => {
-    doubt = `Enter got no acknowledgement: ${message(error)}`;
-  });
+  const submitted = await page
+    .eval<boolean>(`return editor()?.commands.keyboardShortcut("Enter") ?? false;`, Math.min(deadline - Date.now(), CALL_MS))
+    .catch((error) => {
+      doubt = `the submit call got no answer: ${message(error)}`;
+      return undefined;
+    });
+  if (submitted === false) throw new Error(`${agent.name}'s prompt field did not accept Enter; nothing was sent`);
   const printed = new Set<number>();
   const asks = new Map<number, string>();
   let requestId: string | undefined;

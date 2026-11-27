@@ -70,7 +70,7 @@ Do not hardcode other names.
 Approvals stay with the user in the app.
 `ask` prints approval requests to stderr.
 Opening a bot switches the chat the user sees in that app.
-`ask` refuses to overwrite an unsent draft in the prompt field, and before inserting anything it refuses while a dialog is open in the app, since that dialog would take the Enter; ask the user to close it.
+`ask` refuses to overwrite an unsent draft in the prompt field, and before inserting anything it refuses while a dialog is open in the app, since that dialog can trap the app's own handlers; ask the user to close it.
 
 ## Judge
 
