@@ -332,7 +332,7 @@ async function choose(found: Target[]) {
   if (best) return best;
   const usages = rated.map((r) => `${r.pool} ${spent(r)}`).join("; ");
   throw new Error(
-    `no pool with ${found[0].agent.name} is under ${FLOOR}% used with a working usage call (${usages}); --pool overrides`,
+    `no pool with ${found[0].agent.name} is under ${FLOOR}% used with a working usage call (${usages}); on-demand spend is off-limits, so nothing was sent`,
   );
 }
 
@@ -434,7 +434,7 @@ async function ask(probes: Probe[], name: string, prompt: string, timeoutS = "60
   const text = prompt === "-" ? await Bun.stdin.text() : prompt;
   if (!text.trim()) throw new Error("empty prompt");
   const found = await holders(probes, name);
-  const target = pinned ? found[0] : await choose(found);
+  const target = await choose(found);
   console.error(`pool: ${target.pool} (pin follow-ups with --pool ${target.pool})`);
   const before = await open(target.page, target.agent);
   const since = Math.max(0, ...before.entries.map((e) => e.seq));

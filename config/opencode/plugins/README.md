@@ -204,9 +204,8 @@ It places them right to left and stops at the first chevron that would touch tex
 `usage_status` only reads the local cache and reports capacity, freshness, and reset timing.
 `usage/tui.tsx` prepends root-session usage rows to `sidebar.content`; click a provider heading to refresh it.
 OpenAI and OpenCode Go use V2 integration credentials, Anthropic uses the fixed Claude directories, and xAI uses Grok CLI auth.
-xAI's `G` and `O` rows come from the X Grok Bot window through `grok-bot/bot.ts --pool x pools --json`.
-`G` is its weekly usage, and `O` is its on-demand spend as a percent of the monthly limit, shown only when the limit is set.
-`G` shows `--` while that window is down or unresponsive, and both rows appear only when the Grok CLI billing reads.
+xAI's `G` row is the X Grok Bot window's weekly usage, read through `grok-bot/bot.ts --pool x pools --json`.
+`G` shows `--` while that window is down or unresponsive, and appears only when the Grok CLI billing reads.
 Cursor exchanges the bridge's API key at `~/.local/share/dotfiles/cursor-api-key` for a dashboard token and shows `no auth` only when that file is missing.
 Caches are `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/<provider>.json`.
 Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/opencode-<uid>/usage-sidebar-<provider>.lock` without that variable.

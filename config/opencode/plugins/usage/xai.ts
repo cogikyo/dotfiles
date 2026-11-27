@@ -12,7 +12,7 @@ const { id, label, staleAfterMS } = usageProviders.xai;
 export const xaiUsage: ProviderAdapter = {
   id,
   label,
-  placeholders: ["W", "M", "G", "O"],
+  placeholders: ["W", "M", "G"],
   poll: {
     minFetchIntervalMS: 5 * 60_000,
     errorBackoffMS: 5 * 60_000,
@@ -50,18 +50,13 @@ function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["
   return { id, label, windows, note, noteKind };
 }
 
-// G and O read the X account's Grok Bot app panel through bot.ts, not the Grok CLI billing API.
+// G reads the X account's Grok Bot app panel through bot.ts, not the Grok CLI billing API.
 const GROK_BOT = path.resolve(import.meta.dirname, "..", "..", "skills", "orchestration", "grok-bot", "bot.ts");
 
 async function grokBot(): Promise<UsageWindow[]> {
   const pool = await botPool();
   if (pool?.state !== "live") return [{ label: "G" }];
-  const weekly = { label: "G", usedPercent: botPercent(num(pool.percentUsed)), resetAt: msTime(pool.nextResetMs) };
-  const demand = record(pool.onDemand);
-  const used = num(demand?.usedCents);
-  const limit = num(demand?.limitCents);
-  if (used === undefined || limit === undefined || limit <= 0) return [weekly];
-  return [weekly, { label: "O", usedPercent: botPercent((used / limit) * 100), resetAt: msTime(demand?.resetMs) }];
+  return [{ label: "G", usedPercent: botPercent(num(pool.percentUsed)), resetAt: msTime(pool.nextResetMs) }];
 }
 
 async function botPool() {

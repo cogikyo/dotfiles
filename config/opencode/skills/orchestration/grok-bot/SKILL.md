@@ -21,10 +21,10 @@ Two app instances run under different accounts, and `bot.ts` calls each one a po
 Each bot lives on one pool.
 `ask` without `--pool` picks among the live pools that have the bot: it drops any at or above 95% weekly usage or whose usage call failed, then takes the one whose usage resets soonest.
 Pools with no reset time sort last, and ties go to `trend`.
-The floor exists because both accounts bill on-demand past their allowance: Trend with no spend limit, X up to $50 a month.
+Both accounts bill on-demand past their allowance, and on-demand spend is never allowed, so the floor applies to every `ask`, pinned or not.
 
 `read` and `file` use the one live pool that has the bot; pass `--pool` when both have it, and note that `ask` prints its choice to stderr.
-`--pool trend|x` before the command pins a pool, skips the floor, and fails if that pool is down or unresponsive.
+`--pool trend|x` before the command pins a pool and fails if that pool is down or unresponsive.
 
 ## App
 
