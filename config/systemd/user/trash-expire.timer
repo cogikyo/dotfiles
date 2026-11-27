@@ -1,0 +1,9 @@
+[Unit]
+Description=Empty trash items older than 30 days, daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

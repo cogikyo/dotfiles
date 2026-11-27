@@ -1,0 +1,6 @@
+[Unit]
+Description=Empty trash items older than 30 days
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/trash-empty -f 30
