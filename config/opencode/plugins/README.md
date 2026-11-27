@@ -204,6 +204,9 @@ It places them right to left and stops at the first chevron that would touch tex
 `usage_status` only reads the local cache and reports capacity, freshness, and reset timing.
 `usage/tui.tsx` prepends root-session usage rows to `sidebar.content`; click a provider heading to refresh it.
 OpenAI and OpenCode Go use V2 integration credentials, Anthropic uses the fixed Claude directories, and xAI uses Grok CLI auth.
+xAI's `G` and `O` rows come from the X Grok Bot window through `grok-bot/bot.ts --pool x pools --json`.
+`G` is its weekly usage, and `O` is its on-demand spend as a percent of the monthly limit, shown only when the limit is set.
+`G` shows `--` while that window is down or unresponsive, and both rows appear only when the Grok CLI billing reads.
 Cursor exchanges the bridge's API key at `~/.local/share/dotfiles/cursor-api-key` for a dashboard token and shows `no auth` only when that file is missing.
 Caches are `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/<provider>.json`.
 Locks are `${XDG_RUNTIME_DIR}/opencode/usage-sidebar-<provider>.lock`, or `/tmp/opencode-<uid>/usage-sidebar-<provider>.lock` without that variable.
@@ -740,6 +743,20 @@ It adds a backtick to the hook filter, which moves every block with inline code 
 Headings use a per-theme copy of the syntax style, so diffs and file views of Markdown keep `markdown.heading`.
 A palette change swaps in a fresh copy, because OpenTUI does not repaint a style that changes in place.
 Disposing restores the prototype and every hooked renderable.
+
+## Paths
+
+`paths/tui.tsx` links file paths in transcript Markdown and runs `xdg-open` on a plain click.
+Stock OpenCode does not open `file://` links: its `openUrl` rejects anything but http(s) with an error toast, so the plugin handles the click on each transcript Markdown itself.
+It chains the host's `ses_` session-link hook, adds `/` to that hook's filter, and coexists with [Transcript](#transcript)'s prototype setter wrapping.
+
+`paths/split.ts` links only absolute and `~/` paths that exist when the block renders; a trailing `:line` stays outside the link.
+A code span links only when it holds nothing but the path, so commands stay copyable.
+Fenced code blocks and tool output never link.
+A file created after its paragraph rendered stays plain until that block runs the hook again.
+
+Through `config/mimeapps.list`, text and source types open with `share/applications/hyprd-edit.desktop` (`hyprd edit %f`), in the workspace nvim.
+`file` sniffs the type from the file's contents, and a type missing from that list falls through to xdg-open's browser fallback.
 
 ## Workflow
 

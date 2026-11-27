@@ -12,7 +12,7 @@ const { id, label, staleAfterMS } = usageProviders.xai;
 export const xaiUsage: ProviderAdapter = {
   id,
   label,
-  placeholders: ["W", "M"],
+  placeholders: ["W", "M", "G", "O"],
   poll: {
     minFetchIntervalMS: 5 * 60_000,
     errorBackoffMS: 5 * 60_000,
@@ -24,6 +24,11 @@ export const xaiUsage: ProviderAdapter = {
 };
 
 async function load(): Promise<ProviderUsage> {
+  const [cli, bot] = await Promise.all([loadCli(), grokBot()]);
+  return cli.windows.length ? usage([...cli.windows, ...bot]) : cli;
+}
+
+async function loadCli(): Promise<ProviderUsage> {
   const auth = await liveAuth();
   if (!auth.ok) return usage([], auth.reason, "warn");
 
@@ -43,6 +48,49 @@ async function load(): Promise<ProviderUsage> {
 
 function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["noteKind"]): ProviderUsage {
   return { id, label, windows, note, noteKind };
+}
+
+// G and O read the X account's Grok Bot app panel through bot.ts, not the Grok CLI billing API.
+const GROK_BOT = path.resolve(import.meta.dirname, "..", "..", "skills", "orchestration", "grok-bot", "bot.ts");
+
+async function grokBot(): Promise<UsageWindow[]> {
+  const pool = await botPool();
+  if (pool?.state !== "live") return [{ label: "G" }];
+  const weekly = { label: "G", usedPercent: botPercent(num(pool.percentUsed)), resetAt: msTime(pool.nextResetMs) };
+  const demand = record(pool.onDemand);
+  const used = num(demand?.usedCents);
+  const limit = num(demand?.limitCents);
+  if (used === undefined || limit === undefined || limit <= 0) return [weekly];
+  return [weekly, { label: "O", usedPercent: botPercent((used / limit) * 100), resetAt: msTime(demand?.resetMs) }];
+}
+
+async function botPool() {
+  let proc: Bun.Subprocess<"ignore", "pipe", "ignore">;
+  try {
+    proc = Bun.spawn([process.execPath, GROK_BOT, "--pool", "x", "pools", "--json"], {
+      env: { ...process.env, BUN_BE_BUN: "1" },
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "ignore",
+      timeout: 15_000,
+    });
+  } catch {
+    return undefined;
+  }
+  const [pools, code] = await Promise.all([new Response(proc.stdout).json().catch(() => undefined), proc.exited]);
+  if (code !== 0 || !Array.isArray(pools)) return undefined;
+  return pools.map(record).find((pool) => pool?.pool === "x");
+}
+
+function botPercent(value: number | undefined) {
+  if (value === undefined) return undefined;
+  const used = Math.max(0, Math.min(100, value));
+  return used > 0 && used < 1 ? 1 : used;
+}
+
+function msTime(value: unknown) {
+  const ms = num(value);
+  return ms === undefined ? undefined : new Date(ms).toISOString();
 }
 
 const BILLING_USAGE_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=usage";
