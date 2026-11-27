@@ -20,6 +20,7 @@ const holds = new Set<Hold>();
 const [clock, setClock] = createSignal(0);
 
 let moving = true;
+let focused = true;
 let timer: ReturnType<typeof setInterval> | undefined;
 let unwatch: (() => void) | undefined;
 
@@ -79,7 +80,8 @@ export function animate(renderer?: CliRenderer) {
     renderer?.requestRender();
     if (!on) return;
     holds.add(hold);
-    renderer?.on("focus", reveal);
+    renderer?.on("focus", focus);
+    renderer?.on("blur", blur);
     unwatch ??= watch(run);
     run();
   };
@@ -87,7 +89,10 @@ export function animate(renderer?: CliRenderer) {
   renderer?.requestRender();
   return () => {
     stopped = true;
-    if (holds.delete(hold)) renderer?.off("focus", reveal);
+    if (holds.delete(hold)) {
+      renderer?.off("focus", focus);
+      renderer?.off("blur", blur);
+    }
     if (holds.size === 0) {
       unwatch?.();
       unwatch = undefined;
@@ -98,8 +103,20 @@ export function animate(renderer?: CliRenderer) {
   };
 }
 
+// Animations run only while the terminal has focus; a blurred window keeps its last frame.
+function focus() {
+  focused = true;
+  reveal();
+  run();
+}
+
+function blur() {
+  focused = false;
+  run();
+}
+
 function run() {
-  if (holds.size > 0 && shown()) {
+  if (holds.size > 0 && shown() && focused) {
     timer ??= setInterval(beat, tick);
     return;
   }

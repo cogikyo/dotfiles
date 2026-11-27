@@ -199,7 +199,7 @@ While a session in the root's family runs, the groups take that family's [work c
 A group that leaves its row re-enters from the left after a random wait.
 With `animations` off, nothing travels: three chevrons park at the right end of the model row in the same colors.
 With `animations` on, changes in color, brightness, and speed ease over 600 ms; with it off they snap.
-While the chevrons travel, `Pace` holds statusline's shared animation clock, so an idle session renders about 10 frames per second while the pane is shown.
+While the chevrons travel, `Pace` holds statusline's shared animation clock, so an idle session renders about 10 frames per second while its terminal has focus.
 When the model row's run is shorter than 7 cells, `drive/arrows.ts` draws no chevrons in any row and the work light shows instead.
 `drive/wheel.ts` puts a steering wheel in the editor's top-right corner when text leaves room, in the work color while the family runs and bright blue otherwise, and preserves the queue glyph.
 `drive/rpc.ts` defines the `state` and `set` methods and the `changed` event the TUI follows.
@@ -632,7 +632,8 @@ The row stays the host's own while nothing runs.
 `Pace` in `statusline/pace.tsx` hosts the light: it paints after the prompt, skips `modal` and `menu` keymap modes, and holds the animation clock only while the light moves.
 Another plugin hides the light on a prompt with `veil` from `statusline/light.ts`, as drive does while its chevrons show.
 A draw error stops the light and shows a `Statusline: light off, <reason>` toast.
-`statusline/view.ts` uses the shared [hyprd bus](#hyprd) to pause these animations in out-of-view panes; unknown view state leaves them running.
+The shared clock in `statusline/working.tsx` runs only while the terminal has focus, so every clock-driven animation holds its last frame in a blurred window.
+`statusline/view.ts` uses the shared [hyprd bus](#hyprd) to also pause them in out-of-view panes; unknown view state leaves them running.
 
 `statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
 In queue mode, Enter dispatches `prompt.queue` only while the session runs, the prompt is in normal mode, and the prompt has text.
