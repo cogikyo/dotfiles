@@ -280,14 +280,15 @@
   },
   "transcript": {
     "code": {
-      "path": "grn_4",
+      "path": "tyr_3",
       "command": "orn_4",
-      "danger": "rby_1",
-      "identifier": "cyn_3",
-      "number": "pnk_3",
+      "danger": "rby_3",
+      "symbol": "blu_2 bold",
+      "key": "cyn_3",
+      "number": "pnk_4",
       "other": "grn_4"
     },
-    "session": "prp_3",
+    "session": "prp_3 bold",
     "h1": "orn_3",
     "h2": "orn_4",
     "h3": "blu_4",

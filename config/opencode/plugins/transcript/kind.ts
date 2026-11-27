@@ -1,4 +1,4 @@
-export const kinds = ["path", "command", "danger", "identifier", "number", "other"] as const;
+export const kinds = ["path", "command", "danger", "symbol", "key", "number", "other"] as const;
 
 export type Kind = (typeof kinds)[number] | "hex";
 
@@ -32,7 +32,9 @@ const NUMBER = [
   /^\d{1,2}:\d{2}(:\d{2})?$/,
   /^U\+[0-9A-F]{4,6}$/,
 ];
-const IDENTIFIER = /^[-$#@]*[a-z_][\w$.:/#@+*-]*(\(\))?$/i;
+const IDENTIFIER = /^([-$#@]*[a-z_][\w$.:/#@+*-]*(\(\))?|\$\{[a-z_]\w*\})$/i;
+const KEY = /^[-$]|\w\.\w/;
+const span = (token: string) => (!token.endsWith("()") && KEY.test(token) ? "key" : "symbol");
 const DECLARATION =
   /^(export\s+(default|const|let|var|function|class|async|type|interface|enum|declare|abstract)\b|export\s*[{*]|import\s+[^-\s])/;
 
@@ -147,6 +149,6 @@ export function kind(text: string, probe: Probe): Kind {
   }
   if (path(token, probe)) return "path";
   if (command(token, probe)) return danger(token) ? "danger" : "command";
-  if (IDENTIFIER.test(token)) return "identifier";
+  if (IDENTIFIER.test(token)) return span(token);
   return "other";
 }

@@ -6,24 +6,23 @@ import { delimiter } from "node:path";
 import { Compiler, isTree, load, source, type Tree } from "../vagari/build.ts";
 import { kind, kinds, type Probe } from "./kind.ts";
 import { patch } from "./markdown.ts";
+import { paint, type Paint } from "./paint.ts";
 
 type Palette = {
   readonly code: RGBA;
   readonly heading: RGBA;
   readonly link: RGBA;
-  readonly session?: RGBA;
-  readonly kinds: Partial<Record<(typeof kinds)[number], RGBA>>;
-  readonly headings: ReadonlyMap<number, RGBA>;
+  readonly session?: Paint;
+  readonly kinds: Partial<Record<(typeof kinds)[number], Paint>>;
+  readonly headings: ReadonlyMap<number, Paint>;
 };
+
+const FALLBACK: Partial<Record<(typeof kinds)[number], (typeof kinds)[number]>> = { danger: "command", key: "symbol" };
 
 const isKind = (key: string): key is (typeof kinds)[number] => (kinds as readonly string[]).includes(key);
 
 function settings(compiler: Compiler, block: Tree) {
-  const color = (name: unknown, where: string) => {
-    const hex = compiler.hex(name, where);
-    return hex ? RGBA.fromHex(hex) : undefined;
-  };
-  const palette: { kinds: Palette["kinds"]; headings: Map<number, RGBA>; session?: RGBA } = {
+  const palette: { kinds: Palette["kinds"]; headings: Map<number, Paint>; session?: Paint } = {
     kinds: {},
     headings: new Map(),
   };
@@ -31,12 +30,12 @@ function settings(compiler: Compiler, block: Tree) {
     const where = `transcript.${key}`;
     const level = /^h([1-6])$/.exec(key)?.[1];
     if (level) {
-      const fg = color(value, where);
-      if (fg) palette.headings.set(Number(level), fg);
-    } else if (key === "session") palette.session = color(value, where);
+      const found = paint(compiler, value, where);
+      if (found) palette.headings.set(Number(level), found);
+    } else if (key === "session") palette.session = paint(compiler, value, where);
     else if (key === "code" && isTree(value)) {
       for (const [name, hex] of Object.entries(value)) {
-        if (isKind(name)) palette.kinds[name] = color(hex, `${where}.${name}`);
+        if (isKind(name)) palette.kinds[name] = paint(compiler, hex, `${where}.${name}`);
         else compiler.fail(`${where}.${name}`, hex, `is not a span kind; use ${kinds.join(", ")}`);
       }
     } else compiler.fail(where, value, "is not a transcript setting; use code, session, or h1 through h6");
@@ -105,8 +104,8 @@ export default Plugin.define({
         code(text, fg) {
           if (!palette || !probe || !fg?.equals(palette.code)) return undefined;
           const found = kind(text, probe);
-          if (found === "hex") return RGBA.fromHex(text.trim());
-          return palette.kinds[found] ?? (found === "danger" ? palette.kinds.command : undefined);
+          if (found === "hex") return { fg: RGBA.fromHex(text.trim()), bold: false };
+          return palette.kinds[found] ?? palette.kinds[FALLBACK[found] ?? found];
         },
         heading: (level, fg) => (palette && fg?.equals(palette.heading) ? palette.headings.get(level) : undefined),
         session: (fg) => (palette && fg?.equals(palette.link) ? palette.session : undefined),

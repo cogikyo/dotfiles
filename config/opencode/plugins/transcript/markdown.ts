@@ -6,6 +6,7 @@ import {
   type Renderable,
   type RGBA,
 } from "@opentui/core";
+import type { Paint } from "./paint.ts";
 
 // The host runs OpenTUI 0.9.9; node_modules types are 0.8.0, which predate inline hooks.
 export type Span = {
@@ -29,9 +30,9 @@ type Rerun = { rerunInlineHook(select: (source: string) => boolean): void };
 type Filter = readonly string[];
 
 export type Look = {
-  code(text: string, fg: RGBA | undefined): RGBA | undefined;
-  heading(level: number, fg: RGBA | undefined): RGBA | undefined;
-  session(fg: RGBA | undefined): RGBA | undefined;
+  code(text: string, fg: RGBA | undefined): Paint | undefined;
+  heading(level: number, fg: RGBA | undefined): Paint | undefined;
+  session(fg: RGBA | undefined): Paint | undefined;
 };
 
 type Accessor<T> = PropertyDescriptor & {
@@ -93,6 +94,12 @@ export function closed(source: string) {
   return count;
 }
 
+const embolden = (span: Span, { fg, bold }: Paint): Span => ({
+  ...span,
+  fg,
+  ...(bold && { attributes: (span.attributes ?? 0) | TextAttributes.BOLD }),
+});
+
 const idle = (renderer: CliRenderer) => renderer.idle().catch(() => undefined);
 
 class Styles {
@@ -112,8 +119,8 @@ class Styles {
     const headings = [1, 2, 3, 4, 5, 6].flatMap((level) => {
       const name = `markup.heading.${level}`;
       const base = shared.getStyle(name);
-      const fg = this.heading(level, base?.fg);
-      return base && fg ? [{ name, style: { ...base, fg } }] : [];
+      const paint = this.heading(level, base?.fg);
+      return base && paint ? [{ name, style: { ...base, fg: paint.fg, ...(paint.bold && { bold: true }) } }] : [];
     });
     if (headings.length === 0) return shared;
     copy = SyntaxStyle.fromStyles(shared.getAllStyles(), this.renderer.nativeScene);
@@ -170,15 +177,15 @@ export function patch(renderer: CliRenderer, look: Look) {
     let settled = closed(context.source);
     return spans.map((span) => {
       if (!span.code || settled-- <= 0 || span.link) return span;
-      const fg = look.code(context.conceal ? span.text : span.text.replace(/^`+\s?|\s?`+$/g, ""), span.fg);
-      return fg ? { ...span, fg } : span;
+      const paint = look.code(context.conceal ? span.text : span.text.replace(/^`+\s?|\s?`+$/g, ""), span.fg);
+      return paint ? embolden(span, paint) : span;
     });
   };
   const relink = (spans: Span[]) =>
     spans.map((span) => {
       if (span.link || !span.target?.startsWith("ses_")) return span;
-      const fg = look.session(span.fg);
-      return fg ? { ...span, fg, attributes: (span.attributes ?? 0) | TextAttributes.BOLD } : span;
+      const paint = look.session(span.fg);
+      return paint ? embolden(span, paint) : span;
     });
   const hooks = pair<Hook>((base) => (spans, context) => relink(base(recolor(spans, context), context)));
   // The host runs the hook only on blocks containing a filter string; add a backtick so inline code reaches `recolor`.

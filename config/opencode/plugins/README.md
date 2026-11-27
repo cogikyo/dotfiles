@@ -731,23 +731,25 @@ From `config/opencode`, `bun plugins/vagari/build.ts` builds by hand and prints 
 ## Transcript
 
 To recolor inline code, session links, and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
-Each value is a Vagari name, and `transcript/tui.ts` picks a code color by what the span holds.
+Each value is a Vagari name, optionally followed by `bold` as in `"session": "prp_3 bold"`, and `transcript/tui.ts` picks a code color by what the span holds.
 
-| Key               | Colors                                                   |
-| ----------------- | -------------------------------------------------------- |
-| `code.path`       | Paths, file names, `file:line`, URLs                     |
-| `code.command`    | First word is a program on `PATH` or a builtin like `cd` |
-| `code.danger`     | Destructive or privileged commands, such as `rm -rf`     |
-| `code.identifier` | Names, keys, and flags                                   |
-| `code.number`     | Numbers, versions, hashes, `:line`, `true`, `null`       |
-| `code.other`      | Anything else                                            |
-| `session`         | Session links such as `@Reply styles`, drawn bold        |
-| `h1` to `h6`      | Headings at that level                                   |
+| Key            | Colors                                                                        |
+| -------------- | ----------------------------------------------------------------------------- |
+| `code.path`    | Paths, file names, `file:line`, URLs                                          |
+| `code.command` | First word is a program on `PATH` or a builtin like `cd`                      |
+| `code.danger`  | Destructive or privileged commands, such as `rm -rf`                          |
+| `code.symbol`  | Names from code, such as `inlineHook`, `session_part`, `lead()`, `SIGUSR2`    |
+| `code.key`     | Settings and switches: dot paths, `--flags`, `$VARS`, such as `markdown.code` |
+| `code.number`  | Numbers, versions, hashes, `:line`, `true`, `null`                            |
+| `code.other`   | Anything else                                                                 |
+| `session`      | Session links such as `@Reply styles`, drawn bold                             |
+| `h1` to `h6`   | Headings at that level                                                        |
 
 A span with spaces is `danger`, `command`, `number` for a timestamp, or `other`, and a span that holds a `#rrggbb` color draws in that color.
+A single word is a `key` when it holds a dot path (`a.b`) or starts with `-` or `$`, and a `symbol` otherwise, so `foo.bar()`, `@scope/pkg`, and `ALL_CAPS` names are symbols.
 `danger` covers privilege commands such as `sudo`, recursive or forced `rm`, disk writers such as `dd` and `mkfs`, history rewrites such as `git push --force` and `git reset --hard`, service stops, forced kills, power commands, and `dctl install` or `dctl iso usb|release`, anywhere in a `&&`, `;`, or `|` chain.
 Plain `rm file` and `trash` stay `command`, and the rule table is `DANGER` in `transcript/kind.ts`.
-A missing key keeps the theme's color, except that a missing `code.danger` uses `code.command`; headings keep their bold and level-1 underline, and session links keep their underline.
+A missing key keeps the theme's color, except that a missing `code.danger` uses `code.command` and a missing `code.key` uses `code.symbol`; headings keep their bold and level-1 underline, and session links keep their underline but are bold only when their value says `bold`.
 Code inside a link and a span that is still streaming keep `markdown.code`.
 Only spans, links, and headings drawn in Vagari's `markdown.code`, `markdown.link`, and `markdown.heading` change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
 A bad name or key shows a `Vagari theme` error toast, and the last good colors stay.
