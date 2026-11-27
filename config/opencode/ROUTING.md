@@ -16,12 +16,15 @@ A model without an effort note follows the defaults under Effort.
    - The best default: the least likely to get things wrong, at a fair cost and speed.
    - It still writes sloppy work at times, so its builds need review.
    - It can be more thorough than appropriate, both a strength and a weakness.
+     - When it misfires, it causes churn and wastes time and tokens.
+     - Other times that thoroughness is critical; the line is hard to judge, and Fable can help.
 
 2. **Fable**, `claude/claude-fable-5-2`
    - Stronger than Opus on the hardest decisions and broad, open-ended reviews.
    - It costs about twice as much per token, runs slower, and can be less thorough.
    - Its effort levels sit one step above Opus's.
      - Fable `high` roughly matches Opus `xhigh`, and `medium` matches `high`.
+     - Sometimes Fable one level down is cheaper, better, and faster on a task than Opus.
    - Fable `xhigh` is the strongest seat here; save it for the toughest calls.
 
 3. **Neon**, `gemini/gemini-4-neon`
@@ -40,25 +43,30 @@ A model without an effort note follows the defaults under Effort.
    - **Weakness:** it can miss the main point of a problem.
      - It decides critical calls less reliably than Fable.
 
-6. **Sonnet**, `claude/claude-sonnet-5-5`
+6. **Grok Bot**, the `grok-bot` skill
+   - A cloud agent, not a model: Collab runs it through the skill, and `subagent` cannot launch it.
+   - **Strengths:** web research, filling out forms, and tasks a direct model call does badly.
+   - **Bots:** each one can specialize, so new bots extend this list.
+   - **Accounts:** xAI and Cursor both have it; use only xAI for now.
+
+7. **Sonnet**, `claude/claude-sonnet-5-5`
    - **Strengths:** speed on context maps, dirty-tree reads, and bounded jobs.
    - **Effort:** avoid `medium`.
 
-7. **Hydrogen**, `gemini/gemini-4-hydrogen`
+8. **Hydrogen**, `gemini/gemini-4-hydrogen`
    - Fast but shallow in review, with no good read on it yet beyond simple scouts.
    - It could be better, but could be slower.
    - Use it on council scouts, so comparisons can be collected.
 
-8. **DeepSeek**, `opencode-go/deepseek-v4.1-flash`
+9. **DeepSeek**, `opencode-go/deepseek-v4.1-flash`
    - **Strengths:** web research that finds facts other seats miss, at cents a seat.
 
-9. **GLM 5.3**, `opencode-go/glm-5.3`
-   - **Weaknesses:** it leans on vendor docs in web research, and builds poorly.
-   - **Effort:** pass `#high`, since it defaults to `max`.
+10. **GLM 5.3**, `opencode-go/glm-5.3`
+    - **Weaknesses:** it leans on vendor docs in web research, and builds poorly.
+    - **Effort:** pass `#high`, since it defaults to `max`.
 
-10. **Grok 4.7**, `xai/grok-4.7` and `opencode-go/grok-4.7`
+11. **Grok 4.7**, `xai/grok-4.7`
     - **`x` tool:** it runs X search; when xAI is capped, tell web scouts to skip it.
-    - **Cost:** one scout on Go spends about 15% of its weekly cap.
 
 ## Effort
 
@@ -107,15 +115,7 @@ A council gives models from different providers the same brief, blind to each ot
 - **Security:** Neon and Sol each found leaks the other missed.
 - **Review:** Neon has found real bugs that Sol missed.
 - **Opus** filters Sol and Astra findings well, as a critic or a verdict seat.
-  - Its verdicts add the most on harness, production, and design.
 - **Web:** DeepSeek, Sol, Opus, and Sonnet each found sources the others missed.
-- **Tendril** is a Grok Bot research seat on the `x` pool, not a `provider/model`.
-  - Collab drives it through the `grok-bot` skill, so `subagent` cannot launch it.
-  - In a 2026-11-27 bake-off, a blind judge (Sol) scored it 4.7 of 5 on average, best on 2 of 3 questions.
-    - A DeepSeek web scout with working search scored 3.7 and won the third; scouts without working search scored 3.0.
-    - That was one judge and three questions, and Opus never reran with working search.
-  - **Cost:** about 0.7% of the X weekly Grok Bot pool per question, roughly 140 a week from X Premium+, with no extra spend.
-  - A question takes 5–10 minutes, and one bot takes one question at a time.
 
 ## Refusals
 
