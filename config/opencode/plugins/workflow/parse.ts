@@ -1,6 +1,6 @@
 export const roles = ["build", "review", "scout", "verify"] as const;
 const plain = ["self", "gate", "you"] as const;
-const texts = ["done", "if", "why"] as const;
+const texts = ["done", "if"] as const;
 
 export type Role = (typeof roles)[number];
 

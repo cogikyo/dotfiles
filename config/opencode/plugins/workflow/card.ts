@@ -197,11 +197,6 @@ function mark({ kind, text }: Detail, bullet: Segment, tone: Segment["tone"] = "
         { text: "⑂ only if ", tone: "muted" },
         { text, tone: "text", italic: true },
       ];
-    case "why":
-      return [
-        { text: "↳ why ", tone: "muted" },
-        { text, tone: "muted", italic: true },
-      ];
   }
 }
 
