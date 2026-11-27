@@ -1,8 +1,9 @@
 import { Plugin } from "@opencode/plugin/tui";
 import { createEffect, Show } from "solid-js";
 import { createStore } from "solid-js/store";
-import { colors } from "../statusline/palette.ts";
-import { Look } from "./look.tsx";
+import { Pace } from "../statusline/pace.tsx";
+import { lead } from "../statusline/working.tsx";
+import { look, mark } from "./look.ts";
 import { api } from "./rpc.ts";
 
 type Context = Plugin.Context;
@@ -12,9 +13,7 @@ export default Plugin.define({
   setup(context) {
     const drive = connect(context);
     const root = (sessionID?: string) => (sessionID ? context.data.session.root(sessionID) : undefined);
-    const busy = (id?: string) =>
-      id !== undefined &&
-      context.data.session.family(id).some((child) => child !== id && context.data.session.status(child) === "running");
+    const hue = (sessionID?: string) => lead(context, root(sessionID));
 
     context.ui.slot({
       before: "prompt.footer.status",
@@ -25,7 +24,7 @@ export default Plugin.define({
         });
         return (
           <Show when={drive.on[root(input.sessionID) ?? ""]}>
-            <text fg={colors.brightBlue} flexShrink={0}>
+            <text fg={mark(hue(input.sessionID))} flexShrink={0}>
               <b>DRIVE</b>
             </text>
           </Show>
@@ -36,11 +35,12 @@ export default Plugin.define({
     context.ui.slot({
       append: "prompt.footer",
       render: (input) => (
-        <Look
+        <Pace
           context={context}
           on={drive.on[root(input.sessionID) ?? ""] ?? false}
-          busy={busy(root(input.sessionID))}
-          fail={drive.fail}
+          hue={hue(input.sessionID)}
+          open={(prompt) => look(context.renderer, prompt)}
+          fail={(reason) => drive.fail(new Error(`look off, ${reason}`))}
         />
       ),
     });

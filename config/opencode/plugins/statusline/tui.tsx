@@ -5,9 +5,11 @@ import { configured, threshold } from "../compact/limits.ts";
 import { Delivery } from "./delivery.tsx";
 import { Effort } from "./effort.tsx";
 import { gitStatus, place, type GitStatus } from "./git.ts";
+import { light } from "./light.ts";
+import { Pace } from "./pace.tsx";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toasts.tsx";
-import { animate, clock, heat, mix, period, tail, Working } from "./working.tsx";
+import { animate, clock, heat, lead, mix, period, tail, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -77,6 +79,18 @@ export default Plugin.define({
       context.ui.slot({
         append: "prompt.footer",
         render: (input) => <Working context={context} sessionID={input.sessionID} />,
+      });
+      context.ui.slot({
+        append: "prompt.footer",
+        render: (input) => (
+          <Pace
+            context={context}
+            on
+            hue={lead(context, input.sessionID)}
+            open={light}
+            fail={(reason) => context.ui.toast.show({ message: `Statusline: light off, ${reason}`, variant: "error" })}
+          />
+        ),
       });
       context.ui.slot({
         append: "prompt.footer",

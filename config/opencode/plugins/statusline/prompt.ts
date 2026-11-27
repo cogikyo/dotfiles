@@ -5,7 +5,7 @@ type Frame = Renderable & { readonly border: unknown; borderColor: RGBA };
 type Draw = (this: Renderable, buffer: OptimizedBuffer, deltaTime: number) => void;
 type Editor = Renderable & { readonly plainText: string };
 
-const covers = new Set(["modal", "menu"]);
+export const covers = new Set(["modal", "menu"]);
 
 export type Prompt = {
   readonly frame: Frame;

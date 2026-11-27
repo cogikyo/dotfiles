@@ -1,59 +1,62 @@
-import { RGBA, type OptimizedBuffer } from "@opentui/core";
-import { colors } from "../statusline/palette.ts";
-import { cell, type Prompt } from "../statusline/prompt.ts";
-import { mix } from "../statusline/working.tsx";
+import type { OptimizedBuffer, RGBA } from "@opentui/core";
+import { ramp, smooth, tint, toward } from "../statusline/pace.tsx";
+import type { Prompt } from "../statusline/prompt.ts";
 
-type Point = { readonly x: number; readonly y: number };
+type Aim = { readonly hue: RGBA; readonly peak: number; readonly pacing: boolean };
 
-const boost = [
-  { weight: 3, tone: 0.2 },
-  { weight: 2, tone: 0.16 },
-  { weight: 1, tone: 0.12 },
-];
-const tallest = 4;
-const margin = 6;
+const chevron = 0x276f;
+const pitch = 3;
+const parked = 3;
+const spread = 3.5;
+const reach = 2 * spread;
+const speed = 0.016;
+const margin = 4;
+const faint = 0.04;
 
-function chevron(origin: Point, height: number, weight: number) {
-  return Array.from({ length: height }, (_, row) => {
-    const fold = height - 1 - row;
-    const [tail, head] = row < fold ? "◥◣" : row > fold ? "◢◤" : "🭨🭬";
-    const glyphs = [tail, ...Array.from({ length: weight - 1 }, () => "█"), head];
-    const x = origin.x + Math.min(row, fold);
-    return glyphs.map((glyph, column) => ({ x: x + column, y: origin.y + row, glyph }));
-  }).flat();
+export function arrows(prompt: Prompt) {
+  let go = 0;
+  let head = -reach;
+
+  return (buffer: OptimizedBuffer, aim: Aim, elapsed: number) => {
+    const track = lane(buffer, prompt);
+    if (!track) return undefined;
+    const want = aim.pacing ? 1 : 0;
+    go = toward(go, want, elapsed / ramp);
+    if (go === 0) head = -reach;
+    else if (Number.isFinite(elapsed)) head += speed * elapsed;
+    if (head > track.to - track.from + reach) head = -reach;
+    const ease = smooth(go);
+    const hue = aim.hue.toInts();
+    const { char, fg, bg } = buffer.buffers;
+    for (let slot = 0, x = track.to - 1; x >= track.from; slot++, x -= pitch) {
+      const flow = Math.exp(-(((x - track.from - head) / spread) ** 2));
+      const tone = aim.peak * ((slot < parked ? 1 - ease : 0) + ease * flow);
+      if (tone < faint) continue;
+      const cell = track.row + x;
+      char[cell] = chevron;
+      fg.set(bg.subarray(cell * 4, cell * 4 + 4), cell * 4);
+      tint(fg, cell, hue, tone);
+    }
+    return go === want && want === 0;
+  };
 }
 
-export function arrows(buffer: OptimizedBuffer, prompt: Prompt, cursor?: Point) {
-  const inner = prompt.frame.getChildren()[0];
-  if (!inner) return;
-  const { bg } = buffer.buffers;
-  const shade = (x: number, y: number) => {
-    const index = (y * buffer.width + x) * 4;
-    return RGBA.fromArray(bg.slice(index, index + 4));
-  };
-  const left = Math.max(inner.screenX, 0);
-  const right = Math.min(inner.screenX + inner.width, buffer.width);
-  const top = Math.max(prompt.editor.screenY - 1, inner.screenY, 0);
-  const bottom = Math.min(inner.screenY + inner.height, buffer.height);
-  if (left >= right || top >= bottom) return;
-  const base = shade(left, top).toInts().slice(0, 3).join();
-  const clear = ({ x, y }: Point) =>
-    x >= left &&
-    !(cursor && cursor.y === y && Math.abs(cursor.x - x) <= 1) &&
-    [x - 1, x, x + 1].every((column) => cell(buffer, column, y) === undefined) &&
-    shade(x, y).toInts().slice(0, 3).join() === base;
-  const height = Math.min(bottom - top, tallest);
-  const fits = [];
-  let tip = right - margin - 1;
-  for (const { weight, tone } of boost) {
-    const tall = Math.min(2 * weight - (height % 2), height);
-    const origin = { x: tip - weight - Math.floor((tall - 1) / 2), y: bottom - (height + tall) / 2 };
-    const marks = chevron(origin, tall, weight);
-    if (!marks.every(clear)) break;
-    fits.push({ marks, tone });
-    tip -= 2 * weight;
+function lane(buffer: OptimizedBuffer, prompt: Prompt) {
+  const { width, height } = buffer;
+  const y = prompt.cap.screenY - 1;
+  const left = Math.max(prompt.editor.screenX, 0);
+  const right = Math.min(prompt.editor.screenX + prompt.editor.width, width);
+  if (y < 0 || y >= height) return undefined;
+  const { char } = buffer.buffers;
+  const row = y * width;
+  let run = { from: left, to: left };
+  for (let x = left, start = left; x <= right; x++) {
+    const code = x < right ? char[row + x] : undefined;
+    if (code === 0 || code === 32) continue;
+    if (x - start > run.to - run.from) run = { from: start, to: x };
+    start = x + 1;
   }
-  for (const { marks, tone } of fits)
-    for (const mark of marks)
-      buffer.drawText(mark.glyph, mark.x, mark.y, mix(shade(mark.x, mark.y), colors.blue, tone));
+  const from = run.from === left ? left : run.from + margin;
+  const to = run.to === right ? right : run.to - margin;
+  return to - from > (parked - 1) * pitch ? { row, from, to } : undefined;
 }

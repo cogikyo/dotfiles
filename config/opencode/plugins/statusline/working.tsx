@@ -3,6 +3,7 @@ import { RGBA, type CliRenderer, type OptimizedBuffer, type Renderable } from "@
 import os from "node:os";
 import path from "node:path";
 import { createEffect, createSignal, onCleanup } from "solid-js";
+import { roles } from "./palette.ts";
 import { hook, locate, type Prompt } from "./prompt.ts";
 import { reveal, shown, watch } from "./view.ts";
 
@@ -13,6 +14,7 @@ export const period = 1_000;
 export const tail = 3;
 export const tick = 100;
 const white = RGBA.fromInts(255, 255, 255);
+const order = ["build", "review", "scout", "verify"];
 // Hot reload gives each plugin entrypoint its own clock and timer.
 const holds = new Set<Hold>();
 const [clock, setClock] = createSignal(0);
@@ -35,6 +37,17 @@ export function mix(from: RGBA, to: RGBA, amount: number) {
     from.b + (to.b - from.b) * amount,
     from.a,
   );
+}
+
+export function lead(context: Context, sessionID?: string) {
+  if (sessionID === undefined) return undefined;
+  const { session } = context.data;
+  const names = session
+    .family(sessionID)
+    .filter((id) => session.status(id) === "running")
+    .map((id) => session.get(id)?.agent?.split("/")[0]);
+  if (names.length === 0) return undefined;
+  return roles[order.find((role) => names.includes(role)) ?? "build"];
 }
 
 export function Working(props: { context: Context; sessionID?: string }) {

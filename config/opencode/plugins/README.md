@@ -189,13 +189,18 @@ The line is never stored in history, so a flip takes effect at the next request.
 On Anthropic requests, `claude-auth/transforms.js` moves the line with the rest of the non-core system text into the first user message (see [Anthropic](#anthropic)).
 [COLLAB.md's Boundaries](../COLLAB.md#boundaries) own what the line authorizes; permissions are unchanged.
 
-`drive/tui.tsx` shows a bold bright-blue `DRIVE` before `prompt.footer.status` while the shown session's root is on, and toasts `Drive on` or `Drive off` after each flip.
-`drive/tui.tsx` mounts `Look` in a slot appended to `prompt.footer`.
-`drive/look.tsx` paints after the prompt while drive is on, skips `modal` and `menu` keymap modes, and requests animation frames only while another session in the root's family is running.
-`drive/look.tsx` stops drawing after a draw error and reports `look off, <reason>` through the drive error toast.
-`drive/wheel.ts` puts a blue steering wheel in the editor's top-right corner when text leaves room, preserves the queue glyph, and pulses with statusline's animation clock.
-`drive/arrows.ts` draws a boost pad at the input's right end: three solid blue chevrons of one shape at 3×, 2×, and 1× scale, brightest at the right.
-It places them right to left and stops at the first chevron that would touch text, the cursor, their horizontal neighbors, or a different background.
+`drive/tui.tsx` shows a bold `DRIVE` before `prompt.footer.status` while the shown session's root is on, and toasts `Drive on` or `Drive off` after each flip.
+The label takes the [work color](#usage) of the root's family while a session in it runs, and is bright blue otherwise.
+`drive/tui.tsx` mounts statusline's `Pace` in a slot appended to `prompt.footer`; while drive is on, `Pace` runs `drive/look.ts`.
+A draw error stops the look and reports `look off, <reason>` through the drive error toast.
+`drive/look.ts` draws the wheel and the chevrons, and hides statusline's work light while the chevrons have room.
+`drive/arrows.ts` draws `❯` chevrons on the prompt's model row, in its longest run of empty cells and 4 cells clear of the text or gauge at either end.
+While the tree waits, three dim bright-blue chevrons rest at the right end of that run.
+While the tree works, a group of about three chevrons in the work color travels from left to right at 16 cells per second, then starts again from the left.
+Typing while the tree works parks three chevrons in the work color at the right end, and so does `animations` off.
+The change between resting and traveling eases over 600 ms.
+When the run is shorter than 7 cells, `drive/arrows.ts` draws nothing and the work light shows instead.
+`drive/wheel.ts` puts a steering wheel in the label's color in the editor's top-right corner when text leaves room, and preserves the queue glyph.
 `drive/rpc.ts` defines the `state` and `set` methods and the `changed` event the TUI follows.
 
 ## Usage
@@ -617,6 +622,15 @@ It replaces the built-in sidebar footer, also disabled, with the OpenCode versio
 A linked worktree shows its main repository path and a worktree glyph in place of the branch glyph.
 While the session runs, `statusline/working.tsx` widens the prompt's left border to a half cell and pulses it in a brightened agent color.
 The border pulse, fire fade, and gauge wave stop when `animations` is off in `cli.json`; the wide border stays.
+`lead` in `statusline/working.tsx` gives a session its work color: the role color of the running sessions in its family, read from each agent name's prefix, with build before review, scout, and verify.
+Running sessions with none of those roles, such as a root session that works alone, get the build color; a family with nothing running has no work color.
+While a session's family works, `statusline/light.ts` thins the `▀` row under the prompt box to an upper quarter block (`🮂`) and moves one light in the work color along it, from side to side once every 4 seconds.
+Typing in a focused terminal parks the light at the center as a broad dim glow, and so does `animations` off.
+The light eases in and out over 600 ms, with the row at three eighths (`🮃`) for the first and last half of that time.
+The row stays the host's own while nothing runs.
+`Pace` in `statusline/pace.tsx` hosts the light: it paints after the prompt, skips `modal` and `menu` keymap modes, and holds the animation clock only while the light moves.
+Another plugin hides the light on a prompt with `veil` from `statusline/light.ts`, as drive does while its chevrons show.
+A draw error stops the light and shows a `Statusline: light off, <reason>` toast.
 `statusline/view.ts` uses the shared [hyprd bus](#hyprd) to pause these animations in out-of-view panes; unknown view state leaves them running.
 
 `statusline/delivery.tsx` adds Ctrl+Enter to toggle Enter between steer and queue; `prompt.queue` is unbound (`"none"`) in `cli.json`, so Ctrl+Enter only toggles.
