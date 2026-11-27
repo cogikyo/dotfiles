@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Hyprd Edit
+Comment=Open text files in the Neovim window owned by this Hyprland workspace
+Exec=hyprd edit %f
+Terminal=false
+NoDisplay=true
+Icon=nvim
+Categories=Utility;TextEditor;
+MimeType=text/plain;text/markdown;text/xml;text/english;text/javascript;text/x-c;text/x-c++;text/x-c++hdr;text/x-c++src;text/x-chdr;text/x-csrc;text/x-java;text/x-makefile;text/x-moc;text/x-pascal;text/x-script.python;text/x-shellscript;text/x-tcl;text/x-tex;application/json;application/x-shellscript;
