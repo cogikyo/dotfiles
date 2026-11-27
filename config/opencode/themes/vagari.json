@@ -141,7 +141,7 @@
       "code": "$hue.grn.100",
       "blockQuote": "$hue.slt.100",
       "emphasis": "$hue.blue.100",
-      "strong": "$hue.brt.400",
+      "strong": "$hue.blue.100",
       "horizontalRule": "$hue.glc.400",
       "listItem": "$hue.glu.200",
       "listEnumeration": "$hue.glu.200",
@@ -151,7 +151,7 @@
     },
     "@dialog": {
       "background": {
-        "base": "$hue.glc.600",
+        "base": "$background.raised.base",
         "action": {
           "primary": {
             "$hovered": "$background.raised.high"

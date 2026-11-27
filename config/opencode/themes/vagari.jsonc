@@ -259,7 +259,7 @@
       "code": "grn_4",
       "blockQuote": "slt_5",
       "emphasis": "blu_4",
-      "strong": "brt_0",
+      "strong": "blu_4",
       "horizontalRule": "glc_2",
       "listItem": "glu_2",
       "listEnumeration": "glu_2",
@@ -269,7 +269,7 @@
     },
     "@dialog": {
       "background": {
-        "base": "glc_0",
+        "base": "$background.raised.base",
         "action": {
           "primary": {
             "$hovered": "$background.raised.high",
