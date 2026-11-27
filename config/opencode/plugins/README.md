@@ -707,9 +707,39 @@ A name takes the first ramp whose members all share its family (`glc` for `glc_0
 A `base` token gets a reference only when every mode resolves it to the same one.
 The build writes through a temporary file and a rename, and only when the output changes, so windows can build at once.
 
-A window whose build output differs from its last sends `SIGUSR2` to its own process, which makes the TUI re-read custom themes.
+The build leaves the `transcript` block out of `vagari.json`; [Transcript](#transcript) reads it from the source.
+A window whose build output or `transcript` block differs from its last sends `SIGUSR2` to its own process, which makes the TUI re-read custom themes and Transcript re-read its block.
 It sends the signal only while a handler listens, since an unhandled `SIGUSR2` ends the process.
 From `config/opencode`, `bun plugins/vagari/build.ts` builds by hand and prints errors, but it signals no window.
+
+## Transcript
+
+To recolor inline code and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
+Each value is a Vagari name, and `transcript/tui.ts` picks a code color by what the span holds.
+
+| Key               | Colors                                                   |
+| ----------------- | -------------------------------------------------------- |
+| `code.path`       | Paths, file names, `file:line`, URLs                     |
+| `code.command`    | First word is a program on `PATH` or a builtin like `cd` |
+| `code.identifier` | Names, keys, and flags                                   |
+| `code.number`     | Numbers, versions, hashes, `:line`, `true`, `null`       |
+| `code.other`      | Anything else                                            |
+| `h1` to `h6`      | Headings at that level                                   |
+
+A span with spaces is `command` or `other`, and a span that holds a `#rrggbb` color draws in that color.
+A missing key keeps the theme's color, and headings keep their bold and level-1 underline.
+Code inside a link and a span that is still streaming keep `markdown.code`.
+Only spans and headings drawn in Vagari's `markdown.code` and `markdown.heading` change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
+A bad name or key shows a `Vagari theme` error toast, and the last good colors stay.
+
+OpenCode has no plugin API for inline spans, so the plugin wraps the `inlineHook`, `inlineHookFilter`, and `syntaxStyle` setters on OpenTUI's `MarkdownRenderable` prototype.
+Setup fails with an error toast if OpenTUI drops one of those accessors.
+Only renderables that set an inline hook change: reply text, compaction summaries, and `/btw` answers.
+The wrapper colors code spans before OpenCode's session-link hook runs, and its getters return what callers set, so another plugin that wraps the same hook still finds its own wrapper.
+It adds a backtick to the hook filter, which moves every block with inline code from OpenTUI's native write path to its slower host path; the measured cost is a few microseconds per block.
+Headings use a per-theme copy of the syntax style, so diffs and file views of Markdown keep `markdown.heading`.
+A palette change swaps in a fresh copy, because OpenTUI does not repaint a style that changes in place.
+Disposing restores the prototype and every hooked renderable.
 
 ## Workflow
 

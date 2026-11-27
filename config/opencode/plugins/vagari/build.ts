@@ -6,9 +6,10 @@ export const source = path.join(import.meta.dirname, "..", "..", "themes", "vaga
 const STEPS = ["100", "200", "300", "400", "500", "600", "700", "800", "900"];
 const MODES = ["dark", "light"];
 
-type Tree = { readonly [key: string]: unknown };
+export type Tree = { readonly [key: string]: unknown };
 
-const isTree = (value: unknown): value is Tree => typeof value === "object" && value !== null && !Array.isArray(value);
+export const isTree = (value: unknown): value is Tree =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const family = (name: unknown) => String(name).replace(/_\d+$/, "");
 
@@ -27,7 +28,7 @@ function home(hues: Tree, name: string) {
   return `$hue.${hue}.${STEPS[edge === -1 ? members.indexOf(name) : edge]}`;
 }
 
-class Compiler {
+export class Compiler {
   readonly errors: string[] = [];
   readonly defs = new Map<string, string>();
   readonly hues = new Map<string, Tree>();
@@ -100,7 +101,7 @@ function compile(doc: Tree) {
   const modes = [...compiler.hues.keys()];
   const theme: Record<string, unknown> = { $schema: "https://opencode.ai/theme.json" };
   for (const [key, value] of Object.entries(doc)) {
-    if (key === "defs" || key === "$schema") continue;
+    if (key === "defs" || key === "transcript" || key === "$schema") continue;
     if (key === "base" && isTree(value)) theme[key] = compiler.tokens(value, key, modes);
     else if (modes.includes(key) && isTree(value)) theme[key] = compiler.mode(key, value);
     else theme[key] = value;
@@ -109,8 +110,7 @@ function compile(doc: Tree) {
   return theme;
 }
 
-export async function build(from = source, to = from.replace(/\.jsonc$/, ".json")) {
-  if (to === from) throw new Error(`${path.basename(from)}: the source must end in .jsonc`);
+export async function load(from = source): Promise<Tree> {
   let doc: unknown;
   try {
     doc = Bun.JSONC.parse(await readFile(from, "utf8"));
@@ -120,8 +120,15 @@ export async function build(from = source, to = from.replace(/\.jsonc$/, ".json"
     });
   }
   if (!isTree(doc)) throw new Error(`${path.basename(from)}: expected an object`);
+  return doc;
+}
+
+export async function build(from = source, to = from.replace(/\.jsonc$/, ".json")) {
+  if (to === from) throw new Error(`${path.basename(from)}: the source must end in .jsonc`);
+  const doc = await load(from);
+  const { transcript } = doc;
   const content = `${JSON.stringify(compile(doc), null, 2)}\n`;
-  if ((await readFile(to, "utf8").catch(() => undefined)) === content) return { content, written: false };
+  if ((await readFile(to, "utf8").catch(() => undefined)) === content) return { content, transcript, written: false };
   const temp = path.join(path.dirname(to), `.${path.basename(to)}.${process.pid}.${crypto.randomUUID()}.tmp`);
   try {
     await writeFile(temp, content);
@@ -129,7 +136,7 @@ export async function build(from = source, to = from.replace(/\.jsonc$/, ".json"
   } finally {
     await rm(temp, { force: true });
   }
-  return { content, written: true };
+  return { content, transcript, written: true };
 }
 
 if (import.meta.main) {

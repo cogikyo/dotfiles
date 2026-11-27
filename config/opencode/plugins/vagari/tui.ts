@@ -15,9 +15,10 @@ export function watchTheme(from: string, onError: (message: string) => void) {
   };
   const run = async () => {
     try {
-      const { content, written } = await build(from);
-      const changed = written || (last !== undefined && content !== last);
-      last = content;
+      const { content, transcript, written } = await build(from);
+      const state = JSON.stringify([content, transcript]);
+      const changed = written || (last !== undefined && state !== last);
+      last = state;
       if (!disposed && changed && process.listenerCount("SIGUSR2") > 0) process.kill(process.pid, "SIGUSR2");
     } catch (error) {
       fail(error);
