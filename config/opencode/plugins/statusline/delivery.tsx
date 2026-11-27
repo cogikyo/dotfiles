@@ -7,7 +7,9 @@ import { cell, locate, overlay, type Prompt } from "./prompt.ts";
 type Context = Plugin.Context;
 
 export const glyph = { steer: "\u{f048a}", queue: "\u{f1163}" };
+const width = { steer: Bun.stringWidth(glyph.steer), queue: Bun.stringWidth(glyph.queue) };
 const gap = 2;
+const reserve = Math.max(width.steer, width.queue) + gap;
 const [queued, setQueued] = createSignal(false);
 
 export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }) {
@@ -56,15 +58,15 @@ export function Delivery(props: { sessionID?: string; mode: "normal" | "shell" }
 
 /** First column the send icon reserves; anything drawn at or right of it hides the icon. */
 export function edge(editor: Renderable) {
-  return editor.screenX + editor.width - Math.max(...Object.values(glyph).map((icon) => Bun.stringWidth(icon))) - gap;
+  return editor.screenX + editor.width - reserve;
 }
 
 function tip(context: Context, buffer: OptimizedBuffer, editor: Renderable) {
-  const icon = queued() ? glyph.queue : glyph.steer;
-  const width = Bun.stringWidth(icon);
-  const x = editor.screenX + editor.width - width;
+  const kind = queued() ? "queue" : "steer";
+  const icon = glyph[kind];
+  const x = editor.screenX + editor.width - width[kind];
   const y = editor.screenY;
   if (x - gap < editor.screenX) return;
-  for (let column = x - gap; column < x + width; column++) if (cell(buffer, column, y) !== undefined) return;
+  for (let column = x - gap; column < x + width[kind]; column++) if (cell(buffer, column, y) !== undefined) return;
   buffer.drawText(icon, x, y, queued() ? colors.yellow : context.theme.text.muted);
 }

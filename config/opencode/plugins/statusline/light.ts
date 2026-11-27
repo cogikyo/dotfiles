@@ -1,5 +1,5 @@
 import type { OptimizedBuffer, Renderable } from "@opentui/core";
-import { ramp, smooth, tint, toward, type Painter } from "./pace.tsx";
+import { channels, ramp, smooth, tint, toward, type Painter } from "./pace.tsx";
 import type { Prompt } from "./prompt.ts";
 
 type Pose = { readonly glyph: number; readonly centre: number; readonly wide: number; readonly peak: number };
@@ -28,19 +28,20 @@ export function light(prompt: Prompt): Painter {
   let on = 0;
   let go = 0;
   let phase = 0;
-  let hue = [0, 0, 0];
+  const rgb = channels();
+  let edge: Renderable | undefined;
 
   return {
     draw(buffer, aim, elapsed) {
       const hidden = veiled.has(prompt.cap);
       const lit = aim.hue !== undefined && !hidden;
       const want = { on: lit ? 1 : 0, go: lit && aim.pacing ? 1 : 0 };
-      if (aim.hue) hue = aim.hue.toInts();
+      const hue = rgb(aim.hue);
       on = hidden ? 0 : toward(on, want.on, elapsed / ramp);
       go = on === 0 ? 0 : toward(go, want.go, elapsed / ramp);
       if (go === 0) phase = 0;
       else if (Number.isFinite(elapsed)) phase += (2 * Math.PI * elapsed) / period;
-      const edge = prompt.cap.getChildren()[0];
+      if (edge?.parent !== prompt.cap) edge = prompt.cap.getChildren()[0];
       if (edge && on > 0) paint(buffer, edge, pose(on, go, phase, edge.width), hue);
       return on === want.on && go === want.go && want.go === 0;
     },

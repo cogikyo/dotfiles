@@ -73,7 +73,10 @@ export function animate(renderer?: CliRenderer) {
   const hold: Hold = { renderer };
   let stopped = false;
   const begin = async () => {
-    if (!(await refresh()) || stopped) return;
+    const on = await refresh();
+    if (stopped) return;
+    renderer?.requestRender();
+    if (!on) return;
     holds.add(hold);
     renderer?.on("focus", reveal);
     unwatch ??= watch(run);

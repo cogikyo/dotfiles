@@ -1,5 +1,5 @@
 import type { OptimizedBuffer, RGBA } from "@opentui/core";
-import { ramp, smooth, tint, toward } from "../statusline/pace.tsx";
+import { channels, ramp, smooth, tint, toward } from "../statusline/pace.tsx";
 import type { Prompt } from "../statusline/prompt.ts";
 
 type Aim = { readonly hue: RGBA; readonly peak: number; readonly pacing: boolean };
@@ -16,6 +16,7 @@ const faint = 0.04;
 export function arrows(prompt: Prompt) {
   let go = 0;
   let head = -reach;
+  const rgb = channels();
 
   return (buffer: OptimizedBuffer, aim: Aim, elapsed: number) => {
     const track = lane(buffer, prompt);
@@ -26,7 +27,7 @@ export function arrows(prompt: Prompt) {
     else if (Number.isFinite(elapsed)) head += speed * elapsed;
     if (head > track.to - track.from + reach) head = -reach;
     const ease = smooth(go);
-    const hue = aim.hue.toInts();
+    const hue = rgb(aim.hue);
     const { char, fg, bg } = buffer.buffers;
     for (let slot = 0, x = track.to - 1; x >= track.from; slot++, x -= pitch) {
       const flow = Math.exp(-(((x - track.from - head) / spread) ** 2));
@@ -34,7 +35,7 @@ export function arrows(prompt: Prompt) {
       if (tone < faint) continue;
       const cell = track.row + x;
       char[cell] = chevron;
-      fg.set(bg.subarray(cell * 4, cell * 4 + 4), cell * 4);
+      for (let channel = 0; channel < 4; channel++) fg[cell * 4 + channel] = bg[cell * 4 + channel] ?? 0;
       tint(fg, cell, hue, tone);
     }
     return go === want && want === 0;

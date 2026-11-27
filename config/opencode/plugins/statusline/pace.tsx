@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin/tui";
-import type { OptimizedBuffer, Renderable, RGBA } from "@opentui/core";
+import type { CliRenderer, OptimizedBuffer, Renderable, RGBA } from "@opentui/core";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { covers, hook, locate, type Prompt } from "./prompt.ts";
 import { animate, clock, motion } from "./working.tsx";
@@ -42,24 +42,48 @@ export function Pace(props: {
   createEffect(() => {
     const prompt = props.on && host ? locate(host) : undefined;
     if (!host || !prompt) return;
+    const { renderer, keymap } = props.context;
     const painter = props.open(prompt);
+    const fail = props.fail;
     let seen = 0;
-    onCleanup(() => painter.close?.());
-    onCleanup(
-      last(
-        props.context,
-        host,
-        (buffer) => {
-          const beat = clock() && performance.now();
-          const elapsed = !motion() ? Infinity : beat && seen ? Math.min(beat - seen, stall) : 0;
-          seen = beat;
-          const hue = props.hue;
-          const pacing = motion() && hue !== undefined && (away() || prompt.editor.plainText === "");
-          setStill(painter.draw(buffer, { hue, pacing }, elapsed));
-        },
-        props.fail,
-      ),
-    );
+    let painted = false;
+    let live = true;
+    const unhook = hook(host, () => {
+      painted = true;
+    });
+    const post = (buffer: OptimizedBuffer) => {
+      if (!live) return;
+      const shown = painted;
+      painted = false;
+      if (!shown) {
+        setStill(true);
+        return;
+      }
+      if (covers.has(keymap.mode.current())) return;
+      try {
+        const beat = clock() && performance.now();
+        const elapsed = !motion() ? Infinity : beat && seen ? Math.min(beat - seen, stall) : 0;
+        seen = beat;
+        const hue = props.hue;
+        const pacing = motion() && hue !== undefined && (away() || prompt.editor.plainText === "");
+        setStill(painter.draw(buffer, { hue, pacing }, elapsed));
+      } catch (error) {
+        stop();
+        const reason = error instanceof Error ? error.message : String(error);
+        queueMicrotask(() => fail(reason));
+      }
+    };
+    const detach = last(renderer, post);
+    const stop = () => {
+      if (!live) return;
+      live = false;
+      detach();
+      unhook();
+      painter.close?.();
+      setStill(true);
+      renderer.requestRender();
+    };
+    onCleanup(stop);
   });
   createEffect(() => {
     void props.hue;
@@ -90,37 +114,23 @@ export function tint(fg: Plane, cell: number, hue: readonly number[], tone: numb
   fg[cell * 4 + 3] = (fg[cell * 4 + 3] ?? 0) & 0xff;
 }
 
-function last(
-  context: Context,
-  node: Renderable,
-  draw: (buffer: OptimizedBuffer) => void,
-  fail: (reason: string) => void,
-) {
-  const renderer = context.renderer;
-  let painted = false;
-  let live = true;
-  const unhook = hook(node, () => {
-    painted = true;
-  });
-  const post = (buffer: OptimizedBuffer) => {
-    if (!live) return;
-    try {
-      if (painted && !covers.has(context.keymap.mode.current())) draw(buffer);
-    } catch (error) {
-      live = false;
-      const reason = error instanceof Error ? error.message : String(error);
-      queueMicrotask(() => fail(reason));
+export function channels() {
+  let color: RGBA | undefined;
+  let ints: readonly number[] = [0, 0, 0];
+  return (next: RGBA | undefined) => {
+    if (next && next !== color) {
+      color = next;
+      ints = next.toInts();
     }
-    painted = false;
-    renderer.removePostProcessFn(post);
-    if (live) renderer.addPostProcessFn(post);
+    return ints;
   };
-  renderer.addPostProcessFn(post);
+}
+
+function last(renderer: CliRenderer, post: (buffer: OptimizedBuffer) => void) {
+  const frame = renderer.requestAnimationFrame(() => renderer.addPostProcessFn(post));
   renderer.requestRender();
   return () => {
-    live = false;
-    unhook();
+    renderer.cancelAnimationFrame(frame);
     renderer.removePostProcessFn(post);
-    renderer.requestRender();
   };
 }

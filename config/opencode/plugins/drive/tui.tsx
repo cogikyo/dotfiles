@@ -1,8 +1,8 @@
 import { Plugin } from "@opencode/plugin/tui";
-import { createEffect, Show } from "solid-js";
+import { createEffect, createMemo, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Pace } from "../statusline/pace.tsx";
-import { lead } from "../statusline/working.tsx";
+import { lead, refresh } from "../statusline/working.tsx";
 import { look, mark } from "./look.ts";
 import { api } from "./rpc.ts";
 
@@ -11,20 +11,21 @@ type Context = Plugin.Context;
 export default Plugin.define({
   id: "drive",
   setup(context) {
+    void refresh();
     const drive = connect(context);
     const root = (sessionID?: string) => (sessionID ? context.data.session.root(sessionID) : undefined);
-    const hue = (sessionID?: string) => lead(context, root(sessionID));
 
     context.ui.slot({
       before: "prompt.footer.status",
       render: (input) => {
+        const hue = createMemo(() => lead(context, input.sessionID));
         createEffect(() => {
           const id = root(input.sessionID);
           if (id) drive.sync(id).catch(drive.fail);
         });
         return (
           <Show when={drive.on[root(input.sessionID) ?? ""]}>
-            <text fg={mark(hue(input.sessionID))} flexShrink={0}>
+            <text fg={mark(hue())} flexShrink={0}>
               <b>DRIVE</b>
             </text>
           </Show>
@@ -34,15 +35,18 @@ export default Plugin.define({
 
     context.ui.slot({
       append: "prompt.footer",
-      render: (input) => (
-        <Pace
-          context={context}
-          on={drive.on[root(input.sessionID) ?? ""] ?? false}
-          hue={hue(input.sessionID)}
-          open={(prompt) => look(context.renderer, prompt)}
-          fail={(reason) => drive.fail(new Error(`look off, ${reason}`))}
-        />
-      ),
+      render: (input) => {
+        const hue = createMemo(() => lead(context, input.sessionID));
+        return (
+          <Pace
+            context={context}
+            on={drive.on[root(input.sessionID) ?? ""] ?? false}
+            hue={hue()}
+            open={(prompt) => look(context.renderer, prompt)}
+            fail={(reason) => drive.fail(new Error(`look off, ${reason}`))}
+          />
+        );
+      },
     });
 
     const toggle = () => drive.toggle().catch(drive.fail);

@@ -9,7 +9,7 @@ import { light } from "./light.ts";
 import { Pace } from "./pace.tsx";
 import { colors, pressure, tier } from "./palette.ts";
 import { mirror } from "./toasts.tsx";
-import { animate, clock, heat, lead, mix, period, tail, Working } from "./working.tsx";
+import { animate, clock, heat, lead, mix, period, refresh, tail, Working } from "./working.tsx";
 
 type Context = Plugin.Context;
 type Message = ReturnType<Context["data"]["session"]["message"]["list"]>[number];
@@ -52,6 +52,7 @@ const counts = [
 export default Plugin.define({
   id: "statusline",
   setup(context) {
+    void refresh();
     return createRoot((dispose) => {
       const [focused, setFocused] = createSignal(true);
       const focus = () => setFocused(true);
@@ -82,15 +83,20 @@ export default Plugin.define({
       });
       context.ui.slot({
         append: "prompt.footer",
-        render: (input) => (
-          <Pace
-            context={context}
-            on
-            hue={lead(context, input.sessionID)}
-            open={light}
-            fail={(reason) => context.ui.toast.show({ message: `Statusline: light off, ${reason}`, variant: "error" })}
-          />
-        ),
+        render: (input) => {
+          const hue = createMemo(() => lead(context, input.sessionID));
+          return (
+            <Pace
+              context={context}
+              on
+              hue={hue()}
+              open={light}
+              fail={(reason) =>
+                context.ui.toast.show({ message: `Statusline: light off, ${reason}`, variant: "error" })
+              }
+            />
+          );
+        },
       });
       context.ui.slot({
         append: "prompt.footer",
