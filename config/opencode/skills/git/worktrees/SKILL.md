@@ -93,7 +93,7 @@ Exit 0 prints `landed: …` when all committed and uncommitted changes match the
 On exit 0, remove without asking: use `git worktree remove --force -- <path>` when dirty and `git worktree remove -- <path>` otherwise, then delete its branch under Named branch lifecycle.
 On exit 1, keep the worktree and report each `unique: <path>`; removal needs the user's yes for that named path.
 On exit 2, keep it and report the printed refusal.
-Before removing a worktree the current session lives in, move the session to the main checkout with `tools.opencode.session_move` inside `execute`.
+Before removing a worktree the current session lives in, move the session to the main checkout with `tools.opencode.session.move` inside `execute`.
 Use Git's worktree operations rather than deleting a live worktree directory by hand.
 
 ## Named branch lifecycle
