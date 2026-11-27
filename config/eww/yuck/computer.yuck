@@ -112,6 +112,7 @@
         :markup "${"${round(percent,0)}" < 10 ? "0${round(percent,0)}" : round(percent,0) }<small>%</small>"
       )
     )
+    (children)
   )
 )
 
@@ -226,30 +227,49 @@
 )
 
 (defwidget memory [compact key]
-  (tip :compact compact :text "  󰍛 󰳽 btop  " :visible {computer-info.ram_available}
+  (tip :compact compact :visible {computer-info.ram_available}
+    :text {compact ? "  󰍛 󰳽 btop  " :
+      "  ${computer-info.breakdown_available ? "󰪺 tmp ${computer-info.tmp_gib}G · 󰩹 trash ${computer-info.trash_gib}G · 󰃨 cache ${computer-info.cache_gib}G · " : ""}󰳽 btop/ncdu  "}
     (eventbox
       :onhover {compact ? "" : "eww update hover=${key}"}
       :onhoverlost {compact ? "" : "eww update hover=''"}
-      :onclick "${terminal} --title='terminalfloat' -e btop & disown"
       :cursor "pointer"
       (box
         :class "${compact ? "" : "computerbox"} ${!compact && hover == key ? "computerbox-hover" : ""}"
+        :style {compact ? "" : "padding: 0;"}
         :space-evenly false
-        (label-ramp
-          :icon "󰍛"
-          :percent {computer-info.ram_used_percent}
-          :bool {hover == key}
-        )
-        (slide-n-fade :bool {compact && hover != key} :direction "right"
-          (box :class "gap-text" (level-bars :percent {computer-info.ram_used_percent} :steps range4))
-        )
-        (slide-n-fade :bool {!compact || hover == key} :direction "right"
-          (box :class "gap" :style {compact ? "" : "margin-left: 8px;"}
-            (level-bars :percent {computer-info.ram_used_percent} :steps range16)
+        (eventbox :onclick "${terminal} --title='terminalfloat' -e btop & disown"
+          (box :space-evenly false :style {compact ? "" : "padding: 6px 0 4px 1.3em;"}
+            (label-ramp
+              :icon "󰍛"
+              :percent {computer-info.ram_used_percent}
+              :bool {hover == key}
+              (slide-n-fade :bool {!compact && hover == key} :direction "right"
+                (label :style "margin-left: 6px;" :markup "<small>${round(computer-info.ram_used_gib, 1)}<sub>G</sub></small>")
+              )
+            )
+            (slide-n-fade :bool {compact && hover != key} :direction "right"
+              (box :class "gap-text" (level-bars :percent {computer-info.ram_used_percent} :steps range4))
+            )
+            (slide-n-fade :bool {!compact || hover == key} :direction "right"
+              (box :class "gap" :style {compact ? "" : "margin-left: 8px;"}
+                (level-bars :percent {computer-info.ram_used_percent} :steps range16)
+              )
+            )
           )
         )
-        (box :class "gap" :visible {computer-info.disk_available} :style {compact ? "" : "margin-left: 12px;"}
-          (label-ramp :icon "󰋊" :percent {computer-info.disk_used_percent} :bool true)
+        (eventbox :onclick {compact ? "${terminal} --title='terminalfloat' -e btop & disown" : "${terminal} --title='terminalfloat' -e ncdu -x -t 8 ~ & disown"}
+          (box :class "gap" :visible {computer-info.disk_available} :style {compact ? "" : "padding: 6px 1.3em 4px 12px;"}
+            (label-ramp :icon "󰋊" :percent {computer-info.disk_used_percent} :bool true
+              (slide-n-fade :bool {!compact && hover == key} :direction "right"
+                (label :style "margin-left: 6px;" :markup "<small>${computer-info.disk_used_gib}<sub>G</sub></small>")
+              )
+              (slide-n-fade :bool {!compact && hover == key && computer-info.breakdown_available} :direction "right"
+                (label :style "margin-left: 10px;"
+                  :markup "󰪺 <small>${computer-info.tmp_gib}<sub>G</sub></small>  󰩹 <small>${computer-info.trash_gib}<sub>G</sub></small>  󰃨 <small>${computer-info.cache_gib}<sub>G</sub></small>")
+              )
+            )
+          )
         )
       )
     )
@@ -257,7 +277,7 @@
 )
 
 (deflisten computer-info
-  :initial '{"ram_available":false,"ram_used_percent":0,"disk_available":false,"disk_used_percent":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0}'
+  :initial '{"ram_available":false,"ram_used_percent":0,"ram_used_gib":0,"disk_available":false,"disk_used_percent":0,"disk_used_gib":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0,"breakdown_available":false,"tmp_gib":0,"trash_gib":0,"cache_gib":0}'
   'ewwd subscribe computer | jq --unbuffered -c ".data"'
 )
 
