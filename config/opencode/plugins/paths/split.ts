@@ -1,5 +1,5 @@
 import { TextAttributes } from "@opentui/core";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export type Span = {
   text: string;
@@ -15,13 +15,23 @@ type Resolve = (token: string) => string | undefined;
 
 const openers = String.raw`[\s([{<"'=*]`;
 const opener = new RegExp(openers);
-const starts = { bounded: new RegExp(`(?:^|${openers})(~?/)`), inner: new RegExp(`${openers}(~?/)`) };
+const starts = {
+  bounded: new RegExp(`(?:^|${openers})(~?/|file:///)`),
+  inner: new RegExp(`${openers}(~?/|file:///)`),
+};
 const trailer = /[\s.,;:!?)\]}>"'`*]/;
 const cut = /["'`<>|]/;
 const head = /^(?:~\/|\/)(?!\/)./;
 
 export function split<S extends Span>(spans: readonly S[], home: string, exists: (path: string) => boolean): S[] {
   const resolve: Resolve = (raw) => {
+    if (raw.startsWith("file:")) {
+      try {
+        return exists(fileURLToPath(raw)) ? raw : undefined;
+      } catch {
+        return undefined;
+      }
+    }
     const path = raw.startsWith("~/") ? home + raw.slice(1) : raw;
     return exists(path) ? pathToFileURL(path).href : undefined;
   };
@@ -71,14 +81,15 @@ function prose(text: string, before: string | undefined, after: string | undefin
 }
 
 function token(word: string, bounded: boolean, resolve: Resolve): Found | undefined {
-  if (word.includes("://")) return;
   const match = (bounded ? starts.bounded : starts.inner).exec(word);
   if (!match) return;
   const start = match.index + match[0].length - match[1].length;
   const rest = word.slice(start);
+  const file = match[1] === "file:///";
+  if (word.slice(0, start).includes("://") || rest.slice(file ? "file://".length : 0).includes("://")) return;
   const stop = rest.search(cut);
   const path = trim(stop === -1 ? rest : rest.slice(0, stop));
-  if (!head.test(path)) return;
+  if (!file && !head.test(path)) return;
   const url = resolve(path);
   return url ? { start, end: start + path.length, url } : undefined;
 }

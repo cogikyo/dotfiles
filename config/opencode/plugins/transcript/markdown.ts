@@ -29,10 +29,13 @@ type Hook = (spans: Span[], context: Context) => Span[];
 type Rerun = { rerunInlineHook(select: (source: string) => boolean): void };
 type Filter = readonly string[];
 
+export type Link = { readonly paint: Paint; readonly icon?: string };
+
 export type Look = {
   code(text: string, fg: RGBA | undefined): Paint | undefined;
   heading(level: number, fg: RGBA | undefined): Paint | undefined;
   session(fg: RGBA | undefined): Paint | undefined;
+  link(url: string, fg: RGBA | undefined): Link | undefined;
 };
 
 type Accessor<T> = PropertyDescriptor & {
@@ -98,6 +101,17 @@ const embolden = (span: Span, { fg, bold }: Paint): Span => ({
   ...span,
   fg,
   ...(bold && { attributes: (span.attributes ?? 0) | TextAttributes.BOLD }),
+});
+
+const continues = (spans: readonly Span[], at: number, url: string) =>
+  spans[at - 1]?.link?.url === url || (spans[at - 1]?.text === " " && spans[at - 2]?.link?.url === url);
+
+const badge = ({ link: _link, target: _target, ...span }: Span, glyph: string, { fg }: Paint): Span => ({
+  ...span,
+  text: `${glyph} `,
+  fg,
+  attributes: (span.attributes ?? 0) & ~TextAttributes.UNDERLINE,
+  code: false,
 });
 
 const idle = (renderer: CliRenderer) => renderer.idle().catch(() => undefined);
@@ -181,15 +195,30 @@ export function patch(renderer: CliRenderer, look: Look) {
       return paint ? embolden(span, paint) : span;
     });
   };
-  const relink = (spans: Span[]) =>
-    spans.map((span) => {
-      if (span.link || !span.target?.startsWith("ses_")) return span;
-      const paint = look.session(span.fg);
-      return paint ? embolden(span, paint) : span;
+  const relink = (spans: Span[], context: Context) => {
+    const fallback = context.syntaxStyle.getStyle("default")?.fg;
+    return spans.flatMap((span, at) => {
+      if (!span.link) {
+        const paint = span.target?.startsWith("ses_") && look.session(span.fg);
+        return paint ? [embolden(span, paint)] : [span];
+      }
+      const found = look.link(span.link.url, span.fg ?? fallback);
+      if (!found) return [span];
+      const before = spans[at - 1];
+      const glyph = found.icon;
+      const lead =
+        glyph && !context.tableCell && !continues(spans, at, span.link.url) && before?.text !== `${glyph} `
+          ? [badge(span, glyph, found.paint)]
+          : [];
+      return [...lead, embolden(span, found.paint)];
     });
-  const hooks = pair<Hook>((base) => (spans, context) => relink(base(recolor(spans, context), context)));
-  // The host runs the hook only on blocks containing a filter string; add a backtick so inline code reaches `recolor`.
-  const filters = pair<Filter>((base) => (base.length === 0 || base.includes("`") ? base : [...base, "`"]));
+  };
+  const hooks = pair<Hook>((base) => (spans, context) => relink(base(recolor(spans, context), context), context));
+  // The host runs the hook only on blocks containing a filter string; add a backtick so inline code reaches `recolor`, and `www.` for bare autolinks.
+  const filters = pair<Filter>((base) => {
+    const missing = base.length === 0 ? [] : ["`", "www."].filter((text) => !base.includes(text));
+    return missing.length === 0 ? base : [...base, ...missing];
+  });
 
   const instances = () =>
     [...live].flatMap((ref) => {

@@ -730,7 +730,7 @@ From `config/opencode`, `bun plugins/vagari/build.ts` builds by hand and prints 
 
 ## Transcript
 
-To recolor inline code, session links, and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
+To recolor inline code, links, and headings in replies, edit the `transcript` block of `themes/vagari.jsonc` and save; every open window applies it.
 Each value is a Vagari name, optionally followed by `bold` as in `"session": "prp_3 bold"`, and `transcript/tui.ts` picks a code color by what the span holds.
 
 | Key            | Colors                                                                        |
@@ -743,23 +743,29 @@ Each value is a Vagari name, optionally followed by `bold` as in `"session": "pr
 | `code.number`  | Numbers, versions, hashes, `:line`, `true`, `null`                            |
 | `code.other`   | Anything else                                                                 |
 | `session`      | Session links such as `@Reply styles`, drawn bold                             |
+| `link`         | Web links, including `localhost` and Markdown `[label](https://…)` links      |
+| `icons`        | `true` puts a Nerd Font glyph before each link, `false` leaves them off       |
 | `h1` to `h6`   | Headings at that level                                                        |
 
 A span with spaces is `danger`, `command`, `number` for a timestamp, or `other`, and a span that holds a `#rrggbb` color draws in that color.
 A single word is a `key` when it holds a dot path (`a.b`) or starts with `-` or `$`, and a `symbol` otherwise, so `foo.bar()`, `@scope/pkg`, and `ALL_CAPS` names are symbols.
 `danger` covers privilege commands such as `sudo`, recursive or forced `rm`, disk writers such as `dd` and `mkfs`, history rewrites such as `git push --force` and `git reset --hard`, service stops, forced kills, power commands, and `dctl install` or `dctl iso usb|release`, anywhere in a `&&`, `;`, or `|` chain.
 Plain `rm file` and `trash` stay `command`, and the rule table is `DANGER` in `transcript/kind.ts`.
+Links also draw in `code.path` when they target a `file:` URL, whether from a path in prose, a `file://` URL, or a Markdown `[label](file:///…)` link.
+With `icons`, a link gets a globe, and a file link gets a glyph for its extension, a folder glyph for a directory, or a plain file glyph.
+The glyph is a separate span in the link color without underline or link target, so it joins the copied text and a click on it does nothing; table cells and session links get none.
+`transcript/icons.ts` holds the extension table, which uses nvim-web-devicons glyphs, and xplr's `node_types.lua` in `config/xplr/` supplied the folder glyph.
 A missing key keeps the theme's color, except that a missing `code.danger` uses `code.command` and a missing `code.key` uses `code.symbol`; headings keep their bold and level-1 underline, and session links keep their underline but are bold only when their value says `bold`.
 Code inside a link and a span that is still streaming keep `markdown.code`.
-Only spans, links, and headings drawn in Vagari's `markdown.code`, `markdown.link`, and `markdown.heading` change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
+Only spans drawn in Vagari's `markdown.code`, `markdown.link`, `markdown.linkText`, `markdown.heading`, and `text.base` colors change, so other themes and the muted reasoning style keep their colors, even when another plugin hooks reasoning blocks.
 A bad name or key shows a `Vagari theme` error toast, and the last good colors stay.
 
 OpenCode has no plugin API for inline spans, so the plugin wraps the `inlineHook`, `inlineHookFilter`, and `syntaxStyle` setters on OpenTUI's `MarkdownRenderable` prototype.
 Setup fails with an error toast if OpenTUI drops one of those accessors.
 Only renderables that set an inline hook change: reply text, compaction summaries, and `/btw` answers.
-The wrapper colors code spans before OpenCode's session-link hook runs and recolors session links after it, finding them by the `ses_` click target that hook sets; path links from other plugins carry a `link` instead and keep their colors.
+The wrapper colors code spans before OpenCode's session-link hook runs and recolors session links and every `link` span after it, finding session links by the `ses_` click target that hook sets.
 Its getters return what callers set, so another plugin that wraps the same hook still finds its own wrapper.
-It adds a backtick to a non-empty hook filter, which moves every block with inline code from OpenTUI's native write path to its slower host path; the measured cost is a few microseconds per block.
+It adds a backtick and `www.` to a non-empty hook filter, which moves every block with inline code or a bare `www.` link from OpenTUI's native write path to its slower host path; the measured cost is a few microseconds per block.
 Headings use a per-theme copy of the syntax style, so diffs and file views of Markdown keep `markdown.heading`; without heading keys, renderables keep the shared style.
 A palette change swaps in a fresh copy, because OpenTUI does not repaint a style that changes in place, and reruns the hook where the style stays the same.
 Clearing a renderable's hook gives it back the shared style.
@@ -772,7 +778,8 @@ Disposing restores the prototype and every hooked renderable.
 Stock OpenCode does not open `file://` links: its `openUrl` rejects anything but http(s) with an error toast, so the plugin handles the click on each transcript Markdown itself.
 It chains the host's `ses_` session-link hook, adds `/` to that hook's filter, and coexists with [Transcript](#transcript)'s prototype setter wrapping.
 
-`paths/split.ts` links only absolute and `~/` paths that exist when the block renders; a trailing `:line` stays outside the link.
+`paths/split.ts` links only absolute and `~/` paths, and `file:///` URLs, that exist when the block renders; a trailing `:line` stays outside the link.
+A `file://` URL links to itself, other schemes such as `http://` are left to OpenTUI's own autolinks, and [Transcript](#transcript) draws every `file:` link in the path color.
 A code span links only when it holds nothing but the path, so commands stay copyable.
 Fenced code blocks and tool output never link.
 A file created after its paragraph rendered stays plain until that block runs the hook again.
