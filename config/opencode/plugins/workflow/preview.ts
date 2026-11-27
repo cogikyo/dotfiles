@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { migrateV1, resolveThemeDocument } from "@opencode/theme/tui";
+import { parseThemeDocument, resolveThemeDocument } from "@opencode/theme/tui";
 import type { RGBA } from "@opentui/core";
 import { card } from "./card.ts";
 import { fences, parse } from "./parse.ts";
@@ -17,7 +17,7 @@ if (!Number.isInteger(width) || width <= 2 * inset) throw new Error(`--width nee
 const [path] = positionals;
 const source = path ? await Bun.file(path).text() : await Bun.stdin.text();
 const document = await Bun.file(new URL("../../themes/vagari.json", import.meta.url)).json();
-const theme = resolveThemeDocument(migrateV1(document), "dark");
+const theme = resolveThemeDocument(parseThemeDocument(document, "vagari"), "dark");
 const tones = palette(theme, "dark");
 const ground = color(tones.card, 48);
 const found = fences(source);
