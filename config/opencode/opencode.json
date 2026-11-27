@@ -206,7 +206,7 @@
     }
   },
   "websearch": {
-    "provider": "exa"
+    "provider": "parallel"
   },
   "watcher": {
     "ignore": [".git/**", "node_modules/**", "dist/**", "build/**"]
