@@ -25,6 +25,7 @@ type Host = { context: Plugin.Context; sessionID?: string; stage: Stage };
 type Scan = { names: Names; ledger: Ledger; renderer: CliRenderer; width: number; error: RGBA };
 type Markdown = MarkdownRenderable & {
   readonly blocks: readonly { kind: string; renderable: Renderable | undefined }[];
+  // Private in OpenTUI 0.9.9, so typed here by hand; no public member returns a block's Markdown source, and `raw` is all this reads.
   view(index: number): { raw: string };
 };
 
@@ -211,6 +212,7 @@ function classify(row: Renderable, scan: Scan, kind: "prompt" | "plain" | undefi
   }
   if (!marked(only)) return { kind: "content", row };
   const raw = (index: number) => only.view(index).raw;
+  // `blocks` also lists nested blocks; only those the Markdown row itself holds are top-level.
   const shown = only.blocks.flatMap(({ kind: type, renderable }, index) =>
     renderable?.parent === only ? [{ type, node: renderable, index }] : [],
   );

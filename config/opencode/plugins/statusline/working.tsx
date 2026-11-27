@@ -39,6 +39,7 @@ export function mix(from: RGBA, to: RGBA, amount: number) {
   );
 }
 
+/** Color of the role the session's family is waiting on, ranked by `order`; undefined when nothing runs. Agent names like `build/general` count under `build`. */
 export function lead(context: Context, sessionID?: string) {
   if (sessionID === undefined) return undefined;
   const { session } = context.data;

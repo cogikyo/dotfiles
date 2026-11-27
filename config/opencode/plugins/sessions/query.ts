@@ -17,7 +17,7 @@ const marker = "[hidden by refusals]";
 const hint = (table: string) =>
   `${table} is huge, so filter it by the indexed session_id, such as ${huge[table]}.session_id = ? or ${huge[table]}.session_id IN (SELECT id FROM session_v2 WHERE …)`;
 
-/** Mirrors withParts() in packages/core/src/session/history.ts. */
+/** SQL for one message's content as a JSON array: split `session_part` rows, then inline items, as withParts() in packages/core/src/session/history.ts orders them. */
 export const content = (message: string) => `(
   SELECT json_group_array(json(item.data) ORDER BY item.inline, item.position) FROM (
     SELECT 0 AS inline, ordinal AS position, data FROM session_part WHERE message_id = ${message}.id

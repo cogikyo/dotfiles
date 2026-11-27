@@ -52,7 +52,7 @@ const counts = [
 export default Plugin.define({
   id: "statusline",
   setup(context) {
-    void refresh();
+    void refresh(); // Read the animations flag up front; `motion()` stays true until it resolves.
     return createRoot((dispose) => {
       const [focused, setFocused] = createSignal(true);
       const focus = () => setFocused(true);

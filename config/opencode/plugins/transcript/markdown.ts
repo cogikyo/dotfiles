@@ -70,6 +70,7 @@ function run(source: string, from: number) {
   return end;
 }
 
+/** Counts the inline code spans in `source` that have their closing backticks, since streaming text can end inside an open one. */
 export function closed(source: string) {
   let count = 0;
   let at = 0;
@@ -152,6 +153,10 @@ class Styles {
   }
 }
 
+/**
+ * Wraps the `inlineHook`, `inlineHookFilter`, and `syntaxStyle` accessors on the MarkdownRenderable prototype, so renderables the host creates later get the recoloring too.
+ * The wrapped getters return the host's own values and `restore` reinstates the original accessors, so the host sees no change.
+ */
 export function patch(renderer: CliRenderer, look: Look) {
   const proto = MarkdownRenderable.prototype;
   const hookAccess = accessor<Hook>("inlineHook");
@@ -176,6 +181,7 @@ export function patch(renderer: CliRenderer, look: Look) {
       return fg ? { ...span, fg, attributes: (span.attributes ?? 0) | TextAttributes.BOLD } : span;
     });
   const hooks = pair<Hook>((base) => (spans, context) => relink(base(recolor(spans, context), context)));
+  // The host runs the hook only on blocks containing a filter string; add a backtick so inline code reaches `recolor`.
   const filters = pair<Filter>((base) => (base.length === 0 || base.includes("`") ? base : [...base, "`"]));
 
   const instances = () =>

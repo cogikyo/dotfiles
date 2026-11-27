@@ -11,7 +11,7 @@ type Context = Plugin.Context;
 export default Plugin.define({
   id: "drive",
   setup(context) {
-    void refresh();
+    void refresh(); // Read the animations flag up front; `motion()` stays true until it resolves.
     const drive = connect(context);
     const root = (sessionID?: string) => (sessionID ? context.data.session.root(sessionID) : undefined);
 

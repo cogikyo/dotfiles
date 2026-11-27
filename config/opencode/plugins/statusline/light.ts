@@ -4,7 +4,7 @@ import type { Prompt } from "./prompt.ts";
 
 type Pose = { readonly glyph: number; readonly centre: number; readonly wide: number; readonly peak: number };
 
-const lip = 0x2580;
+const lip = 0x2580; // Upper half block; the light repaints only cells holding it, as thinner rails.
 const rail = { slim: 0x1fb83, fine: 0x1fb82 };
 const rest = { wide: 0.2, peak: 0.5 };
 const pace = { wide: 0.09, peak: 0.95 };
@@ -13,6 +13,7 @@ const blur = 0.5;
 const grain = 8;
 const period = 4000;
 
+// Prompts whose edge light drive's chevrons replace; shared across plugin loads and hot-reload generations.
 const key = Symbol.for("statusline.light");
 const scope = globalThis as typeof globalThis & { [key]?: WeakSet<Renderable> };
 const veiled = (scope[key] ??= new WeakSet());

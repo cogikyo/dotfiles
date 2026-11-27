@@ -42,6 +42,7 @@ export function arrows(prompt: Prompt) {
   };
 }
 
+/** The longest blank stretch of the row above the prompt, trimmed by `margin` where text borders it; undefined when too short for the parked chevrons. */
 function lane(buffer: OptimizedBuffer, prompt: Prompt) {
   const { width, height } = buffer;
   const y = prompt.cap.screenY - 1;

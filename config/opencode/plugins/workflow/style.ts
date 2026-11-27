@@ -60,6 +60,7 @@ export function pill(text: string, tone: Tone): Segment[] {
 
 export function palette(theme: Plugin.Context["theme"], mode: Plugin.Context["themeMode"]): Record<Tone, RGBA> {
   const role = (name: Role) => roles[name] ?? theme.text.muted;
+  // The theme types only accent, interactive, and neutral hues; read `purple` by name when it exists, as accent did on 2.3.2.
   const hues: Partial<Record<string, typeof theme.hue.accent>> = theme.hue;
   return {
     accent: (hues.purple ?? theme.hue.accent)[mode === "light" ? 300 : 200],

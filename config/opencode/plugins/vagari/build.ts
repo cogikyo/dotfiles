@@ -13,6 +13,7 @@ export const isTree = (value: unknown): value is Tree =>
 
 const family = (name: unknown) => String(name).replace(/_\d+$/, "");
 
+/** Finds the `$hue.<ramp>.<step>` reference for a color name, preferring a ramp of the same family; a ramp can repeat a color, so it picks the step where the run ends. */
 function home(hues: Tree, name: string) {
   const holding = Object.entries(hues).flatMap(([hue, ramp]) => {
     const members = isTree(ramp) ? STEPS.map((step) => ramp[step]) : [];
@@ -101,6 +102,7 @@ function compile(doc: Tree) {
   const modes = [...compiler.hues.keys()];
   const theme: Record<string, unknown> = { $schema: "https://opencode.ai/theme.json" };
   for (const [key, value] of Object.entries(doc)) {
+    // `transcript` configures the transcript plugin and is not an OpenCode theme key.
     if (key === "defs" || key === "transcript" || key === "$schema") continue;
     if (key === "base" && isTree(value)) theme[key] = compiler.tokens(value, key, modes);
     else if (modes.includes(key) && isTree(value)) theme[key] = compiler.mode(key, value);

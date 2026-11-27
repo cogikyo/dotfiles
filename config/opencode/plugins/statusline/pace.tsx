@@ -9,6 +9,7 @@ type Plane = OptimizedBuffer["buffers"]["fg"];
 
 export type Aim = { readonly hue: RGBA | undefined; readonly pacing: boolean };
 export type Painter = {
+  /** Paints one frame and returns true when nothing is moving, so the animation loop can stop. */
   readonly draw: (buffer: OptimizedBuffer, aim: Aim, elapsed: number) => boolean;
   readonly close?: () => void;
 };
@@ -61,10 +62,12 @@ export function Pace(props: {
       }
       if (covers.has(keymap.mode.current())) return;
       try {
+        // Elapsed ms since the last frame, capped at `stall`; 0 on the first frame or while the shared clock is stopped, Infinity (snap to target) with animations off.
         const beat = clock() && performance.now();
         const elapsed = !motion() ? Infinity : beat && seen ? Math.min(beat - seen, stall) : 0;
         seen = beat;
         const hue = props.hue;
+        // The light sweeps only while the user is not typing: the window is blurred or the editor is empty.
         const pacing = motion() && hue !== undefined && (away() || prompt.editor.plainText === "");
         setStill(painter.draw(buffer, { hue, pacing }, elapsed));
       } catch (error) {
@@ -114,6 +117,7 @@ export function tint(fg: Plane, cell: number, hue: readonly number[], tone: numb
   fg[cell * 4 + 3] = (fg[cell * 4 + 3] ?? 0) & 0xff;
 }
 
+/** Returns the RGB ints of the latest color passed, holding the previous color when given undefined so a fade-out keeps its hue. */
 export function channels() {
   let color: RGBA | undefined;
   let ints: readonly number[] = [0, 0, 0];
@@ -126,6 +130,7 @@ export function channels() {
   };
 }
 
+// Adds `post` from an animation frame, not at once, so it runs after the post-process functions registered earlier and paints over them.
 function last(renderer: CliRenderer, post: (buffer: OptimizedBuffer) => void) {
   const frame = renderer.requestAnimationFrame(() => renderer.addPostProcessFn(post));
   renderer.requestRender();

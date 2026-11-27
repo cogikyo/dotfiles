@@ -147,6 +147,7 @@ export const rows = (mailed?: Mailed, near?: Near) =>
   function row(context: Context, session: Session, current: boolean, note: Footer): Option<string> {
     const theme = () => dialog(context);
     const text = title(session);
+    // The host hands `fg` to the gutter only on the selected row; a fresh copy makes `color === focused` mean selected, where an equal theme color would not.
     const { r, g, b, a } = theme().text.action.primary.focused;
     const focused = RGBA.fromValues(r, g, b, a);
     const [plain, setPlain] = createSignal(true);

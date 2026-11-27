@@ -21,6 +21,7 @@ export function watchTheme(from: string, onError: (message: string) => void) {
       const changed = written || failed || (last !== undefined && state !== last);
       last = state;
       failed = false;
+      // SIGUSR2 reloads custom themes, but kills a process that has no handler.
       if (!disposed && changed && process.listenerCount("SIGUSR2") > 0) process.kill(process.pid, "SIGUSR2");
     } catch (error) {
       failed = true;

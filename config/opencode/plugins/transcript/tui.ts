@@ -100,6 +100,7 @@ export default Plugin.define({
 
     let patched: ReturnType<typeof patch>;
     try {
+      // Each callback recolors only text the host drew in the theme's markdown anchor color, so other styling is left alone.
       patched = patch(context.renderer, {
         code(text, fg) {
           if (!palette || !probe || !fg?.equals(palette.code)) return undefined;
@@ -130,6 +131,7 @@ export default Plugin.define({
       queue = queue.then(reload);
     };
     signal();
+    // The vagari plugin raises SIGUSR2 after it rebuilds the theme.
     process.on("SIGUSR2", signal);
 
     return () => {

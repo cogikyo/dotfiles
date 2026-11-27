@@ -179,6 +179,7 @@ function inset(block: Renderable) {
 
 function palette(context: Context): Tones {
   const theme = context.theme;
+  // The theme types only accent, interactive, and neutral hues; read `purple` by name when it exists, as accent did on 2.3.2.
   const hues: Partial<Record<string, typeof theme.hue.accent>> = theme.hue;
   return {
     accent: (hues.purple ?? theme.hue.accent)[context.themeMode === "light" ? 300 : 200],

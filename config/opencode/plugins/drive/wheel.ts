@@ -10,6 +10,7 @@ export function wheel(renderer: CliRenderer) {
   let steer = 0;
 
   const draw = (buffer: OptimizedBuffer, editor: Renderable, color: RGBA) => {
+    // Render the steer glyph once to learn the code the buffer stores for it, so the wheel overwrites that icon and nothing else.
     if (!sample) {
       sample = OptimizedBuffer.create(span, 1, renderer.widthMethod, {
         owner: renderer.nativeScene,
