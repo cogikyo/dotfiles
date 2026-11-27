@@ -8,17 +8,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const hwmonRoot = "/sys/class/hwmon"
 
 type ComputerState struct {
-	RAMAvailable   bool    `json:"ram_available"`
-	RAMUsedPercent int     `json:"ram_used_percent"`
-	TempAvailable  bool    `json:"temp_available"`
-	TempCurrent    int     `json:"temp_current"`
-	TempPercent    int     `json:"temp_percent"`
-	TempMax        float64 `json:"temp_max"`
+	RAMAvailable    bool    `json:"ram_available"`
+	RAMUsedPercent  int     `json:"ram_used_percent"`
+	DiskAvailable   bool    `json:"disk_available"`
+	DiskUsedPercent int     `json:"disk_used_percent"`
+	TempAvailable   bool    `json:"temp_available"`
+	TempCurrent     int     `json:"temp_current"`
+	TempPercent     int     `json:"temp_percent"`
+	TempMax         float64 `json:"temp_max"`
 }
 
 type Computer struct {
@@ -71,6 +75,7 @@ func (c *Computer) publish(notify func(data any)) {
 func (c *Computer) read() ComputerState {
 	state := ComputerState{}
 	state.RAMUsedPercent, state.RAMAvailable = readRAM()
+	state.DiskUsedPercent, state.DiskAvailable = readDisk("/")
 	state.TempCurrent, state.TempPercent, state.TempMax, state.TempAvailable = c.readTemperature()
 	return state
 }
@@ -107,6 +112,19 @@ func readRAM() (int, bool) {
 
 	used := math.Round(float64(total-available) / float64(total) * 100)
 	return int(used), true
+}
+
+// readDisk matches df's Use%: root-reserved blocks count as neither used nor available.
+func readDisk(path string) (int, bool) {
+	var st unix.Statfs_t
+	if unix.Statfs(path, &st) != nil {
+		return 0, false
+	}
+	used := st.Blocks - st.Bfree
+	if used+st.Bavail == 0 {
+		return 0, false
+	}
+	return int(math.Ceil(float64(used) / float64(used+st.Bavail) * 100)), true
 }
 
 func (c *Computer) readTemperature() (current, percent int, maxTemp float64, available bool) {

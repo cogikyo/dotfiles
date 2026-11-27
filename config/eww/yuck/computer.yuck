@@ -248,13 +248,16 @@
             (level-bars :percent {computer-info.ram_used_percent} :steps range16)
           )
         )
+        (box :class "gap" :visible {computer-info.disk_available} :style {compact ? "" : "margin-left: 12px;"}
+          (label-ramp :icon "󰋊" :percent {computer-info.disk_used_percent} :bool true)
+        )
       )
     )
   )
 )
 
 (deflisten computer-info
-  :initial '{"ram_available":false,"ram_used_percent":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0}'
+  :initial '{"ram_available":false,"ram_used_percent":0,"disk_available":false,"disk_used_percent":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0}'
   'ewwd subscribe computer | jq --unbuffered -c ".data"'
 )
 

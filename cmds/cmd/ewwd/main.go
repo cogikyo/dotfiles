@@ -253,7 +253,7 @@ Providers:
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
   clock      - Wall-aligned hour, minute, and second
-  computer   - RAM use and NVMe Composite temperature
+  computer   - RAM and root disk use, CPU temperature
   battery    - Laptop charge, AC state, and time remaining
   backlight  - Panel brightness; flashes the OSD on outside changes
   cycle-5    - Wall-aligned five-second display cycle

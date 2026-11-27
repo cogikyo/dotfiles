@@ -115,7 +115,7 @@ Brightness changes made outside these actions, such as the brightness keys, open
 | network   | /proc/net/dev       | upload/download speeds                     |
 | date      | time                | time, date, clockface icons, weeks alive   |
 | clock     | time                | wall-aligned hour, minute, second          |
-| computer  | procfs/sysfs        | RAM use, NVMe Composite temperature        |
+| computer  | procfs/sysfs/statfs | RAM and root disk use, CPU temperature     |
 | battery   | sysfs power_supply  | charge, AC state, time to empty or full    |
 | backlight | sysfs backlight     | brightness percent; OSD on key changes     |
 | cycle-5   | time                | wall-aligned scalar display cycle          |
