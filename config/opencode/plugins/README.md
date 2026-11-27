@@ -194,7 +194,8 @@ On Anthropic requests, `claude-auth/transforms.js` moves the line with the rest 
 `drive/look.tsx` paints after the prompt while drive is on, skips `modal` and `menu` keymap modes, and requests animation frames only while another session in the root's family is running.
 `drive/look.tsx` stops drawing after a draw error and reports `look off, <reason>` through the drive error toast.
 `drive/wheel.ts` puts a blue steering wheel in the editor's top-right corner when text leaves room, preserves the queue glyph, and pulses with statusline's animation clock.
-`drive/arrows.ts` draws faint blue `›` marks staggered by row over the input's empty background, skipping text, the cursor, their horizontal neighbors, and cells with a different background; `step` and `tone` control spacing and tint.
+`drive/arrows.ts` draws a boost pad at the input's right end: three solid blue chevrons of one shape at 3×, 2×, and 1× scale, brightest at the right.
+It places them right to left and stops at the first chevron that would touch text, the cursor, their horizontal neighbors, or a different background.
 `drive/rpc.ts` defines the `state` and `set` methods and the `changed` event the TUI follows.
 
 ## Usage
